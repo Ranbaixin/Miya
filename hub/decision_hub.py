@@ -1484,6 +1484,9 @@ class DecisionHub:
                     if self.onebot_client
                     else None,
                     "game_mode_adapter": self.game_mode_adapter,
+                    # 【关键】传递图片分析结果
+                    "image_analysis": perception.get("image_analysis"),
+                    "image_data": perception.get("image_data"),
                 }
                 logger.warning(
                     f"[决策层] 构建的tool_context keys: {list(tool_context.keys())}"
@@ -1669,14 +1672,7 @@ class DecisionHub:
                             f"原因={collab_result.reasoning}"
                         )
 
-                        # 【新增】协作引擎路径的情感注入
-                        if soul_result and collab_result.response:
-                            injected_response = self._inject_soul_into_response(
-                                collab_result.response, soul_result
-                            )
-                            return injected_response
-
-                        # 协作引擎已直接返回最终响应
+                        # 协作引擎已直接返回最终响应（情绪已在context中注入）
                         return collab_result.response
 
                     except Exception as e:
@@ -1765,9 +1761,7 @@ class DecisionHub:
                 tool_choice=tool_choice,
             )
 
-            # 【灵魂发生器】将情感注入到回复中
-            if _soul_result and response:
-                response = self._inject_soul_into_response(response, _soul_result)
+            # 【灵魂发生器】将情感注入到回复中 (已移除，使用Prompt引导)
 
             return response
 
@@ -1776,66 +1770,6 @@ class DecisionHub:
             return await self._fallback_response_cross_platform(
                 content, sender_name, platform
             )
-
-    def _inject_soul_into_response(self, response: str, soul_result: Dict) -> str:
-        """
-        将灵魂发生器的情感注入到AI回复中
-        根据主导情绪调整回复的语气、情感色彩
-        """
-        try:
-            dominant = soul_result.get("dominant_emotion", "平静")
-            emotions = soul_result.get("emotions", {})
-
-            import random
-            import json
-
-            config_path = (
-                Path(__file__).parent.parent / "config" / "soul_generator_config.json"
-            )
-            with open(config_path, "r", encoding="utf-8") as f:
-                config = json.load(f)
-
-            emotion_value = emotions.get(dominant, 50)
-            high_threshold = config.get("HIGH_EMOTION_THRESHOLD", 70)
-            medium_threshold = config.get("LOW_EMOTION_THRESHOLD", 30)
-
-            high_emotion_trigger = config.get("HIGH_EMOTION_TRIGGER_EMOTIONS", [])
-            if emotion_value > high_threshold:
-                if dominant in high_emotion_trigger:
-                    prefix_options = config.get("HIGH_EMOTION_RESPONSES", [])
-                    if prefix_options:
-                        prefix = random.choice(prefix_options)
-                        if not response.startswith(prefix):
-                            response = f"{prefix} {response}"
-                            logger.info(f"[灵魂] 注入了高情绪前缀: {prefix}")
-
-            low_emotion_trigger = config.get("LOW_EMOTION_TRIGGER_EMOTIONS", [])
-            low_suffixes = config.get("LOW_EMOTION_SUFFIXES", [])
-            if emotion_value < medium_threshold:
-                if dominant in low_emotion_trigger and low_suffixes:
-                    suffix = random.choice(low_suffixes)
-                    if not response.endswith(suffix):
-                        response = f"{response}{suffix}"
-                        logger.info(f"[灵魂] 注入了低情绪后缀: {suffix}")
-
-            context = soul_result.get("context", {})
-            relationship = context.get("relationship")
-            if relationship and "value" in str(relationship):
-                rel_str = str(relationship.value)
-                if rel_str == "INTIMATE":
-                    intimate_keywords = config.get("INTIMATE_RELATIONSHIP_KEYWORDS", [])
-                    intimate_suffix = config.get("INTIMATE_SUFFIX", "")
-                    if intimate_suffix and not any(
-                        kw in response for kw in intimate_keywords
-                    ):
-                        response = response + intimate_suffix
-                        logger.info(f"[灵魂] 注入了亲密后缀")
-
-            return response
-
-        except Exception as e:
-            logger.warning(f"[灵魂] 注入情感失败: {e}")
-            return response
 
     async def _fallback_response_cross_platform(
         self, content: str, sender_name: str, platform: str

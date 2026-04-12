@@ -654,8 +654,15 @@ class OpenAIClient(BaseAIClient):
                             else:
                                 tool_args = {}
 
+                        # 过滤日志中的 CQ 码，避免终端刷屏
+                        safe_args = {}
+                        for k, v in tool_args.items():
+                            if isinstance(v, str) and ("[CQ:" in v or "base64," in v):
+                                safe_args[k] = "[图片数据]"
+                            else:
+                                safe_args[k] = v
                         logger.info(
-                            f"[AIClient] 工具调用: {tool_call.function.name}, 参数: {tool_args}"
+                            f"[AIClient] 工具调用: {tool_call.function.name}, 参数: {safe_args}"
                         )
 
                         from core.gestalt_controller import get_gestalt_controller
@@ -850,7 +857,7 @@ class OpenAIClient(BaseAIClient):
                         "group_file_downloader",
                         "local_file_finder",
                         "qq_file_reader",
-                        "qq_image_analyzer",
+                        # 注意：qq_image_analyzer 不在这里，因为它需要经过人格润色
                         "python_interpreter",
                     ]
                     if tool_call.function.name in direct_return_tools:
@@ -1134,14 +1141,21 @@ class DeepSeekClient(BaseAIClient):
                             )
                             tool_args = json.loads(fixed_str2)
 
+                        # 过滤日志中的 CQ 码，避免终端刷屏
+                        safe_args = {}
+                        for k, v in tool_args.items():
+                            if isinstance(v, str) and ("[CQ:" in v or "base64," in v):
+                                safe_args[k] = "[图片数据]"
+                            else:
+                                safe_args[k] = v
                         logger.info(
-                            f"[AIClient] 工具调用: {tool_call.function.name}, 参数: {tool_args}"
+                            f"[AIClient] 工具调用: {tool_call.function.name}, 参数: {safe_args}"
                         )
 
                         from core.gestalt_controller import get_gestalt_controller
                         from core.terminal_formatter import TerminalFormatter
 
-                        TerminalFormatter.tool_call(tool_call.function.name, tool_args)
+                        TerminalFormatter.tool_call(tool_call.function.name, safe_args)
 
                         gestalt = get_gestalt_controller()
                         result = await gestalt.execute_tool(
@@ -1284,8 +1298,15 @@ class DeepSeekClient(BaseAIClient):
                                     )
                                     continue
 
+                        # 过滤日志中的 CQ 码，避免终端刷屏
+                        safe_args = {}
+                        for k, v in tool_args.items():
+                            if isinstance(v, str) and ("[CQ:" in v or "base64," in v):
+                                safe_args[k] = "[图片数据]"
+                            else:
+                                safe_args[k] = v
                         logger.info(
-                            f"[AIClient] 工具调用: {tool_call.function.name}, 参数: {tool_args}"
+                            f"[AIClient] 工具调用: {tool_call.function.name}, 参数: {safe_args}"
                         )
 
                         result = await adapter.execute_tool(
@@ -1323,7 +1344,7 @@ class DeepSeekClient(BaseAIClient):
                             "group_file_downloader",
                             "local_file_finder",
                             "qq_file_reader",
-                            "qq_image_analyzer",
+                            # qq_image_analyzer 需要经过人格润色
                             "python_interpreter",
                         ]
                         if tool_call.function.name in direct_return_tools:

@@ -484,6 +484,23 @@ class MiyaQQ:
 
     async def _process_single_message(self, qq_message: Any) -> None:
         """处理单条消息（加入队列或直接处理）"""
+        safe_msg = {
+            k: v
+            for k, v in qq_message.__dict__.items()
+            if k not in ["image_data", "files", "image_analysis"]
+        }
+        self.logger.info(f"[_process_single_message] qq_message: {safe_msg}")
+        self.logger.info(
+            f"[_process_single_message] has_image={getattr(qq_message, 'has_image', 'N/A')}"
+        )
+        if hasattr(qq_message, "image_analysis"):
+            analysis = qq_message.image_analysis
+            if analysis and analysis.get("description"):
+                desc_len = len(analysis.get("description", ""))
+                self.logger.info(
+                    f"[_process_single_message] image_analysis: 描述长度={desc_len}字符, 成功={analysis.get('success')}"
+                )
+
         msg_type = qq_message.message_type
         if msg_type not in ["group", "private"]:
             if qq_message.group_id and qq_message.group_id > 0:

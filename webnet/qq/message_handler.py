@@ -693,17 +693,21 @@ class QQMessageHandler:
     def _has_image_message(self, event: Dict[str, Any]) -> bool:
         """检查消息是否包含图片"""
         message = event.get("message", [])
+        logger.info(f"[QQMessageHandler] _has_image_message 检查: message={message}")
 
         # 检查标准消息段
         for segment in message:
             if isinstance(segment, dict):
                 seg_type = segment.get("type")
+                logger.info(f"[QQMessageHandler] segment type: {seg_type}")
                 if seg_type == "image":
+                    logger.info(f"[QQMessageHandler] 检测到图片段落")
                     return True
 
         # 检查原始消息字符串
         raw_message = event.get("raw_message", "")
         if isinstance(raw_message, str) and "[CQ:image" in raw_message:
+            logger.info(f"[QQMessageHandler] 检测到图片在 raw_message")
             return True
 
         return False

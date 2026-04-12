@@ -192,6 +192,9 @@ class ToolAdapter:
             "game_mode_adapter",
             "bot_qq",
             "superadmin",
+            # 图片相关
+            "image_data",
+            "image_analysis",
         }
         filtered_context = {k: v for k, v in context.items() if k in supported_fields}
 
@@ -341,6 +344,9 @@ class ToolAdapter:
             "game_mode_adapter",
             "bot_qq",
             "superadmin",
+            # 图片相关
+            "image_data",
+            "image_analysis",
         }
         filtered_context = {k: v for k, v in context.items() if k in supported_fields}
 

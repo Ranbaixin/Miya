@@ -68,6 +68,9 @@ class GestaltController:
                 at_list: list = None
                 message_sent_this_turn: bool = False
                 bot_qq: Any = None
+                # 图片相关
+                image_data: Any = None
+                image_analysis: Any = None
 
                 def __post_init__(self):
                     if self.at_list is None:
@@ -93,6 +96,9 @@ class GestaltController:
             "at_list",
             "bot_qq",
             "superadmin",
+            # 图片相关
+            "image_data",
+            "image_analysis",
         }
 
         filtered = {k: v for k, v in context.items() if k in supported_fields}
@@ -116,7 +122,15 @@ class GestaltController:
         self, tool_name: str, args: Dict[str, Any], context: Dict[str, Any]
     ) -> str:
         """直接执行工具（格式塔核心模式）- 统一转换为 ToolContext"""
-        logger.info(f"[格式塔] 执行工具: {tool_name}, 参数: {args}")
+        safe_args = {
+            k: (
+                "[图片数据]"
+                if isinstance(v, str) and ("[CQ:" in v or "base64," in v)
+                else v
+            )
+            for k, v in args.items()
+        }
+        logger.info(f"[格式塔] 执行工具: {tool_name}, 参数: {safe_args}")
 
         # 统一转换为 ToolContext 对象
         tool_context = self._build_tool_context(context)

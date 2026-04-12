@@ -48,6 +48,10 @@ class ToolContext:
     # QQ 相关
     bot_qq: Optional[int] = None
 
+    # 图片数据（用于图片分析工具）
+    image_data: Optional[bytes] = None  # 原始图片数据
+    image_analysis: Optional[Dict] = None  # 图片分析结果
+
 
 class ToolRegistry:
     """工具注册表（兼容层）"""

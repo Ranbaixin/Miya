@@ -86,6 +86,7 @@ class ConversationContextManager:
     ):
         # 从配置文件加载配置
         config = self._load_config()
+        self.conversation_context_config = config
 
         self.memory_net = memory_net
         self.enable_conversation_context = config.get(
@@ -121,7 +122,11 @@ class ConversationContextManager:
             if config_path.exists():
                 with open(config_path, "r", encoding="utf-8") as f:
                     full_config = json.load(f)
-                return full_config.get("conversation_context", {})
+                cc_config = full_config.get("conversation_context", {})
+                cc_config["important_topic_keywords"] = full_config.get(
+                    "important_topic_keywords", []
+                )
+                return cc_config
         except Exception as e:
             logger.warning(f"[对话上下文] 加载配置失败: {e}")
         return {}
@@ -130,16 +135,21 @@ class ConversationContextManager:
         """更新话题追踪，返回当前话题"""
         current_topic = self._detect_topic(user_input)
 
+        important_keywords = self.conversation_context_config.get(
+            "important_topic_keywords", []
+        )
+        is_important = any(kw in user_input for kw in important_keywords)
+
         if current_topic:
             if session_id not in self._topic_history:
                 self._topic_history[session_id] = []
             self._topic_history[session_id].append(current_topic)
-            if len(self._topic_history[session_id]) > 20:
-                self._topic_history[session_id] = self._topic_history[session_id][-20:]
+            max_history = 50 if is_important else 20
+            if len(self._topic_history[session_id]) > max_history:
+                self._topic_history[session_id] = self._topic_history[session_id][
+                    -max_history:
+                ]
             self._last_topics[session_id] = current_topic
-            self._conversation_turns[session_id] = (
-                self._conversation_turns.get(session_id, 0) + 1
-            )
 
         return current_topic or ""
 
@@ -254,8 +264,8 @@ class ConversationContextManager:
                     else messages
                 )
             else:
-                # 正常对话加载最近15条
-                recent_messages = messages[-15:] if len(messages) > 15 else messages
+                # 正常对话加载最近20条，增加深度
+                recent_messages = messages[-20:] if len(messages) > 20 else messages
 
             logger.debug(f"[对话上下文] 加载对话历史: {len(recent_messages)} 条")
 
