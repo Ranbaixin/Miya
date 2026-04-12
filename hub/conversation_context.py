@@ -21,6 +21,7 @@ class ConversationContextManager:
     - 检测用户的"回忆"意图
     - 话题连续性检测
     - 主动回忆机制
+    - 多轮对话流程追踪
     """
 
     # 话题关键词映射
@@ -83,15 +84,6 @@ class ConversationContextManager:
         conversation_context_max_count: int = 20,
         conversation_context_max_tokens: int = 6000,
     ):
-        """
-        初始化对话上下文管理器
-
-        Args:
-            memory_net: MemoryNet记忆系统
-            enable_conversation_context: 是否启用对话上下文
-            conversation_context_max_count: 最大消息数量
-            conversation_context_max_tokens: 最大Token数量
-        """
         # 从配置文件加载配置
         config = self._load_config()
 
@@ -109,7 +101,7 @@ class ConversationContextManager:
         # 从配置文件加载回忆关键词
         self.recall_patterns = config.get("recall_patterns", [])
 
-        # 新增：话题跟踪
+        # 话题跟踪（用于多轮对话追踪）
         self._topic_history: Dict[str, List[str]] = defaultdict(
             list
         )  # session_id -> 话题列表
@@ -117,6 +109,7 @@ class ConversationContextManager:
         self._conversation_turns: Dict[str, int] = defaultdict(
             int
         )  # session_id -> 对话轮次
+        self._pending_intent: Dict[str, str] = {}  # session_id -> 未完成的意图
 
     def _load_config(self) -> dict:
         """从 text_config.json 加载对话上下文配置"""
@@ -133,74 +126,91 @@ class ConversationContextManager:
             logger.warning(f"[对话上下文] 加载配置失败: {e}")
         return {}
 
+    def _update_topic_tracking(self, session_id: str, user_input: str) -> str:
+        """更新话题追踪，返回当前话题"""
+        current_topic = self._detect_topic(user_input)
+
+        if current_topic:
+            if session_id not in self._topic_history:
+                self._topic_history[session_id] = []
+            self._topic_history[session_id].append(current_topic)
+            if len(self._topic_history[session_id]) > 20:
+                self._topic_history[session_id] = self._topic_history[session_id][-20:]
+            self._last_topics[session_id] = current_topic
+            self._conversation_turns[session_id] = (
+                self._conversation_turns.get(session_id, 0) + 1
+            )
+
+        return current_topic or ""
+
+    def _detect_topic(self, text: str) -> str:
+        """检测当前输入的话题"""
+        if not text:
+            return ""
+        text_lower = text.lower()
+        for topic, keywords in self.TOPIC_KEYWORDS.items():
+            if any(kw in text_lower for kw in keywords):
+                return topic
+        return ""
+
+    def get_topic_context(self, session_id: str) -> str:
+        """获取话题上下文信息"""
+        last_topic = self._last_topics.get(session_id, "")
+        turns = self._conversation_turns.get(session_id, 0)
+        if not last_topic:
+            return ""
+        return f"[话题追踪] 当前话题: {last_topic}, 连续对话: {turns}轮"
+
     def check_needs_recall(self, user_input: str) -> bool:
-        """
-        检测用户是否在问关于过去的问题
-
-        Args:
-            user_input: 当前用户输入（可能是字符串或列表）
-
-        Returns:
-            是否需要回忆过去
-        """
-        # 安全处理用户输入 - 处理图片消息等非字符串情况
+        """检测用户是否在问关于过去的问题"""
         if not user_input:
             return False
+        recall_patterns = [
+            "你记得",
+            "你还记得",
+            "记得",
+            "上次",
+            "上次我们",
+            "之前",
+            "昨天",
+            "前天",
+            "以前",
+            "我们聊过",
+            "曾经",
+            "回忆",
+        ]
+        return any(p in user_input for p in recall_patterns)
 
-        if not isinstance(user_input, str):
-            if isinstance(user_input, list):
-                # 尝试从列表中提取文本（QQ图片消息格式）
-                content_str = ""
-                for item in user_input:
-                    if isinstance(item, dict):
-                        item_type = item.get("type", "")
-                        if item_type == "text":
-                            content_str += item.get("data", {}).get("text", "")
-                        elif item_type == "image":
-                            # 图片消息，不需要回忆检测
-                            continue
-                    elif isinstance(item, str):
-                        content_str += item
-                user_input = content_str if content_str else ""
-            else:
-                # 其他类型转换为字符串
-                user_input = str(user_input)
-
-        if not user_input:
+    def _is_deep_discussion(self, user_input: str) -> bool:
+        """检测是否是深度讨论"""
+        if not user_input or not isinstance(user_input, str):
             return False
-
-        import re
-
-        for pattern in self.recall_patterns:
-            if re.search(pattern, user_input):
-                logger.info(f"[对话上下文] 检测到回忆请求: {user_input[:30]}")
-                return True
-
+        if len(user_input) > 50:
+            return True
+        topic_count = sum(
+            1
+            for t, kws in self.TOPIC_KEYWORDS.items()
+            for kw in kws
+            if kw in user_input.lower()
+        )
+        if topic_count >= 2:
+            return True
+        if user_input.count("?") + user_input.count("？") >= 2:
+            return True
         return False
 
     async def get_conversation_context(
         self, session_id: str, current_input: str = ""
     ) -> List[Dict]:
-        """
-        获取对话历史上下文（分层摘要架构）
-
-        分层策略：
-        - 精确层（最近10条）：完整对话
-        - 摘要层（10-50条）：每5条压缩为一条摘要
-        - 回忆模式：加载50条完整历史
-
-        Args:
-            session_id: 会话ID
-            current_input: 当前用户输入（用于判断是否需要回忆）
-
-        Returns:
-            对话历史列表
-        """
         if not self.enable_conversation_context:
             return []
 
         if not self.memory_net or not self.memory_net.conversation_history:
             return []
+
+        # 【新增】更新话题追踪
+        if current_input:
+            self._update_topic_tracking(session_id, current_input)
 
         # 检测用户是否在问关于过去的问题
         needs_recall = self.check_needs_recall(current_input)

@@ -609,17 +609,20 @@ class QQEmojiTool(BaseTool):
             if file_size > max_size:
                 return f"❌ 表情包文件过大: {file_size}字节 > {max_size}字节"
 
-            # 读取文件并发送
-            with open(emoji_info["path"], "rb") as f:
-                image_data = f.read()
+            # 读取文件并转换为 base64
+            import base64
 
-            # 发送图片消息
-            result = await qq_client.send_image_message(
-                target_type=target_type,
-                target_id=target_id,
-                image_data=image_data,
-                image_name=emoji_info["name"],
-            )
+            with open(emoji_info["path"], "rb") as f:
+                image_base64 = base64.b64encode(f.read()).decode("utf-8")
+
+            # 使用 CQ 码方式发送图片
+            cq_image = f"[CQ:image,file=base64://{image_base64}]"
+
+            # 发送消息
+            if target_type == "private":
+                result = await qq_client.send_private_message(target_id, cq_image)
+            else:
+                result = await qq_client.send_group_message(target_id, cq_image)
 
             if result and result.get("status") == "ok":
                 emoji_type = (

@@ -1327,10 +1327,10 @@ class QQMessageHandler:
             if not emoji_name:
                 logger.info(f"[QQNet-表情包请求] 未提取到表情包名称，发送随机表情包")
                 success = await self._send_emoji_response(group_id, sender_id)
-            if success:
-                return get_text("emoji_responses.sent_random")
-            else:
-                return get_text("error_messages.emoji_send_failed")
+                if success:
+                    return get_text("emoji_responses.sent_random")
+                else:
+                    return get_text("error_messages.emoji_send_failed")
 
             logger.info(f"[QQNet-表情包请求] 提取到表情包名称: '{emoji_name}'")
 

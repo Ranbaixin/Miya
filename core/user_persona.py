@@ -53,6 +53,12 @@ class UserPersona:
     last_interaction: str = ""
     total_interactions: int = 0
 
+    # 【新增】行为模式学习
+    active_hours: List[int] = field(default_factory=list)  # 活跃小时
+    response_length_prefer: str = ""  # 响应长度偏好: short/medium/long
+    emoji_frequency: int = 0  # 表情使用频率
+    question_frequency: int = 0  # 提问频率
+
     # 备注
     notes: List[str] = field(default_factory=list)
 
@@ -246,8 +252,44 @@ class UserPersonaManager:
         # 从消息中提取信息
         self._extract_info_from_message(persona, message)
 
+        # 【新增】学习行为模式
+        self._learn_behavior_pattern(persona, message)
+
         # 保存
         self._save_user_persona(user_key)
+
+    def _learn_behavior_pattern(self, persona: UserPersona, message: str):
+        """学习用户行为模式"""
+        if not message:
+            return
+
+        # 1. 学习活跃时间段
+        current_hour = datetime.now().hour
+        if current_hour not in persona.active_hours:
+            persona.active_hours.append(current_hour)
+        if len(persona.active_hours) > 20:
+            persona.active_hours = persona.active_hours[-20:]
+
+        # 2. 学习响应长度偏好
+        msg_len = len(message)
+        if msg_len < 10:
+            persona.response_length_prefer = "short"
+        elif msg_len < 50:
+            persona.response_length_prefer = "medium"
+        else:
+            persona.response_length_prefer = "long"
+
+        # 3. 学习表情使用频率
+        if any(c in message for c in ["[", "]", "表情", "emoji"]):
+            persona.emoji_frequency += 1
+
+        # 4. 学习提问频率
+        if (
+            "?" in message
+            or "？" in message
+            or any(w in message for w in ["怎么", "为什么", "如何", "是不是", "能不能"])
+        ):
+            persona.question_frequency += 1
 
         # 更新群聊侧写
         if group_id:
@@ -367,6 +409,18 @@ class UserPersonaManager:
         # 互动统计
         if persona.total_interactions > 0:
             lines.append(f"历史互动: {persona.total_interactions}次")
+
+        # 【新增】行为模式
+        if persona.active_hours:
+            lines.append(
+                f"活跃时间段: {', '.join(map(str, persona.active_hours[-3:]))}点"
+            )
+        if persona.response_length_prefer:
+            lines.append(f"回复偏好: {persona.response_length_prefer}")
+        if persona.emoji_frequency > 5:
+            lines.append(f"使用表情: 频繁")
+        if persona.question_frequency > 10:
+            lines.append(f"喜欢提问")
 
         # 备注
         if persona.notes:

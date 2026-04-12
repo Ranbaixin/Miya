@@ -199,16 +199,18 @@ class CognitiveEngine:
     - 记忆关联度学习
     """
 
-    def __init__(self, memory_core=None):
+    def __init__(self, memory_core=None, embedding_client=None):
         """初始化认知引擎
 
         Args:
             memory_core: 记忆核心实例
+            embedding_client: 向量嵌入客户端（用于语义相似度计算）
         """
         import asyncio
 
         self.memory_core = memory_core
         self._memory_core_initialized = False
+        self.embedding_client = embedding_client
 
         # 记忆关联度学习
         self._co_occurrence: Dict[
@@ -216,6 +218,9 @@ class CognitiveEngine:
         ] = {}  # memory_id -> {related_id: count}
         self._access_frequency: Dict[str, int] = {}  # memory_id -> access count
         self._last_retrieved_ids: List[str] = []  # 上次检索到的记忆ID列表
+
+        # 语义相似度缓存（避免重复计算embedding）
+        self._embedding_cache: Dict[int, List[float]] = {}
 
     def _record_co_occurrence(self, memory_ids: List[str]):
         """记录记忆共现关系，用于关联度学习"""
@@ -332,8 +337,69 @@ class CognitiveEngine:
 
         return True
 
-    def _calculate_relevance(
-        self, memory: MemoryItem, current_topics: List[str], keywords: List[str]
+    async def _get_embedding_similarity(self, text: str, memory_content: str) -> float:
+        """计算语义相似度（使用embedding）
+
+        Args:
+            text: 当前输入文本
+            memory_content: 记忆内容
+
+        Returns:
+            相似度分数 0-1
+        """
+        if not self.embedding_client:
+            return 0.0
+
+        try:
+            # 检查缓存
+            text_hash = hash(text)
+            memory_hash = hash(memory_content)
+
+            # 获取或计算text的embedding
+            if text_hash not in self._embedding_cache:
+                embedding = await self.embedding_client.get_embedding(text)
+                if embedding:
+                    self._embedding_cache[text_hash] = embedding
+            text_emb = self._embedding_cache.get(text_hash)
+            if not text_emb:
+                return 0.0
+
+            # 获取或计算memory的embedding
+            if memory_hash not in self._embedding_cache:
+                embedding = await self.embedding_client.get_embedding(memory_content)
+                if embedding:
+                    self._embedding_cache[memory_hash] = embedding
+            memory_emb = self._embedding_cache.get(memory_hash)
+            if not memory_emb:
+                return 0.0
+
+            # 计算余弦相似度
+            return self._cosine_similarity(text_emb, memory_emb)
+
+        except Exception as e:
+            logger.debug(f"[认知引擎] 语义相似度计算失败: {e}")
+            return 0.0
+
+    def _cosine_similarity(self, vec1: List[float], vec2: List[float]) -> float:
+        """计算余弦相似度"""
+        if not vec1 or not vec2 or len(vec1) != len(vec2):
+            return 0.0
+
+        dot_product = sum(a * b for a, b in zip(vec1, vec2))
+        magnitude1 = sum(a * a for a in vec1) ** 0.5
+        magnitude2 = sum(b * b for b in vec2) ** 0.5
+
+        if magnitude1 == 0 or magnitude2 == 0:
+            return 0.0
+
+        return dot_product / (magnitude1 * magnitude2)
+
+    async def _calculate_relevance(
+        self,
+        memory: MemoryItem,
+        current_topics: List[str],
+        keywords: List[str],
+        current_input: str = "",
     ) -> float:
         """计算记忆与当前对话的相关度
 
@@ -341,6 +407,7 @@ class CognitiveEngine:
             memory: 记忆
             current_topics: 当前话题
             keywords: 关键词
+            current_input: 当前用户输入（用于语义相似度）
 
         Returns:
             相关度分数 0-1
@@ -367,9 +434,16 @@ class CognitiveEngine:
             memory_time = datetime.fromisoformat(memory.created_at)
             hours_ago = (datetime.now() - memory_time).total_seconds() / 3600
             time_weight = max(0.1, 1 - hours_ago / (24 * 30))  # 30天内衰减
-            score += time_weight * 0.2
+            score += time_weight * 0.15
         except:
             score += 0.1
+
+        # 5. 语义相似度（使用embedding）
+        if current_input and self.embedding_client:
+            semantic_score = await self._get_embedding_similarity(
+                current_input, memory.content
+            )
+            score += semantic_score * 0.35  # 35%权重给语义相似度
 
         return min(1.0, score)
 
@@ -437,7 +511,9 @@ class CognitiveEngine:
         # 3. 计算相关度并排序（加入关联度学习）
         scored_memories = []
         for memory in all_memories:
-            relevance = self._calculate_relevance(memory, current_topics, keywords)
+            relevance = await self._calculate_relevance(
+                memory, current_topics, keywords, user_input
+            )
             # 关联度提升
             boost = self._get_relevance_boost(memory.id, [m.id for m in all_memories])
             relevance += boost
@@ -683,5 +759,17 @@ def get_cognitive_engine() -> CognitiveEngine:
     """获取认知引擎单例实例"""
     global _cognitive_engine
     if _cognitive_engine is None:
-        _cognitive_engine = CognitiveEngine()
+        # 尝试获取embedding_client
+        embedding_client = None
+        try:
+            from core.embedding_client import get_embedding_client
+            import asyncio
+
+            embedding_client = (
+                asyncio.run(get_embedding_client()) if get_embedding_client else None
+            )
+        except Exception:
+            pass
+
+        _cognitive_engine = CognitiveEngine(embedding_client=embedding_client)
     return _cognitive_engine

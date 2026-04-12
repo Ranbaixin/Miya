@@ -151,6 +151,13 @@ class ResponseGenerator:
             # 获取平台可用工具
             available_tools = self._get_platform_tools(platform)
 
+            # 【新增】构建人格状态注入（7种特质向量）
+            vectors = personality_state.get("vectors", {})
+            soul_state = "当前灵魂状态:\n"
+            for key, value in vectors.items():
+                soul_state += f"- {key}: {value:.2f}\n"
+            soul_state += f"- 稳定度: {personality_state.get('stability', 0):.2f}"
+
             # 构建提示词
             additional_ctx = {
                 "platform": platform,
@@ -160,6 +167,7 @@ class ResponseGenerator:
                 "at_list": context.get("at_list", []),
                 "bot_qq": context.get("bot_qq"),
                 "is_creator": self._is_creator(user_id),
+                "soul_state": soul_state,  # 人格特质向量注入
             }
 
             # 注入状态信息
@@ -202,9 +210,7 @@ class ResponseGenerator:
                 if self.model_pool:
                     from core.model_pool import TaskType
 
-                    task_type = await self.model_pool.classify_task(
-                        content, context
-                    )
+                    task_type = await self.model_pool.classify_task(content, context)
                     (
                         model_key,
                         selected_client,
@@ -254,9 +260,7 @@ class ResponseGenerator:
                 if self.model_pool:
                     from core.model_pool import TaskType
 
-                    task_type = await self.model_pool.classify_task(
-                        content, context
-                    )
+                    task_type = await self.model_pool.classify_task(content, context)
                     (
                         model_key,
                         selected_client,

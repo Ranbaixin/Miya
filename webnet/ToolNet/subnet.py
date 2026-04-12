@@ -151,8 +151,8 @@ class ToolSubnet:
         )
 
         try:
-            # 执行工具
-            result = await self.registry.execute_tool(tool_name, args, context)
+            # 执行工具 (registry expects: name, context, **kwargs)
+            result = await self.registry.execute_tool(tool_name, context, **args)
 
             self.config.success_calls += 1
             self.config.last_call_time = datetime.now()

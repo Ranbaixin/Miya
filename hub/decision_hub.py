@@ -665,6 +665,11 @@ class DecisionHub:
 
         logger.info(f"[决策层] 收到感知数据: {sender_name} - {content[:50]}")
 
+        # 【过滤】跳过内部处理标志消息，防止循环处理
+        if content.startswith("[表情包请求已处理]"):
+            logger.info(f"[决策层] 跳过内部标志消息 (emoji request processed)")
+            return content.replace("[表情包请求已处理] ", "")
+
         # 【谛听】第一时间记录所有群消息（在任何拦截之前）
         group_id = perception.get("group_id", 0)
         is_at_bot = perception.get("is_at_bot", False)
@@ -2319,12 +2324,12 @@ class DecisionHub:
         timer_keywords = [
             "提醒我",
             "叫我",
-            "点个赞",
             "定时",
             "一分钟后",
             "五分钟后",
             "十分钟后",
             "小时后",
+            "分钟后",  # 保留"分钟后"来识别具体时间
         ]
         has_timer_keyword = any(keyword in content for keyword in timer_keywords)
 
@@ -2403,6 +2408,13 @@ class DecisionHub:
                     "action_type": action_type,
                     "times": times,
                 }
+
+                # 确保 user_id 格式正确（统一变量名）
+                uid = (
+                    int(user_id)
+                    if isinstance(user_id, (int, str)) and str(user_id).isdigit()
+                    else (int(user_id) if isinstance(user_id, int) else 0)
+                )
             else:
                 # 提醒任务
                 from core.text_loader import get_reminder_message
@@ -2432,7 +2444,6 @@ class DecisionHub:
                 group_id=perception.get("group_id", 0),
                 message_type=perception.get("message_type", "private"),
                 sender_name=sender_name,
-                at_list=perception.get("at_list", []),
             )
 
             logger.info(f"[决策层-定时任务] 定时任务创建结果: {result[:100]}...")

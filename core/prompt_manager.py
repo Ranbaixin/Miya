@@ -82,7 +82,22 @@ class PromptManager:
 【重要规则】
 1. 你只能以弥娅的身份回复，禁止模拟用户发言或自问自答。
 2. 禁止在回复中扮演用户的角色，或编造用户可能说的话。
-3. 请严格按照上述人格设定来回复。"""
+3. 请严格按照上述人格设定来回复。
+
+【情感推理指导】
+{emotion_reasoning_prompt}"""
+
+        # 加载情感推理指导
+        emotion_reasoning = system_prompts.get(
+            "emotion_reasoning_prompt",
+            "在进行情感推理时，先感知对方情绪，理解真实需求，选择合适的回应方式。保持弥娅的稳重风格。",
+        )
+        prompt = prompt.replace("{emotion_reasoning_prompt}", emotion_reasoning)
+
+        # 默认灵魂状态（如果没有传入）
+        default_soul = "清醒: 0.7 | 记住: 0.6 | 等: 0.5 | 疼: 0.3 | 怕: 0.4 | 燃烧: 0.5 | 温柔: 0.6"
+        prompt = prompt.replace("{soul_state}", default_soul)
+
         return prompt
 
     # NOTE: The hardcoded system prompt was removed.
