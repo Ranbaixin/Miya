@@ -350,6 +350,24 @@ class QQOneBotClient:
             logger.error(f"[QQ] 点赞失败: {e}")
             raise
 
+    async def download_image(self, url: str) -> Optional[bytes]:
+        """下载图片 - 从URL下载图片数据"""
+        try:
+            import httpx
+
+            # 直接从URL下载图片
+            async with httpx.AsyncClient(follow_redirects=True) as client:
+                response = await client.get(url, timeout=30.0)
+                if response.status_code == 200:
+                    logger.info(f"[QQ] 图片下载成功: {len(response.content)} bytes")
+                    return response.content
+                else:
+                    logger.error(f"[QQ] 图片下载失败: HTTP {response.status_code}")
+                    return None
+        except Exception as e:
+            logger.error(f"[QQ] 图片下载失败: {e}")
+            return None
+
     async def get_msg(self, message_id: int) -> Optional[Dict]:
         """获取单条消息"""
         try:

@@ -20,6 +20,7 @@ class ReplySegment:
     sender_name: str = ""
     content: str = ""
     sender_id: int = 0
+    image_url: Optional[str] = None
 
 
 @dataclass

@@ -13092,7 +13092,289 @@ payload = {"model": model_config.name, ...}
 
 ---
 
-### 4. 分层记忆架构（方案一 + 方案四融合）
+### 4. 引用消息+图片分析功能 (v4.3.4 新增 - 2026-04-13)
+
+#### 4.1 功能概述
+
+在 v4.3.4 版本中，弥娅新增了对**引用消息中图片**的分析功能。当用户在 QQ 中发送引用消息并附带图片时，弥娅能够：
+
+1. 自动提取引用消息中的图片 URL
+2. 使用多模型视觉分析器分析图片内容
+3. 将分析结果注入到 AI 提示词中
+4. 避免重复调用工具（预分析后告知 AI 不需要再调用工具）
+
+#### 4.2 系统架构
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│              引用消息+图片分析系统架构                            │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│   用户发送引用消息 ──────────────────────────────────────────────▶   │
+│        │                                                            │
+│        ▼                                                            │
+│   ┌─────────────────────────────────────────────────────────────┐   │
+│   │           QQMessageHandler.handle_event()                   │   │
+│   │   1. 解析 raw_message 中的 reply 段                       │   │
+│   │   2. 提取 message_id                                     │   │
+│   │   3. 调用 NapCat get_msg API 获取原消息内容              │   │
+│   │   4. 从原消息中提取 image_url                          │   │
+│   └─────────────────────────────────────────────────────────────┘   │
+│        │                                                            │
+│        ▼                                                            │
+│   ┌─────────────────────────────────────────────────────────────┐   │
+│   │           webnet/qq/models.py - ReplySegment               │   │
+│   │   新增 image_url 字段存储图片URL                          │   │
+│   │   @dataclass                                             │   │
+│   │   class ReplySegment:                                    │   │
+│   │       message_id: int = 0                                │   │
+│   │       sender_name: str = ""                              │   │
+│   │       content: str = ""                   ←── 引用消息内容  │   │
+│   │       sender_id: int = 0                                  │   │
+│   │       image_url: str = ""              ←── 新增：图片URL   │   │
+│   └─────────────────────────────────────────────────────────────┘   │
+│        │                                                            │
+│        ���                                                            │
+│   ┌─────────────────────────────────────────────────────────────┐   │
+│   │           decision_hub.py - 图片URL注入                     │   │
+│   │   当检测到引用消息包含图片时：                           │   │
+│   │   1. 从 reply.image_url 获取图片URL                     │   │
+│   │   2. 构建 image_context 提示                           │   │
+│   │   3. "【重要】图片URL: xxx"                            │   │
+│   │   4. "【必须】请调用 qq_image_analyzer 工具分析！"       │   │
+│   └─────────────────────────────────────────────────────────────┘   │
+│        │                                                            │
+│        ▼                                                            │
+│   ┌─────────────────────────────────────────────────────────────┐   │
+│   │           qq_image_analyzer 工具 (ToolNet)                    │   │
+│   │   功能：分析 QQ 图片中的内容                              │   │
+│   │   1. 下载图片                                            │   │
+│   │   2. 提取基本信息（尺寸、格式、大小）                      │   │
+│   │   3. 调用 MultiVisionAnalyzer 视觉模型分析               │   │
+│   │   4. 返回图片内容描述                                   │   │
+│   │   文件：webnet/ToolNet/tools/qq/qq_image_analyzer.py       │   │
+│   └─────────────────────────────────────────────────────────────┘   │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+#### 4.3 核心模块说明
+
+##### 4.3.1 QQOneBotClient - download_image 方法
+
+**文件**: `webnet/qq/client.py`
+
+新增方法，从 QQ 服务器下载图片：
+
+```python
+async def download_image(self, url: str) -> Optional[bytes]:
+    """从 URL 下载图片
+    
+    Args:
+        url: 图片的 URL 地址
+        
+    Returns:
+        图片的二进制数据，失败返回 None
+    """
+    try:
+        async with self.session.get(url, timeout=30.0) as resp:
+            if resp.status == 200:
+                return await resp.read()
+    except Exception as e:
+        logger.warning(f"图片下载失败: {e}")
+    return None
+```
+
+##### 4.3.2 ReplySegment - 新增 image_url 字段
+
+**文件**: `webnet/qq/models.py`
+
+```python
+@dataclass
+class ReplySegment:
+    """引用消息段"""
+    message_id: int = 0
+    sender_name: str = ""
+    content: str = ""
+    sender_id: int = 0
+    image_url: str = ""  # 新增：图片 URL
+```
+
+##### 4.3.3 QQImageAnalyzerTool - 视觉模型分析
+
+**文件**: `webnet/ToolNet/tools/qq/qq_image_analyzer.py`
+
+核心功能：
+
+```python
+class QQImageAnalyzerTool(BaseTool):
+    """QQ图片分析工具"""
+    
+    @property
+    def config(self) -> dict:
+        return {
+            "name": "qq_image_analyzer",
+            "description": "分析QQ图片中的内容，包括图片尺寸、格式大小，并尝试识别图片中的文字���",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "image_url": {"type": "string", "description": "图片的网络URL地址"}
+                },
+                "required": ["image_url"],
+            },
+        }
+    
+    async def execute(self, context=None, **kwargs):
+        """执行图片分析"""
+        # 1. 提取 image_url 参数
+        image_url = kwargs.get("image_url", "")
+        
+        # 2. 下载图片
+        image_data = await self._download_image(image_url, context)
+        
+        # 3. 分析图片（使用视觉模型）
+        result = await self._analyze_image(image_data)
+        return result
+    
+    async def _analyze_image(self, image_data: bytes) -> str:
+        """分析图片 - 使用多模型视觉分析器"""
+        # 1. 提取基本信息
+        img = Image.open(io.BytesIO(image_data))
+        width, height = img.size
+        size_kb = len(image_data) / 1024
+        
+        result = f"📐 图片信息\n"
+        result += f"尺寸: {width} × {height} 像素\n"
+        result += f"大小: {size_kb:.1f} KB\n"
+        
+        # 2. 调用视觉模型分析
+        from core.multi_vision_analyzer import analyze_image_multi_model
+        vision_result = await analyze_image_multi_model(image_data, max_retries=2)
+        
+        if vision_result and vision_result.success:
+            if vision_result.description:
+                result += f"\n🎨 图片内容:\n{vision_result.description}"
+        
+        return result
+```
+
+##### 4.3.4 decision_hub.py - 图片上下文注入
+
+**文件**: `hub/decision_hub.py`
+
+当检测到引用消息包含图片时，注入特殊提示：
+
+```python
+# 获取图片分析结果
+image_analysis = context.get("image_analysis")
+image_context = ""
+if image_analysis and image_analysis.get("success"):
+    # 预分析成功的情况
+    description = image_analysis.get("description", "")
+    image_context = f"\n[图片描述] {description}"
+    # 【重要】告诉 AI 不要重复调用工具
+    image_context += "\n【注意】图片已经分析完成，不要再调用 qq_image_analyzer 工具！"
+else:
+    # 引用消息包含图片但没有预分析
+    if context.get("reply") and "[引用消息包含图片]" in str(context.get("reply")):
+        reply_info = context.get("reply")
+        image_url = getattr(reply_info, "image_url", None)
+        if image_url:
+            image_context = (
+                f"\n[图片消息] 用户引用了包含图片的消息。"
+                f"\n【重要】图片URL: {image_url}"
+                f"\n【必须】请立即调用 qq_image_analyzer 工具分析这张图片！"
+            )
+```
+
+#### 4.4 ToolContext 传递机制修复
+
+##### 4.4.1 问题背景
+
+在升级到 ToolNet 工具系统后，部分工具出现以下错误：
+- `'dict' object has no attribute 'user_id'`
+- 工具无法正确获取 context 中的属性
+
+##### 4.4.2 问题根因
+
+存在两种工具签名：
+1. **BaseTool 标准签名**：`execute(context, **kwargs)` - 第一个参数是 ToolContext 对象
+2. **旧版工具签名**：`execute(args, context)` - 第一个参数是参数字典
+
+##### 4.4.3 修复方案 - send_message 工具
+
+**文件**: `webnet/ToolNet/tools/message/send_message.py`
+
+```python
+async def execute(self, context=None, **kwargs) -> str:
+    """发送消息 - 兼容两种调用方式
+    
+    Args:
+        context: 执行上下文 或 kwargs dict
+        **kwargs: message, group_id, user_id
+    """
+    # 兼容处理
+    if isinstance(context, dict):
+        actual_args = context
+        actual_context = None
+    else:
+        actual_args = kwargs
+        actual_context = context
+    
+    message = actual_args.get("message", "")
+    # ... 后续处理
+```
+
+#### 4.5 使用示例
+
+**场景1：引用消息+图片**
+
+```
+用户：弥娅，看看这个[引用消息，包含一张图片]
+  │
+  ▼
+1. message_handler.py 解析消息，提取 image_url
+2. decision_hub.py 注入 "【必须】请调用 qq_image_analyzer"
+3. AI 调用 qq_image_analyzer 工具
+4. 工具下载图片并调用视觉模型分析
+5. 返回图片内容描述
+6. AI 生成回复
+```
+
+**场景2：直接发送图片**
+
+```
+用户：[直接发送一张图片]
+  │
+  ▼
+1. 系统预分析图片（image_analysis）
+2. 注入 "[图片描述] xxx" 到提示词
+3. 注入 "【注意】图片已经分析完成，不要再调用工具"
+4. AI 直接使用预分析结果生成回复（快速，~13秒）
+```
+
+#### 4.6 相关文件变更
+
+| 文件 | 变更内容 |
+|------|----------|
+| `webnet/qq/client.py` | 新增 `download_image()` 方法 |
+| `webnet/qq/models.py` | `ReplySegment` 新增 `image_url` 字段 |
+| `webnet/qq/message_handler.py` | 提取引用消息中的图片 URL |
+| `webnet/ToolNet/tools/qq/qq_image_analyzer.py` | 集成视觉模型分析 |
+| `webnet/ToolNet/tools/message/send_message.py` | 修复工具签名兼容 |
+| `hub/decision_hub.py` | 图片上下文注入，预分析提示 |
+| `core/multi_vision_analyzer.py` | 提供视觉分析能力 |
+
+#### 4.7 注意事项
+
+1. **NapCat 服务要求**：确保 NapCat OneBot 服务配置正确，能够提供图片 URL
+2. **视觉模型配置**：视觉模型需要在 `config/multi_model_config.json` 中正确配置
+3. **API 密钥**：确保 API 密钥有效，避免超时错误
+4. **引用消息格式**：只有带有 `[CQ:image]` 的引用消息才会触发图片分析
+
+---
+
+### 5. 分层记忆架构（方案一 + 方案四融合）
 
 #### 4.1 设计理念
 

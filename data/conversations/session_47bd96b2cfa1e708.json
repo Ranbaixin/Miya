@@ -643,5 +643,95 @@
       "sender": "咕",
       "chat_label": "群聊_1092980378"
     }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，问，你是志愿者，院长说不要给孤儿们过多关注，因为你不会长久待着，给他们更多爱以后会让他们伤心，你会因这个理由而无视他们那些渴望的眼神吗",
+    "timestamp": "2026-04-13T13:22:57.491499",
+    "session_id": "qq_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "2911746585",
+      "group_id": "1092980378",
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "洛雅你等等，你是洛雅啊不是弥娅",
+    "timestamp": "2026-04-13T16:17:43.962559",
+    "session_id": "qq_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "2911746585",
+      "group_id": "1092980378",
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "找到了一个消息",
+    "timestamp": "2026-04-13T16:22:39.610794",
+    "session_id": "qq_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "2911746585",
+      "group_id": "1092980378",
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": " 弥娅，细说长腿紧身胶衣",
+    "timestamp": "2026-04-13T16:54:11.262469",
+    "session_id": "qq_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "2911746585",
+      "group_id": "1092980378",
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "发来看看",
+    "timestamp": "2026-04-13T16:54:22.596849",
+    "session_id": "qq_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "2911746585",
+      "group_id": "1092980378",
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "我看不到",
+    "timestamp": "2026-04-13T16:54:38.490852",
+    "session_id": "qq_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "2911746585",
+      "group_id": "1092980378",
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
   }
 ]

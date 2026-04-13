@@ -150,21 +150,9 @@ class ToolRegistry:
                 if not valid:
                     return f"❌ 参数错误: {error}"
 
-            # 执行工具 - 兼容两种签名
+            # 执行工具 - 只使用BaseTool标准签名
             logger.info(f"[Registry] 执行工具: {name}, kwargs: {list(kwargs.keys())}")
-            try:
-                # 方式1: execute(context, **kwargs) - BaseTool 标准
-                result = await tool.execute(context, **kwargs)
-            except TypeError as e:
-                if (
-                    "positional argument" in str(e).lower()
-                    or "unexpected keyword argument" in str(e).lower()
-                ):
-                    # 方式2: execute(kwargs_dict, context) - 旧签名
-                    logger.info(f"[Registry] 尝试旧签名调用: {name}")
-                    result = await tool.execute(kwargs, context)
-                else:
-                    raise
+            result = await tool.execute(context, **kwargs)
             return result
         except Exception as e:
             self.logger.error(f"执行工具失败 {name}: {e}", exc_info=True)

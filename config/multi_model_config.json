@@ -16,8 +16,8 @@
       "priority": 1
     },
     "model_preferences": {
-      "primary": "siliconflow_qwen_vl",
-      "secondary": "zhipu_glm_46v_flash",
+      "primary": "zhipu_glm_46v_flash",
+      "secondary": "siliconflow_qwen_vl",
       "fallback": "simple_analysis",
       "disabled_models": []
     }
@@ -360,8 +360,8 @@
       "fallback": "deepseek_v3_official"
     },
     "image_description": {
-      "primary": "siliconflow_qwen_vl",
-      "secondary": "zhipu_glm_46v_flash",
+      "primary": "zhipu_glm_46v_flash",
+      "secondary": "siliconflow_qwen_vl",
       "fallback": "simple_analysis"
     },
     "agent_mode": {

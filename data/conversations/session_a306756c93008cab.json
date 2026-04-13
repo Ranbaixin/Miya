@@ -309,5 +309,380 @@
       "sender": "",
       "chat_label": "群聊_1092980378"
     }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，看看这个，你怎么评价",
+    "timestamp": "2026-04-12T18:11:14.401219",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "1092980378",
+      "message_type": "group",
+      "sender": "",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "[图片]",
+    "timestamp": "2026-04-12T18:11:56.098602",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "1092980378",
+      "message_type": "group",
+      "sender": "",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，看看这个",
+    "timestamp": "2026-04-12T18:19:08.686973",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "1092980378",
+      "message_type": "group",
+      "sender": "",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "[图片]",
+    "timestamp": "2026-04-12T18:20:06.067599",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "1092980378",
+      "message_type": "group",
+      "sender": "",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，看看这个",
+    "timestamp": "2026-04-12T20:18:09.089155",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，看看这个",
+    "timestamp": "2026-04-12T20:26:34.912147",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，看看这个",
+    "timestamp": "2026-04-12T20:39:02.147216",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，看看这个",
+    "timestamp": "2026-04-12T20:44:43.208612",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，看看这个",
+    "timestamp": "2026-04-12T20:51:12.494204",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅 看一下（从刚刚到现在一直在测试你的视觉识别）",
+    "timestamp": "2026-04-12T20:55:37.052623",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅 看一下（从刚刚到现在一直在测试你的视觉识别）",
+    "timestamp": "2026-04-12T21:00:13.789139",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，看看这个",
+    "timestamp": "2026-04-12T21:12:58.267455",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅 看一下（从刚刚到现在一直在测试你的视觉识别）[图片]",
+    "timestamp": "2026-04-12T21:17:02.258586",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅 看一下（从刚刚到现在一直在测试你的视觉识别）[图片][图片]",
+    "timestamp": "2026-04-12T21:22:11.215965",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "[图片]",
+    "timestamp": "2026-04-12T21:27:24.780760",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅 看一下（从刚刚到现在一直在测试你的视觉识别）[图片][图片][图片]",
+    "timestamp": "2026-04-12T21:27:31.035281",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅 看一下（从刚刚到现在一直在测试你的视觉识别）",
+    "timestamp": "2026-04-12T21:38:58.649588",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅 看一下（从刚刚到现在一直在测试你的视觉识别）",
+    "timestamp": "2026-04-12T21:57:52.243425",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅 看一下（从刚刚到现在一直在测试你的视觉识别）",
+    "timestamp": "2026-04-12T22:54:50.571875",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅 看一下（从刚刚到现在一直在测试你的视觉识别）",
+    "timestamp": "2026-04-12T23:02:59.561233",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，你觉得这张图在表达什么（从刚刚到现在一直在测试你的视觉识别）",
+    "timestamp": "2026-04-12T23:07:48.259346",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "[图片]",
+    "timestamp": "2026-04-13T17:24:38.342640",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "没有，再看看",
+    "timestamp": "2026-04-13T17:25:11.830122",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，再看看这个",
+    "timestamp": "2026-04-13T20:48:57.329943",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，我想要这个",
+    "timestamp": "2026-04-13T20:55:37.964475",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "",
+      "chat_label": "私聊"
+    }
   }
 ]

@@ -1317,13 +1317,20 @@ class DecisionHub:
                 if hasattr(reply_info, "get"):
                     sender_name = reply_info.get("sender_name", "未知")
                     content = reply_info.get("content", "")[:100]
+                    image_url = reply_info.get("image_url")
                 elif hasattr(reply_info, "sender_name"):
                     sender_name = getattr(reply_info, "sender_name", "未知")
                     content = getattr(reply_info, "content", "")[:100]
+                    image_url = getattr(reply_info, "image_url", None)
                 else:
                     sender_name = "未知"
                     content = ""
-                reply_context = f"\n[引用消息] 来自: {sender_name}\n内容: {content}"
+                    image_url = None
+
+                if image_url:
+                    reply_context = f"\n[引用消息] 来自: {sender_name}\n内容: {content}\n图片URL: {image_url}"
+                else:
+                    reply_context = f"\n[引用消息] 来自: {sender_name}\n内容: {content}"
 
             # 获取文件信息
             files_info = context.get("files", [])
@@ -1355,7 +1362,37 @@ class DecisionHub:
                 if labels:
                     image_context += f"\n[图片标签] {', '.join(labels)}"
                 image_context += f"\n(分析模型: {model})"
+                # 【重要】告诉AI不要重复调用工具
+                image_context += (
+                    "\n【注意】图片已经分析完成，不要再调用 qq_image_analyzer 工具！"
+                )
                 logger.info(f"[决策层] 图片分析结果已添加到上下文: {description[:50]}")
+            # 【新增】如果检测到引用消息包含图片但没有分析结果，给出提示
+            elif context.get("reply") and "[引用消息包含图片]" in str(
+                context.get("reply")
+            ):
+                # 获取引用消息中的图片URL
+                reply_info = context.get("reply")
+                image_url = None
+                if hasattr(reply_info, "get"):
+                    image_url = reply_info.get("image_url")
+                elif hasattr(reply_info, "image_url"):
+                    image_url = getattr(reply_info, "image_url", None)
+
+                if image_url:
+                    image_context = (
+                        f"\n[图片消息] 用户引用了包含图片的消息。"
+                        f"\n【重要】图片URL: {image_url}"
+                        f"\n【必须】请立即调用 qq_image_analyzer 工具分析这张图片！"
+                    )
+                    logger.info(
+                        f"[决策层] 检测到引用消息包含图片，URL: {image_url[:50]}..."
+                    )
+                else:
+                    image_context = (
+                        "\n[图片消息] 用户引用了一条包含图片的消息，但无法获取图片URL"
+                    )
+                    logger.info("[决策层] 检测到引用消息包含图片但无URL")
 
             # 【意识感知层】注入时间、地点、活动感知
             awareness_text = ""

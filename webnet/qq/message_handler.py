@@ -250,6 +250,13 @@ class QQMessageHandler:
         ]
         has_media = self.message_parser.has_media(message_segments)
 
+        # 【修复】检查引用消息是否包含图片
+        if reply_info and "[引用消息包含图片]" in reply_info.content:
+            has_media = True
+            logger.info(
+                "[QQMessageHandler] 检测到引用消息中的图片，设置 has_media=True"
+            )
+
         # 提取基本消息信息
         text = self._extract_text(raw_message, skip_image=True)
         sender_info = event.get("sender", {})
@@ -346,13 +353,38 @@ class QQMessageHandler:
             else:
                 sender_name = "未知"
 
+            message_content = reply_msg.get("message", [])
+
+            # 检查引用消息是否包含图片，提取图片URL
+            has_image_in_reply = False
+            image_url = None
+            for seg in message_content:
+                if isinstance(seg, dict) and seg.get("type") == "image":
+                    has_image_in_reply = True
+                    image_data = seg.get("data", {})
+                    image_url = image_data.get("url", "")
+                    logger.info(
+                        f"[QQMessageHandler] 引用消息图片URL: {image_url[:50]}..."
+                    )
+                    break
+
+            # 提取文本内容
             content = self.message_parser.extract_text(
-                self.message_parser.normalize_message(reply_msg.get("message", [])),
+                self.message_parser.normalize_message(message_content),
                 skip_image=True,
             )
 
+            # 如果有图片，在内容中添加标记
+            if has_image_in_reply and content:
+                content = f"[引用消息包含图片] {content}"
+            elif has_image_in_reply:
+                content = "[引用消息包含图片，但无法提取内容]"
+
             return ReplySegment(
-                message_id=message_id, sender_name=sender_name, content=content[:200]
+                message_id=message_id,
+                sender_name=sender_name,
+                content=content[:200],
+                image_url=image_url,
             )
         except Exception as e:
             logger.warning(f"获取引用消息失败: {e}")

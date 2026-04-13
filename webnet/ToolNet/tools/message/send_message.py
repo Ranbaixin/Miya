@@ -3,8 +3,8 @@
 从 MessageNet 迁移到 ToolNet
 """
 
-from typing import Dict, Any
-from webnet.ToolNet.base import BaseTool, ToolContext
+from typing import Any, Dict, Optional
+from webnet.ToolNet.base import BaseTool
 import logging
 
 logger = logging.getLogger(__name__)
@@ -35,58 +35,58 @@ class SendMessageTool(BaseTool):
             },
         }
 
-    async def execute(self, args: Dict[str, Any], context: ToolContext) -> str:
+    async def execute(self, context: Optional[Any] = None, **kwargs) -> str:
         """
-        发送消息
+        发送消息 - 兼容两种调用方式
 
         Args:
-            args: {
-                message: 消息内容
-                group_id: 群号（可选）
-                user_id: 用户ID（可选）
-            }
-            context: 执行上下文
-                - onebot_client: OneBot 客户端
-                - group_id: 当前群号
-                - user_id: 当前用户ID
+            context: 执行上下文 或 kwargs dict
+            **kwargs: message, group_id, user_id
 
         Returns:
             执行结果字符串
         """
-        message = args.get("message", "")
-        target_group_id = args.get("group_id")
-        target_user_id = args.get("user_id")
+        # 兼容处理
+        if isinstance(context, dict):
+            actual_args = context
+            actual_context = None
+        else:
+            actual_args = kwargs
+            actual_context = context
+
+        message = actual_args.get("message", "")
+        target_group_id = actual_args.get("group_id")
+        target_user_id = actual_args.get("user_id")
 
         if not message:
             return "❌ 消息内容不能为空"
 
         # 检查 OneBot 客户端是否可用
-        if not context.onebot_client:
-            # 尝试从 context 的其他属性获取 onebot_client
-            onebot_from_context = getattr(context, "onebot_from_context", None)
-            if onebot_from_context:
-                logger.info("[send_message] 使用备用的 onebot_client")
-                context.onebot_client = onebot_from_context
-            else:
-                # 【修复】将原始消息内容嵌入 FINAL 响应中，供 AI 客户端提取使用
-                # 格式: [FINAL]消息内容|||TARGET:group_123 或 TARGET:user_456
-                target_info = (
-                    f"group_{target_group_id}"
-                    if target_group_id
-                    else f"user_{target_user_id}"
-                    if target_user_id
-                    else "unknown"
-                )
-                logger.info(f"[send_message] 消息将通过响应路径发送: {message[:50]}...")
-                return f"[FINAL]{message}|||TARGET:{target_info}"
+        onebot_client = None
+        if actual_context:
+            onebot_client = getattr(actual_context, "onebot_client", None)
+
+        if not onebot_client:
+            # 尝试从 context 获取
+            target_info = (
+                f"group_{target_group_id}"
+                if target_group_id
+                else f"user_{target_user_id}"
+                if target_user_id
+                else "unknown"
+            )
+            logger.info(f"[send_message] 消息将通过响应路径发送: {message[:50]}...")
+            return f"[FINAL]{message}|||TARGET:{target_info}"
 
         try:
             # 确定发送目标
-            send_group_id = target_group_id or context.group_id
+            send_group_id = target_group_id or (
+                actual_context.group_id if actual_context else None
+            )
 
             # 发送群消息
             if send_group_id:
-                await context.onebot_client.send_group_message(
+                await onebot_client.send_group_message(
                     group_id=send_group_id, message=message
                 )
                 logger.info(f"已发送群消息到群 {send_group_id}")
@@ -94,7 +94,7 @@ class SendMessageTool(BaseTool):
 
             # 发送私聊消息
             elif target_user_id:
-                await context.onebot_client.send_private_message(
+                await onebot_client.send_private_message(
                     user_id=target_user_id, message=message
                 )
                 logger.info(f"已发送私聊消息给用户 {target_user_id}")
