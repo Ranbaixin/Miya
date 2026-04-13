@@ -737,29 +737,28 @@ class DecisionHub:
             # 将图片分析结果添加到上下文中
             perception["_image_analysis"] = image_analysis
 
-            # 【新增】将图片分析结果保存到工作记忆，实现跨轮次持久化
+            # 【新增】将图片分析结果保存到长期记忆（数据库持久化）
             try:
-                from memory.working_memory import get_working_memory
+                from memory import store_important
 
-                wm = get_working_memory()
-                img_key = (
-                    f"{message_type}_{user_id}"
-                    if user_id
-                    else f"{message_type}_unknown"
+                img_desc = image_analysis.get("description", "")[:500]
+                img_labels = ", ".join(image_analysis.get("labels", [])[:10])
+                img_model = image_analysis.get("model", "")
+                # 存到长期记忆系统（和普通记忆一样持久化到数据库）
+                memory_id = await store_important(
+                    content=f"[图片分析] {img_desc}",
+                    user_id=str(user_id) if user_id else "unknown",
+                    tags=["image_analysis", "media", "图片识别"],
+                    priority=0.6,
+                    metadata={
+                        "labels": img_labels,
+                        "model": img_model,
+                        "message_type": message_type,
+                    },
                 )
-                img_desc = image_analysis.get("description", "")[:300]
-                img_labels = ", ".join(image_analysis.get("labels", [])[:5])
-                # 保存到专门的媒体分析区块
-                wm.add_media_analysis(
-                    group_id=img_key,
-                    analysis_type="image",
-                    description=img_desc,
-                    labels=img_labels,
-                    source=image_analysis.get("model", ""),
-                )
-                logger.info(f"[决策层] 图片分析结果已保存到媒体记忆区块")
+                logger.info(f"[决策层] 图片分析结果已保存到长期记忆: {memory_id}")
             except Exception as e:
-                logger.warning(f"[决策层] 保存图片分析结果失败: {e}")
+                logger.warning(f"[决策层] 保存图片到长期记忆失败: {e}")
 
         quick_response = self._handle_quick_commands(content, platform, perception)
         if quick_response:
