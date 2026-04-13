@@ -1067,6 +1067,69 @@
         ]
     },
 
+    "correction_learning": {
+        "description": "确认/纠正学习配置 - 用户确认或纠正后的自动学习",
+        "enabled": true,
+        "scenarios": {
+            "image": {
+                "description": "图片识别确认/纠正",
+                "patterns": ["是的", "对", "没错", "答对了", "正确", "就是", "是xxx", "叫xxx", "不是", "不对", "错了", "实际上", "其实", "是yyy", "叫yyy", "这个是", "这不是", "他叫", "她叫", "这是", "应该叫"],
+                "tags": ["image_correction", "图片纠正", "确认学习"],
+                "priority": 0.7,
+                "regex_extract": [
+                    "(?:是|叫|这个是|应该叫|他叫|她叫)\\s*(\\w+)",
+                    "不是\\w+，?(?:是|叫|应该)\\s*(\\w+)"
+                ]
+            },
+            "preference": {
+                "description": "用户偏好学习",
+                "patterns": ["更喜欢", "喜欢的是", "我喜欢", "我的爱好"],
+                "tags": ["preference", "偏好学习", "用户偏好"],
+                "priority": 0.8,
+                "regex_extract": [
+                    "(?:更喜欢?|喜欢的是|我喜欢)\\s*(.+?)(?:。|$)"
+                ]
+            },
+            "name": {
+                "description": "名字/称呼学习",
+                "patterns": ["我叫", "我叫", "不是", "名字是", "叫"],
+                "tags": ["name_learn", "名字学习", "称呼"],
+                "priority": 0.9,
+                "regex_extract": [
+                    "(?:我叫?|不是|名字是|叫)\\s*(\\w+)"
+                ]
+            },
+            "fact": {
+                "description": "事实纠正",
+                "patterns": ["其实", "实际上", "事实上", "不是", "正确的是"],
+                "tags": ["fact_learn", "事实纠正", "知识纠正"],
+                "priority": 0.85,
+                "regex_extract": [
+                    "(?:其实|实际上|事实上|不是)[^，]+,\\s*(.+?)(?:。|$)",
+                    "(?:正确的是)\\s*(.+?)(?:。|$)"
+                ]
+            },
+            "behavior": {
+                "description": "行为/互动方式学习",
+                "patterns": ["以后", "下次", "这样叫我", "用这个方式"],
+                "tags": ["behavior_learn", "行为学习", "互动学习"],
+                "priority": 0.85,
+                "regex_extract": [
+                    "(?:以后|下次)\\s*(.+?)(?:。|$)"
+                ]
+            },
+            "identity": {
+                "description": "身份/设定学习",
+                "patterns": ["我是", "我的身份", "我的���定"],
+                "tags": ["identity_learn", "identity_learn"],
+                "priority": 0.9,
+                "regex_extract": [
+                    "(?:我是|我的身份|我的设定)\\s*(.+?)(?:。|$)"
+                ]
+            }
+        }
+    },
+
     "assistant_self": {
         "description": "弥娅自记忆配置 - 从弥娅回复中提取的记忆模式和标签",
         "patterns": {

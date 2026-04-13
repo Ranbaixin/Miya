@@ -2998,43 +2998,50 @@ class DecisionHub:
         self, perception: dict, content: str, last_image_analysis: dict, user_id
     ):
         """检查用户是否在确认/纠正图片识别结果，并学习对应关系"""
+        # 从配置文件加载检测模式
+        from core.text_loader import get_text_loader
+        loader = get_text_loader()
+        config = loader._config
+        
+        correction_config = config.get("correction_learning", {})
+        image_config = correction_config.get("scenarios", {}).get("image", {})
+        
+        if not image_config.get("enabled", True):
+            return
+            
+        patterns = image_config.get("patterns", [])
         content_lower = content.lower().strip()
         
         # 检查是否有最近的图片分析记录
         if not last_image_analysis:
             return
-            
-        # 常见确认/纠正模式
-        confirm_patterns = [
-            "是的", "对", "没错", "答对了", "正确", "就是", "是xxx", "叫xxx",
-            "不是", "不对", "错了", "实际上", "其实", "是yyy", "叫yyy",
-            "这个是", "这不是", "他叫", "她叫", "这是", "应该叫"
-        ]
         
         # 检查内容是否包含确认/纠正关键词
-        is_correction = any(p in content_lower for p in confirm_patterns)
+        is_correction = any(p in content_lower for p in patterns)
         if not is_correction:
             return
             
         # 提取答案（可能的目标）
         import re
-        # 尝试匹配 "是/叫/这个是 + xxx" 模式
-        match = re.search(r"(?:是|叫|这个是|应该叫|他叫|她叫)\s*(\w+)", content)
-        if not match:
-            match = re.search(r"(\w+)\s*(?:角色|人物|角色名|角色名)", content)
-            
-        if not match:
+        regex_patterns = image_config.get("regex_extract", [])
+        
+        answer = None
+        for pattern in regex_patterns:
+            match = re.search(pattern, content)
+            if match:
+                answer = match.group(1).strip()
+                break
+                
+        if not answer:
             # 用户可能在否定，尝试提取否定后的答案
             if "不是" in content_lower and "是" in content_lower:
-                neg_match = re.search(r"不是\w+，?\s*(?:是|叫|应该)\s*(\w+)", content)
+                neg_match = re.search(r"不是\w+，?(?:是|叫|应该)\s*(\w+)", content)
                 if neg_match:
                     answer = neg_match.group(1)
                 else:
                     return
             else:
                 return
-        else:
-            answer = match.group(1)
             
         if not answer or len(answer) < 2:
             return
@@ -3053,11 +3060,14 @@ class DecisionHub:
                 f"标签: {labels} | 用户确认答案: {answer}"
             )
             
+            priority = image_config.get("priority", 0.8)
+            tags = image_config.get("tags", ["image_learning", "图片学习"])
+            
             memory_id = await store_important(
                 content=learning_content,
                 user_id=str(user_id) if user_id else "unknown",
-                tags=["image_learning", "图片学习", "确认学习"],
-                priority=0.8,  # 较高的优先级
+                tags=tags,
+                priority=priority,
                 metadata={
                     "learned_answer": answer,
                     "image_labels": labels,
@@ -3078,36 +3088,19 @@ class DecisionHub:
         self, perception: dict, content: str, user_id
     ):
         """通用的确认/纠正学习框架 - 支持多种场景"""
+        # 从配置文件加载
+        from core.text_loader import get_text_loader
+        loader = get_text_loader()
+        config = loader._config
+        
+        correction_config = config.get("correction_learning", {})
+        if not correction_config.get("enabled", True):
+            return
+            
         content_lower = content.lower().strip()
         
-        # 定义各种纠正模式和场景
-        correction_scenarios = {
-            "preference": {
-                "patterns": ["更喜欢", "喜欢的是", "我喜欢", "我的爱好", "我喜欢"],
-                "tags": ["preference", "偏好学习", "用户偏好"],
-                "priority": 0.8,
-            },
-            "name": {
-                "patterns": ["我叫", "我叫", "不是", "名字是", "叫"],
-                "tags": ["name_learn", "名字学习", "称呼"],
-                "priority": 0.9,
-            },
-            "fact": {
-                "patterns": ["其实", "实际上", "事实上", "不是", "正确的是"],
-                "tags": ["fact_learn", "事实纠正", "知识纠正"],
-                "priority": 0.85,
-            },
-            "behavior": {
-                "patterns": ["以后", "下次", "这样叫我", "这样叫我", "用这个方式"],
-                "tags": ["behavior_learn", "行为学习", "互动学习"],
-                "priority": 0.85,
-            },
-            "identity": {
-                "patterns": ["我是", "我的身份", "我的设定"],
-                "tags": ["identity_learn", "身份学习"],
-                "priority": 0.9,
-            },
-        }
+        # 获取所有场景配置
+        scenarios = correction_config.get("scenarios", {})
         
         # 检测是否匹配任何纠正模式
         matched_scenario = None
@@ -3116,40 +3109,22 @@ class DecisionHub:
         
         import re
         
-        for scenario, config in correction_scenarios.items():
-            patterns = config["patterns"]
+        for scenario_name, scenario_config in scenarios.items():
+            if scenario_name == "image":
+                continue  # 图片学习单独处理
+                
+            patterns = scenario_config.get("patterns", [])
             if any(p in content_lower for p in patterns):
-                matched_scenario = config
+                matched_scenario = scenario_config
                 
                 # 尝试提取答案
-                if scenario == "preference":
-                    match = re.search(r"(?:更喜欢?|喜欢的是|我喜欢)\s*(.+?)(?:。|$)", content)
+                regex_patterns = scenario_config.get("regex_extract", [])
+                for pattern in regex_patterns:
+                    match = re.search(pattern, content)
                     if match:
                         extracted_answer = match.group(1).strip()[:100]
+                        break
                         
-                elif scenario == "name":
-                    match = re.search(r"(?:我叫?|不是|名字是|叫)\s*(\w+)", content)
-                    if match:
-                        extracted_answer = match.group(1).strip()
-                        
-                elif scenario == "fact":
-                    # 提取"其实是/实际上是 xxx" 中的答案
-                    match = re.search(r"(?:其实|实际上|事实上|不是)[^，]+,\s*(.+?)(?:。|$)", content)
-                    if not match:
-                        match = re.search(r"(?:正确的是)\s*(.+?)(?:。|$)", content)
-                    if match:
-                        extracted_answer = match.group(1).strip()[:100]
-                        
-                elif scenario == "behavior":
-                    match = re.search(r"(?:以后|下次)\s*(.+?)(?:。|$)", content)
-                    if match:
-                        extracted_answer = match.group(1).strip()[:100]
-                        
-                elif scenario == "identity":
-                    match = re.search(r"(?:我是|我的身份|我的设定)\s*(.+?)(?:。|$)", content)
-                    if match:
-                        extracted_answer = match.group(1).strip()[:100]
-                
                 break  # 找到第一个匹配的场景
         
         if not matched_scenario or not extracted_answer:
