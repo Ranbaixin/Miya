@@ -97,15 +97,35 @@ data/emoji/user_uploaded/*.jpeg
 
 # Runtime Data (not committed - generated during runtime)
 data/conversations/
-data/memory/
-data/user_personas/
-data/.emoji_backups/
-data/emoji/*.json
-data/lifebook/
-data/emoji/user_uploaded/
-
-# Runtime working memory
+data/memory/backups/
+data/memory/dialogue/
 data/memory/short_term/
+data/user_personas/
+data/emoji/*.json
+data/emoji/user_uploaded/
+# 忽略 2026 年 5 月之后的 lifebook
+data/lifebook/lover/2026/05/
+data/lifebook/together/2026/05/
+data/lifebook/user/2026/05/
+# 保留之前的 lifebook
+!data/lifebook/lover/2026/04/
+!data/lifebook/together/2026/04/
+!data/lifebook/user/2026/04/
+data/blog/
+data/downloads/
+data/tasks.db
+data/auth.db
+
+# Keep these data files (force add)
+!.gitkeep
+data/.emoji_backups/
+!data/lifebook/
+!data/interaction_scenarios/
+!data/memory/index.json
+!data/memory/tag_index.json
+!data/memory_config.example.json
+!data/memory_anchors_identity.json
+!data/memory_anchors_user.json
 
 # Cache
 Cache/

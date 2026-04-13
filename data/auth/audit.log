@@ -1,0 +1,4 @@
+{"timestamp": "2026-03-10T22:10:50.478458", "action": "permission_check", "user_id": "system_admin", "target": "tool.web_search", "result": "success", "details": {"required": false}, "ip_address": null, "platform": null}
+{"timestamp": "2026-03-10T22:10:50.481231", "action": "permission_check", "user_id": "test_user", "target": "tool.web_search", "result": "success", "details": {"required": false}, "ip_address": null, "platform": null}
+{"timestamp": "2026-03-10T22:17:30.802725", "action": "permission_check", "user_id": "terminal_default", "target": "api.access", "result": "deny", "details": {"required": false}, "ip_address": null, "platform": null}
+{"timestamp": "2026-03-10T22:36:31.413811", "action": "permission_check", "user_id": "terminal_default", "target": "api.access", "result": "deny", "details": {"required": false}, "ip_address": null, "platform": null}
