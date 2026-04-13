@@ -100,32 +100,31 @@ data/conversations/
 data/memory/backups/
 data/memory/dialogue/
 data/memory/short_term/
+data/memory/long_term/
 data/user_personas/
 data/emoji/*.json
 data/emoji/user_uploaded/
-# 忽略 2026 年 5 月之后的 lifebook
 data/lifebook/lover/2026/05/
 data/lifebook/together/2026/05/
 data/lifebook/user/2026/05/
-# 保留之前的 lifebook
-!data/lifebook/lover/2026/04/
-!data/lifebook/together/2026/04/
-!data/lifebook/user/2026/04/
+data/lifebook/index.json
 data/blog/
+data/blog_cache/
 data/downloads/
+data/backups/
 data/tasks.db
 data/auth.db
 
-# Keep these data files (force add)
-!.gitkeep
+# Keep these static data files
+data/memory/index.json
+data/memory/tag_index.json
+data/memory_config.example.json
+data/memory_anchors_identity.json
+data/memory_anchors_user.json
+data/interaction_scenarios/
 data/.emoji_backups/
-!data/lifebook/
-!data/interaction_scenarios/
-!data/memory/index.json
-!data/memory/tag_index.json
-!data/memory_config.example.json
-!data/memory_anchors_identity.json
-!data/memory_anchors_user.json
+data/stickers/
+data/auth/
 
 # Cache
 Cache/
