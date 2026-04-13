@@ -760,6 +760,14 @@ class DecisionHub:
             except Exception as e:
                 logger.warning(f"[决策层] 保存图片到长期记忆失败: {e}")
 
+            # 【新增】检查是否是用户确认/纠正答案的学习
+            try:
+                await self._check_and_learn_image_correction(
+                    perception, content, image_analysis, user_id
+                )
+            except Exception as e:
+                logger.debug(f"[决策层] 检查图片学习失败: {e}")
+
         quick_response = self._handle_quick_commands(content, platform, perception)
         if quick_response:
             logger.warning(
@@ -2985,6 +2993,77 @@ class DecisionHub:
 
             logger.info(f"[决策层] 从配置加载触发关键词: {len(keywords)} 个")
             return keywords
+
+    async def _check_and_learn_image_correction(
+        self, perception: dict, content: str, last_image_analysis: dict, user_id
+    ):
+        """检查用户是否在确认/纠正图片识别结果，并学习对应关系"""
+        content_lower = content.lower().strip()
+        
+        # 检查是否有最近的图片分析记录
+        if not last_image_analysis:
+            return
+            
+        # 常见确认/纠正模式
+        confirm_patterns = [
+            "是的", "对", "没错", "答对了", "正确", "就是", "是xxx", "叫xxx",
+            "不是", "不对", "错了", "实际上", "其实", "是yyy", "叫yyy",
+            "这个是", "这不是", "他叫", "她叫", "这是", "应该叫"
+        ]
+        
+        # 检查内容是否包含确认/纠正关键词
+        is_correction = any(p in content_lower for p in confirm_patterns)
+        if not is_correction:
+            return
+            
+        # 提取答案（可能的目标）
+        import re
+        # 尝试匹配 "是/叫/这个是 + xxx" 模式
+        match = re.search(r"(?:是|叫|这个是|应该叫|他叫|她叫)\s*(\w+)", content)
+        if not match:
+            match = re.search(r"(\w+)\s*(?:角色|人物|角色名|角色名)", content)
+            
+        if not match:
+            # 用户可能在否定，尝试提取否定后的答案
+            if "不是" in content_lower and "是" in content_lower:
+                neg_match = re.search(r"不是\w+，?\s*(?:是|叫|应该)\s*(\w+)", content)
+                if neg_match:
+                    answer = neg_match.group(1)
+                else:
+                    return
+            else:
+                return
+        else:
+            answer = match.group(1)
+            
+        if not answer or len(answer) < 2:
+            return
+            
+        # 获取之前识别的描述
+        description = last_image_analysis.get("description", "")[:300]
+        labels = ", ".join(last_image_analysis.get("labels", [])[:5])
+        model = last_image_analysis.get("model", "")
+        
+        # 保存学习记录到长期记忆
+        try:
+            from memory import store_important
+            
+            learning_content = (
+                f"[图片对照学习] 之前识别为: {description[:100]} | "
+                f"标签: {labels} | 用户确认答案: {answer}"
+            )
+            
+            memory_id = await store_important(
+                content=learning_content,
+                user_id=str(user_id) if user_id else "unknown",
+                tags=["image_learning", "图片学习", "确认学习"],
+                priority=0.8,  # 较高的优先级
+                metadata={
+                    "learned_answer": answer,
+                    "image_labels": labels,
+                    "model": model,
+                }
+            )
+            logger.info(f"[决策层] 图片对照学习完成，答案: {answer}")
         except Exception as e:
-            logger.warning(f"[决策层] 加载触发关键词失败: {e}")
-            return []
+            logger.warning(f"[决策层] 图片对照学习失败: {e}")
