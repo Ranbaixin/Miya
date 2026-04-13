@@ -3067,3 +3067,114 @@ class DecisionHub:
             logger.info(f"[决策层] 图片对照学习完成，答案: {answer}")
         except Exception as e:
             logger.warning(f"[决策层] 图片对照学习失败: {e}")
+            
+            # 【新增】通用纠正学习（偏好、名字、事实等）
+            try:
+                await self._check_and_learn_general_correction(perception, content, user_id)
+            except Exception as e:
+                logger.debug(f"[决策层] 通用学习检查失败: {e}")
+            
+    async def _check_and_learn_general_correction(
+        self, perception: dict, content: str, user_id
+    ):
+        """通用的确认/纠正学习框架 - 支持多种场景"""
+        content_lower = content.lower().strip()
+        
+        # 定义各种纠正模式和场景
+        correction_scenarios = {
+            "preference": {
+                "patterns": ["更喜欢", "喜欢的是", "我喜欢", "我的爱好", "我喜欢"],
+                "tags": ["preference", "偏好学习", "用户偏好"],
+                "priority": 0.8,
+            },
+            "name": {
+                "patterns": ["我叫", "我叫", "不是", "名字是", "叫"],
+                "tags": ["name_learn", "名字学习", "称呼"],
+                "priority": 0.9,
+            },
+            "fact": {
+                "patterns": ["其实", "实际上", "事实上", "不是", "正确的是"],
+                "tags": ["fact_learn", "事实纠正", "知识纠正"],
+                "priority": 0.85,
+            },
+            "behavior": {
+                "patterns": ["以后", "下次", "这样叫我", "这样叫我", "用这个方式"],
+                "tags": ["behavior_learn", "行为学习", "互动学习"],
+                "priority": 0.85,
+            },
+            "identity": {
+                "patterns": ["我是", "我的身份", "我的设定"],
+                "tags": ["identity_learn", "身份学习"],
+                "priority": 0.9,
+            },
+        }
+        
+        # 检测是否匹配任何纠正模式
+        matched_scenario = None
+        extracted_answer = None
+        matched_pattern = None
+        
+        import re
+        
+        for scenario, config in correction_scenarios.items():
+            patterns = config["patterns"]
+            if any(p in content_lower for p in patterns):
+                matched_scenario = config
+                
+                # 尝试提取答案
+                if scenario == "preference":
+                    match = re.search(r"(?:更喜欢?|喜欢的是|我喜欢)\s*(.+?)(?:。|$)", content)
+                    if match:
+                        extracted_answer = match.group(1).strip()[:100]
+                        
+                elif scenario == "name":
+                    match = re.search(r"(?:我叫?|不是|名字是|叫)\s*(\w+)", content)
+                    if match:
+                        extracted_answer = match.group(1).strip()
+                        
+                elif scenario == "fact":
+                    # 提取"其实是/实际上是 xxx" 中的答案
+                    match = re.search(r"(?:其实|实际上|事实上|不是)[^，]+,\s*(.+?)(?:。|$)", content)
+                    if not match:
+                        match = re.search(r"(?:正确的是)\s*(.+?)(?:。|$)", content)
+                    if match:
+                        extracted_answer = match.group(1).strip()[:100]
+                        
+                elif scenario == "behavior":
+                    match = re.search(r"(?:以后|下次)\s*(.+?)(?:。|$)", content)
+                    if match:
+                        extracted_answer = match.group(1).strip()[:100]
+                        
+                elif scenario == "identity":
+                    match = re.search(r"(?:我是|我的身份|我的设定)\s*(.+?)(?:。|$)", content)
+                    if match:
+                        extracted_answer = match.group(1).strip()[:100]
+                
+                break  # 找到第一个匹配的场景
+        
+        if not matched_scenario or not extracted_answer:
+            return
+        
+        # 保存学习记录
+        try:
+            from memory import store_important
+            
+            learning_content = (
+                f"[{matched_scenario['tags'][0]}] 用户纠正: {extracted_answer} | "
+                f"原始消息: {content[:100]}"
+            )
+            
+            memory_id = await store_important(
+                content=learning_content,
+                user_id=str(user_id) if user_id else "unknown",
+                tags=matched_scenario["tags"],
+                priority=matched_scenario["priority"],
+                metadata={
+                    "learned_content": extracted_answer,
+                    "scenario": matched_scenario["tags"][0],
+                    "original_message": content[:200],
+                }
+            )
+            logger.info(f"[决策层] 通用学习完成，场景: {matched_scenario['tags'][0]}, 内容: {extracted_answer}")
+        except Exception as e:
+            logger.warning(f"[决策层] 通用学习失败: {e}")
