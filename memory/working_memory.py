@@ -58,6 +58,8 @@ class WorkingMemoryState:
     recent_messages: List[str] = field(default_factory=list)
     topic_switch_count: int = 0
     last_update: float = 0.0
+    # 专门保存图片/文件分析结果
+    media_analysis: List[Dict[str, str]] = field(default_factory=list)
 
 
 class TopicDriftDetector:
@@ -327,7 +329,32 @@ class WorkingMemoryManager:
                 {"summary": t.summary, "weight": t.weight}
                 for t in state.background_topics[-3:]
             ],
+            "media_analysis": state.media_analysis.copy(),
         }
+
+    def add_media_analysis(
+        self,
+        group_id: str,
+        analysis_type: str,
+        description: str,
+        labels: str = "",
+        source: str = "",
+    ):
+        """添加图片/文件分析结果到专门记忆区块"""
+        state = self._get_state(group_id)
+        analysis_record = {
+            "type": analysis_type,  # image, file, etc
+            "description": description[:500],  # 限制长度
+            "labels": labels[:200] if labels else "",
+            "source": source,
+            "timestamp": time.time(),
+        }
+        state.media_analysis.append(analysis_record)
+        # 只保留最近5条分析记录
+        if len(state.media_analysis) > 5:
+            state.media_analysis = state.media_analysis[-5:]
+        # 更新最后活跃时间
+        state.last_update = time.time()
 
     def _is_low_info(self, content: str) -> bool:
         """检测是否为低信息量输入（从配置加载）"""
@@ -466,6 +493,17 @@ class WorkingMemoryManager:
             if current_keywords:
                 kw_str = "、".join(list(current_keywords)[:5])
                 lines.append(f"\n[当前话题关键词] {kw_str}")
+
+        # === 媒体分析记忆区块（图片/文件分析结果）===
+        if state.media_analysis:
+            lines.append("\n【已识别内容】")
+            for analysis in state.media_analysis[-3:]:  # 最多显示最近3条
+                type_emoji = "🖼️" if analysis.get("type") == "image" else "📄"
+                desc = analysis.get("description", "")[:100]
+                labels = analysis.get("labels", "")
+                lines.append(f"  {type_emoji} {desc}")
+                if labels:
+                    lines.append(f"     标签: {labels}")
 
         return "\n".join(lines)
 

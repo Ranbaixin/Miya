@@ -749,14 +749,15 @@ class DecisionHub:
                 )
                 img_desc = image_analysis.get("description", "")[:300]
                 img_labels = ", ".join(image_analysis.get("labels", [])[:5])
-                # 添加到工作记忆的消息列表中
-                wm.add_message(
+                # 保存到专门的媒体分析区块
+                wm.add_media_analysis(
                     group_id=img_key,
-                    sender="[图片分析]",
-                    content=f"图片描述: {img_desc} | 标签: {img_labels}",
-                    is_at_bot=False,
+                    analysis_type="image",
+                    description=img_desc,
+                    labels=img_labels,
+                    source=image_analysis.get("model", ""),
                 )
-                logger.info(f"[决策层] 图片分析结果已保存到工作记忆")
+                logger.info(f"[决策层] 图片分析结果已保存到媒体记忆区块")
             except Exception as e:
                 logger.warning(f"[决策层] 保存图片分析结果失败: {e}")
 
