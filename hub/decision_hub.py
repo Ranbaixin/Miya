@@ -737,6 +737,29 @@ class DecisionHub:
             # 将图片分析结果添加到上下文中
             perception["_image_analysis"] = image_analysis
 
+            # 【新增】将图片分析结果保存到工作记忆，实现跨轮次持久化
+            try:
+                from memory.working_memory import get_working_memory
+
+                wm = get_working_memory()
+                img_key = (
+                    f"{message_type}_{user_id}"
+                    if user_id
+                    else f"{message_type}_unknown"
+                )
+                img_desc = image_analysis.get("description", "")[:300]
+                img_labels = ", ".join(image_analysis.get("labels", [])[:5])
+                # 添加到工作记忆的消息列表中
+                wm.add_message(
+                    group_id=img_key,
+                    sender="[图片分析]",
+                    content=f"图片描述: {img_desc} | 标签: {img_labels}",
+                    is_at_bot=False,
+                )
+                logger.info(f"[决策层] 图片分析结果已保存到工作记忆")
+            except Exception as e:
+                logger.warning(f"[决策层] 保存图片分析结果失败: {e}")
+
         quick_response = self._handle_quick_commands(content, platform, perception)
         if quick_response:
             logger.warning(

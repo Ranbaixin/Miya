@@ -21086,5 +21086,322 @@
     "created_at": "2026-04-13T21:09:19.118342",
     "file_path": "data\\memory\\short_term\\1523878699\\8d1b2a6b2a0d5cb7.json",
     "priority": 0.3
+  },
+  "1a7848454c610b68": {
+    "level": "dialogue",
+    "user_id": "1523878699",
+    "session_id": "qq_1523878699",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:01:59.537770",
+    "file_path": "data\\memory\\dialogue\\1523878699\\1a7848454c610b68.json",
+    "priority": 0.5
+  },
+  "750875937296394b": {
+    "level": "dialogue",
+    "user_id": "1523878699",
+    "session_id": "terminal_1523878699",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:02:14.814111",
+    "file_path": "data\\memory\\dialogue\\1523878699\\750875937296394b.json",
+    "priority": 0.5
+  },
+  "cae154a307304305": {
+    "level": "short_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:02:15.303906",
+    "file_path": "data\\memory\\short_term\\1523878699\\cae154a307304305.json",
+    "priority": 0.3
+  },
+  "18e505cdf687ef3d": {
+    "level": "dialogue",
+    "user_id": "1523878699",
+    "session_id": "qq_1523878699",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:26:01.859244",
+    "file_path": "data\\memory\\dialogue\\1523878699\\18e505cdf687ef3d.json",
+    "priority": 0.5
+  },
+  "6813fbf77de39033": {
+    "level": "dialogue",
+    "user_id": "1523878699",
+    "session_id": "terminal_1523878699",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:26:26.016651",
+    "file_path": "data\\memory\\dialogue\\1523878699\\6813fbf77de39033.json",
+    "priority": 0.5
+  },
+  "ca0cec2c4e244a63": {
+    "level": "short_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:26:26.362181",
+    "file_path": "data\\memory\\short_term\\1523878699\\ca0cec2c4e244a63.json",
+    "priority": 0.7
+  },
+  "6b6c0dd07b0a985c": {
+    "level": "dialogue",
+    "user_id": "1523878699",
+    "session_id": "qq_1523878699",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:27:29.503292",
+    "file_path": "data\\memory\\dialogue\\1523878699\\6b6c0dd07b0a985c.json",
+    "priority": 0.5
+  },
+  "de4a46d772721622": {
+    "level": "dialogue",
+    "user_id": "1523878699",
+    "session_id": "terminal_1523878699",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:27:44.337036",
+    "file_path": "data\\memory\\dialogue\\1523878699\\de4a46d772721622.json",
+    "priority": 0.5
+  },
+  "05bbd28e722f41e7": {
+    "level": "short_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:27:44.690996",
+    "file_path": "data\\memory\\short_term\\1523878699\\05bbd28e722f41e7.json",
+    "priority": 0.3
+  },
+  "0b6051dd90811565": {
+    "level": "dialogue",
+    "user_id": "1523878699",
+    "session_id": "qq_1523878699",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:30:21.982303",
+    "file_path": "data\\memory\\dialogue\\1523878699\\0b6051dd90811565.json",
+    "priority": 0.5
+  },
+  "3c35dd239a49f4b9": {
+    "level": "dialogue",
+    "user_id": "1523878699",
+    "session_id": "terminal_1523878699",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:30:42.870611",
+    "file_path": "data\\memory\\dialogue\\1523878699\\3c35dd239a49f4b9.json",
+    "priority": 0.5
+  },
+  "0ae08c7e70dfeb28": {
+    "level": "short_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:30:43.223156",
+    "file_path": "data\\memory\\short_term\\1523878699\\0ae08c7e70dfeb28.json",
+    "priority": 0.7
+  },
+  "0c58a538ac290624": {
+    "level": "dialogue",
+    "user_id": "1523878699",
+    "session_id": "qq_1523878699",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:31:17.244337",
+    "file_path": "data\\memory\\dialogue\\1523878699\\0c58a538ac290624.json",
+    "priority": 0.5
+  },
+  "c71d208cb8be1f59": {
+    "level": "dialogue",
+    "user_id": "1523878699",
+    "session_id": "terminal_1523878699",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:31:35.586658",
+    "file_path": "data\\memory\\dialogue\\1523878699\\c71d208cb8be1f59.json",
+    "priority": 0.5
+  },
+  "4316f308d4f4c455": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "弥娅知识",
+      "星璇自记忆",
+      "类型_知识"
+    ],
+    "created_at": "2026-04-13T22:31:35.945807",
+    "file_path": "data\\memory\\long_term\\1523878699\\4316f308d4f4c455.json",
+    "priority": 0.5
+  },
+  "eef0d793202e6b52": {
+    "level": "short_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:31:37.003220",
+    "file_path": "data\\memory\\short_term\\1523878699\\eef0d793202e6b52.json",
+    "priority": 0.7
+  },
+  "3cacfb3587006297": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "弥娅自记忆",
+      "knowledge",
+      "情绪"
+    ],
+    "created_at": "2026-04-13T22:31:37.348367",
+    "file_path": "data\\memory\\long_term\\1523878699\\3cacfb3587006297.json",
+    "priority": 0.5
+  },
+  "340371d01f83fd91": {
+    "level": "dialogue",
+    "user_id": "1523878699",
+    "session_id": "qq_1523878699",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:32:40.066152",
+    "file_path": "data\\memory\\dialogue\\1523878699\\340371d01f83fd91.json",
+    "priority": 0.5
+  },
+  "64d85635bf779291": {
+    "level": "dialogue",
+    "user_id": "1523878699",
+    "session_id": "terminal_1523878699",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:32:53.563341",
+    "file_path": "data\\memory\\dialogue\\1523878699\\64d85635bf779291.json",
+    "priority": 0.5
+  },
+  "563cf93a64e245cf": {
+    "level": "short_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:32:54.043014",
+    "file_path": "data\\memory\\short_term\\1523878699\\563cf93a64e245cf.json",
+    "priority": 0.3
+  },
+  "a7df08c455e77a8e": {
+    "level": "dialogue",
+    "user_id": "0",
+    "session_id": "qq_0",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:36:18.486060",
+    "file_path": "data\\memory\\dialogue\\0\\a7df08c455e77a8e.json",
+    "priority": 0.5
+  },
+  "85a7b39c00d2fd75": {
+    "level": "dialogue",
+    "user_id": "0",
+    "session_id": "terminal_0",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:36:34.731349",
+    "file_path": "data\\memory\\dialogue\\0\\85a7b39c00d2fd75.json",
+    "priority": 0.5
+  },
+  "93d757d9d9347367": {
+    "level": "long_term",
+    "user_id": "0",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "弥娅承诺",
+      "星璇自记忆",
+      "类型_承诺"
+    ],
+    "created_at": "2026-04-13T22:36:35.135693",
+    "file_path": "data\\memory\\long_term\\0\\93d757d9d9347367.json",
+    "priority": 0.85
+  },
+  "aa82c26196237e3e": {
+    "level": "short_term",
+    "user_id": "0",
+    "session_id": "",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:36:35.944856",
+    "file_path": "data\\memory\\short_term\\0\\aa82c26196237e3e.json",
+    "priority": 0.3
+  },
+  "cb97df2d6ecfd563": {
+    "level": "long_term",
+    "user_id": "0",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "弥娅自记忆",
+      "commitment"
+    ],
+    "created_at": "2026-04-13T22:36:36.346373",
+    "file_path": "data\\memory\\long_term\\0\\cb97df2d6ecfd563.json",
+    "priority": 0.95
+  },
+  "2f29f01e06523d60": {
+    "level": "dialogue",
+    "user_id": "0",
+    "session_id": "qq_0",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:40:31.512175",
+    "file_path": "data\\memory\\dialogue\\0\\2f29f01e06523d60.json",
+    "priority": 0.5
+  },
+  "649e3849c390dae6": {
+    "level": "dialogue",
+    "user_id": "0",
+    "session_id": "terminal_0",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:40:43.729567",
+    "file_path": "data\\memory\\dialogue\\0\\649e3849c390dae6.json",
+    "priority": 0.5
+  },
+  "16efc231fcae4bee": {
+    "level": "dialogue",
+    "user_id": "1523878699",
+    "session_id": "qq_1523878699",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:41:17.561850",
+    "file_path": "data\\memory\\dialogue\\1523878699\\16efc231fcae4bee.json",
+    "priority": 0.5
+  },
+  "4a78eb6d32067cc8": {
+    "level": "dialogue",
+    "user_id": "1523878699",
+    "session_id": "terminal_1523878699",
+    "group_id": "",
+    "tags": [],
+    "created_at": "2026-04-13T22:41:37.110936",
+    "file_path": "data\\memory\\dialogue\\1523878699\\4a78eb6d32067cc8.json",
+    "priority": 0.5
+  },
+  "2f68090d64f013af": {
+    "level": "short_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "爱好"
+    ],
+    "created_at": "2026-04-13T22:41:37.492008",
+    "file_path": "data\\memory\\short_term\\1523878699\\2f68090d64f013af.json",
+    "priority": 0.8999999999999999
   }
 }
