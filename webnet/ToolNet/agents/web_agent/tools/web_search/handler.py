@@ -10,10 +10,50 @@ import os
 logger = logging.getLogger(__name__)
 
 
-async def execute(args: Dict[str, Any], context: Dict[str, Any]) -> str:
+def _search_duckduckgo(query: str, count: int = 5) -> str:
+    """使用DuckDuckGo免费搜索"""
+    try:
+        url = "https://html.duckduckgo.com/html/"
+        params = {"q": query, "b": count}
+
+        import requests
+
+        resp = requests.get(url, params=params, timeout=10)
+
+        if resp.status_code == 200:
+            from bs4 import BeautifulSoup
+
+            soup = BeautifulSoup(resp.text, "html.parser")
+
+            results = []
+            for result in soup.select(".result")[:count]:
+                title_elem = result.select_one(".result__title")
+                snippet_elem = result.select_one(".result__snippet")
+                link_elem = result.select_one("a.result__a")
+
+                if title_elem:
+                    title = title_elem.get_text(strip=True)
+                    snippet = snippet_elem.get_text(strip=True) if snippet_elem else ""
+                    url = link_elem.get("href", "") if link_elem else ""
+
+                    results.append(
+                        f"{len(results) + 1}. {title}\n   {snippet[:100]}...\n   链接: {url}\n"
+                    )
+
+            if results:
+                return "\n".join(results)
+            else:
+                return f"未找到与'{query}'相关的搜索结果"
+        else:
+            return f"DuckDuckGo搜索失败: HTTP {resp.status_code}"
+    except Exception as e:
+        return f"DuckDuckGo搜索失败: {str(e)[:50]}"
+
+
+async def execute(context, **kwargs) -> str:
     """执行网络搜索"""
-    query = args.get("query", "")
-    count = args.get("count", 5)
+    query = kwargs.get("query", "")
+    count = kwargs.get("count", 5)
 
     if not query:
         return "请提供搜索关键词"
@@ -56,10 +96,10 @@ async def execute(args: Dict[str, Any], context: Dict[str, Any]) -> str:
 
                     return result
                 else:
-                    return f"搜索失败: HTTP {resp.status_code}"
+                    return f"Bing搜索失败，尝试DuckDuckGo...\n\n{_search_duckduckgo(query, count)}"
         else:
-            # 无API key时使用备用方案
-            return f"网络搜索需要配置BING_API_KEY\n当前搜索关键词: {query}\n\n(搜索功能暂时不可用，请配置API后重试)"
+            # 无API key时使用DuckDuckGo备用方案
+            return f"【搜索结果: {query}】\n\n{_search_duckduckgo(query, count)}"
 
     except Exception as e:
         logger.error(f"网络搜索失败: {e}")

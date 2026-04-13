@@ -59,13 +59,13 @@ Tavily 返回结构化、干净的搜索结果，适合 AI 阅读。
             },
         }
 
-    async def execute(self, args: Dict[str, Any], context: ToolContext) -> str:
-        query = args.get("query", "").strip()
+    async def execute(self, context: ToolContext, **kwargs) -> str:
+        query = kwargs.get("query", "").strip()
         if not query:
             return "请提供搜索内容"
 
-        max_results = args.get("max_results", 5)
-        search_depth = args.get("search_depth", "basic")
+        max_results = kwargs.get("max_results", 5)
+        search_depth = kwargs.get("search_depth", "basic")
 
         api_key = os.getenv("TAVILY_API_KEY", "")
         if not api_key:
