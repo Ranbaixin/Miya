@@ -1,0 +1,32 @@
+{
+  "id": "d8ab8042c8128c42",
+  "content": "弥娅，你最喜欢怎么称呼我哇？",
+  "level": "short_term",
+  "priority": 0.3,
+  "tags": [
+    "爱好"
+  ],
+  "user_id": "1523878699",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-11T13:02:51.643503",
+  "updated_at": "2026-04-11T13:02:51.643503",
+  "expires_at": "2026-04-11T14:02:51.643503",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

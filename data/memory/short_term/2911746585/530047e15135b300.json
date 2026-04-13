@@ -1,0 +1,32 @@
+{
+  "id": "530047e15135b300",
+  "content": "你好啊，很高兴认识你，你在干什么",
+  "level": "short_term",
+  "priority": 0.3,
+  "tags": [
+    "情绪"
+  ],
+  "user_id": "2911746585",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-08T12:34:06.838684",
+  "updated_at": "2026-04-08T12:34:06.838684",
+  "expires_at": "2026-04-08T13:34:06.838684",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

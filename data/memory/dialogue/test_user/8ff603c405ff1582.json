@@ -1,0 +1,32 @@
+{
+  "id": "8ff603c405ff1582",
+  "content": "测试消息",
+  "level": "dialogue",
+  "priority": 0.5,
+  "tags": [],
+  "user_id": "test_user",
+  "session_id": "qq_123_test_user",
+  "group_id": "",
+  "platform": "qq",
+  "source": "dialogue",
+  "role": "user",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-04T12:05:09.643042",
+  "updated_at": "2026-04-04T12:05:09.643042",
+  "expires_at": null,
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {
+    "test": "meta"
+  },
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

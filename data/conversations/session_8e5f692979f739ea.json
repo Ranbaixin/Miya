@@ -1,0 +1,32 @@
+[
+  {
+    "role": "user",
+    "content": "弥娅，我是谁",
+    "timestamp": "2026-04-11T18:33:23.634887",
+    "session_id": "qq_3802786314",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "3802786314",
+      "group_id": "1084115564",
+      "message_type": "group",
+      "sender": "镜流",
+      "chat_label": "群聊_1084115564"
+    }
+  },
+  {
+    "role": "user",
+    "content": "你喜欢我吗",
+    "timestamp": "2026-04-11T18:34:34.024337",
+    "session_id": "qq_3802786314",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "3802786314",
+      "group_id": "1084115564",
+      "message_type": "group",
+      "sender": "镜流",
+      "chat_label": "群聊_1084115564"
+    }
+  }
+]

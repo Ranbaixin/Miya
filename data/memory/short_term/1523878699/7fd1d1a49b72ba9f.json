@@ -1,0 +1,32 @@
+{
+  "id": "7fd1d1a49b72ba9f",
+  "content": "不用了，你陪我聊聊天就好",
+  "level": "short_term",
+  "priority": 0.7,
+  "tags": [
+    "社交"
+  ],
+  "user_id": "1523878699",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-06T18:44:06.634471",
+  "updated_at": "2026-04-06T18:44:06.634471",
+  "expires_at": "2026-04-06T19:44:06.634471",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

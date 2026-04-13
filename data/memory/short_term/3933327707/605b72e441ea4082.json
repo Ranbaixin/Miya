@@ -1,0 +1,32 @@
+{
+  "id": "605b72e441ea4082",
+  "content": "（目光沉静地注视着屏幕，指尖在键盘上停留片刻）\n\n累了就歇会儿，我在这儿。",
+  "level": "short_term",
+  "priority": 0.3,
+  "tags": [
+    "休息"
+  ],
+  "user_id": "3933327707",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-13T16:17:30.159541",
+  "updated_at": "2026-04-13T16:17:30.159541",
+  "expires_at": "2026-04-13T17:17:30.159541",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

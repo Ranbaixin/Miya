@@ -1,0 +1,32 @@
+{
+  "id": "b05db90e5442cb03",
+  "content": "弥娅，你刚才在和谁聊天哇",
+  "level": "short_term",
+  "priority": 0.8999999999999999,
+  "tags": [
+    "社交"
+  ],
+  "user_id": "1523878699",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-11T18:36:29.991945",
+  "updated_at": "2026-04-11T18:36:29.991945",
+  "expires_at": "2026-04-11T19:36:29.991945",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

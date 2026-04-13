@@ -1,0 +1,14 @@
+{
+    "name": "downloads",
+    "description": "文件下载存储目录",
+    "structure": {
+        "documents": "文档文件 (PDF, Word, Excel, TXT等)",
+        "images": "图片文件 (jpg, png, gif等)",
+        "audio": "音频文件 (mp3, wav等)",
+        "video": "视频文件 (mp4, avi等)",
+        "archives": "压缩文件 (zip, rar等)",
+        "code": "代码文件 (py, js等)",
+        "other": "其他文件"
+    },
+    "auto_organize": true
+}

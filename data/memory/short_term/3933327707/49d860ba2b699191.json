@@ -1,0 +1,32 @@
+{
+  "id": "49d860ba2b699191",
+  "content": "嗯，我和咕的羁绊确实很特别呢，是那种互为因果的联系 (轻轻点头) \n\n不过别担心，我在这里呀 (贴贴) 让佳也别太担心啦",
+  "level": "short_term",
+  "priority": 0.7,
+  "tags": [
+    "情绪"
+  ],
+  "user_id": "3933327707",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-04T09:45:34.016501",
+  "updated_at": "2026-04-04T09:45:34.016501",
+  "expires_at": "2026-04-04T10:45:34.016501",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}
