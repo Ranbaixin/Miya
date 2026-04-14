@@ -760,13 +760,64 @@ class DecisionHub:
             except Exception as e:
                 logger.warning(f"[决策层] 保存图片到长期记忆失败: {e}")
 
-            # 【新增】检查是否是用户确认/纠正答案的学习
+            # 【新增】保存图片分析结果到工作内存（短期记忆）
             try:
-                await self._check_and_learn_image_correction(
-                    perception, content, image_analysis, user_id
+                from memory.working_memory import get_working_memory
+
+                wm = get_working_memory()
+                group_id_str = (
+                    str(group_id)
+                    if (group_id is not None and group_id != 0)
+                    else "private"
                 )
+                img_desc = image_analysis.get("description", "")[:300]
+                img_labels = ", ".join(image_analysis.get("labels", [])[:5])
+                wm.add_media_analysis(
+                    group_id_str,
+                    "image",
+                    img_desc,
+                    img_labels,
+                    image_analysis.get("model", ""),
+                )
+                logger.info(f"[决策层] 图片分析结果已保存到工作内存")
             except Exception as e:
-                logger.debug(f"[决策层] 检查图片学习失败: {e}")
+                logger.debug(f"[决策层] 保存图片到工作内存失败: {e}")
+
+        # 【新增】检测引用消息包含图片，提前保存占位记录
+        if not has_image:
+            reply_info = perception.get("reply")
+            content_check = str(perception.get("raw_message", []))
+            has_reply_image = reply_info and (
+                "image" in str(reply_info).lower()
+                or "引用消息包含图片" in content_check
+            )
+            if has_reply_image:
+                group_id_str = (
+                    str(group_id)
+                    if (group_id is not None and group_id != 0)
+                    else "private"
+                )
+                try:
+                    wm = get_working_memory()
+                    wm.add_media_analysis(
+                        group_id_str,
+                        "image",
+                        "[图片待分析]",
+                        "",
+                        "pending",
+                    )
+                    logger.info(f"[决策层] 引用图片预保存记录")
+                except Exception as e:
+                    logger.debug(f"[决策层] 引用图片预保存失败: {e}")
+
+        # 【新增】检查是否是用户确认/纠正图片识别结果（独立于图片消息）
+        # 用户可能发送"是的，这是xxx"或"不是，是yyy"来确认/纠正之前的图片识别
+        try:
+            await self._check_and_learn_image_correction(
+                perception, content, user_id, group_id
+            )
+        except Exception as e:
+            logger.debug(f"[决策层] 检查图片学习失败: {e}")
 
         quick_response = self._handle_quick_commands(content, platform, perception)
         if quick_response:
@@ -2993,130 +3044,98 @@ class DecisionHub:
 
             logger.info(f"[决策层] 从配置加载触发关键词: {len(keywords)} 个")
             return keywords
+        except Exception as e:
+            logger.warning(f"[决策层] 加载触发关键词失败: {e}")
+            return []
 
     async def _check_and_learn_image_correction(
-        self, perception: dict, content: str, last_image_analysis: dict, user_id
+        self, perception: dict, content: str, user_id, group_id
     ):
-        """检查用户是否在确认/纠正图片识别结果，并学习对应关系"""
-        # 从配置文件加载检测模式
-        from core.text_loader import get_text_loader
-        loader = get_text_loader()
-        config = loader._config
-        
-        correction_config = config.get("correction_learning", {})
-        image_config = correction_config.get("scenarios", {}).get("image", {})
-        
-        if not image_config.get("enabled", True):
-            return
-            
-        patterns = image_config.get("patterns", [])
-        content_lower = content.lower().strip()
-        
-        # 检查是否有最近的图片分析记录
-        if not last_image_analysis:
-            return
-        
-        # 检查内容是否包含确认/纠正关键词
-        is_correction = any(p in content_lower for p in patterns)
-        if not is_correction:
-            return
-            
-        # 提取答案（可能的目标）
+        """使用 AI 检查用户是否在确认/纠正图片识别结果，并学习对应关系"""
+        import logging
         import re
-        regex_patterns = image_config.get("regex_extract", [])
-        
+        import json
+
+        logger = logging.getLogger(__name__)
+
+        logger.warning(f"[AI学习] 检查纠正: {content[:30]}")
+
+        # 检测用户是否在纠正（关键词检测）
+        correction_keywords = ["是", "对的", "没错", "正确", "就是", "这个是", "错了"]
+        has_correction = any(kw in content for kw in correction_keywords)
+
+        # 提取可能的答案（优先引号，再次提取最后的角色名）
         answer = None
-        for pattern in regex_patterns:
-            match = re.search(pattern, content)
-            if match:
-                answer = match.group(1).strip()
-                break
-                
-        if not answer:
-            # 用户可能在否定，尝试提取否定后的答案
-            if "不是" in content_lower and "是" in content_lower:
-                neg_match = re.search(r"不是\w+，?(?:是|叫|应该)\s*(\w+)", content)
-                if neg_match:
-                    answer = neg_match.group(1)
-                else:
-                    return
+        answer_match = re.search(r"['\"](.+?)['\"]", content)
+        if answer_match:
+            answer = answer_match.group(1).strip()
+        else:
+            # 提取 "xxx里的xxx" 格式
+            match2 = re.search(r"里的(.+?)(?:，|$)", content)
+            if match2:
+                answer = match2.group(1).strip()
             else:
-                return
-            
-        if not answer or len(answer) < 2:
+                # 提取是/叫/为后面的内容
+                match3 = re.search(r"(?:是|叫|为|的)(.+?)(?:，|啦|啊|的|$)", content)
+                if match3:
+                    answer = match3.group(1).strip()
+
+        if not (has_correction and answer and len(answer) >= 2):
+            logger.info(f"[AI学习] 非纠正内容，跳过")
             return
-            
-        # 获取之前识别的描述
-        description = last_image_analysis.get("description", "")[:300]
-        labels = ", ".join(last_image_analysis.get("labels", [])[:5])
-        model = last_image_analysis.get("model", "")
-        
-        # 保存学习记录到长期记忆
+
+        answer = answer.strip()
+        logger.warning(f"[AI学习] 检测到纠正/确认，答案={answer}")
+
+        # 保存到长期记忆
         try:
             from memory import store_important
-            
-            learning_content = (
-                f"[图片对照学习] 之前识别为: {description[:100]} | "
-                f"标签: {labels} | 用户确认答案: {answer}"
-            )
-            
-            priority = image_config.get("priority", 0.8)
-            tags = image_config.get("tags", ["image_learning", "图片学习"])
-            
+
             memory_id = await store_important(
-                content=learning_content,
+                content=f"[AI学习] 用户纠正/确认: {answer}",
                 user_id=str(user_id) if user_id else "unknown",
-                tags=tags,
-                priority=priority,
-                metadata={
-                    "learned_answer": answer,
-                    "image_labels": labels,
-                    "model": model,
-                }
+                tags=["ai_learn", "纠正学习"],
+                priority=0.7,
+                metadata={"learned_answer": answer},
             )
-            logger.info(f"[决策层] 图片对照学习完成，答案: {answer}")
+            logger.warning(f"[AI学习] 学习完成，memory_id={memory_id}")
         except Exception as e:
-            logger.warning(f"[决策层] 图片对照学习失败: {e}")
-            
-            # 【新增】通用纠正学习（偏好、名字、事实等）
-            try:
-                await self._check_and_learn_general_correction(perception, content, user_id)
-            except Exception as e:
-                logger.debug(f"[决策层] 通用学习检查失败: {e}")
-            
+            logger.warning(f"[AI学习] 保存失败: {e}")
+
     async def _check_and_learn_general_correction(
         self, perception: dict, content: str, user_id
     ):
         """通用的确认/纠正学习框架 - 支持多种场景"""
         # 从配置文件加载
         from core.text_loader import get_text_loader
+
         loader = get_text_loader()
         config = loader._config
-        
+
         correction_config = config.get("correction_learning", {})
         if not correction_config.get("enabled", True):
             return
-            
+
         content_lower = content.lower().strip()
-        
+
         # 获取所有场景配置
         scenarios = correction_config.get("scenarios", {})
-        
+
         # 检测是否匹配任何纠正模式
         matched_scenario = None
         extracted_answer = None
         matched_pattern = None
-        
+
         import re
-        
+
         for scenario_name, scenario_config in scenarios.items():
             if scenario_name == "image":
                 continue  # 图片学习单独处理
-                
+
             patterns = scenario_config.get("patterns", [])
             if any(p in content_lower for p in patterns):
                 matched_scenario = scenario_config
-                
+
                 # 尝试提取答案
                 regex_patterns = scenario_config.get("regex_extract", [])
                 for pattern in regex_patterns:
@@ -3124,21 +3143,21 @@ class DecisionHub:
                     if match:
                         extracted_answer = match.group(1).strip()[:100]
                         break
-                        
+
                 break  # 找到第一个匹配的场景
-        
+
         if not matched_scenario or not extracted_answer:
             return
-        
+
         # 保存学习记录
         try:
             from memory import store_important
-            
+
             learning_content = (
                 f"[{matched_scenario['tags'][0]}] 用户纠正: {extracted_answer} | "
                 f"原始消息: {content[:100]}"
             )
-            
+
             memory_id = await store_important(
                 content=learning_content,
                 user_id=str(user_id) if user_id else "unknown",
@@ -3148,8 +3167,10 @@ class DecisionHub:
                     "learned_content": extracted_answer,
                     "scenario": matched_scenario["tags"][0],
                     "original_message": content[:200],
-                }
+                },
             )
-            logger.info(f"[决策层] 通用学习完成，场景: {matched_scenario['tags'][0]}, 内容: {extracted_answer}")
+            logger.info(
+                f"[决策层] 通用学习完成，场景: {matched_scenario['tags'][0]}, 内容: {extracted_answer}"
+            )
         except Exception as e:
             logger.warning(f"[决策层] 通用学习失败: {e}")

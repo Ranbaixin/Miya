@@ -8,10 +8,12 @@
 - 低信息量输入检测：识别"不是"、"对的对的"等短消息
 """
 
+import json
 import logging
 import time
 import hashlib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
+from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 from collections import defaultdict
 
@@ -266,6 +268,10 @@ class WorkingMemoryManager:
         self._states: Dict[str, WorkingMemoryState] = {}
         self._message_counts: Dict[str, int] = defaultdict(int)
 
+        self._persist_file = Path("data/working_memory.json")
+        self._ensure_data_dir()
+        self._load()
+
         logger.info("[工作记忆] 管理器初始化完成")
 
     def _get_state(self, group_id: str) -> WorkingMemoryState:
@@ -355,6 +361,8 @@ class WorkingMemoryManager:
             state.media_analysis = state.media_analysis[-5:]
         # 更新最后活跃时间
         state.last_update = time.time()
+        # 自动持久化
+        self.save()
 
     def _is_low_info(self, content: str) -> bool:
         """检测是否为低信息量输入（从配置加载）"""
@@ -545,6 +553,47 @@ class WorkingMemoryManager:
 
         if expired_groups:
             logger.debug(f"[工作记忆] 清理了 {len(expired_groups)} 个过期群记忆")
+
+    def _ensure_data_dir(self):
+        """确保数据目录存在"""
+        self._persist_file.parent.mkdir(parents=True, exist_ok=True)
+
+    def _load(self):
+        """从文件加载工作记忆"""
+        if not self._persist_file.exists():
+            return
+        try:
+            with open(self._persist_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            for gid, state_data in data.get("states", {}).items():
+                media = state_data.get("media_analysis", [])
+                if media:
+                    state = WorkingMemoryState()
+                    state.media_analysis = media
+                    self._states[gid] = state
+
+            logger.info(f"[工作记忆] 加载了 {len(self._states)} 个群的工作记忆")
+        except Exception as e:
+            logger.warning(f"[工作记忆] 加载失败: {e}")
+
+    def save(self):
+        """保存工作记忆到文件"""
+        try:
+            data = {
+                "states": {
+                    gid: {"media_analysis": state.media_analysis}
+                    for gid, state in self._states.items()
+                    if state.media_analysis
+                }
+            }
+            with open(self._persist_file, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            logger.debug(
+                f"[工作记忆] 已保存 {len(data['states'])} 个群的 media_analysis"
+            )
+        except Exception as e:
+            logger.warning(f"[工作记忆] 保存失败: {e}")
 
 
 # 全局单例
