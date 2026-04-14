@@ -177,6 +177,32 @@
    - [使用示例](#10-使用示例-7)
    - [相关文件](#11-相关文件-2)
 
+- [星璇记忆系统 (v4.3.0+ 新增)](#星璇记忆系统-v430-新增)
+   - [系统概述](#1-系统概述-25)
+   - [核心组件](#2-核心组件)
+      - [MiyaMemoryCore 统一记忆核心](#miyamemorycore-统一记忆核心)
+      - [MemoryLevel 记忆层级](#memorylevel-记忆层级)
+      - [MemorySource 记忆来源](#memorysource-记忆来源)
+   - [星璇自记忆系统 (v4.3.3+)](#星璇自记忆系统-v433)
+      - [原理说明](#原理说明)
+      - [配置详解](#配置详解)
+      - [使用示例](#使用示例)
+   - [Historian 历史记录员 v3.0](#historian-历史记录员-v30)
+      - [工作流程](#工作流程)
+      - [核心方法](#核心方法)
+   - [LifeBook 日记系统 (v4.3.3+)](#lifebook-日记系统-v433)
+      - [三视角说明](#三视角说明)
+      - [配置详解](#配置详解-1)
+      - [使用示例](#使用示例-1)
+   - [Working Memory 短期记忆持久化 (v4.3.4+)](#working-memory-短期记忆持久化-v434-新增)
+   - [存储后端](#存储后端)
+      - [JSON 文件存储](#json-文件存储)
+      - [SQLite 向量存储](#sqlite-向量存储)
+      - [外部数据库说明](#外部数据库说明)
+   - [配置详解](#配置详解-2)
+      - [memory_config.json](#memory_configjson)
+      - [text_config.json 记忆相关配置](#text_configjson-记忆相关配置)
+
 - [Working Memory 短期记忆持久化 (v4.3.4+ 新增)](#working-memory-短期记忆持久化-v434-新增)
    - [系统概述](#1-系统概述-24)
    - [工作原理](#2-工作原理-5)
@@ -214,119 +240,13 @@ MIYA 具备：
 | **伦理边界** | 基于用户权限的伦理约束执行 |
 | **仲裁机制** | 人格欲望与伦理约束的冲突解决 |
 
-### 💾 多层记忆系统
+### 💾 星璇记忆系统 (v4.3.0+)
 
-> **注意 (v4.3.4+)**：弥娅的记忆系统已简化，外部数据库（Redis/Milvus/Neo4j）已禁用，默认使用 SQLite 本地存储。
+> 弥娅的记忆系统命名为**星璇记忆系统**，代表记忆如星系螺旋旋转，核心轨道反复出现，外层安静旋转，关键词触发引力牵引。
 
-| 记忆层 | 类型 | 说明 |
-|--------|------|------|
-| **Tide Memory** | 短期 | 会话内短期记忆，带 TTL |
-| **Dream Memory** | 长期 | 持久化存储 |
-| **Semantic Memory** | 向量 | 基于 SQLite 的语义相似度搜索 |
-| **Knowledge Graph** | 图谱 | 已禁用（需要 Neo4j） |
-| **Session Memory** | 会话 | 多会话管理 |
+详见：[星璇记忆系统详解](#星璇记忆系统-v430-新增)
 
-#### 统一记忆系统 (v4.3.0 新增)
-
-弥娅的记忆系统在 v4.3.0 版本中进行了全面统一和优化，实现了真正的"单一入口 - 100%统一"设计原则。
-
-##### 统一前的问题
-- 存在多个并行的记忆存储系统：旧的 `miya_memory_storage` (JSON文件)、统一记忆兼容层、以及各种测试/临时存储
-- 记忆存储逻辑分散在 Historian、CognitiveEngine 等多个模块中
-- 缺乏统一的记忆数据模型和存储接口
-- 测试和冗余的记忆目录占用空间且易造成混淆
-
-##### 统一后的架构
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    统一记忆系统 (MiyaMemoryCore V3.1)               │
-├─────────────────────────────────────────────────────────────────────┤
-│  MemoryLevel.DIALOGUE     - 对话历史 (会话级)                       │
-│  MemoryLevel.SHORT_TERM   - 短期记忆 (TTL自动过期)                 │
-│  MemoryLevel.LONG_TERM    - 长期记忆 (持久化)                       │
-│  MemoryLevel.SEMANTIC     - 语义记忆 (向量搜索，SQLite)            │
-│  MemoryLevel.KNOWLEDGE    - 知识图谱 (已禁用)                       │
-├─────────────────────────────────────────────────────────────────────┤
-│  存储后端：JSON文件 (主存储) + SQLite (向量) +                     │
-│           外部数据库已禁用 (Redis/Milvus/Neo4j)                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-> **⚠️ 重要更新 (v4.3.4)**：外部数据库已禁用，系统使用 SQLite 本地存储作为替代。
-
-##### 核心特性
-1. **单一数据结构**：所有记忆都统一为 `MemoryItem` 格式，没有任何例外
-2. **分层存储**：基于重要性、情感强度和事件类型自动分类到五个记忆层级
-3. **数据一致性**：单一数据结构确保跨模块记忆操作的一致性
-4. **自动生命周期管理**：基于TTL的短期记忆过期、旧对话归档等
-5. **本地存储优先**：使用 JSON 文件 + SQLite 向量存储，无需外部依赖
-
-##### 关键改动
-1. **迁移核心模块**：
-   - `memory/historian.py`：从 `miya_memory_storage` 迁移到 `MiyaMemoryCore`
-   - `memory/cognitive_engine.py`：从 `miya_memory_storage` 迁移到 `MiyaMemoryCore`
-   
-2. **清理冗余存储**：
-   - 禁用旧的外部数据库依赖 (Redis/Milvus/Neo4j)
-   - 统一使用 SQLite 本地存储
-
-3. **统一接口**：
-   - 所有记忆操作现在通过 `MiyaMemoryCore` 类进行
-   - 提供统一的存储(`store`)、检索(`retrieve`)、更新(`update`)、删除(`delete`)方法
-   - 保持与现有代码的向后兼容性通过统一记忆兼容层
-
-##### 使用示例
-```python
-from memory import get_memory_core, MemoryLevel, MemorySource
-
-# 获取统一记忆核心实例
-async def example():
-    core = await get_memory_core()
-    await core.initialize()
-    
-    # 存储记忆（自动分类）
-    memory_id = await core.store(
-        content="我叫张三，喜欢打篮球",
-        importance=0.8,
-        tags=["个人信息", "爱好"],
-        source=MemorySource.MANUAL
-    )
-    
-    # 检索记忆
-    from memory import MemoryQuery
-    query = MemoryQuery(
-        query="篮球",
-        tags=["爱好"],
-        limit=10
-    )
-    memories = await core.retrieve(query)
-    
-    # 按ID获取特定记忆
-    memory = await core.get_by_id(memory_id)
-    
-    return memories
-```
-
-##### 原理说明
-统一记忆系统基于以下核心原则设计：
-
-1. **重要性驱动分类**：
-   - 高重要性（≥0.8）→ 长期记忆
-   - 强烈情感 + 中等重要性(≥0.6)→ 长期记忆
-   - 特定事件类型（生日、纪念日等）→ 长期记忆
-   - 个人信息（姓名、生日、联系方式等）→ 长期记忆
-
-2. **自动生命周期**：
-   - 短期记忆默认TTL为1小时（可配置）
-   - 自动清理过期记忆
-   - 旧对话（>90天）自动归档
-
-3. **多存储后端**（v4.3.4 已简化）：
-   - 主存储：JSON文件系统（持久化）
-   - 向量检索：SQLite（本地向量，已替代 Milvus）
-   - > **注意**：Redis/Milvus/Neo4j 已禁用，系统使用本地存储
-
-这个统一系统确保了弥娅的记忆操作既高效又一致，为后续的记忆功能扩展提供了坚实的基础。
+---
 
 | **QQ** | OneBot WebSocket | 活跃 |
 | **Web** | FastAPI + WebSocket | 活跃 |
@@ -785,6 +705,508 @@ qq:
 - **A/B 测试** - 实验框架
 - **增量学习** - 持续学习机制
 - **用户协作** - Co-play 学习
+
+---
+
+## 星璇记忆系统 (v4.3.0+ 新增)
+
+弥娅的记忆系统命名为**星璇记忆系统**，代表记忆如星系螺旋旋转，核心轨道反复出现，外层安静旋转，关键词触发引力牵引。
+
+### 1. 系统概述
+
+星璇记忆系统是弥娅从 v4.3.0 开始构建的统一记忆体系，经历了以下重要迭代：
+
+| 版本 | 时间 | 重要更新 |
+|------|------|----------|
+| v4.3.0 | 2026-03 | 统一记忆系统 MiyaMemoryCore V3.1 |
+| v4.3.3 | 2026-04-07 | 星璇自记忆系统 - 弥娅记住自己说的话 |
+| v4.3.4 | 2026-04-11 | 外部数据库禁用，使用 SQLite 本地存储 |
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    星璇记忆系统架构                                  │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│   ┌─────────────────────────────────────────────────────────────┐   │
+│   │                    MiyaMemoryCore (统一核心)                 │   │
+│   │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │   │
+│   │  │  DIALOGUE   │  │ SHORT_TERM  │  │  LONG_TERM  │        │   │
+│   │  │  对话历史   │  │  短期记忆   │  │  长期记忆   │        │   │
+│   │  └─────────────┘  └─────────────┘  └─────────────┘        │   │
+│   │  ┌─────────────┐  ┌─────────────┐                        │   │
+│   │  │  SEMANTIC  │  │ KNOWLEDGE  │                        │   │
+│   │  │  语义记忆  │  │  知识图谱   │                        │   │
+│   │  └─────────────┘  └─────────────┘                        │   │
+│   └────────────────────────┬────────────────────────────────┘   │
+│                            │                                      │
+│   ┌────────────────────────┴────────────────────────────────┐   │
+│   │                    存储后端                                 │   │
+│   │   JSON 文件 (主存储) + SQLite (向量)                        │   │
+│   │   外部数据库已禁用 (Redis/Milvus/Neo4j)                     │   │
+│   └───────────────────────────────────────────────────────────┘   │
+│                                                                      │
+│   ┌─────────────────────────────────────────────────────────────┐   │
+│   │                    星璇自记忆 (v4.3.3+)                     │   │
+│   │   弥娅记住自己说的话：承诺、观点、建议、情感、自我认知        │   │
+│   └─────────────────────────────────────────────────────────────┘   │
+│                                                                      │
+│   ┌─────────────────────────────────────────────────────────────┐   │
+│   │                    Historian v3.0                           │   │
+│   │   双向分析：用户输入 + 弥娅回复                               │   │
+│   └─────────────────────────────────────────────────────────────┘   │
+│                                                                      │
+│   ┌─────────────────────────────────────────────────────────────┐   │
+│   │                    LifeBook 日记系统 (v4.3.3+)              │   │
+│   │   三视角：lover / user / together                            │   │
+│   └─────────────────────────────────────────────────────────────┘   │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 2. 核心组件
+
+#### 2.1 MiyaMemoryCore 统一记忆核心
+
+**文件位置**: `memory/core.py`
+
+MiyaMemoryCore 是整个星璇记忆系统的核心，提供了统一的存储、检索、管理接口。
+
+**核心特性**：
+- 单一数据结构：`MemoryItem` 格式
+- 分层存储：5个记忆层级
+- 自动生命周期管理
+- 向量语义搜索
+
+**使用示例**：
+```python
+from memory import get_memory_core, MemoryLevel, MemorySource
+
+core = await get_memory_core()
+await core.initialize()
+
+# 存储记忆
+memory_id = await core.store(
+    content="用户说他喜欢科幻电影",
+    level=MemoryLevel.LONG_TERM,
+    priority=0.8,
+    tags=["爱好", "电影"],
+    source=MemorySource.DIALOGUE,
+    user_id="12345"
+)
+
+# 检索记忆
+memories = await core.retrieve(
+    query="用户有什么爱好？",
+    limit=5
+)
+```
+
+#### 2.2 MemoryLevel 记忆层级
+
+星璇记忆系统包含 5 个记忆层级：
+
+| 层级 | 枚举值 | 说明 | 存储位置 |
+|------|--------|------|----------|
+| 对话历史 | DIALOGUE | 会话级自动过期 | JSON文件 |
+| 短期记忆 | SHORT_TERM | TTL自动过期（默认1小时） | JSON文件 |
+| 长期记忆 | LONG_TERM | 持久化存储 | JSON文件 |
+| 语义记忆 | SEMANTIC | 向量搜索，SQLite | SQLite |
+| 知识图谱 | KNOWLEDGE | 已禁用 | - |
+
+```python
+from memory import MemoryLevel
+
+class MemoryLevel(Enum):
+    DIALOGUE = "dialogue"      # 对话历史
+    SHORT_TERM = "short_term"  # 短期记忆
+    LONG_TERM = "long_term"    # 长期记忆
+    SEMANTIC = "semantic"      # 语义记忆
+    KNOWLEDGE = "knowledge"    # 知识图谱（已禁用）
+```
+
+#### 2.3 MemorySource 记忆来源
+
+记忆来源类型标识记忆是如何产生的：
+
+```python
+from memory import MemorySource
+
+class MemorySource(Enum):
+    DIALOGUE = "dialogue"          # 对话中自动存储
+    AUTO_EXTRACT = "auto_extract"  # 自动提取
+    MANUAL = "manual"              # 手动添加
+    SYSTEM = "system"              # 系统生成
+    IMPORTED = "imported"          # 导入
+    ASSISTANT_SELF = "assistant_self"  # 弥娅自记忆（v4.3.3+）
+```
+
+### 3. 星璇自记忆系统 (v4.3.3+)
+
+#### 3.1 原理说明
+
+星璇自记忆系统使弥娅能够**记住自己说过的话**。系统会自动分析弥娅的回复，识别其中的：
+- 承诺（"我会"、"我答应"）
+- 观点（"我觉得"、"我认为"）
+- 建议（"我建议"、"你可以"）
+- 情感（"我担心"、"我在乎你"）
+- 知识（"原理是"、"原因是"）
+- 自我认知（"我是"、"我能"）
+
+**工作流程**：
+
+```
+弥娅生成回复
+      ↓
+Historian.process_after_response()
+      ↓
+_extract_assistant_self_memory() - 用正则模式扫描
+      ↓
+匹配到自记忆内容 → 提取类型和重要性
+      ↓
+_store_assistant_self_memory() - 存储为 LONG_TERM
+      ↓
+标签: ["弥娅自记忆", category, "星璇自记忆"]
+```
+
+#### 3.2 配置详解
+
+所有自记忆配置在 `config/text_config.json` 的 `assistant_self` 节：
+
+```json
+{
+  "assistant_self": {
+    "description": "弥娅自记忆配置",
+    "patterns": {
+      "commitment": [
+        ["我(会|一定|保证|承诺).*(记住|帮你)", "弥娅承诺"],
+        ["我(答应|保证|承诺).+", "弥娅承诺"],
+        ["下次我.*", "弥娅承诺"],
+        ["我会一直.*", "弥娅承诺"]
+      ],
+      "opinion": [
+        ["我觉得.*", "弥娅观点"],
+        ["我认为.*", "弥娅观点"],
+        ["我建议.*", "弥娅建议"],
+        ["最好.*", "弥娅建议"]
+      ],
+      "emotion": [
+        ["我很(开心|高兴|难过|担心|心疼)", "弥娅情感"],
+        ["我(喜欢|爱|在乎|关心).*(你|佳)", "弥娅情感"]
+      ],
+      "knowledge": [
+        ["根据.*", "弥娅知识"],
+        [".*的原理是.*", "弥娅知识"]
+      ],
+      "self_awareness": [
+        ["我是.*", "弥娅自我认知"],
+        ["我能.*", "弥娅自我认知"]
+      ]
+    },
+    "base_importance": {
+      "commitment": 0.85,
+      "opinion": 0.6,
+      "emotion": 0.7,
+      "knowledge": 0.5,
+      "self_awareness": 0.65
+    }
+  }
+}
+```
+
+#### 3.3 使用示例
+
+```python
+from memory import get_memory_core, MemorySource, MemoryLevel
+
+core = await get_memory_core()
+
+# 存储弥娅的承诺
+await core.store(
+    content="[弥娅承诺] 我会一直在这里陪你",
+    level=MemoryLevel.LONG_TERM,
+    priority=0.85,
+    tags=["弥娅承诺", "星璇自记忆"],
+    source=MemorySource.ASSISTANT_SELF,
+    role="assistant"
+)
+
+# 查询弥娅的自记忆
+memories = await core.retrieve(
+    query="承诺",
+    filters={"source": "assistant_self"}
+)
+```
+
+### 4. Historian 历史记录员 v3.0
+
+**文件位置**: `memory/historian.py`
+
+Historian v3.0 是星璇记忆系统的核心组件，负责：
+1. 分析对话内容
+2. 提取用户重要信息
+3. 提取弥娅自记忆（新增）
+4. 群聊有价值讨论提取
+
+#### 4.1 核心方法
+
+```python
+class Historian:
+    async def process_after_response(self, user_input: str, ai_response: str):
+        """处理对话后提取记忆"""
+        # 1. 提取用户重要信息
+        important_infos = self._extract_important_info(user_input)
+        
+        # 2. 提取弥娅自记忆（新增）
+        assistant_memories = self._extract_assistant_self_memory(ai_response)
+        for content, info_type, importance, tags in assistant_memories:
+            await self._store_assistant_self_memory(content, info_type, importance, tags)
+    
+    def _extract_assistant_self_memory(self, ai_response: str) -> List[Tuple]:
+        """从弥娅回复中提取自记忆"""
+        # 使用 text_config.json 中配置的正则模式匹配
+        ...
+    
+    async def _store_assistant_self_memory(self, content, info_type, importance, tags):
+        """存储弥娅自记忆到 LONG_TERM"""
+        await core.store(
+            content=content,
+            level=MemoryLevel.LONG_TERM,
+            priority=importance,
+            tags=tags + ["弥娅自记忆", "星璇自记忆"],
+            source=MemorySource.ASSISTANT_SELF,
+            role="assistant"
+        )
+```
+
+### 5. LifeBook 日记系统 (v4.3.3+)
+
+**文件位置**: `memory/lifebook.py`
+
+LifeBook 是多视角实时日记系统，从三个视角记录弥娅与用户的互动。
+
+#### 5.1 三视角说明
+
+| 视角 | 目录 | 说明 |
+|------|------|------|
+| lover | data/lifebook/lover/ | 弥娅视角，记录思考与感受 |
+| user | data/lifebook/user/ | 用户视角，记录用户重要事实 |
+| together | data/lifebook/together/ | 共同视角，实时记录每次对话 |
+
+#### 5.2 配置详解
+
+```json
+{
+  "lifebook": {
+    "base_dir": "data/lifebook",
+    "perspective_name": {
+      "lover": "弥娅",
+      "user": "佳"
+    },
+    "ai_client": {
+      "model_id": "deepseek_v3_official"
+    },
+    "summary_templates": {
+      "daily": "请以lover的视角，为以下内容生成一段温暖的每日总结..."
+    }
+  }
+}
+```
+
+#### 5.3 使用示例
+
+```python
+from memory.lifebook import get_lifebook
+
+lifebook = get_lifebook()
+
+# 记录互动
+await lifebook.record_interaction(
+    perspective="together",
+    user_id="12345",
+    content="用户说今天加班到很晚",
+    ai_response="辛苦了，要注意身体哦"
+)
+
+# 生成每日总结
+summary = await lifebook.generate_daily_summary("2026-04-14", perspective="lover")
+
+# 查询日记
+entries = lifebook.search("体检", perspective="user")
+```
+
+### 6. Working Memory 短期记忆持久化 (v4.3.4+)
+
+**文件位置**: `memory/working_memory.py`
+
+Working Memory 实现了短期记忆的跨会话持久化。
+
+#### 6.1 工作原理
+
+```
+系统启动
+  ↓
+WorkingMemoryManager.__init__()
+  ↓
+_load() - 从 data/working_memory.json 加载历史记录
+  ↓
+每次更新
+  ↓
+add_media_analysis() - 添加记录
+  ↓
+save() - 自动保存到文件
+```
+
+#### 6.2 数据文件结构
+
+```json
+{
+  "states": {
+    "private": {
+      "media_analysis": [
+        {
+          "type": "image",
+          "description": "白发红眼女性角色...",
+          "labels": "动漫角色,白发,红眼",
+          "source": "glm-4.5v",
+          "timestamp": 1713062400.0
+        }
+      ]
+    },
+    "group_1092980378": {
+      "media_analysis": [...]
+    }
+  }
+}
+```
+
+#### 6.3 使用示例
+
+```python
+from memory.working_memory import get_working_memory
+
+wm = get_working_memory()
+
+# 添加图片分析记录
+wm.add_media_analysis(
+    group_id="private",
+    analysis_type="image",
+    description="白发红眼女性角色",
+    labels="鸣潮,绯雪",
+    source="glm-4.5v"
+)
+
+# 查询记录
+state = wm._get_state("private")
+media_list = state.media_analysis
+```
+
+### 7. 存储后端
+
+#### 7.1 JSON 文件存储
+
+主存储使用 JSON 文件，按用户和记忆层级组织：
+
+```
+data/memory/
+├── index.json              # 记忆索引
+├── tag_index.json          # 标签倒排索引
+├── user_12345/
+│   ├── dialogue/           # 对话历史
+│   │   └── 2026-04-14/
+│   │       └── xxx.json
+│   ├── short_term/         # 短期记忆
+│   └── long_term/          # 长期记忆
+│       └── xxx.json
+└── global/                  # 全局记忆
+```
+
+#### 7.2 SQLite 向量存储
+
+语义搜索使用 SQLite 本地向量：
+
+```python
+# 启用语义搜索
+config/memory_config.json:
+{
+  "levels": {
+    "semantic": {
+      "enabled": true,
+      "engine": "sqlite",
+      "dimension": 1024
+    }
+  }
+}
+```
+
+存储位置: `data/memory/miya_memory.db`
+
+#### 7.3 外部数据库说明
+
+> **注意 (v4.3.4+)**: Redis、Milvus、Neo4j 已禁用，系统使用本地存储替代。
+
+### 8. 配置详解
+
+#### 8.1 memory_config.json
+
+**文件位置**: `config/memory_config.json`
+
+```json
+{
+  "version": "1.0",
+  "storage": {
+    "data_dir": "data/memory",
+    "enable_backup": true
+  },
+  "levels": {
+    "short_term": {
+      "enabled": true,
+      "ttl_seconds": 3600,
+      "max_items": 1000
+    },
+    "dialogue": {
+      "enabled": true,
+      "max_per_session": 100
+    },
+    "long_term": {
+      "enabled": true,
+      "max_items": 10000
+    },
+    "semantic": {
+      "enabled": true,
+      "engine": "sqlite",
+      "dimension": 1024
+    },
+    "knowledge": {
+      "enabled": false
+    }
+  }
+}
+```
+
+#### 8.2 text_config.json 记忆相关配置
+
+主要配置节：
+
+- `historian`: 历史记录员配置（重要信息提取模式）
+- `assistant_self`: 星璇自记忆配置（自记忆提取模式）
+- `lifebook`: LifeBook 日记系统配置
+- `memory_system`: 统一记忆系统配置
+- `memory_anchors`: 记忆锚点配置
+
+### 9. 相关文件
+
+| 文件 | 功能 |
+|------|------|
+| `memory/core.py` | MiyaMemoryCore 核心实现 |
+| `memory/historian.py` | Historian v3.0 历史记录员 |
+| `memory/lifebook.py` | LifeBook 日记系统 |
+| `memory/working_memory.py` | Working Memory 短期记忆 |
+| `memory/sqlite_backend.py` | SQLite 向量存储后端 |
+| `config/memory_config.json` | 记忆系统统一配置 |
+| `config/text_config.json` | 文本配置（含记忆相关节） |
+| `data/memory/` | 记忆数据存储目录 |
+| `data/lifebook/` | LifeBook 日记数据目录 |
+| `data/working_memory.json` | Working Memory 持久化文件 |
 
 ---
 
@@ -1446,18 +1868,6 @@ asyncio.run(main())
 | **自动提取** | ✅ 保留 | 从对话中自动提取重要信息 |
 | **语义检索** | ✅ 保留 | 使用 SQLite 本地向量 |
 | **任务队列集成** | ✅ 保留 | 异步处理，不阻塞主流程 |
-│    └─────────────────────────────────────────────────┘                │
-│             │                                                      │
-│    ┌────────┴───────────────────────────────────────┐                │
-│    │              Neo4j 图数据库                      │                │
-│    │   ┌─────────────────────────────────────────┐  │                │
-│    │   │  (主体)-[关系]->(客体)                   │  │                │
-│    │   │  实体 + 关系 + 属性 + 上下文              │  │                │
-│    │   └─────────────────────────────────────────┘  │                │
-│    └─────────────────────────────────────────────────┘                │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
-```
 
 #### 功能特性
 
