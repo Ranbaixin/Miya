@@ -267,16 +267,8 @@ MIYA 具备：
    - `memory/cognitive_engine.py`：从 `miya_memory_storage` 迁移到 `MiyaMemoryCore`
    
 2. **清理冗余存储**：
-   - 备份并有效禁用旧的 `data/miya_memories.json` 文件
-   - 删除所有测试和冗余的内存目录：
-     - `data/test_enhanced_memory`
-     - `data/test_memory`
-     - `data/test_memory_cross`
-     - `data/test_memory_full`
-     - `data/test_memory_quick`
-     - `data/test_memory_v31`
-     - `data/memory_test`
-     - `data/memory_test2`
+   - 禁用旧的外部数据库依赖 (Redis/Milvus/Neo4j)
+   - 统一使用 SQLite 本地存储
 
 3. **统一接口**：
    - 所有记忆操作现在通过 `MiyaMemoryCore` 类进行
@@ -1559,43 +1551,29 @@ stats = await grag.get_stats()
 ```python
 # 默认配置
 DEFAULT_CONFIG = {
-    "enabled": True,                    # 启用 GRAG
-    "auto_extract": True,                # 自动从对话提取五元组
-    "context_length": 20,               # 最近对话上下文长度
-    "similarity_threshold": 0.7,       # 相似度阈值
-    "neo4j_uri": "bolt://localhost:7687",  # Neo4j 连接
-    "neo4j_user": "neo4j",
-    "neo4j_password": "",
-    "embedding_model": "text-embedding-3-small",  # embedding 模型
-    "max_workers": 3,                   # 任务管理器 worker 数
+    "enabled": True,                    # 启用语义记忆
+    "auto_extract": True,               # 自动从对话提取记忆
+    "context_length": 20,              # 最近对话上下文长度
+    "similarity_threshold": 0.7,      # 相似度阈值
+    "embedding_model": "bge-large-zh-v1.5",  # embedding 模型
+    "storage_backend": "sqlite",        # 存储后端: sqlite (已禁用外部数据库)
+    "max_workers": 3,                 # 任务管理器 worker 数
     "max_queue_size": 100,             # 任务队列大小
-    "task_timeout": 30,                 # 任务超时时间
+    "task_timeout": 30,                # 任务超时时间
     "auto_cleanup_hours": 24,          # 自动清理间隔
 }
 
-# 使用自定义配置
-grag = GRAGMemoryManager.get_instance({
-    "enabled": True,
-    "neo4j_uri": "bolt://192.168.1.100:7687",
-    "neo4j_user": "neo4j",
-    "neo4j_password": "password123"
-})
+# 存储位置: data/memory/miya_memory.db
 ```
 
-#### Neo4j 图谱结构
+#### 语义记忆结构
 
 ```
-节点类型:
-  - Entity (实体)
-    - name: 实体名称
-    - type: 实体类型 (可选)
-
-关系类型:
-  - RELATION (关系)
-    - type: 关系类型 (如 "喜欢", "是", "属于")
-    - timestamp: 创建时间
-    - context: 上下文
-    - attributes: 属性 (JSON)
+记忆类型:
+  - LONG_TERM    # 长期记忆 (高重要性)
+  - SHORT_TERM   # 短期记忆 (TTL过期)
+  - SEMANTIC     # 语义记忆 (向量搜索)
+  - DIALOGUE     # 对话历史
 ```
 
 #### 使用示例
@@ -3558,16 +3536,6 @@ DEEPSEEK_API_KEY=your_deepseek_key
 ANTHROPIC_API_KEY=your_anthropic_key
 ZHIPU_API_KEY=your_zhipu_key
 
-# 数据库配置
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_PASSWORD=
-MILVUS_HOST=localhost
-MILVUS_PORT=19530
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=your_password
-
 # QQ 机器人配置
 QQ_ACCOUNT=123456789
 QQ_PASSWORD=your_password
@@ -5208,166 +5176,11 @@ class GetCurrentTime(BaseTool):
         return f"现在是 {now.strftime('%Y年%m月%d日 %H:%M:%S')}"
 ```
 
-##### 4. Terminal Ultra 工具详解
+##### 4. 终端工具 → Open-ClaudeCode
 
-```python
-# core/terminal_ultra.py
+终端功能已迁移到 **Open-ClaudeCode**，不再使用原生 Python 模块。
 
-class TerminalUltra:
-    """超级终端 - 8大核心工具"""
-    
-    def __init__(self):
-        self.os_type = platform.system().lower()
-    
-    async def terminal_exec(self, command: str, timeout: int = 30) -> dict:
-        """
-        执行终端命令
-        
-        Args:
-            command: 要执行的命令
-            timeout: 超时时间(秒)
-        
-        Returns:
-            dict: {"success": bool, "output": str, "error": str}
-        """
-        # 危险命令检查
-        if self._is_dangerous(command):
-            return {"success": False, "output": "", "error": "危险命令被拦截"}
-        
-        # 执行命令
-        try:
-            result = await asyncio.create_subprocess_shell(
-                command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                cwd=self.workdir  # 工作目录隔离
-            )
-            
-            try:
-                stdout, stderr = await asyncio.wait_for(
-                    result.communicate(), timeout=timeout
-                )
-                return {
-                    "success": result.returncode == 0,
-                    "output": stdout.decode('utf-8', errors='replace'),
-                    "error": stderr.decode('utf-8', errors='replace')
-                }
-            except asyncio.TimeoutError:
-                result.kill()
-                return {"success": False, "output": "", "error": "命令执行超时"}
-        except Exception as e:
-            return {"success": False, "output": "", "error": str(e)}
-    
-    async def file_read(self, file_path: str, offset: int = 0, 
-                       limit: int = 100) -> dict:
-        """
-        读取文件
-        
-        Args:
-            file_path: 文件路径
-            offset: 起始行
-            limit: 读取行数
-        """
-        try:
-            full_path = self._resolve_path(file_path)
-            with open(full_path, 'r', encoding='utf-8') as f:
-                lines = f.readlines()[offset:offset+limit]
-            return {
-                "success": True,
-                "output": f"文件: {file_path}\n行数: {offset}-{offset+len(lines)}\n\n" + 
-                         "".join(lines)
-            }
-        except Exception as e:
-            return {"success": False, "output": "", "error": str(e)}
-    
-    async def file_write(self, file_path: str, content: str) -> dict:
-        """创建/写入文件"""
-        try:
-            full_path = self._resolve_path(file_path)
-            # 创建父目录
-            Path(full_path).parent.mkdir(parents=True, exist_ok=True)
-            with open(full_path, 'w', encoding='utf-8') as f:
-                f.write(content)
-            return {"success": True, "output": f"已写入文件: {file_path}"}
-        except Exception as e:
-            return {"success": False, "output": "", "error": str(e)}
-    
-    async def file_edit(self, file_path: str, old_text: str, 
-                        new_text: str) -> dict:
-        """编辑文件"""
-        try:
-            full_path = self._resolve_path(file_path)
-            with open(full_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            content = content.replace(old_text, new_text)
-            with open(full_path, 'w', encoding='utf-8') as f:
-                f.write(content)
-            return {"success": True, "output": "文件已修改"}
-        except Exception as e:
-            return {"success": False, "output": "", "error": str(e)}
-    
-    async def file_delete(self, file_path: str) -> dict:
-        """删除文件"""
-        try:
-            full_path = self._resolve_path(file_path)
-            if full_path.is_file():
-                full_path.unlink()
-            elif full_path.is_dir():
-                import shutil
-                shutil.rmtree(full_path)
-            return {"success": True, "output": f"已删除: {file_path}"}
-        except Exception as e:
-            return {"success": False, "output": "", "error": str(e)}
-    
-    async def directory_tree(self, path: str = ".", max_depth: int = 3) -> dict:
-        """查看目录树"""
-        try:
-            full_path = self._resolve_path(path)
-            tree = self._build_tree(full_path, max_depth)
-            return {"success": True, "output": tree}
-        except Exception as e:
-            return {"success": False, "output": "", "error": str(e)}
-    
-    async def code_execute(self, code: str, language: str = "python") -> dict:
-        """执行代码"""
-        if language == "python":
-            return await self._execute_python(code)
-        elif language == "javascript":
-            return await self._execute_javascript(code)
-        else:
-            return {"success": False, "output": "", "error": f"不支持的语言: {language}"}
-    
-    async def project_analyze(self, path: str = ".") -> dict:
-        """分析项目结构"""
-        try:
-            full_path = self._resolve_path(path)
-            stats = self._collect_stats(full_path)
-            return {"success": True, "output": self._format_stats(stats)}
-        except Exception as e:
-            return {"success": False, "output": "", "error": str(e)}
-```
-
-##### 5. 使用工具
-
-```python
-# 通过 ToolSubnet 使用工具
-
-from webnet.ToolNet.subnet import ToolSubnet
-
-# 创建工具子网
-subnet = ToolSubnet(memory_engine=None, cognitive_memory=None)
-
-# 执行工具
-result = await subnet.execute_tool(
-    tool_name="terminal_exec",
-    args={"command": "python main.py"},
-    user_id=12345,
-    message_type="terminal"
-)
-
-print(result)
-# 输出: "程序运行成功..."
-```
+终端工具现在通过 `.claude/` 目录提供，支持完整的文件操作、代码执行、Git 操作等能力。
 
 ---
 
@@ -6161,71 +5974,11 @@ result = sensitive_filter.check("内容包含自定义敏感词")
 
 > 已在 `core/ai_client.py` 中实现，使用 `asyncio.gather` 并发执行多个工具。
 
-### 7. 超级终端控制系统 (Terminal Ultra)
+### 7. 超级终端控制系统 → Open-ClaudeCode
 
-弥娅终端模式获得完全终端掌控能力，类似于 opencode 或 Claude Code。
+弥娅终端模式已从原生 Python 模块迁移至 **Open-ClaudeCode**。
 
-#### 功能特性
-
-| 工具 | 功能 | 示例 |
-|------|------|------|
-| `terminal_exec` | 执行任意终端命令 | `python script.py`, `npm install` |
-| `file_read` | 读取文件内容 | 查看代码、配置 |
-| `file_write` | 创建/写入文件 | 创建新文件 |
-| `file_edit` | 编辑/修改文件 | 修改代码 |
-| `file_delete` | 删除文件 | 清理文件 |
-| `directory_tree` | 目录树结构 | 查看项目结构 |
-| `code_execute` | 代码执行 | 运行 Python/JS 代码 |
-| `project_analyze` | 项目分析 | 统计语言分布 |
-
-#### 文件位置
-
-- 核心模块: `core/terminal_ultra.py`
-- 工具集成: `webnet/ToolNet/tools/terminal/ultra_terminal_tools.py`
-- 使用指南: `docs/terminal_guide.md`
-
-#### 使用方法
-
-```python
-from core.terminal_ultra import get_terminal_ultra
-import asyncio
-
-async def main():
-    terminal = get_terminal_ultra()
-    
-    # 执行终端命令
-    result = await terminal.terminal_exec("python script.py")
-    
-    # 读取文件
-    result = await terminal.file_read("config.py")
-    
-    # 写入文件
-    result = await terminal.file_write("test.py", "print('hello')")
-    
-    # 编辑文件
-    result = await terminal.file_edit("test.py", "hello", "world")
-    
-    # 删除文件
-    result = await terminal.file_delete("temp.txt")
-    
-    # 目录树
-    result = await terminal.directory_tree(".", max_depth=3)
-    
-    # 代码执行
-    result = await terminal.code_execute("print(1+1)", "python")
-    
-    # 项目分析
-    result = await terminal.project_analyze(".")
-
-asyncio.run(main())
-```
-
-#### 安全机制
-
-- **危险命令拦截**: 自动阻止 `rm -rf /`、`mkfs` 等危险操作
-- **工作目录隔离**: 默认在项目目录内操作
-- **超时保护**: 命令执行有超时限制
-- **错误处理**: 完善的异常处理和错误信息
+终端功能现由 `.claude/` 目录提供，支持完整的文件操作、代码执行、Git 操作等能力。
 
 ---
 
@@ -6536,74 +6289,11 @@ class RiskLevel(Enum):
 - **v4.2.0**: 添加 Hooks 安全系统
 - **v4.2.0**: 添加 Feature Development Workflow
 - **v4.2.0**: 添加 Skills 注册系统
-- **v4.2.0**: 初始版本 Terminal Ultra
+- **v4.2.0**: 初始版本 Terminal Ultra (已迁移到 Open-ClaudeCode)
 
-```python
-import asyncio
-from core.terminal_ultra import (
-    get_terminal_ultra,
-    call_agent,
-    execute_terminal_agent,
-    ExecutionResult
-)
+---
 
-async def terminal_demo():
-    """弥娅终端模式完整演示"""
-    
-    # 获取终端实例
-    terminal = get_terminal_ultra("D:/project")
-    
-    # ==================== 基础终端操作 ====================
-    
-    # 执行命令
-    result = await terminal.terminal_exec("python script.py", timeout=60)
-    print(f"执行结果: {result.success}, 输出: {result.output}")
-    
-    # 读取文件
-    result = await terminal.file_read("src/main.py", offset=0, limit=50)
-    print(f"文件内容: {result.output}")
-    
-    # 写入文件
-    result = await terminal.file_write("test.py", "print('hello world')")
-    print(f"写入成功: {result.success}")
-    
-    # 编辑文件
-    result = await terminal.file_edit("test.py", "hello", "hi", replace_all=True)
-    print(f"编辑成功: {result.success}")
-    
-    # 删除文件
-    result = await terminal.file_delete("temp.txt")
-    print(f"删除成功: {result.success}")
-    
-    # ==================== 目录操作 ====================
-    
-    # 目录树
-    result = await terminal.directory_tree(".", max_depth=3, include_hidden=False)
-    print(f"目录结构:\n{result.output}")
-    
-    # 项目分析
-    result = await terminal.project_analyze(".")
-    print(f"项目统计: {result.output}")
-    
-    # ==================== Git 操作 ====================
-    
-    # 查看状态
-    result = await terminal.git_status(short=True)
-    print(f"Git状态: {result.output}")
-    
-    # 查看差异
-    result = await terminal.git_diff("src/main.py")
-    print(f"文件差异: {result.output}")
-    
-    # 提交代码
-    result = await terminal.git_commit("feat: add new feature")
-    print(f"提交结果: {result.success}")
-    
-    # 推送
-    result = await terminal.git_push("origin", "main")
-    print(f"推送结果: {result.success}")
-    
-    # ==================== 搜索操作 ====================
+终端功能现由 Open-ClaudeCode (`.claude/`) 提供，不再使用原生 Python 模块。
     
     # 搜索内容
     result = await terminal.file_grep(
@@ -6689,15 +6379,6 @@ asyncio.run(terminal_demo())
 
 | 类别 | 文件路径 | 说明 |
 |------|----------|------|
-| **核心模块** | `core/terminal_ultra.py` | TerminalUltra 主类，包含所有工具方法 |
-| **工具集成** | `webnet/ToolNet/tools/terminal/ultra_terminal_tools.py` | ToolNet 工具适配器 |
-| **使用指南** | `docs/terminal_guide.md` | AI 提示词指南 |
-| **Agent代码** | `core/skills/agents/code_explorer/` | 代码探索 Agent |
-| **Agent代码** | `core/skills/agents/code_reviewer/` | 代码审查 Agent |
-| **Agent代码** | `core/skills/agents/code_architect/` | 架构设计 Agent |
-| **配置** | `config/terminal_config.json` | 终端配置 |
-| **配置** | `config/terminal_whitelist.json` | 命令白名单 |
-
 ---
 
 ##### 7.1.9 ToolNet 工具注册
@@ -8275,7 +7956,7 @@ def auto_detect_from_input(self, content: str) -> None:
 |------|------|
 | `text_config.json` | **所有用户可见文本** - 问候语、错误消息、命令响应等 |
 | `personality_config.json` | 人格阈值、特质向量、情感参数 |
-| `qq_command_config.json` | QQ命令别名和响应配置 |
+
 | `personalities/*.yaml` | 17种人格形态配置 |
 
 ### text_config.json 详解
@@ -8618,7 +8299,6 @@ QQ命令配置系统原先在 `core/qq_command_config.py` 中硬编码了默认�
 - 错误消息: `config/text_config.json` → `error_messages`
 - QQ命令配置: `core/qq_command_config.py` (从 text_config.json 读取)
 
-> **注意 (v4.3.4+)**：`config/qq_command_config.json` 和 `config/default_qq_command_config.json` 已不再使用，配置已迁移到 `config/text_config.json`。见 `core/qq_command_config.py` 第30行的加载逻辑。
 2. **添加新命令类型**: 在配置文件中添加新的命令类别，如 `"game_commands"`
 3. **测试配置**: 重启QQ客户端，发送对应命令测试
 
@@ -8639,9 +8319,6 @@ print(f"形态命令别名: {aliases}")
 ```
 
 #### 模块说明
-- `core.qq_command_config`: QQ命令配置加载器，从 `config/text_config.json` 读取命令关键词和响应配置
-
-> **注意 (v4.3.4+)**：`config/qq_command_config.json` 和 `config/default_qq_command_config.json` 已不再使用，配置已迁移到 `config/text_config.json`。
 
 ### 2. 修复multi_model_config.json解析错误
 
@@ -13701,40 +13378,14 @@ QQClient._init_message_batcher() → qq_config.yaml
 ### 删除的文件
 
 以下文件已从弥娅系统中移除（终端功能已由 Open-ClaudeCode 提供）：
+- 所有 `core/terminal*.py` 模块已删除
+- `webnet/TerminalNet/` 目录已删除
+- `webnet/CrossTerminalNet/` 目录已删除
+- `webnet/ToolNet/tools/terminal/` 目录已删除
+- `webnet/ToolNet/tools/cross_terminal/` 目录已删除
+- `run/multi_terminal_main_v2.py` 等多终端脚本已删除
 
-#### 核心终端模块
-| 文件/目录 | 说明 |
-|-----------|------|
-| `core/terminal_ultra.py` | 超级终端控制核心 (1584行) |
-| `core/terminal_manager.py` | 终端管理器 |
-| `core/terminal_orchestrator.py` | 终端编排器 |
-| `core/terminal_types.py` | 终端类型枚举 |
-| `core/terminal_agent.py` | 终端代理 |
-| `core/local_terminal_manager.py` | 本地终端管理 |
-| `core/master_terminal_controller.py` | 主终端控制器 |
-| `core/child_terminal.py` | 子终端 |
-| `core/conpty_terminal_manager.py` | ConPTY 终端 |
-| `core/linux_pty_terminal_manager.py` | Linux PTY 终端 |
-| `core/ssh_terminal_manager.py` | SSH 终端管理 |
-| `core/miya_takeover_mode.py` | 弥娅接管模式 |
-| `core/terminal/` | 终端分层架构目录 (10+ 文件) |
-
-#### 终端子网
-| 文件/目录 | 说明 |
-|-----------|------|
-| `webnet/TerminalNet/` | 终端子网 |
-| `webnet/CrossTerminalNet/` | 跨端子网 |
-| `webnet/ToolNet/tools/terminal/` | 终端工具 |
-| `webnet/ToolNet/tools/cross_terminal/` | 跨端工具 |
-| `cross_terminal/` | 跨端工具目录 |
-
-#### Web API 和启动脚本
-| 文件 | 说明 |
-|------|------|
-| `core/web_api/terminal.py` | 终端 Web API |
-| `core/web_api/cross_terminal.py` | 跨端 Web API |
-| `run/multi_terminal_main_v2.py` | 多终端主入口 |
-| `run/multi_terminal_start.sh` | 多终端启动脚本 |
+终端功能现由 Open-ClaudeCode (`.claude/` 目录) 提供。
 
 ### 新增的文件
 
@@ -14978,7 +14629,7 @@ self.parallel_output_prompt_template = pv.get("output_prompt_template", "")  # �
 
 | 配置文件 | 说明 | 格式 |
 |---------|------|------|
-| `config/text_config.json` | 所有用户可见文本、规则、提示词、人设 | JSON |
+| `config/text_config.json` | 所有用户可见文本、规则、提示词，人设 | JSON |
 | `config/multi_model_config.json` | 所有 AI 模型配置（文本、视觉、嵌入） | JSON |
 | `config/memory_config.json` | 记忆系统配置 | JSON |
 | `config/permissions.json` | 权限配置 | JSON |
@@ -14986,18 +14637,13 @@ self.parallel_output_prompt_template = pv.get("output_prompt_template", "")  # �
 | `config/skills.yaml` | Skills 配置 | YAML |
 | `config/personalities/*.yaml` | 人格/形态配置 | YAML |
 | `config/qq_config.yaml` | QQ 连接配置 | YAML |
-
-### 2. 已废弃/迁移的配置文件
-
-以下配置文件已被废弃或迁移到其他位置：
-
-| 原配置文件 | 状态 | 迁移位置 |
-|-----------|------|---------|
-| `config/terminal_config.json` | 已废弃 | Open-ClaudeCode 内部 |
-| `config/terminal_whitelist.json` | 已废弃 | Open-ClaudeCode 内部 |
-| `config/qq_command_config.json` | 已废弃 | `config/text_config.json` |
-| `config/default_qq_command_config.json` | 已废弃 | `config/text_config.json` |
-| `config/unified_model_config.yaml` | 已迁移 | `config/multi_model_config.json` |
+| `config/personality_config.json` | 人格阈值和情感参数 | JSON |
+| `config/soul_generator_config.json` | 灵魂发生器配置 | JSON |
+| `config/agent_routing_config.json` | Agent路由配置 | JSON |
+| `config/advanced_config.json` | 高级配置 | JSON |
+| `config/system_constants.json` | 系统常量配置 | JSON |
+| `config/api_endpoints.json` | API 端点配置 | JSON |
+| `config/tts_config.json` | TTS 语音配置 | JSON |
 
 ### 3. text_config.json 详解
 
