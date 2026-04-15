@@ -150,9 +150,31 @@ class ToolRegistry:
                 if not valid:
                     return f"❌ 参数错误: {error}"
 
-            # 执行工具 - 只使用BaseTool标准签名
+            # 执行工具 - 检测工具的签名类型并适配调用
             logger.info(f"[Registry] 执行工具: {name}, kwargs: {list(kwargs.keys())}")
-            result = await tool.execute(context, **kwargs)
+
+            # 检查工具的 execute 方法签名
+            import inspect
+
+            sig = inspect.signature(tool.execute)
+            params = list(sig.parameters.keys())
+
+            # 大部分工具使用 (args, context) 签名，但有些使用 (context, **kwargs)
+            # 如果第二个参数是 kwargs 或 *args，则使用 **kwargs 方式
+            if len(params) >= 2:
+                second_param = sig.parameters[params[1]]
+                if second_param.kind in (
+                    inspect.Parameter.VAR_KEYWORD,
+                    inspect.Parameter.VAR_POSITIONAL,
+                ):
+                    # 使用 (context, **kwargs) 方式
+                    result = await tool.execute(context, **kwargs)
+                else:
+                    # 使用 (args, context) 方式
+                    result = await tool.execute(kwargs, context)
+            else:
+                result = await tool.execute(context, **kwargs)
+
             return result
         except Exception as e:
             self.logger.error(f"执行工具失败 {name}: {e}", exc_info=True)

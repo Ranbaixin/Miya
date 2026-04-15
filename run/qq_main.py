@@ -211,7 +211,7 @@ class MiyaQQ:
     def _init_tts_system(self):
         """初始化 TTS 系统"""
         try:
-            from webnet.tts import TTSNet
+            from core.tts import TTSNet
             import json
             from core.constants import Encoding
 

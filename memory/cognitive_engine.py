@@ -759,17 +759,5 @@ def get_cognitive_engine() -> CognitiveEngine:
     """获取认知引擎单例实例"""
     global _cognitive_engine
     if _cognitive_engine is None:
-        # 尝试获取embedding_client
-        embedding_client = None
-        try:
-            from core.embedding_client import get_embedding_client
-            import asyncio
-
-            embedding_client = (
-                asyncio.run(get_embedding_client()) if get_embedding_client else None
-            )
-        except Exception:
-            pass
-
-        _cognitive_engine = CognitiveEngine(embedding_client=embedding_client)
+        _cognitive_engine = CognitiveEngine(embedding_client=None)
     return _cognitive_engine

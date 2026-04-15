@@ -6,15 +6,37 @@
 - 分层摘要：时间线概览 + 关键对话 + 当前话题
 - 追踪活跃对话窗口
 - 区分公开话题 vs 私密对话
+- 消息策略分析（是否回复、回复策略、意图分类）
 """
 
 import logging
 import time
+import asyncio
+import json
+import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 from collections import defaultdict
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class MessageStrategy:
+    """消息策略分析结果"""
+
+    should_respond: bool = True  # 是否应该回复
+    response_strategy: str = (
+        "full_reply"  # 响应策略: full_reply/brief_reply/emoji_only/ignore/like_only
+    )
+    message_intent: str = (
+        "chat"  # 意图分类: greeting/chat/question/confession/complaint/share/casual
+    )
+    confidence: float = 0.5  # 判断置信度
+    reason: str = ""  # 判断理由
+    suggested_reply_style: str = "normal"  # 建议回复风格: normal/casual/serious/playful
+    max_messages: int = 1  # 本轮回复最多发几条消息
 
 
 @dataclass
@@ -356,6 +378,206 @@ class DiTingListener:
 
         if expired_groups:
             logger.debug(f"[谛听] 清理了 {len(expired_groups)} 个过期群数据")
+
+    async def analyze_message_strategy(
+        self,
+        content: str,
+        user_id: str,
+        group_id: Optional[str] = None,
+        is_at_bot: bool = False,
+        message_type: str = "group",
+        recent_context: str = "",
+    ) -> MessageStrategy:
+        """
+        分析消息策略 - AI判断是否回复及如何回复
+
+        Args:
+            content: 消息内容
+            user_id: 发送者ID
+            group_id: 群ID（私聊为None）
+            is_at_bot: 是否@机器人
+            message_type: 消息类型 group/private
+            recent_context: 最近对话上下文
+
+        Returns:
+            MessageStrategy: 策略分析结果
+        """
+        # 加载配置
+        config = self._load_strategy_config()
+
+        if not config.get("enabled", True):
+            # 如果未启用，返回默认策略
+            return MessageStrategy(should_respond=True, response_strategy="full_reply")
+
+        # 构建分析prompt
+        prompt = self._build_strategy_prompt(
+            content, user_id, group_id, is_at_bot, message_type, recent_context, config
+        )
+
+        try:
+            # 调用AI分析 - 使用 ModelPool 获取客户端
+            from core.model_pool import get_qq_model
+
+            model_config = get_qq_model("simple_chat", "balanced")
+            if not model_config:
+                logger.warning("[谛听-策略] 无法获取模型配置，使用默认策略")
+                return MessageStrategy()
+
+            from core.ai_client import AIClientFactory
+
+            client = AIClientFactory.create_client(
+                provider=model_config.provider,
+                api_key=model_config.api_key or "",
+                model=model_config.name,
+                base_url=model_config.base_url,
+                tool_context=None,
+            )
+
+            from core.ai_client import AIMessage
+
+            messages = [AIMessage(role="user", content=prompt)]
+
+            # 添加超时控制
+            timeout = config.get("timeout", 10)
+            response = await asyncio.wait_for(
+                client.chat(messages=messages, tools=None, use_miya_prompt=False),
+                timeout=timeout,
+            )
+            if not response:
+                logger.warning("[谛听-策略] AI响应为空，使用默认策略")
+                return MessageStrategy()
+
+            # 解析AI返回的JSON
+            json_match = re.search(r"\{.*\}", response, re.DOTALL)
+            if not json_match:
+                logger.warning("[谛听-策略] AI返回非JSON，使用默认策略")
+                return MessageStrategy()
+
+            result = json.loads(json_match.group())
+
+            # 从配置获取默认值
+            max_responses = config.get("max_responses_per_turn", 3)
+            default_max_messages = config.get("default_max_messages", 1)
+
+            # 获取AI返回的max_messages并校验
+            max_messages = result.get("max_messages", default_max_messages)
+            if not isinstance(max_messages, int) or max_messages < 1:
+                max_messages = default_max_messages
+            if max_messages > max_responses:
+                max_messages = max_responses
+
+            # 转换为MessageStrategy
+            return MessageStrategy(
+                should_respond=result.get("should_respond", True),
+                response_strategy=result.get("response_strategy", "full_reply"),
+                message_intent=result.get("message_intent", "chat"),
+                confidence=result.get("confidence", 0.5),
+                reason=result.get("reason", ""),
+                suggested_reply_style=result.get("suggested_reply_style", "normal"),
+                max_messages=max_messages,
+            )
+
+        except asyncio.TimeoutError:
+            logger.warning(f"[谛听-策略] 分析超时，使用默认策略")
+            return MessageStrategy()
+        except Exception as e:
+            logger.warning(f"[谛听-策略] 分析失败: {e}，使用默认策略")
+            return MessageStrategy()
+
+    def _load_strategy_config(self) -> Dict:
+        """加载策略配置 - 合并diteng_strategy_config和text_config的默认值"""
+        try:
+            # 加载策略配置
+            config_path = (
+                Path(__file__).parent.parent / "config" / "diteng_strategy_config.json"
+            )
+            if config_path.exists():
+                with open(config_path, "r", encoding="utf-8") as f:
+                    config = json.load(f)
+            else:
+                config = {}
+
+            # 加载默认值配置
+            defaults_path = Path(__file__).parent.parent / "config" / "text_config.json"
+            if defaults_path.exists():
+                with open(defaults_path, "r", encoding="utf-8") as f:
+                    text_config = json.load(f)
+                    strategy_defaults = text_config.get("strategy_defaults", {})
+
+                    # 合并默认值
+                    if "max_responses_per_turn" not in config:
+                        config["max_responses_per_turn"] = strategy_defaults.get(
+                            "max_responses_per_turn", 3
+                        )
+                    if "default_max_messages" not in config:
+                        config["default_max_messages"] = strategy_defaults.get(
+                            "default_max_messages", 1
+                        )
+
+            return config
+        except Exception:
+            return {"max_responses_per_turn": 3, "default_max_messages": 1}
+
+    def _build_strategy_prompt(
+        self,
+        content: str,
+        user_id: str,
+        group_id: Optional[str],
+        is_at_bot: bool,
+        message_type: str,
+        recent_context: str,
+        config: Dict,
+    ) -> str:
+        """构建策略分析prompt - 所有策略选项从配置文件读取"""
+
+        # 从配置读取策略选项
+        strategy_options = config.get("response_strategies", {})
+        intent_options = config.get("intent_types", {})
+        style_options = config.get("reply_styles", {})
+        judge_rules = config.get("judge_rules", [])
+        max_responses = config.get("max_responses_per_turn", 3)
+
+        # 构建判断规则字符串
+        rules_text = "\n".join(f"{i + 1}. {rule}" for i, rule in enumerate(judge_rules))
+
+        prompt = f"""你是弥娅的消息策略分析助手。根据以下信息判断如何响应这条消息。
+
+【消息信息】
+- 内容: {content}
+- 发送者ID: {user_id}
+- 类型: {"群聊" if message_type == "group" else "私聊"}
+- 是否@机器人: {"是" if is_at_bot else "否"}
+- 群ID: {group_id or "私聊"}
+
+【最近上下文】
+{recent_context if recent_context else "无"}
+
+【回复策略选项】
+{json.dumps(strategy_options, ensure_ascii=False, indent=2)}
+
+【意图类型选项】
+{json.dumps(intent_options, ensure_ascii=False, indent=2)}
+
+【回复风格选项】
+{json.dumps(style_options, ensure_ascii=False, indent=2)}
+
+【重要约束】本轮回复最多发 {max_responses} 条消息，超过会刷屏。
+
+请直接返回JSON（不要其他内容）：
+{{
+  "should_respond": true/false,
+  "response_strategy": "策略名",
+  "message_intent": "意图类型",
+  "confidence": 0.0-1.0,
+  "reason": "判断理由",
+  "suggested_reply_style": "风格",
+  "max_messages": 1到{max_responses}之间的数字
+}}
+
+判断规则：
+{rules_text}
+"""
+        return prompt
 
 
 # 全局单例

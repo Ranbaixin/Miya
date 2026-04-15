@@ -141,6 +141,10 @@ echo Press Ctrl+C to stop.
 echo ================================================================================
 echo.
 
+REM 表情包同步说明：
+REM 请手动将 data\emoji 目录复制到 NapCat 目录
+REM NapCat 表情包目录: E:\AAI\NapCat.Shell.Windows.OneKey\NapCat.44498.Shell\emoji
+
 REM Check if QQ client exists
 if exist "run\qq_main.py" (
     echo [OK] QQ client found
@@ -598,6 +602,13 @@ if "%service_choice:3=%" neq "%service_choice%" (
     echo [4/5] Starting QQ Client...
     call :check_file "run\qq_main.py"
     if not errorlevel 1 (
+        REM 手动同步: 将 data\emoji 复制到 E:\AAI\NapCat.Shell.Windows.OneKey\NapCat.44498.Shell\emoji
+        start "MIYA QQ" /B python run\qq_main.py
+        timeout /t 1 >nul
+        echo [OK] QQ Client started
+    )
+)
+        )
         start "MIYA QQ" /B python run\qq_main.py
         timeout /t 1 >nul
         echo [OK] QQ Client started

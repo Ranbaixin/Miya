@@ -17,6 +17,7 @@ import time
 import random
 import json
 import sys
+import asyncio
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Union
 from dataclasses import dataclass, field
@@ -1233,11 +1234,26 @@ class SoulGenerator:
             from core.ai_client import AIMessage
 
             messages = [AIMessage(role="user", content=prompt)]
-            response = await ai_client.chat(
-                messages=messages, tools=None, use_miya_prompt=False
-            )
+            timeout_seconds = _CONFIG.get("AI_EMOTION_ANALYSIS_TIMEOUT")
+            try:
+                response = await asyncio.wait_for(
+                    ai_client.chat(
+                        messages=messages, tools=None, use_miya_prompt=False
+                    ),
+                    timeout=timeout_seconds,
+                )
+            except asyncio.TimeoutError:
+                logger.warning(f"[灵魂] AI分析超时 ({timeout_seconds}秒)")
+                return None
+            except Exception as e:
+                logger.warning(f"[灵魂] AI调用失败: {e}")
+                return None
 
-            logger.warning(f"[灵魂] AI响应: {response[:500]}")
+            if not response:
+                logger.warning("[灵魂] AI响应为空")
+                return None
+
+            logger.warning(f"[灵魂] AI响应: {response[:500] if response else 'None'}")
 
             import re
             import json
