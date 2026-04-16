@@ -9,17 +9,18 @@
 本工具优先使用新版 MiyaMemoryCore 记忆系统
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import logging
 from pathlib import Path
+from datetime import datetime, timedelta
 from webnet.ToolNet.base import BaseTool, ToolContext
 
 
 logger = logging.getLogger(__name__)
 
 
-def _load_self_memory_tags() -> List[str]:
-    """从 text_config.json 加载弥娅自记忆标签"""
+def _load_config() -> Dict[str, Any]:
+    """从 text_config.json 加载记忆列表工具配置"""
     try:
         config_path = (
             Path(__file__).parent.parent.parent.parent.parent
@@ -31,13 +32,49 @@ def _load_self_memory_tags() -> List[str]:
 
             with open(config_path, "r", encoding="utf-8") as f:
                 full_config = json.load(f)
+
+            tool_config = full_config.get("memory_list_tool", {})
             self_config = full_config.get("assistant_self", {})
-            tags = self_config.get("self_memory_tags")
-            if tags:
-                return tags
+
+            return {
+                "description": tool_config.get("description", ""),
+                "time_range_options": tool_config.get("time_range_options", {}),
+                "defaults": tool_config.get("defaults", {}),
+                "self_memory_tags": self_config.get("self_memory_tags", []),
+            }
     except Exception as e:
-        logger.warning(f"[MemoryList] 加载自记忆标签配置失败: {e}")
-    return []
+        logger.warning(f"[MemoryList] 加载配置失败: {e}")
+
+    return {}
+
+
+def _parse_time_range(
+    time_range: Optional[str], keywords: Dict[str, List[str]]
+) -> tuple:
+    """解析时间范围，返回 (start_time, end_time)"""
+    if not time_range:
+        return None, None
+
+    now = datetime.now()
+    start_time = None
+    end_time = None
+
+    if time_range == "today":
+        start_time = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    elif time_range == "yesterday":
+        yesterday = now - timedelta(days=1)
+        start_time = yesterday.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_time = yesterday.replace(hour=23, minute=59, second=59, microsecond=999999)
+    elif time_range == "day_before_yesterday":
+        dby = now - timedelta(days=2)
+        start_time = dby.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_time = dby.replace(hour=23, minute=59, second=59, microsecond=999999)
+    elif time_range == "last_week":
+        start_time = now - timedelta(days=7)
+    elif time_range == "last_month":
+        start_time = now - timedelta(days=30)
+
+    return start_time, end_time
 
 
 class MemoryList(BaseTool):
@@ -45,16 +82,34 @@ class MemoryList(BaseTool):
 
     @property
     def config(self) -> Dict[str, Any]:
+        cfg = _load_config()
+
+        time_range_desc = ", ".join(
+            f"'{k}'({v})"
+            for k, v in cfg.get(
+                "time_range_options",
+                {
+                    "today": "今天",
+                    "yesterday": "昨天",
+                    "day_before_yesterday": "前天",
+                    "last_week": "上周",
+                    "last_month": "上月",
+                },
+            ).items()
+        )
+
+        defaults = cfg.get("defaults", {"limit": 15, "include_dialogue": True})
+
         return {
             "name": "memory_list",
-            "description": "列出记忆，支持按标签、角色（user/assistant）、用户筛选。当用户说'查看记忆'、'列出记忆'、'显示所有记忆'、'记忆列表'、'你记得什么'、'我们都聊过什么'、'昨天聊了什么'、'你说过什么'、'你承诺过什么'等回忆类问题时必须调用此工具。重要：此工具返回的记忆结果包含完整的用户信息和弥娅自记忆，AI 必须仔细阅读工具返回的内容并基于这些信息回答用户问题。参数role='assistant'可专门查询弥娅自己说过的话（承诺、观点、建议等）。",
+            "description": cfg.get("description", "列出记忆"),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "limit": {
                         "type": "integer",
-                        "description": "返回的最大数量，默认15",
-                        "default": 15,
+                        "description": f"返回的最大数量，默认{defaults.get('limit', 15)}",
+                        "default": defaults.get("limit", 15),
                         "minimum": 1,
                         "maximum": 50,
                     },
@@ -66,8 +121,24 @@ class MemoryList(BaseTool):
                     },
                     "include_dialogue": {
                         "type": "boolean",
-                        "description": "是否包含对话历史（dialogue层），默认false",
-                        "default": False,
+                        "description": f"是否包含对话历史（dialogue层），默认{defaults.get('include_dialogue', True)}",
+                        "default": defaults.get("include_dialogue", True),
+                    },
+                    "time_range": {
+                        "type": "string",
+                        "description": f"时间范围筛选: {time_range_desc}",
+                        "enum": list(
+                            cfg.get(
+                                "time_range_options",
+                                {
+                                    "today": "今天",
+                                    "yesterday": "昨天",
+                                    "day_before_yesterday": "前天",
+                                    "last_week": "上周",
+                                    "last_month": "上月",
+                                },
+                            ).keys()
+                        ),
                     },
                 },
                 "required": [],
@@ -76,31 +147,47 @@ class MemoryList(BaseTool):
 
     async def execute(self, context: ToolContext, **kwargs) -> str:
         """执行工具 - 优先使用 MiyaMemoryCore"""
+        cfg = _load_config()
+        defaults = cfg.get("defaults", {})
+
         args = kwargs
-        limit = args.get("limit", 15)
+        limit = args.get("limit", defaults.get("limit", 15))
         tag = args.get("tag")
         role_filter = args.get("role")
-        include_dialogue = args.get("include_dialogue", False)
+        include_dialogue = args.get(
+            "include_dialogue", defaults.get("include_dialogue", True)
+        )
+        time_range = args.get("time_range")
         user_id = str(context.user_id) if context.user_id else None
 
-        # 从配置加载自记忆标签
-        self_memory_tags = _load_self_memory_tags()
+        self_memory_tags = cfg.get("self_memory_tags", [])
+        preview_length = defaults.get("content_preview_length", 120)
 
-        # 优先级 1: 新版 MiyaMemoryCore（权威记忆源）
+        start_time, end_time = _parse_time_range(time_range, {})
+
         try:
             from memory import get_memory_core, MemoryLevel, MemorySource
 
             core = await get_memory_core()
 
             if tag:
-                # 按标签搜索
-                results = await core.search_by_tag(tag, user_id=user_id, limit=limit)
+                results = await core.search_by_tag(
+                    tag,
+                    user_id=user_id,
+                    limit=limit,
+                    start_time=start_time,
+                    end_time=end_time,
+                )
             elif role_filter == "assistant":
-                # 【星璇增强】专门查询弥娅自记忆
-                all_results = await core.retrieve(
+                from memory.core import MemoryQuery
+
+                q = MemoryQuery(
                     query="",
                     limit=limit * 3,
+                    start_time=start_time,
+                    end_time=end_time,
                 )
+                all_results = await core.retrieve(q)
                 results = []
                 for m in all_results:
                     level_val = (
@@ -109,8 +196,6 @@ class MemoryList(BaseTool):
                     source_val = (
                         m.source.value if hasattr(m.source, "value") else str(m.source)
                     )
-                    meta = getattr(m, "metadata", {}) or {}
-                    # 匹配：弥娅自记忆来源 或 配置中的自记忆标签 或 role=assistant的长期记忆
                     if (
                         source_val == "assistant_self"
                         or any(t in (m.tags or []) for t in self_memory_tags)
@@ -123,15 +208,19 @@ class MemoryList(BaseTool):
                     if len(results) >= limit:
                         break
             elif user_id and user_id != "global":
-                # 按用户搜索
-                results = await core.search_by_user(user_id, limit=limit)
+                results = await core.search_by_user(
+                    user_id, limit=limit, start_time=start_time, end_time=end_time
+                )
             else:
-                # 获取所有记忆
-                results = await core.retrieve(
+                from memory.core import MemoryQuery
+
+                q = MemoryQuery(
                     query="",
                     limit=limit * 3,
+                    start_time=start_time,
+                    end_time=end_time,
                 )
-                # 保留长期/语义/知识记忆，以及短期重要记忆
+                results = await core.retrieve(q)
                 filtered = []
                 for m in results:
                     level_val = (
@@ -141,15 +230,13 @@ class MemoryList(BaseTool):
                         m.source.value if hasattr(m.source, "value") else str(m.source)
                     )
                     meta = getattr(m, "metadata", {}) or {}
-                    # 保留：长期、语义、知识
                     if level_val in ("long_term", "semantic", "knowledge"):
                         filtered.append(m)
-                    # 【修复】短期记忆：如果标记为重要/高优先级，也保留
                     elif level_val == "short_term":
                         priority = getattr(m, "priority", 0)
                         importance = meta.get("importance", "")
                         if (
-                            priority >= 0.7  # 高优先级
+                            priority >= 0.7
                             or importance == "high"
                             or source_val == "assistant_self"
                             or source_val == "manual"
@@ -172,7 +259,9 @@ class MemoryList(BaseTool):
             ]
             for i, mem in enumerate(results, 1):
                 content_preview = (
-                    mem.content[:120] + "..." if len(mem.content) > 120 else mem.content
+                    mem.content[:preview_length] + "..."
+                    if len(mem.content) > preview_length
+                    else mem.content
                 )
                 tags_str = ", ".join(mem.tags) if mem.tags else "none"
                 level_label = {
@@ -193,7 +282,6 @@ class MemoryList(BaseTool):
                 elif hasattr(mem.source, "__str__"):
                     source_label = str(mem.source)
 
-                # 构建展示行
                 line_parts = [f"{i}. [{level_label}]"]
                 if role_label:
                     line_parts.append(f"[{role_label}]")
@@ -216,7 +304,6 @@ class MemoryList(BaseTool):
         except Exception as e:
             logger.error(f"[MemoryList] MiyaMemoryCore 查询失败: {e}", exc_info=True)
 
-        # 优先级 2: Undefined 轻量记忆系统（回退）
         try:
             from memory.undefined_memory import get_undefined_memory_adapter
 
@@ -244,7 +331,9 @@ class MemoryList(BaseTool):
                     created_at = getattr(mem, "created_at", "未知时间")
 
                 content_preview = (
-                    content[:100] + "..." if len(content) > 100 else content
+                    content[: int(preview_length * 0.83)] + "..."
+                    if len(content) > int(preview_length * 0.83)
+                    else content
                 )
                 tags_str = ", ".join(tags) if tags else "none"
                 result += f"{i}. **{mem_id}**\n"
@@ -256,7 +345,6 @@ class MemoryList(BaseTool):
         except Exception as e:
             logger.error(f"[MemoryList] Undefined 记忆系统失败: {e}", exc_info=True)
 
-        # 优先级 3: 认知记忆系统
         cognitive_memory = getattr(context, "cognitive_memory", None)
         if cognitive_memory:
             try:

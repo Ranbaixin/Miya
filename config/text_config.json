@@ -208,7 +208,8 @@
         "amics": "爱弥斯态",
         "ganyu": "甘雨态",
         "bianka":"比安卡态",
-        "shenhe": "申鹤态"
+        "shenhe": "申鹤态",
+        "baiyuekui":"白月魁态"
 
     },
     
@@ -1186,5 +1187,21 @@
             "弥娅自记忆",
             "星璇自记忆"
         ]
+    },
+
+    "memory_list_tool": {
+        "description": "列出记忆。当用户问关于过去的对话、记忆、曾经聊过什么、昨晚/昨天/前天/上周的事情时，调用此工具查询相应时间范围的记忆。此工具支持按时间范围查询：today/yesterday/day_before_yesterday/last_week/last_month。返回的记忆包含完整的用户信息和弥娅自记忆，AI需要理解后用自己的话回答，不要直接复制工具输出。",
+        "time_range_options": {
+            "today": "今天",
+            "yesterday": "昨晚/昨天",
+            "day_before_yesterday": "前天",
+            "last_week": "上周",
+            "last_month": "上月"
+        },
+        "defaults": {
+            "limit": 15,
+            "include_dialogue": true,
+            "content_preview_length": 120
+        }
     }
 }

@@ -1464,6 +1464,16 @@ class MiyaMemoryCore:
             or memory.significance > query.max_significance
         ):
             return False
+        # 时间过滤
+        if query.start_time or query.end_time:
+            try:
+                mem_time = datetime.fromisoformat(memory.created_at)
+                if query.start_time and mem_time < query.start_time:
+                    return False
+                if query.end_time and mem_time > query.end_time:
+                    return False
+            except Exception:
+                pass
         return True
 
     def _sort_results(
@@ -1512,12 +1522,16 @@ class MiyaMemoryCore:
         tag: str,
         user_id: Optional[str] = None,
         limit: int = 20,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
     ) -> List[MemoryItem]:
         """按标签搜索"""
         q = MemoryQuery(
             tags=[tag],
             user_id=user_id,
             limit=limit,
+            start_time=start_time,
+            end_time=end_time,
         )
         return await self.retrieve(q)
 
@@ -1526,12 +1540,16 @@ class MiyaMemoryCore:
         user_id: str,
         level: Optional[MemoryLevel] = None,
         limit: int = 20,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
     ) -> List[MemoryItem]:
         """按用户搜索"""
         q = MemoryQuery(
             user_id=user_id,
             level=level,
             limit=limit,
+            start_time=start_time,
+            end_time=end_time,
         )
         return await self.retrieve(q)
 
@@ -1540,14 +1558,26 @@ class MiyaMemoryCore:
         session_id: str,
         platform: str = "unknown",
         limit: int = 50,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
     ) -> List[MemoryItem]:
-        """获取对话历史"""
+        """获取对话历史
+
+        Args:
+            session_id: 会话ID
+            platform: 平台过滤
+            limit: 返回数量限制
+            start_time: 开始时间（可选）
+            end_time: 结束时间（可选）
+        """
         q = MemoryQuery(
             session_id=session_id,
             level=MemoryLevel.DIALOGUE,
             limit=limit,
             sort_by="created_at",
             sort_order="asc",
+            start_time=start_time,
+            end_time=end_time,
         )
         results = await self.retrieve(q)
 
