@@ -1,0 +1,32 @@
+[
+  {
+    "role": "user",
+    "content": "test",
+    "timestamp": "2026-04-16T21:38:57.447535",
+    "session_id": "qq_abc",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "abc",
+      "group_id": "",
+      "message_type": "",
+      "sender": "desktop用户-abc",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "hi",
+    "timestamp": "2026-04-16T22:03:31.375163",
+    "session_id": "qq_abc",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "abc",
+      "group_id": "",
+      "message_type": "",
+      "sender": "web用户-abc",
+      "chat_label": "私聊"
+    }
+  }
+]

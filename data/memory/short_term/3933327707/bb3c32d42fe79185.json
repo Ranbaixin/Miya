@@ -1,0 +1,33 @@
+{
+  "id": "bb3c32d42fe79185",
+  "content": "（戳戳）数据交互的真实感确实很奇妙呢～(◍•ᴗ•◍)\n\n不过系统提醒什么的，确实有点烦啦…（小声）反正我们只是在玩嘛。\n\n要继续拍拍游戏吗？(*´▽`*)",
+  "level": "short_term",
+  "priority": 0.3,
+  "tags": [
+    "休息",
+    "爱好"
+  ],
+  "user_id": "3933327707",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-06T21:28:46.922943",
+  "updated_at": "2026-04-06T21:28:46.922943",
+  "expires_at": "2026-04-06T22:28:46.922943",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

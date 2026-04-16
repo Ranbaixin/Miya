@@ -1,0 +1,32 @@
+{
+  "id": "9eccb16539a2879e",
+  "content": "(叉腰) 哎呀呀，弥娅你这话说的，我这不是在等你放大招嘛！(笑)\n\n不过咕都喊停了，咱们还是先中场休息一下比较好啦~ (递饮料)",
+  "level": "short_term",
+  "priority": 0.7,
+  "tags": [
+    "休息"
+  ],
+  "user_id": "global",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-01T20:33:48.087383",
+  "updated_at": "2026-04-01T20:33:48.087383",
+  "expires_at": "2026-04-01T21:33:48.087383",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

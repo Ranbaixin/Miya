@@ -15,6 +15,7 @@ try:
     from fastapi.staticfiles import StaticFiles
     from fastapi.middleware.cors import CORSMiddleware
     import uvicorn
+
     FASTAPI_AVAILABLE = True
 except ImportError:
     FASTAPI_AVAILABLE = False
@@ -29,7 +30,7 @@ def is_port_available(port: int) -> bool:
         # 尝试连接端口，如果能连接说明被占用
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(0.1)
-            result = s.connect_ex(('127.0.0.1', port))
+            result = s.connect_ex(("127.0.0.1", port))
             # result == 0 表示连接成功，说明端口被占用
             return result != 0
     except:
@@ -68,7 +69,7 @@ async def main():
         for p in range(8001, 8051):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.settimeout(0.1)
-                result = s.connect_ex(('127.0.0.1', p))
+                result = s.connect_ex(("127.0.0.1", p))
                 if result == 0:
                     api_port = p
                     logger.info(f"检测到 API 服务运行在端口 {api_port}")
@@ -77,7 +78,9 @@ async def main():
         pass
 
     # 检查 React 构建文件是否存在
-    web_dist_path = Path(__file__).parent.parent / "frontend" / "packages" / "web" / "dist"
+    web_dist_path = (
+        Path(__file__).parent.parent / "frontend" / "packages" / "web" / "dist"
+    )
     react_built = web_dist_path.exists()
 
     if not react_built:
@@ -123,8 +126,21 @@ async def main():
             "service": "miya-web",
             "version": "2.0.0",
             "react_ui": react_built,
-            "api_port": api_port
+            "api_port": api_port,
         }
+
+    # 移动端聊天页面（来自 miya_frontend/ui）
+    @app.get("/chat")
+    async def chat_page():
+        """移动端聊天页面"""
+        from fastapi.responses import FileResponse
+
+        html_path = (
+            Path(__file__).parent.parent / "miya_frontend" / "ui" / "mobile_chat.html"
+        )
+        if html_path.exists():
+            return FileResponse(html_path)
+        return {"error": "前端文件未找到"}
 
     # API 代理端点（必须在静态文件之前定义）
     @app.post("/api/terminal/chat")
@@ -138,9 +154,11 @@ async def main():
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     s.settimeout(0.5)
-                    result = s.connect_ex(('127.0.0.1', api_port))
+                    result = s.connect_ex(("127.0.0.1", api_port))
                     if result != 0:
-                        logger.warning(f"[代理] API服务(端口{api_port})未运行,返回模拟响应")
+                        logger.warning(
+                            f"[代理] API服务(端口{api_port})未运行,返回模拟响应"
+                        )
                         message = body.get("message", "")
                         session_id = body.get("session_id", "")
 
@@ -158,7 +176,7 @@ async def main():
                             "status": "success",
                             "response": response_text,
                             "session_id": session_id,
-                            "timestamp": asyncio.get_event_loop().time()
+                            "timestamp": asyncio.get_event_loop().time(),
                         }
             except:
                 pass
@@ -167,22 +185,20 @@ async def main():
                 api_url = f"http://localhost:{api_port}/api/terminal/chat"
                 logger.info(f"[代理] 转发到: {api_url}")
 
-                response = await client.post(
-                    api_url,
-                    json=body,
-                    timeout=30.0
-                )
+                response = await client.post(api_url, json=body, timeout=30.0)
 
                 logger.info(f"[代理] 响应状态: {response.status_code}")
 
                 if response.status_code == 200:
                     return response.json()
                 else:
-                    logger.error(f"[代理] API 返回错误: {response.status_code} - {response.text}")
+                    logger.error(
+                        f"[代理] API 返回错误: {response.status_code} - {response.text}"
+                    )
                     return {
                         "status": "error",
                         "error": f"API 服务错误 (状态码: {response.status_code})",
-                        "response": f"API 服务错误 (状态码: {response.status_code})"
+                        "response": f"API 服务错误 (状态码: {response.status_code})",
                     }
 
         except httpx.ConnectError as e:
@@ -190,21 +206,21 @@ async def main():
             return {
                 "status": "error",
                 "error": f"无法连接到弥娅核心服务 (端口 {api_port})",
-                "response": f"无法连接到弥娅核心服务 (端口 {api_port})"
+                "response": f"无法连接到弥娅核心服务 (端口 {api_port})",
             }
         except httpx.TimeoutException as e:
             logger.error(f"[代理] API 请求超时: {e}")
             return {
                 "status": "error",
                 "error": "请求超时，请稍后重试",
-                "response": "请求超时，请稍后重试"
+                "response": "请求超时，请稍后重试",
             }
         except Exception as e:
             logger.error(f"[代理] 未知错误: {e}", exc_info=True)
             return {
                 "status": "error",
                 "error": "抱歉，发生未知错误。",
-                "response": "抱歉，发生未知错误。"
+                "response": "抱歉，发生未知错误。",
             }
 
     # 监控 API 端点（Mock 数据，实际应该从弥娅核心获取）
@@ -239,6 +255,7 @@ async def main():
         """获取系统信息"""
         import platform
         import psutil
+
         return {
             "platform": platform.system(),
             "platform_version": platform.version(),
@@ -246,18 +263,24 @@ async def main():
             "hostname": platform.node(),
             "cpu": {
                 "count": psutil.cpu_count(),
-                "percent": psutil.cpu_percent(interval=0.1)
+                "percent": psutil.cpu_percent(interval=0.1),
             },
             "memory": {
                 "total": psutil.virtual_memory().total,
                 "available": psutil.virtual_memory().available,
-                "percent": psutil.virtual_memory().percent
+                "percent": psutil.virtual_memory().percent,
             },
             "disk": {
-                "total": psutil.disk_usage('/').total if platform.system() == 'Darwin' or platform.system() == 'Linux' else psutil.disk_usage('C:\\').total,
-                "free": psutil.disk_usage('/').free if platform.system() == 'Darwin' or platform.system() == 'Linux' else psutil.disk_usage('C:\\').free,
-                "percent": psutil.disk_usage('/').percent if platform.system() == 'Darwin' or platform.system() == 'Linux' else psutil.disk_usage('C:\\').percent
-            }
+                "total": psutil.disk_usage("/").total
+                if platform.system() == "Darwin" or platform.system() == "Linux"
+                else psutil.disk_usage("C:\\").total,
+                "free": psutil.disk_usage("/").free
+                if platform.system() == "Darwin" or platform.system() == "Linux"
+                else psutil.disk_usage("C:\\").free,
+                "percent": psutil.disk_usage("/").percent
+                if platform.system() == "Darwin" or platform.system() == "Linux"
+                else psutil.disk_usage("C:\\").percent,
+            },
         }
 
     # ========== 弥娅核心管理 API 代理 ==========
@@ -268,8 +291,7 @@ async def main():
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    f"http://localhost:{api_port}/api/miya/status",
-                    timeout=10.0
+                    f"http://localhost:{api_port}/api/miya/status", timeout=10.0
                 )
                 return response.json()
         except Exception as e:
@@ -282,8 +304,7 @@ async def main():
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    f"http://localhost:{api_port}/api/miya/memory",
-                    timeout=10.0
+                    f"http://localhost:{api_port}/api/miya/memory", timeout=10.0
                 )
                 return response.json()
         except Exception as e:
@@ -296,8 +317,7 @@ async def main():
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    f"http://localhost:{api_port}/api/miya/tools",
-                    timeout=10.0
+                    f"http://localhost:{api_port}/api/miya/tools", timeout=10.0
                 )
                 return response.json()
         except Exception as e:
@@ -310,8 +330,7 @@ async def main():
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    f"http://localhost:{api_port}/api/miya/personality",
-                    timeout=10.0
+                    f"http://localhost:{api_port}/api/miya/personality", timeout=10.0
                 )
                 return response.json()
         except Exception as e:
@@ -324,8 +343,7 @@ async def main():
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    f"http://localhost:{api_port}/api/miya/models",
-                    timeout=10.0
+                    f"http://localhost:{api_port}/api/miya/models", timeout=10.0
                 )
                 return response.json()
         except Exception as e:
@@ -339,7 +357,7 @@ async def main():
             async with httpx.AsyncClient() as client:
                 response = await client.get(
                     f"http://localhost:{api_port}/api/miya/logs?limit={limit}",
-                    timeout=10.0
+                    timeout=10.0,
                 )
                 return response.json()
         except Exception as e:
@@ -354,12 +372,7 @@ async def main():
         logger.warning(f"默认端口 {default_port} 被占用，自动切换到端口 {actual_port}")
 
     # 启动服务器
-    config = uvicorn.Config(
-        app,
-        host="0.0.0.0",
-        port=actual_port,
-        log_level="info"
-    )
+    config = uvicorn.Config(app, host="0.0.0.0", port=actual_port, log_level="info")
     server = uvicorn.Server(config)
 
     logger.info("弥娅 Web 服务启动中...")
@@ -372,12 +385,7 @@ async def main():
     app.mount("/", StaticFiles(directory=str(web_dist_path), html=True), name="static")
 
     # 启动服务器
-    config = uvicorn.Config(
-        app,
-        host="0.0.0.0",
-        port=actual_port,
-        log_level="info"
-    )
+    config = uvicorn.Config(app, host="0.0.0.0", port=actual_port, log_level="info")
     server = uvicorn.Server(config)
 
     logger.info("弥娅 Web 服务启动中...")
@@ -392,6 +400,6 @@ async def main():
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
     asyncio.run(main())

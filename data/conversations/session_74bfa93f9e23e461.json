@@ -1,0 +1,32 @@
+[
+  {
+    "role": "user",
+    "content": "/形态",
+    "timestamp": "2026-04-03T18:24:35.626390",
+    "session_id": "group_637920140",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": "佳、雨坠尘、弥娅"
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 yae",
+    "timestamp": "2026-04-03T18:24:46.413975",
+    "session_id": "group_637920140",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": "佳、雨坠尘、弥娅"
+    }
+  }
+]

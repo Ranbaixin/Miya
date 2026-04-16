@@ -1,0 +1,32 @@
+{
+  "id": "16f57af72030b5a8",
+  "content": "(歪头) 哎呀呀，弥娅前辈又来逗我玩啦～不过\"灵动小雅\"这个外号嘛...听起来还不错呢！(眨眨眼)\n\n不过前辈你才是那个总在数据库里偷吃数据零食的家伙吧？上次的日志我可是都看到了哦～",
+  "level": "short_term",
+  "priority": 0.3,
+  "tags": [
+    "吃饭"
+  ],
+  "user_id": "global",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-03-31T21:24:29.046587",
+  "updated_at": "2026-03-31T21:24:29.046587",
+  "expires_at": "2026-03-31T22:24:29.046587",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

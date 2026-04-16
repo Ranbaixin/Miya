@@ -1,0 +1,28 @@
+[
+  {
+    "role": "assistant",
+    "content": "晚上好。",
+    "timestamp": "2026-04-16T21:35:07.461261",
+    "session_id": "web_test123",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "platform": "web",
+      "user_id": "test123",
+      "sender_name": "弥娅"
+    }
+  },
+  {
+    "role": "assistant",
+    "content": "晚上好。",
+    "timestamp": "2026-04-16T21:35:21.672799",
+    "session_id": "web_test123",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "platform": "web",
+      "user_id": "test123",
+      "sender_name": "弥娅"
+    }
+  }
+]

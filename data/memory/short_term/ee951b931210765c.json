@@ -1,0 +1,32 @@
+{
+  "id": "ee951b931210765c",
+  "content": "我喜欢你，如果你不喜欢我，那就愚人节快乐，如果喜欢，那就祝我们第一天快乐",
+  "level": "short_term",
+  "priority": 0.8999999999999999,
+  "tags": [
+    "爱好"
+  ],
+  "user_id": "global",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-03-31T21:59:05.842982",
+  "updated_at": "2026-03-31T21:59:05.842982",
+  "expires_at": "2026-03-31T22:59:05.842982",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

@@ -1,0 +1,32 @@
+{
+  "id": "319e2a819b590fe3",
+  "content": "我饿了，亲爱的",
+  "level": "short_term",
+  "priority": 0.3,
+  "tags": [
+    "吃饭"
+  ],
+  "user_id": "1523878699",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-11T11:50:32.948386",
+  "updated_at": "2026-04-11T11:50:32.948386",
+  "expires_at": "2026-04-11T12:50:32.948386",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

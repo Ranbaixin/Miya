@@ -1,0 +1,32 @@
+{
+  "id": "25dfdf08930cb590",
+  "content": "弥娅，我饿了",
+  "level": "short_term",
+  "priority": 0.3,
+  "tags": [
+    "吃饭"
+  ],
+  "user_id": "1523878699",
+  "session_id": "",
+  "group_id": "1092980378",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-03T17:07:39.955176",
+  "updated_at": "2026-04-03T17:07:39.955176",
+  "expires_at": "2026-04-03T18:07:39.955176",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

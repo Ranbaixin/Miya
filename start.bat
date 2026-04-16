@@ -19,12 +19,12 @@ echo.
 echo   === Core Modes ===
 echo   [1] MIYA Terminal     - Claude Code with Miya Soul (Personality+Memory+Emotion)
 echo   [2] QQ Client         - QQ Bot Client
-echo   [3] Web Client        - Web Interface Client
-echo   [4] Desktop Client    - Tauri Desktop App (Recommended)
+echo   [3] Desktop Console   - PyQt5 Desktop App (New!)
+echo   [W] Web Frontend      - Browser-based Chat UI (New!)
 echo.
 echo   === Combined Startup ===
-echo   [5] Full System       - QQ + Web + MIYA Terminal
-echo   [6] Custom Launch     - Select services to start
+echo   [4] Full System       - QQ + Desktop Console + MIYA Terminal
+echo   [5] Custom Launch     - Select services to start
 echo.
 echo   === System Tools ===
 echo   [6] Model Bridge      - Start Miya Model Bridge (Anthropic to OpenAI)
@@ -46,16 +46,17 @@ set /p choice=Enter your choice [0-9, M, T, Q]:
 if "%choice%"=="0" goto :exit
 if "%choice%"=="1" goto :miya_terminal
 if "%choice%"=="2" goto :qq_client
-if "%choice%"=="3" goto :web_client
-if "%choice%"=="4" goto :desktop_client
-if "%choice%"=="5" goto :full_system
-if "%choice%"=="6" goto :custom_launch
-if "%choice%"=="7" goto :model_bridge
-if "%choice%"=="8" goto :mcp_setup
-if "%choice%"=="9" goto :diagnostics
+if "%choice%"=="3" goto :desktop_console
+if "%choice%"=="4" goto :full_system
+if "%choice%"=="5" goto :custom_launch
+if "%choice%"=="6" goto :model_bridge
+if "%choice%"=="7" goto :mcp_setup
+if "%choice%"=="8" goto :diagnostics
+if "%choice%"=="9" goto :testing
 if /i "%choice%"=="Q" goto :quick_start
 if /i "%choice%"=="M" goto :model_select
 if /i "%choice%"=="T" goto :terminal_select
+if /i "%choice%"=="W" goto :web_frontend
 
 echo.
 echo [ERROR] Invalid choice! Please enter a valid option.
@@ -166,71 +167,157 @@ echo.
 pause
 goto :main_menu
 
-:desktop_client
+:desktop_console
 cls
 echo ================================================================================
-echo STARTING: MIYA DESKTOP CLIENT (Tauri)
+echo STARTING: MIYA DESKTOP CONSOLE (PyQt5)
 echo ================================================================================
 echo.
-echo This starts the MIYA Desktop Application using Tauri 2.
 echo Features:
-echo   - Native desktop experience
-echo   - Live2D avatar support
-echo   - Chat interface
-echo   - System monitoring
+echo   - Native desktop experience  
+echo   - Chat with Miya Core AI
+echo   - Live2D Avatar
+echo   - Desktop platform tools (69+ tools)
+echo   - Transparency/Glass UI
+echo   - Super Admin permissions
 echo.
-echo Requirements: Node.js, Rust, Tauri CLI
+echo ================================================================================
+echo.
+
+REM Check if PyQt5 frontend exists
+if exist "miya_frontend\main.py" (
+    echo [OK] PyQt5 frontend found
+) else (
+    echo [ERROR] PyQt5 frontend not found
+    pause
+    goto :main_menu
+)
+
+echo Starting MIYA Desktop Console...
+echo This starts BOTH backend and frontend in ONE terminal.
+echo.
+
+REM 启动后端（使用 start 避免阻塞）
+start "MIYA Backend" cmd /k "python run\main.py"
+timeout /t 8 >nul
+echo [OK] Backend started
+
+REM 启动前端
+start "MIYA Desktop" cmd /k "cd miya_frontend && python main.py"
+
+echo.
+echo =======================================
+echo MIYA Desktop Console is running!
+echo =======================================
+echo.
+pause
+goto :main_menu
+
+:web_frontend
+cls
+echo ================================================================================
+echo STARTING: MIYA WEB FRONTEND
+echo ================================================================================
+echo.
+echo This starts the Web-based Chat UI in your browser.
+echo Features:
+echo   - Browser-based chat interface
+echo   - Mobile-friendly design
+echo   - Connects to Miya Core AI
+echo.
+echo Requirements: Miya Core must be running
 echo.
 echo Press Ctrl+C to stop.
 echo ================================================================================
 echo.
 
-REM Check if Tauri project exists
-if exist "frontend\packages\web\src-tauri\Cargo.toml" (
-    echo [OK] Tauri project found
+REM Check if HTML frontend exists
+if exist "miya_frontend\ui\mobile_chat.html" (
+    echo [OK] Web frontend found
 ) else (
-    echo [ERROR] Tauri project not found at frontend\packages\web\src-tauri\
-    echo Please ensure the desktop client is properly set up.
+    echo [ERROR] Web frontend not found at miya_frontend\ui\mobile_chat.html
     pause
     goto :main_menu
 )
 
-REM Check Node.js
-node --version >nul 2>nul
-if errorlevel 1 (
-    echo [ERROR] Node.js not found!
-    pause
-    goto :main_menu
-)
+REM Start Miya Core (port 8000)
+echo Starting Miya Core...
+start "MIYA Core" cmd /k "python run\main.py"
+timeout /t 5 >nul
+echo [OK] Miya Core started
 
-REM Check Rust
-rustc --version >nul 2>nul
-if errorlevel 1 (
-    echo [ERROR] Rust not found! Please install Rust from https://rustup.rs
-    pause
-    goto :main_menu
-)
-
-echo [OK] Node.js found
-echo [OK] Rust found
-
-REM Install frontend dependencies if needed
-if not exist "frontend\node_modules" (
-    echo Installing frontend dependencies...
-    cd frontend
-    call pnpm install
-    cd ..
-    echo [OK] Frontend dependencies installed
-)
-
-REM Start Tauri dev mode
+REM Start Web service (serves frontend at 8080)
+echo Starting Web Frontend...
+start "MIYA Web" cmd /k "python webnet\web_main.py"
+timeout /t 3 >nul
+echo [OK] Web Frontend started
 echo.
-echo Starting MIYA Desktop Application...
 echo ================================================================================
-cd frontend
-call pnpm --filter @miya/web tauri dev
-cd ..
-goto :restart_prompt
+echo MIYA Web Frontend is now running!
+echo.
+echo Please open in your browser:
+echo   http://localhost:8080/chat
+echo.
+echo Close the console window to stop the service.
+echo ================================================================================
+echo.
+pause
+goto :main_menu
+
+:full_system
+cls
+echo ================================================================================
+echo STARTING: MIYA FULL SYSTEM
+echo ================================================================================
+echo.
+echo Starting QQ + Desktop Console + MIYA Terminal...
+echo.
+
+REM Start Model Bridge
+if exist "mcpserver\model-bridge\server.py" (
+    echo Starting Model Bridge...
+    start "MIYA Model Bridge" /B python mcpserver\model-bridge\server.py
+    timeout /t 3 >nul
+    echo [OK] Model Bridge started
+)
+
+REM Start Miya Core (port 8000)
+echo Starting Miya Core...
+start "MIYA Core" cmd /k "python run\main.py"
+timeout /t 5 >nul
+echo [OK] Miya Core started
+
+REM Start QQ Client
+if exist "run\qq_main.py" (
+    echo Starting QQ Client...
+    start "MIYA QQ" cmd /k "python run\qq_main.py"
+    timeout /t 3 >nul
+    echo [OK] QQ Client started
+)
+
+REM Start PyQt5 Desktop Console
+if exist "miya_frontend\main.py" (
+    echo Starting Desktop Console...
+    start "MIYA Console" cmd /k "cd miya_frontend && python main.py"
+    timeout /t 2 >nul
+    echo [OK] Desktop Console started
+)
+
+set MODEL_DISPLAY=%DEFAULT_MODEL:miya-%
+echo.
+echo Starting MIYA Terminal...
+start "MIYA - %MODEL_DISPLAY%" wt node Open-ClaudeCode\package\cli.js
+timeout /t 2 >nul
+
+echo.
+echo [OK] Full System started!
+echo   - MIYA Terminal
+echo   - Desktop Console
+echo   - QQ Client
+echo   - Model Bridge
+echo.
+pause
+goto :main_menu
 
 :model_bridge
 cls
@@ -435,20 +522,15 @@ if exist "mcpserver\model-bridge\server.py" (
 )
 echo.
 
-echo [6/8] Rust Environment (for Desktop Client):
-rustc --version 2>nul && echo   [OK] Rust found || echo   [WARNING] Rust not found (required for Desktop Client)
-cargo --version 2>nul && echo   [OK] Cargo found || echo   [WARNING] Cargo not found
-echo.
-
-echo [7/8] Tauri Desktop Project:
-if exist "frontend\packages\web\src-tauri\Cargo.toml" (
-    echo   [OK] Tauri project found
+echo [6/8] PyQt5 Frontend:
+if exist "miya_frontend\main.py" (
+    echo   [OK] PyQt5 frontend found
 ) else (
-    echo   [ERROR] Tauri project not found
+    echo   [ERROR] PyQt5 frontend not found
 )
 echo.
 
-echo [8/8] MCP Config:
+echo [7/8] MCP Config:
 if exist ".mcp.json" (
     echo   [OK] .mcp.json found
 ) else (
@@ -555,13 +637,13 @@ echo ===========================================================================
 echo.
 echo Select services to start (space-separated numbers):
 echo.
-echo   [1] MIYA Terminal     - Claude Code + Miya Soul
-echo   [2] Web Service       - Web Interface
-echo   [3] QQ Client         - QQ Bot
-echo   [4] Desktop Client    - Tauri Desktop App
-echo   [5] Model Bridge      - Anthropic to OpenAI Bridge
+echo   [1] MIYA Terminal        - Claude Code + Miya Soul
+echo   [2] Desktop Console      - PyQt5 Desktop App
+echo   [3] QQ Client            - QQ Bot
+echo   [4] Model Bridge         - Anthropic to OpenAI Bridge
+echo   [W] Web Frontend        - Browser-based Chat UI
 echo.
-echo Example: 1 5 (Start Terminal + Model Bridge)
+echo Example: 1 4 (Start Terminal + Model Bridge)
 echo.
 set /p service_choice=Enter service numbers (space-separated):
 
@@ -569,19 +651,19 @@ echo.
 echo You selected: %service_choice%
 echo.
 
-if "%service_choice:5=%" neq "%service_choice%" (
-    echo [1/5] Starting Model Bridge...
+if "%service_choice:4=%" neq "%service_choice%" (
+    echo [1/4] Starting Model Bridge...
     start "MIYA Model Bridge" /B python mcpserver\model-bridge\server.py
     timeout /t 3 >nul
     echo [OK] Model Bridge started
     set ANTHROPIC_BASE_URL=http://localhost:8888
     set ANTHROPIC_AUTH_TOKEN=%DEFAULT_MODEL%
-set CLAUDE_CODE_SKIP_AUTH=1
-set ANTHROPIC_MODEL=%DEFAULT_MODEL%
+    set CLAUDE_CODE_SKIP_AUTH=1
+    set ANTHROPIC_MODEL=%DEFAULT_MODEL%
 )
 
 if "%service_choice:1=%" neq "%service_choice%" (
-    echo [2/5] Starting MIYA Terminal...
+    echo [2/4] Starting MIYA Terminal...
     set MODEL_DISPLAY=%DEFAULT_MODEL:miya-%
     start "MIYA - %MODEL_DISPLAY%" /B cmd /c "set ANTHROPIC_BASE_URL=http://localhost:8888 && set ANTHROPIC_AUTH_TOKEN=%DEFAULT_MODEL% && set CLAUDE_CODE_SKIP_AUTH=1 && set ANTHROPIC_MODEL=%DEFAULT_MODEL% && title MIYA - %MODEL_DISPLAY% && node Open-ClaudeCode\package\cli.js"
     timeout /t 2 >nul
@@ -589,12 +671,28 @@ if "%service_choice:1=%" neq "%service_choice%" (
 )
 
 if "%service_choice:2=%" neq "%service_choice%" (
-    echo [3/5] Starting Web Service...
-    call :check_file "webnet\web_main.py"
+    echo [3/4] Starting Desktop Console...
+    call :check_file "miya_frontend\main.py"
     if not errorlevel 1 (
-        start "MIYA Web" /B python webnet\web_main.py
-        timeout /t 1 >nul
-        echo [OK] Web Service started
+        REM Start Miya Core (port 8000)
+        start "MIYA Core" cmd /k "python run\main.py"
+        timeout /t 5 >nul
+        echo [OK] Miya Core started
+        REM Start PyQt5 frontend
+        start "MIYA Console" cmd /k "cd miya_frontend && python main.py"
+        timeout /t 2 >nul
+        echo [OK] Desktop Console started
+    )
+)
+
+if "%service_choice:5=%" neq "%service_choice%" (
+    echo [5/5] Starting Web Frontend...
+    if exist "miya_frontend\ui\mobile_chat.html" (
+        start "MIYA Core" cmd /k "python run\main.py"
+        timeout /t 5 >nul
+        echo [OK] Miya Core started
+    ) else (
+        echo [ERROR] Web frontend not found
     )
 )
 
@@ -602,27 +700,9 @@ if "%service_choice:3=%" neq "%service_choice%" (
     echo [4/5] Starting QQ Client...
     call :check_file "run\qq_main.py"
     if not errorlevel 1 (
-        REM 手动同步: 将 data\emoji 复制到 E:\AAI\NapCat.Shell.Windows.OneKey\NapCat.44498.Shell\emoji
         start "MIYA QQ" /B python run\qq_main.py
         timeout /t 1 >nul
         echo [OK] QQ Client started
-    )
-)
-        )
-        start "MIYA QQ" /B python run\qq_main.py
-        timeout /t 1 >nul
-        echo [OK] QQ Client started
-    )
-)
-
-if "%service_choice:4=%" neq "%service_choice%" (
-    echo [5/5] Starting Desktop Client...
-    call :check_file "frontend\packages\web\src-tauri\Cargo.toml"
-    if not errorlevel 1 (
-        echo [INFO] Desktop Client requires pnpm and Rust
-        start "MIYA Desktop" /B cmd /c "cd frontend && pnpm --filter @miya/web tauri dev"
-        timeout /t 2 >nul
-        echo [OK] Desktop Client starting
     )
 )
 

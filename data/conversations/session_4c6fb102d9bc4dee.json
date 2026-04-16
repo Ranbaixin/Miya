@@ -1,0 +1,62 @@
+[
+  {
+    "role": "user",
+    "content": "你好",
+    "timestamp": "2026-04-16T19:52:07.905191",
+    "session_id": "qq_desktop_test",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "desktop_test",
+      "group_id": "",
+      "message_type": "",
+      "sender": "desktop用户-desktop_",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "你好",
+    "timestamp": "2026-04-16T19:53:56.382280",
+    "session_id": "qq_desktop_test",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "desktop_test",
+      "group_id": "",
+      "message_type": "",
+      "sender": "desktop用户-desktop_",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "你好",
+    "timestamp": "2026-04-16T20:35:26.004410",
+    "session_id": "qq_desktop_test",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "desktop_test",
+      "group_id": "",
+      "message_type": "",
+      "sender": "desktop用户-desktop_",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "你好",
+    "timestamp": "2026-04-16T20:50:20.470354",
+    "session_id": "qq_desktop_test",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "desktop_test",
+      "group_id": "",
+      "message_type": "",
+      "sender": "desktop用户-desktop_",
+      "chat_label": "私聊"
+    }
+  }
+]

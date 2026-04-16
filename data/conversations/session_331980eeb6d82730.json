@@ -1,0 +1,17 @@
+[
+  {
+    "role": "user",
+    "content": "弥娅",
+    "timestamp": "2026-03-31T23:32:12.923936",
+    "session_id": "qq_b96b47a2",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "b96b47a2",
+      "group_id": "",
+      "message_type": "",
+      "sender": "web用户-b96b47a2",
+      "chat_label": "私聊"
+    }
+  }
+]

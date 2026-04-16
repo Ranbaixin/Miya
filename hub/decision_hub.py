@@ -2893,6 +2893,11 @@ class DecisionHub:
                 return True
 
             try:
+                # Desktop 平台用户自动获得超级管理员权限
+                if platform == "desktop":
+                    logger.info(f"[权限检查] Desktop平台用户自动获得超级管理员权限")
+                    return True
+
                 if hasattr(self, "qq_net") and self.qq_net:
                     superadmin_qq = getattr(self.qq_net, "superadmin_qq", 0)
                     if superadmin_qq and user_id == superadmin_qq:

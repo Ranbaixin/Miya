@@ -1,0 +1,17 @@
+[
+  {
+    "role": "user",
+    "content": "hi",
+    "timestamp": "2026-04-16T22:04:48.000930",
+    "session_id": "qq_default",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "default",
+      "group_id": "",
+      "message_type": "",
+      "sender": "web用户-default",
+      "chat_label": "私聊"
+    }
+  }
+]

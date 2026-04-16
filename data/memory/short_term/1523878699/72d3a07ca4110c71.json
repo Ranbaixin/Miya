@@ -1,0 +1,32 @@
+{
+  "id": "72d3a07ca4110c71",
+  "content": "唔…外卖快捷备注点错了，有点不合胃口，不过已经吃完了",
+  "level": "short_term",
+  "priority": 0.7,
+  "tags": [
+    "吃饭"
+  ],
+  "user_id": "1523878699",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-13T12:32:21.846128",
+  "updated_at": "2026-04-13T12:32:21.846128",
+  "expires_at": "2026-04-13T13:32:21.846128",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

@@ -158,22 +158,39 @@ class PlatformToolsManager:
             # Skills 工具
             "list_skills",
         ],
-        # Desktop 平台（Terminal Ultra模式）使用与terminal相同的工具集
+        # Desktop 平台使用与 QQ 相同的工具集（桌面端=超级管理员）
+        # 复制 QQ 的工具列表，确保完全一致
         "desktop": [
-            # 核心终端工具
+            # 消息发送
+            "send_message",
+            "get_user_info",
+            "qq_like",
+            "send_poke",
+            "react_emoji",
+            "get_member_list",
+            "get_member_info",
+            "find_member",
+            "memory_add",
+            "memory_list",
+            # 搜索工具
+            "web_search",
+            "tavily_search",
+            "douyinhot",
+            "weibohot",
+            "baiduhot",
+            "grok_search",
+            "crawl_webpage",
+            # 信息查询
+            "qq_level_query",
+            "weather_query",
+            # 跨端工具
+            "execute_on_desktop",
+            "send_to_desktop",
+            "send_to_terminal",
             "terminal_command",
             "terminal_exec",
             "multi_terminal",
             "wsl_manager",
-            "system_info",
-            "environment_detector",
-            # 跨端工具
-            "send_to_qq",
-            "send_to_desktop",
-            "send_to_terminal",
-            "execute_on_desktop",
-            "sync_state",
-            "qq_like",
             # 文件操作
             "file_read",
             "file_write",
@@ -195,20 +212,24 @@ class PlatformToolsManager:
             # 搜索工具
             "file_grep",
             "file_glob",
-            # 代码理解
-            "code_explain",
-            "code_search_symbol",
             # 智能工具
             "project_context",
             "task_plan",
             "suggestions",
+            # Skills 工具
+            "list_skills",
             # Agent 工具
+            "group_file_downloader",
+            "local_file_finder",
+            "qq_file_reader",
+            "qq_image_analyzer",
+            "python_interpreter",
+            "horoscope",
+            "wenchang_dijun",
             "code_explorer_agent",
             "code_reviewer_agent",
             "code_architect_agent",
             "terminal_agent",
-            # Skills 工具
-            "list_skills",
         ],
         "web": [
             "send_to_qq",

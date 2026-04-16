@@ -1,0 +1,32 @@
+{
+  "id": "80175253c90a673d",
+  "content": "弥娅，猜猜她是鸣潮里的哪个新角色",
+  "level": "short_term",
+  "priority": 0.5,
+  "tags": [
+    "爱好"
+  ],
+  "user_id": "1523878699",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-14T10:37:54.343818",
+  "updated_at": "2026-04-14T10:37:54.343818",
+  "expires_at": "2026-04-14T11:37:54.343818",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

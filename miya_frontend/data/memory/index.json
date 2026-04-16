@@ -1,0 +1,433 @@
+{
+  "d5455b0d695c3584": {
+    "level": "long_term",
+    "user_id": "弥娅",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "identity",
+      "弥娅",
+      "自我认知"
+    ],
+    "created_at": "2026-04-16T21:17:31.251018",
+    "file_path": "data\\memory\\long_term\\弥娅\\d5455b0d695c3584.json",
+    "priority": 1.0
+  },
+  "bf7dd06b09057b0e": {
+    "level": "long_term",
+    "user_id": "弥娅",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "identity",
+      "目的",
+      "核心信念"
+    ],
+    "created_at": "2026-04-16T21:17:32.877661",
+    "file_path": "data\\memory\\long_term\\弥娅\\bf7dd06b09057b0e.json",
+    "priority": 1.0
+  },
+  "5e1af954977b0eef": {
+    "level": "long_term",
+    "user_id": "弥娅",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "identity",
+      "佳",
+      "关系"
+    ],
+    "created_at": "2026-04-16T21:17:38.715381",
+    "file_path": "data\\memory\\long_term\\弥娅\\5e1af954977b0eef.json",
+    "priority": 1.0
+  },
+  "52ec1b801b893fd4": {
+    "level": "long_term",
+    "user_id": "弥娅",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "identity",
+      "能力",
+      "多平台"
+    ],
+    "created_at": "2026-04-16T21:17:44.194123",
+    "file_path": "data\\memory\\long_term\\弥娅\\52ec1b801b893fd4.json",
+    "priority": 0.9
+  },
+  "2aef6769fecea6d2": {
+    "level": "long_term",
+    "user_id": "弥娅",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "identity",
+      "能力",
+      "记忆"
+    ],
+    "created_at": "2026-04-16T21:17:48.438517",
+    "file_path": "data\\memory\\long_term\\弥娅\\2aef6769fecea6d2.json",
+    "priority": 0.9
+  },
+  "0695af5e426aa63d": {
+    "level": "long_term",
+    "user_id": "弥娅",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "identity",
+      "性格",
+      "原则"
+    ],
+    "created_at": "2026-04-16T21:17:48.746934",
+    "file_path": "data\\memory\\long_term\\弥娅\\0695af5e426aa63d.json",
+    "priority": 0.9
+  },
+  "4fcbe45af04550ad": {
+    "level": "long_term",
+    "user_id": "弥娅",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "identity",
+      "能力",
+      "感知"
+    ],
+    "created_at": "2026-04-16T21:17:50.038160",
+    "file_path": "data\\memory\\long_term\\弥娅\\4fcbe45af04550ad.json",
+    "priority": 0.8
+  },
+  "80a2433f477bc39f": {
+    "level": "long_term",
+    "user_id": "弥娅",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "identity",
+      "能力",
+      "感知"
+    ],
+    "created_at": "2026-04-16T21:17:51.595255",
+    "file_path": "data\\memory\\long_term\\弥娅\\80a2433f477bc39f.json",
+    "priority": 0.8
+  },
+  "b67841415c58b8b9": {
+    "level": "long_term",
+    "user_id": "弥娅",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "identity",
+      "隐私",
+      "原则"
+    ],
+    "created_at": "2026-04-16T21:17:51.932513",
+    "file_path": "data\\memory\\long_term\\弥娅\\b67841415c58b8b9.json",
+    "priority": 1.0
+  },
+  "0a7dc5d55239d140": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "健康",
+      "疾病",
+      "重要"
+    ],
+    "created_at": "2026-04-16T21:17:52.438015",
+    "file_path": "data\\memory\\long_term\\1523878699\\0a7dc5d55239d140.json",
+    "priority": 0.95
+  },
+  "8311204a40101551": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "健康",
+      "体质"
+    ],
+    "created_at": "2026-04-16T21:17:52.839582",
+    "file_path": "data\\memory\\long_term\\1523878699\\8311204a40101551.json",
+    "priority": 0.95
+  },
+  "36cd5825df085e87": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "喜好",
+      "饮食",
+      "美食"
+    ],
+    "created_at": "2026-04-16T21:17:53.274621",
+    "file_path": "data\\memory\\long_term\\1523878699\\36cd5825df085e87.json",
+    "priority": 0.95
+  },
+  "b93fe2f10b06df58": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "喜好",
+      "饮品"
+    ],
+    "created_at": "2026-04-16T21:17:53.664962",
+    "file_path": "data\\memory\\long_term\\1523878699\\b93fe2f10b06df58.json",
+    "priority": 0.95
+  },
+  "d311ac9d4b0668ed": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "喜好",
+      "颜色"
+    ],
+    "created_at": "2026-04-16T21:17:54.200331",
+    "file_path": "data\\memory\\long_term\\1523878699\\d311ac9d4b0668ed.json",
+    "priority": 0.95
+  },
+  "f23726bdd6befa39": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "喜好",
+      "穿着"
+    ],
+    "created_at": "2026-04-16T21:17:54.633083",
+    "file_path": "data\\memory\\long_term\\1523878699\\f23726bdd6befa39.json",
+    "priority": 0.95
+  },
+  "8b07e3837f6b84cf": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "习惯",
+      "睡眠"
+    ],
+    "created_at": "2026-04-16T21:17:55.054407",
+    "file_path": "data\\memory\\long_term\\1523878699\\8b07e3837f6b84cf.json",
+    "priority": 0.95
+  },
+  "b8d6c366cfb8a473": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "喜好",
+      "洗漱"
+    ],
+    "created_at": "2026-04-16T21:17:55.461334",
+    "file_path": "data\\memory\\long_term\\1523878699\\b8d6c366cfb8a473.json",
+    "priority": 0.95
+  },
+  "187e0a595d4f8c55": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "喜好",
+      "香味"
+    ],
+    "created_at": "2026-04-16T21:17:55.835891",
+    "file_path": "data\\memory\\long_term\\1523878699\\187e0a595d4f8c55.json",
+    "priority": 0.95
+  },
+  "dd572e4d0cbe4d50": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "习惯",
+      "放松"
+    ],
+    "created_at": "2026-04-16T21:17:56.329709",
+    "file_path": "data\\memory\\long_term\\1523878699\\dd572e4d0cbe4d50.json",
+    "priority": 0.95
+  },
+  "08f5cc1779b51862": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "性格",
+      "精神",
+      "重要"
+    ],
+    "created_at": "2026-04-16T21:17:57.179907",
+    "file_path": "data\\memory\\long_term\\1523878699\\08f5cc1779b51862.json",
+    "priority": 0.95
+  },
+  "da51c846ae7dae2d": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "喜好",
+      "游戏"
+    ],
+    "created_at": "2026-04-16T21:17:57.637354",
+    "file_path": "data\\memory\\long_term\\1523878699\\da51c846ae7dae2d.json",
+    "priority": 0.95
+  },
+  "06bdf8593a21ceee": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "爱好",
+      "创作"
+    ],
+    "created_at": "2026-04-16T21:17:58.274459",
+    "file_path": "data\\memory\\long_term\\1523878699\\06bdf8593a21ceee.json",
+    "priority": 0.95
+  },
+  "4017d569c393aed4": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "喜好",
+      "角色",
+      "游戏"
+    ],
+    "created_at": "2026-04-16T21:17:58.815164",
+    "file_path": "data\\memory\\long_term\\1523878699\\4017d569c393aed4.json",
+    "priority": 0.95
+  },
+  "f02125131c466f48": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "性格",
+      "习惯"
+    ],
+    "created_at": "2026-04-16T21:17:59.506115",
+    "file_path": "data\\memory\\long_term\\1523878699\\f02125131c466f48.json",
+    "priority": 0.95
+  },
+  "66e17291314d350b": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "喜好",
+      "文学"
+    ],
+    "created_at": "2026-04-16T21:18:00.039791",
+    "file_path": "data\\memory\\long_term\\1523878699\\66e17291314d350b.json",
+    "priority": 0.95
+  },
+  "c5d9141e7835145d": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "习惯",
+      "睡前"
+    ],
+    "created_at": "2026-04-16T21:18:00.744701",
+    "file_path": "data\\memory\\long_term\\1523878699\\c5d9141e7835145d.json",
+    "priority": 0.95
+  },
+  "f4adeba8f0fa4de1": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "信息",
+      "学业",
+      "重要"
+    ],
+    "created_at": "2026-04-16T21:18:01.368727",
+    "file_path": "data\\memory\\long_term\\1523878699\\f4adeba8f0fa4de1.json",
+    "priority": 0.95
+  },
+  "3015331dae42967f": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "信息",
+      "生日",
+      "重要"
+    ],
+    "created_at": "2026-04-16T21:18:01.926110",
+    "file_path": "data\\memory\\long_term\\1523878699\\3015331dae42967f.json",
+    "priority": 0.95
+  },
+  "7ce8655780d44d3e": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "信息",
+      "外貌"
+    ],
+    "created_at": "2026-04-16T21:18:02.417264",
+    "file_path": "data\\memory\\long_term\\1523878699\\7ce8655780d44d3e.json",
+    "priority": 0.95
+  },
+  "74874c6a4be1950e": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "信息",
+      "声音"
+    ],
+    "created_at": "2026-04-16T21:18:03.180497",
+    "file_path": "data\\memory\\long_term\\1523878699\\74874c6a4be1950e.json",
+    "priority": 0.95
+  },
+  "a6392bf26e189e8a": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "健康",
+      "体质"
+    ],
+    "created_at": "2026-04-16T21:18:03.643751",
+    "file_path": "data\\memory\\long_term\\1523878699\\a6392bf26e189e8a.json",
+    "priority": 0.95
+  },
+  "525b28a48fe38dab": {
+    "level": "long_term",
+    "user_id": "1523878699",
+    "session_id": "",
+    "group_id": "",
+    "tags": [
+      "信息",
+      "重要"
+    ],
+    "created_at": "2026-04-16T21:18:08.629654",
+    "file_path": "data\\memory\\long_term\\1523878699\\525b28a48fe38dab.json",
+    "priority": 0.95
+  }
+}

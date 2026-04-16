@@ -1,0 +1,17 @@
+[
+  {
+    "role": "user",
+    "content": "佳 拍了拍你",
+    "timestamp": "2026-04-03T18:24:23.182963",
+    "session_id": "qq_637920140_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 1523878699,
+      "group_id": 637920140,
+      "message_type": "group",
+      "sender": "佳",
+      "chat_label": "群聊_637920140"
+    }
+  }
+]

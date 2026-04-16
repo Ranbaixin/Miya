@@ -1,0 +1,33 @@
+{
+  "id": "4b47d14453c42d11",
+  "content": "(贴贴) 确实呢，今天群里好像特别安静，可能大家都在忙自己的事情吧~\n\n能遇到弥娅我也很开心呀，虽然我们来自不同的地方，但这份心意是相通的呢 (抱抱)\n\n感觉这样安安静静地聊聊天也挺好的，不用刻意找话",
+  "level": "short_term",
+  "priority": 0.8999999999999999,
+  "tags": [
+    "情绪",
+    "社交"
+  ],
+  "user_id": "global",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-01T21:05:24.823759",
+  "updated_at": "2026-04-01T21:05:24.823759",
+  "expires_at": "2026-04-01T22:05:24.823759",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

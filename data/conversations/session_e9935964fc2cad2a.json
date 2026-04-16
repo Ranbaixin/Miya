@@ -1,0 +1,67 @@
+[
+  {
+    "role": "assistant",
+    "content": "嗯。",
+    "timestamp": "2026-04-03T16:10:07.185242",
+    "session_id": "terminal_2329146890",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "platform": "terminal",
+      "user_id": 2329146890,
+      "sender_name": "弥娅"
+    }
+  },
+  {
+    "role": "assistant",
+    "content": "嗯。",
+    "timestamp": "2026-04-03T16:10:31.055868",
+    "session_id": "terminal_2329146890",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "platform": "terminal",
+      "user_id": 2329146890,
+      "sender_name": "弥娅"
+    }
+  },
+  {
+    "role": "assistant",
+    "content": "嗯。",
+    "timestamp": "2026-04-03T16:10:40.374586",
+    "session_id": "terminal_2329146890",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "platform": "terminal",
+      "user_id": 2329146890,
+      "sender_name": "弥娅"
+    }
+  },
+  {
+    "role": "assistant",
+    "content": "嗯哼~ 银鳕鱼(^～^)𓆜，今天过得怎么样？有趣的事吗？",
+    "timestamp": "2026-04-03T16:11:10.132155",
+    "session_id": "terminal_2329146890",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "platform": "terminal",
+      "user_id": 2329146890,
+      "sender_name": "弥娅"
+    }
+  },
+  {
+    "role": "assistant",
+    "content": "哎呀，银鳕鱼(^～^)𓆜，V我50，今天心情不错呢。我们来聊点什么有趣的事吧。",
+    "timestamp": "2026-04-03T16:14:08.428757",
+    "session_id": "terminal_2329146890",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "platform": "terminal",
+      "user_id": 2329146890,
+      "sender_name": "弥娅"
+    }
+  }
+]

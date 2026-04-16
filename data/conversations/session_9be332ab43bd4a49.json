@@ -1,0 +1,77 @@
+[
+  {
+    "role": "user",
+    "content": " 你好，v我50",
+    "timestamp": "2026-04-03T16:10:02.238322",
+    "session_id": "qq_2329146890",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2329146890,
+      "group_id": 579433934,
+      "message_type": "group",
+      "sender": "银鳕鱼(^～^)𓆜",
+      "chat_label": "群聊_579433934"
+    }
+  },
+  {
+    "role": "user",
+    "content": " 50呢",
+    "timestamp": "2026-04-03T16:10:29.791241",
+    "session_id": "qq_2329146890",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2329146890,
+      "group_id": 579433934,
+      "message_type": "group",
+      "sender": "银鳕鱼(^～^)𓆜",
+      "chat_label": "群聊_579433934"
+    }
+  },
+  {
+    "role": "user",
+    "content": " 嗯",
+    "timestamp": "2026-04-03T16:10:37.810847",
+    "session_id": "qq_2329146890",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2329146890,
+      "group_id": 579433934,
+      "message_type": "group",
+      "sender": "银鳕鱼(^～^)𓆜",
+      "chat_label": "群聊_579433934"
+    }
+  },
+  {
+    "role": "user",
+    "content": " 嗯",
+    "timestamp": "2026-04-03T16:11:08.168163",
+    "session_id": "qq_2329146890",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2329146890,
+      "group_id": 579433934,
+      "message_type": "group",
+      "sender": "银鳕鱼(^～^)𓆜",
+      "chat_label": "群聊_579433934"
+    }
+  },
+  {
+    "role": "user",
+    "content": " V我50",
+    "timestamp": "2026-04-03T16:14:04.864085",
+    "session_id": "qq_2329146890",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2329146890,
+      "group_id": 579433934,
+      "message_type": "group",
+      "sender": "银鳕鱼(^～^)𓆜",
+      "chat_label": "群聊_579433934"
+    }
+  }
+]

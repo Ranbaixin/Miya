@@ -1,0 +1,32 @@
+{
+  "id": "901b6589fc8da9ba",
+  "content": "你知道她是鸣潮的哪个新角色嘛",
+  "level": "short_term",
+  "priority": 0.5,
+  "tags": [
+    "爱好"
+  ],
+  "user_id": "1523878699",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-14T10:28:10.985263",
+  "updated_at": "2026-04-14T10:28:10.985263",
+  "expires_at": "2026-04-14T11:28:10.985263",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

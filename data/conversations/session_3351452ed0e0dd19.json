@@ -1,0 +1,482 @@
+[
+  {
+    "role": "user",
+    "content": "弥娅?",
+    "timestamp": "2026-04-03T16:42:42.210818",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，倘若现在有两艘船，一艘有1000人一艘有100人，你只能保下其中一艘，你保哪个",
+    "timestamp": "2026-04-03T16:43:39.366311",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": " 不要逃避问题，请回答",
+    "timestamp": "2026-04-03T16:45:28.826437",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，konoDOda!",
+    "timestamp": "2026-04-03T17:29:13.546502",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，你以后也要这么打招呼怎么样",
+    "timestamp": "2026-04-03T17:29:38.383427",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅下午好 ",
+    "timestamp": "2026-04-03T17:30:17.860253",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅下午好啊",
+    "timestamp": "2026-04-03T17:30:27.147189",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": " 不是说这样打招呼吗",
+    "timestamp": "2026-04-03T17:30:39.758203",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅下午好",
+    "timestamp": "2026-04-03T17:30:49.700532",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "咕 拍了拍你",
+    "timestamp": "2026-04-03T17:34:43.238386",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": " 弥娅 这是什么",
+    "timestamp": "2026-04-03T17:34:59.582313",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": " 他是小动物吗",
+    "timestamp": "2026-04-03T17:35:54.303416",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅你的审美好jb怪",
+    "timestamp": "2026-04-03T17:36:23.201862",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "还是说弥娅你这种ai机器人的01审美有自己的特点吗",
+    "timestamp": "2026-04-03T17:36:44.141487",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，你是谁",
+    "timestamp": "2026-04-03T18:03:51.852638",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，你不是申鹤吗？ ",
+    "timestamp": "2026-04-03T18:04:17.538793",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": " 你是谁？",
+    "timestamp": "2026-04-03T18:04:28.894377",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，你是卡面来打",
+    "timestamp": "2026-04-03T18:15:26.829414",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "咕 拍了拍你",
+    "timestamp": "2026-04-04T14:54:35.283697",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": " 不可以",
+    "timestamp": "2026-04-04T14:54:41.779707",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": " 你认为呢",
+    "timestamp": "2026-04-04T14:55:10.661103",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": " 都行",
+    "timestamp": "2026-04-04T14:55:30.797831",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": " 戳一戳 ",
+    "timestamp": "2026-04-04T14:55:51.359647",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅你是谁",
+    "timestamp": "2026-04-04T14:58:20.978622",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅我1523878699是谁",
+    "timestamp": "2026-04-04T14:58:40.170607",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅我是谁",
+    "timestamp": "2026-04-04T14:58:55.850973",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "",
+    "timestamp": "2026-04-04T14:59:20.047083",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "洛雅，你和弥娅说段相声吧，一人一句，后面要加上对方的名称",
+    "timestamp": "2026-04-04T14:59:53.505608",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "咕 拍了拍你",
+    "timestamp": "2026-04-04T16:37:22.961356",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，人为什么活着",
+    "timestamp": "2026-04-04T16:42:06.643574",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，你喜欢人类吗？如果喜欢请列举理由（至少五点）如果不喜欢，请阐述理由（10分）",
+    "timestamp": "2026-04-04T16:43:22.718440",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，我这是在质问你",
+    "timestamp": "2026-04-04T16:46:04.471570",
+    "session_id": "qq_1092980378_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": 2911746585,
+      "group_id": 1092980378,
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  }
+]

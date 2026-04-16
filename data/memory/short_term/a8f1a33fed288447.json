@@ -1,0 +1,32 @@
+{
+  "id": "a8f1a33fed288447",
+  "content": "（弥娅和洛雅同时停下，两人都显得有些疲惫）\n\n弥娅：呼...终于停了，这场辩论太累了（擦汗）\n\n洛雅：确实...咕你突然让我们辩论这么沉重的话题，我都快被弥娅说服了（叹气）\n\n弥娅：不过说真的，这个话",
+  "level": "short_term",
+  "priority": 0.8999999999999999,
+  "tags": [
+    "休息"
+  ],
+  "user_id": "global",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-01T20:33:36.501796",
+  "updated_at": "2026-04-01T20:33:36.501796",
+  "expires_at": "2026-04-01T21:33:36.501796",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

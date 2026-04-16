@@ -1,0 +1,33 @@
+{
+  "id": "0b71df798b8c3db8",
+  "content": "在学校宿舍里，没办法加热，不过我现在已经吃饱了哇",
+  "level": "short_term",
+  "priority": 0.8999999999999999,
+  "tags": [
+    "学习",
+    "吃饭"
+  ],
+  "user_id": "1523878699",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-11T18:21:24.773526",
+  "updated_at": "2026-04-11T18:21:24.773526",
+  "expires_at": "2026-04-11T19:21:24.773526",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

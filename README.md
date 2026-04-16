@@ -16013,6 +16013,269 @@ Working Memory 持久化涉及的核心文件：
 
 ---
 
+## 桌面端控制台 (Desktop Console) - v4.3.4+ 新增
+
+弥娅桌面端控制台是 PyQt5 开发的原生桌面应用程序，提供与弥娅后端直接连接的聊天界面，支持 Live2D 虚拟形象显示。
+
+### 1. 系统架构
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    桌面端控制台架构                                   │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│   ┌─────────────────┐          ┌─────────────────────────────────┐  │
+│   │  PyQt5 前端     │  HTTP    │  弥娅后端 (run/main.py)        │  │
+│   │                 │ ───────► │                                 │  │
+│   │  - 聊天界面     │  /api/   │  - DecisionHub 决策中心        │  │
+│   │  - Live2D       │   chat   │  - 记忆系统 MemoryNet          │  │
+│   │  - 工具调用     │          │  - 情绪系统 Emotion            │  │
+│   │  - 设置面板     │          │  - 69+ 工具集 ToolNet          │  │
+│   └─────────────────┘          │  - Web API 服务器              │  │
+│                                 └─────────────────────────────────┘  │
+│                                                                      │
+│   ┌─────────────────────────────────────────────────────────────┐   │
+│   │                     miya_frontend/                           │   │
+│   │  ├── main.py              - 入口文件                        │   │
+│   │  ├── system/              - 配置和API层                    │   │
+│   │  │   ├── config.py        - 弥娅配置兼容层                  │   │
+│   │  │   ├── api_client.py    - API客户端（端口自动检测）       │   │
+│   │  │   └── miya_adapter.py  - 弥娅功能适配器                  │   │
+│   │  ├── ui/                  - UI层                           │   │
+│   │  │   ├── controller/      - 聊天控制器                     │   │
+│   │  │   ├── components/      - UI组件                         │   │
+│   │  │   └── utils/           - 工具类                         │   │
+│   │  └── run_frontend.bat     - 启动脚本                       │   │
+│   └─────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 2. 核心特性
+
+| 特性 | 说明 |
+|------|------|
+| **完整AI能力** | 连接后端 DecisionHub，获得弥娅完整的AI回复能力 |
+| **Live2D 虚拟形象** | 支持 Live2D 模型显示和动画交互 |
+| **69+ 工具集** | 与QQ端一致的完整工具集 |
+| **超级管理员权限** | desktop 平台自动获得超级管理员权限 |
+| **记忆系统** | 共享弥娅的统一记忆系统 |
+| **形态切换** | 支持 /形态 命令切换人格 |
+| **自动端口检测** | 自动检测后端实际端口（8000/8002） |
+
+### 3. 工作原理
+
+#### 3.1 API 连接机制
+
+前端通过 HTTP 请求与后端通信，核心流程：
+
+```
+用户输入 → PyQt5 UI → SimpleHttpClient → POST /api/chat → 后端处理
+                                                              ↓
+显示回复 ← PyQt5 UI ← response_received signal ← JSON响应 ← DecisionHub
+```
+
+**关键代码 - tool_chat.py:**
+
+```python
+def get_api_url(endpoint: str) -> str:
+    """获取API URL，本地调用时使用127.0.0.1而非0.0.0.0"""
+    host = config.api_server.host
+    if host == "0.0.0.0":
+        host = "127.0.0.1"
+    return f"http://{host}:{config.api_server.port}{endpoint}"
+
+def _build_request_data(self, user_input, stream, use_self_game):
+    """构建请求数据"""
+    data = {
+        "message": user_input,
+        "stream": stream,
+        "use_self_game": use_self_game,
+        "session_id": self._get_current_session_id(),
+        "platform": "desktop",  # 关键：标识为desktop平台
+    }
+    return data
+```
+
+#### 3.2 端口自动检测
+
+前端启动时自动检测后端实际端口：
+
+```python
+# config.py - ApiConfig 类
+def _detect_api_port(self) -> int:
+    """检测弥娅API实际使用的端口"""
+    import socket
+    import httpx
+    
+    # 检查常见端口
+    for port in [8002, 8000, 8001]:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(0.5)
+                if s.connect_ex(("127.0.0.1", port)) == 0:
+                    try:
+                        resp = httpx.get(f"http://127.0.0.1:{port}/api/health", timeout=1)
+                        if resp.status_code == 200:
+                            logger.info(f"[API配置] 检测到弥娅API端口: {port}")
+                            return port
+                    except:
+                        pass
+        except:
+            pass
+    
+    return 8000  # 默认
+```
+
+#### 3.3 平台权限自动赋予
+
+desktop 平台自动获得超级管理员权限：
+
+```python
+# hub/platform_tools.py
+def get_platform_tools(platform: str, superadmin: bool = False):
+    """获取平台工具集"""
+    
+    # desktop 平台自动获得超级管理员权限
+    if platform == "desktop":
+        superadmin = True
+        logger.info("[平台工具] desktop平台自动获得超级管理员权限")
+    
+    # ... 其他逻辑
+```
+
+### 4. 启动方式
+
+#### 方式1：使用 start.bat 启动
+
+```bash
+# 运行 start.bat，选择选项 3 (Desktop Console)
+start.bat
+# → 输入 3
+```
+
+启动脚本会自动：
+1. 启动后端 (run/main.py)
+2. 启动前端 (miya_frontend/main.py)
+
+#### 方式2：手动启动
+
+```bash
+# 终端1：启动后端
+python run/main.py
+
+# 终端2：启动前端
+cd miya_frontend
+python main.py
+```
+
+### 5. 使用命令
+
+桌面端支持所有QQ端的命令：
+
+| 命令 | 功能 |
+|------|------|
+| `/形态 <名称>` | 切换形态，如 `/形态 bianka` |
+| `/形态` | 查看当前形态 |
+| `/状态` | 查看弥娅完整状态 |
+| `/记忆` | 查看记忆系统状态 |
+| 直接聊天 | 与弥娅AI对话 |
+
+### 6. 配置文件
+
+#### 6.1 弥娅配置兼容层
+
+前端通过 `system/config.py` 加载弥娅配置：
+
+```python
+# 加载10个弥娅配置文件
+_TTS_CONFIG = _load_config("tts_config")
+_SYSTEM_CONSTANTS = _load_config("system_constants")
+_API_ENDPOINTS = _load_config("api_endpoints")
+_MULTI_MODEL_CONFIG = _load_config("multi_model_config")
+_TEXT_CONFIG = _load_config("text_config")
+_PERSONALITY_CONFIG = _load_config("personality_config")
+_MEMORY_CONFIG = _load_config("memory_config")
+_SOUL_GENERATOR_CONFIG = _load_config("soul_generator_config")
+_WEB_SEARCH_CONFIG = _load_config("web_search_config")
+_AGENT_ROUTING_CONFIG = _load_config("agent_routing_config")
+```
+
+#### 6.2 API 端点配置
+
+| 端点 | 功能 |
+|------|------|
+| `POST /api/chat` | 聊天接口（核心） |
+| `GET /api/health` | 健康检查 |
+| `GET /api/status` | 系统状态 |
+| `GET /api/emotion` | 情绪状态 |
+
+### 7. 故障排除
+
+#### 问题1：连接失败 (HTTP 404)
+
+**原因**：API 端点路径错误或端口不匹配
+
+**解决方案**：
+1. 检查后端端口（可能是8000或8002）
+2. 确保前端配置中的端口与后端一致
+3. 重启前后端
+
+#### 问题2：流式模式无响应
+
+**原因**：后端不支持 `/api/chat/stream` 端点
+
+**解决方案**：
+前端默认使用非流式模式（`stream_mode: false`），如需更改：
+
+```python
+# system/config.py
+class SystemConfig(DynamicMiyaConfig):
+    def __init__(self):
+        super().__init__({
+            "stream_mode": False,  # 改为 False
+            # ...
+        })
+```
+
+#### 问题3：JSON解析错误
+
+**原因**：发送包含中文字符的JSON时编码问题
+
+**解决方案**：
+确保使用 UTF-8 编码：
+```python
+headers = {'Content-Type': 'application/json; charset=utf-8'}
+```
+
+### 8. 相关文件
+
+桌面端涉及的核心文件：
+
+| 文件 | 功能 |
+|------|------|
+| `miya_frontend/main.py` | 前端入口文件 |
+| `miya_frontend/system/config.py` | 弥娅配置兼容层 |
+| `miya_frontend/system/api_client.py` | API客户端 |
+| `miya_frontend/ui/controller/tool_chat.py` | 聊天控制器 |
+| `miya_frontend/ui/utils/simple_http_client.py` | HTTP客户端 |
+| `hub/platform_tools.py` | 平台工具管理 |
+| `hub/decision_hub.py` | 决策中心 |
+| `core/web_api/__init__.py` | Web API路由 |
+
+### 9. 与QQ端的对比
+
+| 特性 | QQ端 | 桌面端 |
+|------|------|--------|
+| 消息协议 | OneBot协议 | HTTP API |
+| 工具集 | 69+ | 69+ |
+| 超级管理员 | 需配置 | 自动获得 |
+| 记忆系统 | ✓ | ✓ |
+| 情绪系统 | ✓ | ✓ |
+| Live2D | ✗ | ✓ |
+| 形态切换 | ✓ | ✓ |
+
+---
+
 <p align="center">
   Made with ❤️ by Jia
 </p>

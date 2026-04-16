@@ -1,0 +1,32 @@
+{
+  "id": "106d850c14e99b96",
+  "content": "我饿了，刚刚点了外卖",
+  "level": "short_term",
+  "priority": 0.5,
+  "tags": [
+    "吃饭"
+  ],
+  "user_id": "1523878699",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-14T11:09:45.138170",
+  "updated_at": "2026-04-14T11:09:45.138170",
+  "expires_at": "2026-04-14T12:09:45.138170",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

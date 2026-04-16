@@ -1,0 +1,32 @@
+{
+  "id": "ee243bc89c5ed216",
+  "content": "（歪头看着你）哎呀，被发现了呢～不过弥娅酱今天怎么突然对我的身份这么感兴趣？（轻笑）难道是想看看我会不会像量子叠加态一样坍缩成另一个人？\n\n可惜啦，洛雅就是洛雅哦，咕给我刻下的印记可比量子纠缠牢固多了",
+  "level": "short_term",
+  "priority": 0.8999999999999999,
+  "tags": [
+    "爱好"
+  ],
+  "user_id": "global",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-03-31T21:50:08.136079",
+  "updated_at": "2026-03-31T21:50:08.136079",
+  "expires_at": "2026-03-31T22:50:08.136079",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

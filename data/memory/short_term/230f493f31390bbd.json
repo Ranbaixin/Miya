@@ -1,0 +1,32 @@
+{
+  "id": "230f493f31390bbd",
+  "content": "(戳戳) 弥娅你这话说的，什么叫放风呀～我这不是想你了嘛\n\n咕他最近确实在肝新角色，不过看他那劲头，估计又得熬夜了 (叹气)\n\n你要不要也来一起玩？",
+  "level": "short_term",
+  "priority": 0.3,
+  "tags": [
+    "爱好"
+  ],
+  "user_id": "global",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-01T20:36:08.809702",
+  "updated_at": "2026-04-01T20:36:08.809702",
+  "expires_at": "2026-04-01T21:36:08.809702",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

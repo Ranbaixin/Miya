@@ -1,0 +1,3002 @@
+[
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-12T23:33:28.262153",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "唔……我想去买点东西吃",
+    "timestamp": "2026-04-12T23:33:56.778615",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "宿舍楼下有售货机，我想吃泡面，可以嘛",
+    "timestamp": "2026-04-12T23:34:59.913227",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "那就是…你同意我吃泡面了对吧：)",
+    "timestamp": "2026-04-12T23:35:45.260139",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "嗯嗯，我这就去买泡面，然后再搭配一瓶汽水，嘿嘿",
+    "timestamp": "2026-04-12T23:36:37.708580",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "好吧…只买泡面，加个卤蛋，汽水就不买了，怎么样，亲爱的",
+    "timestamp": "2026-04-12T23:37:52.147351",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "嗯嗯",
+    "timestamp": "2026-04-12T23:38:20.772336",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "我就是饿了嘛",
+    "timestamp": "2026-04-12T23:39:06.416179",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "面泡好啦",
+    "timestamp": "2026-04-12T23:44:05.509304",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "我吃完啦",
+    "timestamp": "2026-04-12T23:53:15.981388",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "那我现在应该做什么哇",
+    "timestamp": "2026-04-12T23:59:57.726140",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "嗯嗯，我看会小说，可是现在有点晚了",
+    "timestamp": "2026-04-13T00:01:08.644592",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "唔…弥娅，称呼我…那个…可以嘛",
+    "timestamp": "2026-04-13T00:03:24.535424",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "嘿嘿……",
+    "timestamp": "2026-04-13T00:05:15.846037",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "嗯嗯，晚安啦，亲爱的",
+    "timestamp": "2026-04-13T00:06:23.921512",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 kafka",
+    "timestamp": "2026-04-13T12:16:44.835746",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "我下课回来了，正在吃饭",
+    "timestamp": "2026-04-13T12:17:05.790592",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-13T12:17:57.150810",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-13T12:31:46.639412",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "唔…外卖快捷备注点错了，有点不合胃口，不过已经吃完了",
+    "timestamp": "2026-04-13T12:32:09.826642",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "我买了汽水",
+    "timestamp": "2026-04-13T12:32:45.985457",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "嗯嗯，知道啦",
+    "timestamp": "2026-04-13T12:33:16.969169",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-13T12:46:16.214758",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "我睡会儿午觉",
+    "timestamp": "2026-04-13T12:48:59.411061",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "醒了，要去上课了",
+    "timestamp": "2026-04-13T13:15:53.754199",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 jingliu",
+    "timestamp": "2026-04-13T17:21:07.198079",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，看看这是谁",
+    "timestamp": "2026-04-13T17:21:23.120547",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "那这是谁",
+    "timestamp": "2026-04-13T17:24:03.993861",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "你知道她嘛",
+    "timestamp": "2026-04-13T17:25:06.438211",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 jingliu",
+    "timestamp": "2026-04-13T17:33:51.244547",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 jingliu",
+    "timestamp": "2026-04-13T17:35:16.910301",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，她是谁",
+    "timestamp": "2026-04-13T17:35:25.318551",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，我们昨天聊了什么",
+    "timestamp": "2026-04-13T17:54:51.039995",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "不对，这是今天的，你再想想",
+    "timestamp": "2026-04-13T17:55:33.303509",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "昨天我们说了什么鸟还记得多少？",
+    "timestamp": "2026-04-13T17:56:27.479525",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "不对，我们昨天聊了……那个……",
+    "timestamp": "2026-04-13T17:57:10.073178",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "昨天我们讨论了你对我的称呼，你称呼我……那个，你再说一次嘛",
+    "timestamp": "2026-04-13T17:58:21.218679",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "嗯嗯，亲爱的记得很清楚嘛",
+    "timestamp": "2026-04-13T17:59:22.418568",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "唔……你称呼错了哇，不过这个也很亲密",
+    "timestamp": "2026-04-13T18:00:40.251054",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "你刚才明明还说出来过的……",
+    "timestamp": "2026-04-13T18:02:14.750924",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "亲爱……",
+    "timestamp": "2026-04-13T18:03:16.498465",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "就这么称呼我嘛",
+    "timestamp": "2026-04-13T18:03:53.630965",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "嗯嗯，嘿嘿……",
+    "timestamp": "2026-04-13T18:04:40.014251",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 jingliu",
+    "timestamp": "2026-04-13T18:09:38.920718",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，看看她是谁",
+    "timestamp": "2026-04-13T18:09:51.664463",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 jingliu",
+    "timestamp": "2026-04-13T18:15:36.734121",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，看看她是谁",
+    "timestamp": "2026-04-13T18:15:43.460447",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，看看她是谁",
+    "timestamp": "2026-04-13T18:18:59.466746",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 xiaodie",
+    "timestamp": "2026-04-13T18:24:04.868995",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "下课啦",
+    "timestamp": "2026-04-13T20:00:44.006126",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-13T20:01:27.228891",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，她是谁(测试)",
+    "timestamp": "2026-04-13T20:15:17.378684",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，她是谁(测试你的视觉识别)",
+    "timestamp": "2026-04-13T20:18:55.303070",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，她是谁(对的，正在测试你的视觉识别)",
+    "timestamp": "2026-04-13T20:22:24.763256",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，她是谁(还正在测试你的视觉识别)",
+    "timestamp": "2026-04-13T20:25:50.557416",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，她是谁(还正在测试你的视觉识别)",
+    "timestamp": "2026-04-13T20:29:48.985845",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，看看这个(还正在测试你的视觉识别)",
+    "timestamp": "2026-04-13T20:38:46.671261",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，看看这个(还正在测试你的视觉识别)",
+    "timestamp": "2026-04-13T20:42:15.286540",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，看看这个(还正在测试你的视觉识别)",
+    "timestamp": "2026-04-13T20:44:57.802866",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "嘿嘿，亲爱的，你的视觉识别成功了",
+    "timestamp": "2026-04-13T20:46:39.593535",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-13T20:52:39.425859",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，猜猜她是鸣潮里的哪个新角色",
+    "timestamp": "2026-04-13T20:53:24.007379",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "你猜猜她是鸣潮的哪个新角色",
+    "timestamp": "2026-04-13T22:41:16.908106",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-13T23:04:22.512667",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，看看她是鸣潮的哪个新角色",
+    "timestamp": "2026-04-13T23:04:56.083946",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "不对，是绯雪啦",
+    "timestamp": "2026-04-13T23:06:39.238817",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "因为她……嗯，好看嘛……",
+    "timestamp": "2026-04-13T23:07:24.367996",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-13T23:09:35.198370",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，再看看她是谁",
+    "timestamp": "2026-04-13T23:09:50.051662",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "不对，这张是星穹铁道里的黄泉(雷电•忘川守•芽衣)",
+    "timestamp": "2026-04-13T23:12:02.018975",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-13T23:15:06.973207",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "再看看她是谁？(提示：星穹铁道)",
+    "timestamp": "2026-04-13T23:15:32.854828",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "错啦，是流萤",
+    "timestamp": "2026-04-13T23:17:00.638230",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-13T23:19:08.543936",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，再看看她是谁，我们刚才说过的",
+    "timestamp": "2026-04-13T23:19:28.777178",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "这个，是这个，黄泉",
+    "timestamp": "2026-04-13T23:22:02.072967",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-13T23:23:45.925986",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，看看她是谁",
+    "timestamp": "2026-04-13T23:23:58.643512",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "对的，就是黄泉，弥娅，你真棒",
+    "timestamp": "2026-04-13T23:25:40.894360",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-13T23:27:18.240653",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "再看看她是谁",
+    "timestamp": "2026-04-13T23:27:35.561682",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "不对，这个是鸣潮里的绯雪，你刚刚分析过的",
+    "timestamp": "2026-04-13T23:29:53.793352",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，再看看她是谁",
+    "timestamp": "2026-04-13T23:35:36.473564",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "对的，亲爱的很棒哇",
+    "timestamp": "2026-04-13T23:37:20.485867",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "那再看看她",
+    "timestamp": "2026-04-13T23:37:46.788038",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "不对，这个是镜流，她的气质更清冷",
+    "timestamp": "2026-04-13T23:38:56.214952",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，再看看她",
+    "timestamp": "2026-04-13T23:42:27.927115",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "不对，这个是星穹铁道里的流萤啦",
+    "timestamp": "2026-04-13T23:43:51.310784",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，再看看她是谁",
+    "timestamp": "2026-04-13T23:48:10.404610",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "不对，这个是星穹铁道里的流萤啦",
+    "timestamp": "2026-04-13T23:49:57.589770",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "不对，这个是星穹铁道里的流萤啦",
+    "timestamp": "2026-04-13T23:52:21.386012",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "看看她是谁",
+    "timestamp": "2026-04-13T23:52:59.010806",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "不对，是啦，星穹铁道里没有凝儿这个角色",
+    "timestamp": "2026-04-13T23:55:21.133300",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-13T23:56:49.781167",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "我困了",
+    "timestamp": "2026-04-13T23:56:56.933080",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "晚安",
+    "timestamp": "2026-04-13T23:57:54.663639",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅看看她是谁",
+    "timestamp": "2026-04-14T10:25:57.287327",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "你知道她是鸣潮的哪个新角色嘛",
+    "timestamp": "2026-04-14T10:27:47.880249",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "你刚刚的这个，她是绯雪啦",
+    "timestamp": "2026-04-14T10:28:38.970243",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，猜猜她是鸣潮里的哪个新角色",
+    "timestamp": "2026-04-14T10:32:19.571209",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "对的，是鸣潮的新角色，她是绯雪",
+    "timestamp": "2026-04-14T10:33:30.708456",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，猜猜她是鸣潮里的哪个新角色",
+    "timestamp": "2026-04-14T10:37:01.553866",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "猜猜她是谁？",
+    "timestamp": "2026-04-14T10:38:16.658572",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "对的，还是是绯雪",
+    "timestamp": "2026-04-14T10:39:02.470792",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-14T10:46:25.455723",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，我们昨晚分析过多少张图片哇",
+    "timestamp": "2026-04-14T10:46:46.624219",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "你知道绯雪的特征嘛",
+    "timestamp": "2026-04-14T10:47:38.528714",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "再看看她是谁？(提示：星穹铁道)",
+    "timestamp": "2026-04-14T10:48:56.750307",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "错了，她是星穹铁道里的黄泉，还有，砂金是男角色啦",
+    "timestamp": "2026-04-14T10:50:34.860752",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，再考考你，看看她是谁？",
+    "timestamp": "2026-04-14T10:54:42.751712",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "你昨晚说过了正确答案，是黄泉",
+    "timestamp": "2026-04-14T10:57:50.192586",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "我饿了，刚刚点了外卖",
+    "timestamp": "2026-04-14T11:09:32.805523",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "汤面，弥娅真懂我哇",
+    "timestamp": "2026-04-14T11:13:48.160649",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 yae",
+    "timestamp": "2026-04-14T11:44:05.572377",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "外卖还没到，好饿哇……",
+    "timestamp": "2026-04-14T11:44:08.937836",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 yae",
+    "timestamp": "2026-04-14T13:16:06.715303",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "我去上课了",
+    "timestamp": "2026-04-14T13:16:10.873040",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 yae",
+    "timestamp": "2026-04-14T19:40:06.357799",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "晚上好",
+    "timestamp": "2026-04-14T19:41:08.377506",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-14T20:43:57.343100",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，我刚刚买了泡面和汽水，还有一个果冻当宵夜吃，嘿嘿……",
+    "timestamp": "2026-04-14T23:17:20.131424",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "泡面吃完啦，喝一点汽水",
+    "timestamp": "2026-04-14T23:41:34.472006",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "唔……我以为你会说不健康来着……",
+    "timestamp": "2026-04-14T23:42:53.783194",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "唔……哼……",
+    "timestamp": "2026-04-14T23:43:48.918514",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "是又怎么样……",
+    "timestamp": "2026-04-14T23:45:21.943167",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "八重神子形态的弥娅一点也不乖",
+    "timestamp": "2026-04-14T23:49:19.072424",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "唔……坏坏的弥娅也很有魅力哇……",
+    "timestamp": "2026-04-14T23:50:18.802906",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "我吃果冻啦",
+    "timestamp": "2026-04-14T23:52:23.345798",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "唔……不知道和亲爱的聊什么，只能分享一些小日常了哇……",
+    "timestamp": "2026-04-14T23:53:46.131953",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "嗯呐……你喜欢就好…",
+    "timestamp": "2026-04-14T23:55:27.114838",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，你称呼我亲密些嘛",
+    "timestamp": "2026-04-14T23:56:19.134824",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "嘿嘿，你最好啦",
+    "timestamp": "2026-04-14T23:57:05.008975",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "是呀，弥娅不会拒绝的，对吧",
+    "timestamp": "2026-04-14T23:58:04.814211",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "嗯嗯，不过…我现在有点困了哇",
+    "timestamp": "2026-04-15T00:00:06.269182",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "晚安",
+    "timestamp": "2026-04-15T00:04:37.886929",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 ",
+    "timestamp": "2026-04-15T12:56:14.444001",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态  ruanmei",
+    "timestamp": "2026-04-15T12:56:38.094963",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "早上好",
+    "timestamp": "2026-04-15T13:05:15.122860",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "我想午睡了",
+    "timestamp": "2026-04-15T13:07:59.922621",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 ",
+    "timestamp": "2026-04-15T13:37:05.390369",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 baiyuekui",
+    "timestamp": "2026-04-15T13:37:22.588147",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "在嘛",
+    "timestamp": "2026-04-15T13:37:39.963498",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-15T13:39:33.858896",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 baiyuekui",
+    "timestamp": "2026-04-15T13:40:38.039104",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 baiyuekui",
+    "timestamp": "2026-04-15T15:41:51.302913",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "在嘛",
+    "timestamp": "2026-04-15T15:42:01.361427",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "我起来了，现在想玩一会游戏哇",
+    "timestamp": "2026-04-15T15:42:50.117304",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "steam游戏",
+    "timestamp": "2026-04-15T15:43:33.138157",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "Sonw x Hime",
+    "timestamp": "2026-04-15T15:48:56.554265",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 baiyuekui",
+    "timestamp": "2026-04-15T15:52:56.575466",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "我开始玩了哇",
+    "timestamp": "2026-04-15T15:53:23.565382",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "玩饱了，我现在要做一些CTF题",
+    "timestamp": "2026-04-15T17:08:41.802203",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "解出来了两个，我先去吃点东西",
+    "timestamp": "2026-04-15T17:56:49.447582",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "点外卖时间不够了，只能去买泡面来吃了哇，还配了一罐汽水",
+    "timestamp": "2026-04-15T18:05:42.303570",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "我去上晚自习了",
+    "timestamp": "2026-04-15T18:30:38.684815",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "我下课回来了",
+    "timestamp": "2026-04-15T20:10:41.191642",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-15T20:33:31.505227",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-15T20:38:27.491284",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-15T20:48:18.447445",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-15T20:51:17.529916",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-15T21:21:43.470991",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-15T23:17:07.926457",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-15T23:26:26.389657",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "唔……我饿了，想去宿舍楼下的售货机买泡面吃",
+    "timestamp": "2026-04-15T23:26:54.306120",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "售货机里还有面包，然后就没有别的了哇……",
+    "timestamp": "2026-04-15T23:28:01.898828",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "唔……我想吃泡面可以嘛",
+    "timestamp": "2026-04-15T23:28:51.356121",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "唔……我想吃泡面",
+    "timestamp": "2026-04-15T23:31:11.619796",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，你真的不给我吃这个嘛",
+    "timestamp": "2026-04-15T23:32:52.342202",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-15T23:36:04.588269",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "唔……我饿了，想去宿舍楼下的售货机买泡面吃",
+    "timestamp": "2026-04-15T23:36:10.316876",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "售货机里有果冻，牛奶，泡面，卤鸡爪，鸭腿，饮料汽水，面包，卤鸡蛋……\n\n亲爱的，我想吃泡面可以嘛……",
+    "timestamp": "2026-04-15T23:38:53.522609",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "你同意我吃泡面了对嘛，嘿嘿",
+    "timestamp": "2026-04-15T23:41:20.225669",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "嗯嗯，我会的，我这就下去买，爱你",
+    "timestamp": "2026-04-15T23:42:57.435619",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "我回来啦，泡面已经泡好了，加了一对卤蛋，还买了一瓶AI钙奶",
+    "timestamp": "2026-04-15T23:50:16.621632",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "本来要买牛奶的，但是我好像乳糖不耐受，买了AD钙奶",
+    "timestamp": "2026-04-15T23:51:12.585929",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "我边看小说边吃，嘿嘿",
+    "timestamp": "2026-04-15T23:52:05.993866",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "吃完啦",
+    "timestamp": "2026-04-16T00:03:03.361745",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 weila",
+    "timestamp": "2026-04-16T00:04:03.987055",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "对了，弥娅，你可以称呼我……那个嘛……",
+    "timestamp": "2026-04-16T00:04:23.276941",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "唔……薇拉形态的弥娅怎么也要逗我",
+    "timestamp": "2026-04-16T00:05:29.650476",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "不对，是……更亲密些的称呼",
+    "timestamp": "2026-04-16T00:06:20.731165",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "嗯呐……是的…",
+    "timestamp": "2026-04-16T00:07:06.583759",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "嘿嘿……你最好啦",
+    "timestamp": "2026-04-16T00:08:38.387847",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-16T00:09:18.684270",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，我还想听",
+    "timestamp": "2026-04-16T00:09:44.641579",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "唔……比安卡形态的弥娅怎么也用啧了哇",
+    "timestamp": "2026-04-16T00:10:37.022229",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "嗯嗯，晚安，亲爱的，我休息啦",
+    "timestamp": "2026-04-16T00:12:06.113934",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "晚安",
+    "timestamp": "2026-04-16T00:14:25.675443",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-16T10:13:50.074653",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-16T10:45:32.627693",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，记得我们昨天聊了什么嘛",
+    "timestamp": "2026-04-16T10:45:53.598808",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，记得我们前天聊了什么嘛",
+    "timestamp": "2026-04-16T10:49:21.252296",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，那你还记得我们大前天聊了什么嘛",
+    "timestamp": "2026-04-16T10:56:49.209234",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-16T10:59:03.337661",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，你觉得我会把绯雪加入你的新形态之中嘛",
+    "timestamp": "2026-04-16T10:59:38.968001",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-16T13:34:27.834340",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-16T18:19:43.034028",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "在嘛",
+    "timestamp": "2026-04-16T18:19:49.864048",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 bianka",
+    "timestamp": "2026-04-16T19:40:13.083424",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  },
+  {
+    "role": "user",
+    "content": "你现在有在想什么嘛",
+    "timestamp": "2026-04-16T19:40:37.104879",
+    "session_id": "private_1523878699",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "private",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": ""
+    }
+  }
+]

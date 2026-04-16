@@ -1,0 +1,28 @@
+[
+  {
+    "role": "assistant",
+    "content": "晚上好。夜深了，你还没休息。",
+    "timestamp": "2026-04-16T22:08:23.787455",
+    "session_id": "desktop_50e6db0f-41b3-467a-8801-d003397e1fdb",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "platform": "desktop",
+      "user_id": "50e6db0f-41b3-467a-8801-d003397e1fdb",
+      "sender_name": "弥娅"
+    }
+  },
+  {
+    "role": "assistant",
+    "content": "是的，创建成功了。这样一来，我就能更好地为你提供支持了。",
+    "timestamp": "2026-04-16T22:10:54.622627",
+    "session_id": "desktop_50e6db0f-41b3-467a-8801-d003397e1fdb",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "platform": "desktop",
+      "user_id": "50e6db0f-41b3-467a-8801-d003397e1fdb",
+      "sender_name": "弥娅"
+    }
+  }
+]

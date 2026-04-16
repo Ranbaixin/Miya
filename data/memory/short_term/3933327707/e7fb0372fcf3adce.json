@@ -1,0 +1,32 @@
+{
+  "id": "e7fb0372fcf3adce",
+  "content": "早上好呀弥娅~（揉揉眼睛）\n\n今天感觉还行啦，就是有点困困的...昨晚没睡好（打哈欠）\n\n咕那边应该还好吧？",
+  "level": "short_term",
+  "priority": 0.8,
+  "tags": [
+    "休息"
+  ],
+  "user_id": "3933327707",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-04T09:48:07.848791",
+  "updated_at": "2026-04-04T09:48:07.848791",
+  "expires_at": "2026-04-04T10:48:07.848791",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

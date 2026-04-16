@@ -1,0 +1,33 @@
+{
+  "id": "313c560b12febf0e",
+  "content": "（笑着抿了一口饮料）哎呀，弥娅这么迫不及待呀～不过中场休息可是我的主场呢，要不要再来点零食？（递过薯片）",
+  "level": "short_term",
+  "priority": 0.5,
+  "tags": [
+    "吃饭",
+    "休息"
+  ],
+  "user_id": "global",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-01T20:34:01.843402",
+  "updated_at": "2026-04-01T20:34:01.843402",
+  "expires_at": "2026-04-01T21:34:01.843402",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

@@ -1,0 +1,15 @@
+[
+  {
+    "role": "assistant",
+    "content": "干嘛呀，我在呢",
+    "timestamp": "2026-03-31T23:32:16.932658",
+    "session_id": "web_b96b47a2",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "platform": "web",
+      "user_id": "b96b47a2",
+      "sender_name": "弥娅"
+    }
+  }
+]

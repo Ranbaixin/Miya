@@ -1,0 +1,32 @@
+{
+  "id": "983fd05f5eb4728a",
+  "content": "玩饱了，我现在要做一些CTF题",
+  "level": "short_term",
+  "priority": 0.8999999999999999,
+  "tags": [
+    "吃饭"
+  ],
+  "user_id": "1523878699",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-15T17:08:57.723110",
+  "updated_at": "2026-04-15T17:08:57.723110",
+  "expires_at": "2026-04-15T18:08:57.723110",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

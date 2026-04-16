@@ -1,0 +1,77 @@
+[
+  {
+    "role": "user",
+    "content": "守岸人 拍了拍你",
+    "timestamp": "2026-04-11T18:43:22.306681",
+    "session_id": "qq_3466693528",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "3466693528",
+      "group_id": "1084115564",
+      "message_type": "group",
+      "sender": "守岸人",
+      "chat_label": "群聊_1084115564"
+    }
+  },
+  {
+    "role": "user",
+    "content": "你是谁？",
+    "timestamp": "2026-04-11T18:44:31.109247",
+    "session_id": "qq_3466693528",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "3466693528",
+      "group_id": "1084115564",
+      "message_type": "group",
+      "sender": "守岸人",
+      "chat_label": "群聊_1084115564"
+    }
+  },
+  {
+    "role": "user",
+    "content": "在吗",
+    "timestamp": "2026-04-11T18:45:10.207554",
+    "session_id": "qq_3466693528",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "3466693528",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "守岸人",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，你和佳什么关系",
+    "timestamp": "2026-04-11T19:05:42.425087",
+    "session_id": "qq_3466693528",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "3466693528",
+      "group_id": "1084115564",
+      "message_type": "group",
+      "sender": "守岸人",
+      "chat_label": "群聊_1084115564"
+    }
+  },
+  {
+    "role": "user",
+    "content": "那你和我是什么关系",
+    "timestamp": "2026-04-11T19:06:26.642096",
+    "session_id": "qq_3466693528",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "3466693528",
+      "group_id": "1084115564",
+      "message_type": "group",
+      "sender": "守岸人",
+      "chat_label": "群聊_1084115564"
+    }
+  }
+]

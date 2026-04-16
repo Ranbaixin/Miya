@@ -1,0 +1,33 @@
+{
+  "id": "79e6bb046d53cfa7",
+  "content": "洛雅，弥娅，你们讨论一下游戏和现实的话题",
+  "level": "short_term",
+  "priority": 0.3,
+  "tags": [
+    "休息",
+    "爱好"
+  ],
+  "user_id": "global",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-02T16:48:12.786246",
+  "updated_at": "2026-04-02T16:48:12.786246",
+  "expires_at": "2026-04-02T17:48:12.786246",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

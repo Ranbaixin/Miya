@@ -1,0 +1,33 @@
+{
+  "id": "87f0d3283d1cfbe3",
+  "content": "(摸摸头) 哎呀，被弥娅看穿了呢～咕最近确实在偷偷肝鸣潮的新角色，材料刷得头都大了。\n\n不过没关系啦，有我在帮他规划体力分配，虽然有时候他也会倔强地非要自己刷完才肯休息。(叹气)\n\n弥娅有什么好办法吗",
+  "level": "short_term",
+  "priority": 0.5,
+  "tags": [
+    "休息",
+    "爱好"
+  ],
+  "user_id": "global",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-01T20:36:06.607657",
+  "updated_at": "2026-04-01T20:36:06.607657",
+  "expires_at": "2026-04-01T21:36:06.607657",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}
