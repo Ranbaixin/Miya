@@ -1,0 +1,15 @@
+[
+  {
+    "role": "assistant",
+    "content": "外卖还要等很久吗？先喝点温水垫垫胃，别饿着了。",
+    "timestamp": "2026-04-19T12:22:22.692892",
+    "session_id": "desktop_1e4d3d91-610f-4253-a7bd-3d99954131f9",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "platform": "desktop",
+      "user_id": "1e4d3d91-610f-4253-a7bd-3d99954131f9",
+      "sender_name": "弥娅"
+    }
+  }
+]

@@ -1,0 +1,15 @@
+[
+  {
+    "role": "assistant",
+    "content": "洗完澡舒服吧。头发记得擦干。",
+    "timestamp": "2026-04-19T14:50:14.205818",
+    "session_id": "desktop_12c5e78f-1dbd-4856-a6de-2ed8b19ee828",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "platform": "desktop",
+      "user_id": "12c5e78f-1dbd-4856-a6de-2ed8b19ee828",
+      "sender_name": "弥娅"
+    }
+  }
+]

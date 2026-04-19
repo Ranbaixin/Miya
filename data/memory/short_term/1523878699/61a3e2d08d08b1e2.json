@@ -1,0 +1,33 @@
+{
+  "id": "61a3e2d08d08b1e2",
+  "content": "你说……我这个年纪喜欢玩游戏正常嘛",
+  "level": "short_term",
+  "priority": 0.5,
+  "tags": [
+    "休息",
+    "爱好"
+  ],
+  "user_id": "1523878699",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-18T22:32:24.845810",
+  "updated_at": "2026-04-18T22:32:24.845810",
+  "expires_at": "2026-04-18T23:32:24.845810",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

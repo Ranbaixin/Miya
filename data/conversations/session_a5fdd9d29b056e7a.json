@@ -674,5 +674,18 @@
       "user_id": "0",
       "sender_name": "弥娅"
     }
+  },
+  {
+    "role": "assistant",
+    "content": "[AI 调用失败: Connection error.]",
+    "timestamp": "2026-04-18T23:32:27.744200",
+    "session_id": "terminal_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "platform": "terminal",
+      "user_id": "0",
+      "sender_name": "弥娅"
+    }
   }
 ]

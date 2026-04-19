@@ -20,7 +20,8 @@ DEFAULT_TIMEOUT = 30
 
 def find_available_api_port(start_port: int = 8000, max_attempts: int = 10) -> int:
     """查找可用的 API 端口"""
-    for port in range(start_port, start_port + max_attempts):
+    # 优先检测常用端口
+    for port in [8003, 8000, 8001, 8002, 8004, 8005]:
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.settimeout(0.5)
@@ -39,7 +40,7 @@ def find_available_api_port(start_port: int = 8000, max_attempts: int = 10) -> i
                         pass
         except:
             pass
-    return start_port  # 返回默认端口
+    return 8003  # 返回默认端口
 
 
 class MiyaAPIClient:

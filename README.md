@@ -2408,6 +2408,228 @@ start.bat
 
 ---
 
+## 多端连接指南（v4.3.5+ 新增）
+
+弥娅系统支持多种客户端同时连接，所有客户端共享同一个后端 API 服务，具有**端口自动检测**功能。
+
+### 1. 系统组件
+
+弥娅系统由以下主要组件构成：
+
+| 组件 | 说明 | 端口 | 目录 |
+|------|------|------|------|
+| 后端 API | 核心服务，提供 HTTP API | 8000-8005（自动检测） | `run/main.py` |
+| QQ 端 | QQ 机器人客户端 | - | `run/qq_main.py` |
+| Web 前端 | React 网页界面 | 5173 | `frontend/ui` |
+| PyQt5 桌面端 | PyQt5 桌面应用 | - | `miya_frontend` |
+| 桌面端 (Electron) | Electron 桌面应用 | - | `miya-desktop` |
+
+### 2. 端口自动检测机制
+
+当多个服务同时运行或端口被占用时，系统会自动检测并使用可用端口：
+
+```
+启动顺序和端口分配示例：
+1. 先启动后端 API → 端口 8000
+2. 再启动另一个后端 → 端口 8000 被占用，自动切换到 8001
+3. 第三次启动 → 端口 8001 被占用，自动切换到 8002
+4. 以此类推...
+```
+
+**前端自动检测端口列表**：`[8003, 8000, 8001, 8002, 8004, 8005]`
+
+系统会按优先级依次尝试每个端口，直到找到可用的 API 服务。
+
+### 3. 多端同时运行
+
+您可以同时启动多个客户端，它们会自动连接到正确的后端 API：
+
+#### 方式一：同时运行 QQ 端 + Web 前端
+
+```bash
+# 1. 启动 QQ 端（会自动启动后端 API）
+python run/qq_main.py
+
+# 2. 启动 Web 前端（会自动检测 API 端口）
+cd frontend/ui
+npm run dev
+```
+
+#### 方式二：同时运行桌面端 + Web 前端
+
+```bash
+# 1. 启动桌面端
+cd miya_frontend
+python main.py
+
+# 2. 启动 Web 前端
+cd frontend/ui
+npm run dev
+```
+
+#### 方式三：使用 start.bat 启动
+
+```bash
+start.bat
+
+# 选项：
+# 1 - 终端模式
+# 2 - QQ 客户端
+# 3 - PyQt5 桌面端 (需要先安装 PyQt5)
+# 4 - 全系统（QQ + 桌面端 + 终端）
+```
+
+### 4. 前端连接配置
+
+#### 4.1 Web 前端 (React)
+
+前端的端口检测在以下文件中实现：
+
+**文件位置**：`frontend/ui/src/services/miyaApi.ts`
+
+```typescript
+// 端口自动检测函数
+const API_PORTS = [8000, 8001, 8002, 8003, 8004, 8005];
+let cachedApiBase: string | null = null;
+
+async function findAvailableApiPort(): Promise<string> {
+  if (cachedApiBase) return cachedApiBase;
+  
+  for (const port of API_PORTS) {
+    try {
+      const res = await fetch(`http://localhost:${port}/api/health`, ...);
+      if (res.ok) {
+        cachedApiBase = `http://localhost:${port}`;
+        return cachedApiBase;
+      }
+    } catch {
+      continue;
+    }
+  }
+  return 'http://localhost:8000';
+}
+```
+
+**文件位置**：`frontend/ui/src/hooks/useMiyaQQData.ts`
+
+同样的自动检测机制也在该文件中实现。
+
+#### 4.2 PyQt5 桌面端
+
+端口检测在以下文件中实现：
+
+**文件位置**：`miya_frontend/system/config.py`
+
+```python
+def _detect_api_port(self) -> int:
+    """检测弥娅API实际使用的端口"""
+    # 检查常见端口 (按优先级排序)
+    for port in [8003, 8000, 8001, 8002, 8004, 8005]:
+        # 检测逻辑...
+        return port
+    return 8003
+```
+
+**文件位置**：`miya_frontend/system/api_client.py`
+
+```python
+def find_available_api_port(...) -> int:
+    """查找可用的 API 端口"""
+    for port in [8003, 8000, 8001, 8002, 8004, 8005]:
+        # 检测逻辑...
+        return port
+    return 8003
+```
+
+### 5. 手动指��端口
+
+如果您需要手动指定端口，可以在相应的配置文件中修改：
+
+#### 5.1 Web 前端
+
+**文件**：`frontend/ui/src/services/miyaApi.ts`
+
+```typescript
+// 手动指定端口
+const API_BASE = 'http://localhost:8003';  // 修改这里
+```
+
+#### 5.2 PyQt5 桌面端
+
+**文件**：`miya_frontend/system/config.py`
+
+```python
+class SystemConfig(DynamicMiyaConfig):
+    def __init__(self):
+        super().__init__({
+            "api_port": 8003,  # 修改这里
+            # ...
+        })
+```
+
+### 6. API 端点列表
+
+后端 API 提供以下端点：
+
+| 端点 | 方法 | 功能 |
+|------|------|------|
+| `/api/health` | GET | 健康检查 |
+| `/api/status` | GET | 系统状态 |
+| `/api/emotion` | GET | 情绪状态 |
+| `/api/v1/management/runtime/meta` | GET | 运行时元信息 |
+| `/api/v1/management/system` | GET | 系统信息 |
+| `/api/v1/management/runtime/tools` | GET | 可用工具列表 |
+| `/api/v1/management/runtime/chat` | POST | 聊天接口 |
+| `/api/v1/memory` | GET | 记忆查询 |
+| `/api/chat` | POST | Web 聊天 |
+
+### 7. 故障排除
+
+#### 问题1：前端显示"无法连接到后端 API"
+
+**解决方案**：
+
+1. 确保后端 API 正在运行：
+   ```bash
+   # 检查端口
+   netstat -ano | findstr "800"
+   ```
+
+2. 确认后端启动日志中的端口号：
+   ```
+   [Miya] API 端口已切换到 8003
+   [Miya] Web API 服务器已在后台启动 (http://0.0.0.0:8003)
+   ```
+
+3. 前端会**自动检测**端口，只需刷新浏览器即可。
+
+#### 问题2：端口被占用
+
+**解决方案**：
+
+1. 找到占用端口的进程：
+   ```bash
+   netstat -ano | findstr ":8000"
+   ```
+
+2. 结束占用进程或等待系统释放端口
+
+3. 系统会自动切换到下一个可用端口
+
+### 8. 相关文件
+
+| 文件 | 功能 |
+|------|------|
+| `run/main.py` | 终端模式入口（含后端 API） |
+| `run/qq_main.py` | QQ 模式入口（含后端 API） |
+| `run/web_main.py` | Web 模式入口 |
+| `frontend/ui/src/services/miyaApi.ts` | Web 前端 API 客户端 |
+| `frontend/ui/src/hooks/useMiyaQQData.ts` | Web 前端数据 hook |
+| `miya_frontend/system/config.py` | PyQt5 配置（含端口检测） |
+| `miya_frontend/system/api_client.py` | PyQt5 API 客户端 |
+
+---
+
 ## 项目结构
 
 ```
@@ -16211,14 +16433,31 @@ _AGENT_ROUTING_CONFIG = _load_config("agent_routing_config")
 
 ### 7. 故障排除
 
-#### 问题1：连接失败 (HTTP 404)
+#### 问题1：连接失败 (HTTP 404) 或 连接被拒绝 (ERR_CONNECTION_REFUSED)
 
-**原因**：API 端点路径错误或端口不匹配
+**原因**：API 端点路径错误或端口不匹配，前端尝试连接的端口上没有服务运行
 
 **解决方案**：
-1. 检查后端端口（可能是8000或8002）
-2. 确保前端配置中的端口与后端一致
-3. 重启前后端
+
+> **重要**：v4.3.5+ 版本已支持端口自动检测，前端会自动查找可用的 API 端口
+
+1. **自动检测**（推荐）
+   - 前端会**自动检测端口 8000-8005**，只需刷新页面即可自动连接
+   
+2. **手动检查端口**
+   - 检查后端实际运行的端口（查看后端启动日志）：
+     ```
+     [Miya] API 端口已切换到 8003
+     [Miya] Web API 服务器已在后台启动 (http://0.0.0.0:8003)
+     ```
+   - 或者使用命令检查：
+     ```bash
+     netstat -ano | findstr "LISTENING" | findstr "800"
+     ```
+
+3. **等待后端启动**
+   - 如果后端刚启动，稍等几秒再刷新页面
+   - 后端启动大约需要 5-10 秒
 
 #### 问题2：流式模式无响应
 

@@ -1,0 +1,33 @@
+{
+  "id": "ff09970dc5e2bc92",
+  "content": "我喜欢玩RPG游戏……唔……就是那种RPG……",
+  "level": "short_term",
+  "priority": 1.0,
+  "tags": [
+    "休息",
+    "爱好"
+  ],
+  "user_id": "1523878699",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-19T00:15:44.202783",
+  "updated_at": "2026-04-19T00:15:44.202783",
+  "expires_at": "2026-04-19T01:15:44.202783",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

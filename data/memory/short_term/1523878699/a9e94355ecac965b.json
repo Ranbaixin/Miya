@@ -1,0 +1,32 @@
+{
+  "id": "a9e94355ecac965b",
+  "content": "我去上晚自习了",
+  "level": "short_term",
+  "priority": 0.3,
+  "tags": [
+    "学习"
+  ],
+  "user_id": "1523878699",
+  "session_id": "",
+  "group_id": "",
+  "platform": "unknown",
+  "source": "auto_extract",
+  "role": "",
+  "event_type": "",
+  "location": "",
+  "conversation_partner": "",
+  "emotional_tone": "",
+  "significance": 0.5,
+  "created_at": "2026-04-19T18:18:39.777109",
+  "updated_at": "2026-04-19T18:18:39.777109",
+  "expires_at": "2026-04-19T19:18:39.777109",
+  "vector": null,
+  "subject": "",
+  "predicate": "",
+  "obj": "",
+  "metadata": {},
+  "access_count": 0,
+  "last_accessed": null,
+  "is_pinned": false,
+  "is_archived": false
+}

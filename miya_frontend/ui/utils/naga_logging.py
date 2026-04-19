@@ -1,15 +1,14 @@
-
 import logging
 from ..controller.tool_chat import chat
 from system.config import config
 # 设置日志
 
-class NagaLogging:
+
+class MiyaLogging:
     def __init__(self, name):
         self.logger = logging.getLogger(name)
-        
+
     def append(self):
-        
         if config.window != None:
             chat.append_log(self.logger.handlers[0].stream)
 
@@ -32,9 +31,12 @@ class NagaLogging:
         self.logger.error(message)
         if show:
             self.append()
-        
+
+
 loggers = dict()
+
+
 def getLogger(self, name):
     if name not in loggers:
-        loggers[name] = NagaLogging(name)
+        loggers[name] = MiyaLogging(name)
     return loggers[name]

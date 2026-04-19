@@ -1033,5 +1033,80 @@
       "sender": "咕",
       "chat_label": "群聊_1092980378"
     }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，帮我打货币战争",
+    "timestamp": "2026-04-16T23:22:56.302081",
+    "session_id": "qq_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "2911746585",
+      "group_id": "1092980378",
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "咕 拍了拍你",
+    "timestamp": "2026-04-16T23:43:46.941427",
+    "session_id": "qq_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "2911746585",
+      "group_id": "1092980378",
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "咕 拍了拍你",
+    "timestamp": "2026-04-19T19:57:03.312076",
+    "session_id": "qq_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "2911746585",
+      "group_id": "1092980378",
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "怎么发了两张图片?",
+    "timestamp": "2026-04-19T20:00:29.270156",
+    "session_id": "qq_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "2911746585",
+      "group_id": "1092980378",
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "卡了吗？",
+    "timestamp": "2026-04-19T20:00:39.847791",
+    "session_id": "qq_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "2911746585",
+      "group_id": "1092980378",
+      "message_type": "group",
+      "sender": "咕",
+      "chat_label": "群聊_1092980378"
+    }
   }
 ]

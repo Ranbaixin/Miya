@@ -288,8 +288,8 @@ class ApiConfig(DynamicMiyaConfig):
         import socket
         import httpx
 
-        # 检查常见端口
-        for port in [8002, 8000, 8001]:
+        # 检查常见端口 (按可能性排序)
+        for port in [8003, 8000, 8001, 8002, 8004, 8005]:
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     s.settimeout(0.5)
@@ -412,11 +412,11 @@ class NetworkConfig(DynamicMiyaConfig):
         super().__init__({"timeout": net.get("connection_timeout", 30), "proxy": ""})
 
 
-class NagaPortalConfig(DynamicMiyaConfig):
-    """Naga门户配置"""
+class MiyaPortalConfig(DynamicMiyaConfig):
+    """弥娅门户配置 - 预留扩展接口"""
 
     def __init__(self):
-        super().__init__({"username": "", "token": "", "enabled": False})
+        super().__init__({"enabled": False})
 
 
 # ==================== 主配置对象 ====================
@@ -460,8 +460,8 @@ class MiyaConfig:
         return self.api
 
     @property
-    def naga_portal(self):
-        return NagaPortalConfig()
+    def miya_portal(self):
+        return MiyaPortalConfig()
 
     @property
     def network(self):

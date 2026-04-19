@@ -413,10 +413,17 @@ class ChatTool(QObject):
         line = new_text.count("\n")
         # 处理消息格式化
         msg = extract_message(new_text)
-        from nagaagent_core.vendors.markdown import markdown
+        try:
+            import markdown
+            from markdown import markdown as md_convert
 
-        content_html = str(msg).replace("\n", "<br>")
-        content_html = markdown(content_html, extensions=["extra", "codehilite"])
+            content_html = str(msg).replace("\n", "<br>")
+            if md_convert:
+                content_html = md_convert(
+                    content_html, extensions=["extra", "codehilite"]
+                )
+        except (ImportError, AttributeError):
+            content_html = str(msg).replace("\n", "<br>")
 
         # 优先使用当前消息ID（流式更新时设置的）
         message_id = None

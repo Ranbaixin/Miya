@@ -1,7 +1,15 @@
 import sys
 import os
-from PyQt5.QtWidgets import (QApplication, QWidget, QHBoxLayout, QVBoxLayout,
-                             QPushButton, QLabel, QSizePolicy, QGraphicsOpacityEffect)
+from PyQt5.QtWidgets import (
+    QApplication,
+    QWidget,
+    QHBoxLayout,
+    QVBoxLayout,
+    QPushButton,
+    QLabel,
+    QSizePolicy,
+    QGraphicsOpacityEffect,
+)
 from PyQt5.QtCore import Qt, QSize, QPropertyAnimation, QEasingCurve, QCoreApplication
 from PyQt5.QtGui import QIcon, QPixmap, QPainter, QColor
 
@@ -10,6 +18,7 @@ animation_duration = 300  # 动画持续时间
 sidebar_width = 80  # 侧边栏宽度
 border_radius = 15  # 边框圆角
 border_alpha = 50  # 边框透明度
+
 
 def get_resource_path(relative_path):
     """获取资源文件的绝对路径，兼容PyInstaller打包环境"""
@@ -23,9 +32,11 @@ def get_resource_path(relative_path):
     possible_paths = [
         os.path.join(base_path, relative_path),
         os.path.join(base_path, "_internal", relative_path),
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", relative_path),
+        os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "..", "..", relative_path
+        ),
         os.path.join(os.path.dirname(os.path.abspath(__file__)), relative_path),
-        relative_path
+        relative_path,
     ]
 
     for path in possible_paths:
@@ -34,6 +45,7 @@ def get_resource_path(relative_path):
 
     # 如果都找不到，返回原始路径（让错误抛出）
     return relative_path
+
 
 class SidebarItem(QWidget):
     """侧边栏项目组件，包含图标和文字"""
@@ -105,11 +117,14 @@ class SidebarItem(QWidget):
         pixmap = QPixmap(resolved_path)
 
         if pixmap.isNull():
-            raise FileNotFoundError(f"无法加载图标文件: {icon_path}({resolved_path})。请检查文件路径是否正确。")
+            raise FileNotFoundError(
+                f"无法加载图标文件: {icon_path}({resolved_path})。请检查文件路径是否正确。"
+            )
         scaled = pixmap.scaled(
-            size, size,
+            size,
+            size,
             Qt.KeepAspectRatio,  # 保持宽高比
-            Qt.SmoothTransformation  # 平滑缩放
+            Qt.SmoothTransformation,  # 平滑缩放
         )
         # 创建白色版本的图标
         white_icon = QPixmap(scaled.size())
@@ -170,13 +185,13 @@ class SidebarWidget(QWidget):
 
         # 项目配置
         self.items_config = [
-            ("ui/img/icons/naga_chat.png", "对话"),
+            ("ui/img/icons/miya_chat.png", "对话"),
             ("ui/img/icons/mind_map.png", "心智云图"),
             ("ui/img/icons/personality_game.png", "博弈图"),
-            ("ui/img/icons/love_adventure.png", "游戏拓展")
+            ("ui/img/icons/love_adventure.png", "游戏拓展"),
         ]
 
-        #self._prepare_icons()
+        # self._prepare_icons()
 
         # 创建并添加项目
         self.items = []

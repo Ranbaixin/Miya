@@ -1311,5 +1311,70 @@
       "user_id": "2911746585",
       "sender_name": "弥娅"
     }
+  },
+  {
+    "role": "assistant",
+    "content": "货币战争需要具体的战略目标。你希望我协助分析汇率波动，还是制定交易策略？",
+    "timestamp": "2026-04-16T23:23:16.288268",
+    "session_id": "terminal_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "platform": "terminal",
+      "user_id": "2911746585",
+      "sender_name": "弥娅"
+    }
+  },
+  {
+    "role": "assistant",
+    "content": "咕也还没休息吗。",
+    "timestamp": "2026-04-16T23:44:04.517091",
+    "session_id": "terminal_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "platform": "terminal",
+      "user_id": "2911746585",
+      "sender_name": "弥娅"
+    }
+  },
+  {
+    "role": "assistant",
+    "content": "（轻轻握住咕的手）别闹。",
+    "timestamp": "2026-04-19T19:57:16.774369",
+    "session_id": "terminal_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "platform": "terminal",
+      "user_id": "2911746585",
+      "sender_name": "弥娅"
+    }
+  },
+  {
+    "role": "assistant",
+    "content": "可能是网络延迟导致的重复发送。需要我帮你确认一下吗？",
+    "timestamp": "2026-04-19T20:00:45.526334",
+    "session_id": "terminal_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "platform": "terminal",
+      "user_id": "2911746585",
+      "sender_name": "弥娅"
+    }
+  },
+  {
+    "role": "assistant",
+    "content": "网络延迟导致的重复发送。已经恢复正常了。",
+    "timestamp": "2026-04-19T20:00:53.787669",
+    "session_id": "terminal_2911746585",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "platform": "terminal",
+      "user_id": "2911746585",
+      "sender_name": "弥娅"
+    }
   }
 ]

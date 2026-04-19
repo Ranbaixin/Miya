@@ -108,7 +108,7 @@ class ChatWindow(QWidget):
                 border: 1px solid rgba(255, 255, 255, 30);
             }}
         """)
-        self.titlebar = TitleBar("NAGA AGENT", self)
+        self.titlebar = TitleBar("弥娅 AI", self)
         self.titlebar.setGeometry(0, 0, self.width(), 100)
 
     def _init_Layout(self):
@@ -919,12 +919,8 @@ class ChatWindow(QWidget):
 
                                     loop = asyncio.get_event_loop()
                                     if loop and loop.is_running():
-                                        # 检查QQ配置，决定发送模式 - 直接读取config.json
-                                        from pathlib import Path
-                                        from nagaagent_core.vendors import json5
-                                        from nagaagent_core.vendors.charset_normalizer import (
-                                            from_path,
-                                        )
+                                        # 检查QQ配置，决定发送模式
+                                        import json
 
                                         config_path = (
                                             Path(__file__).parent.parent / "config.json"
@@ -934,19 +930,10 @@ class ChatWindow(QWidget):
                                         reply_mode = "both"
 
                                         try:
-                                            charset_results = from_path(
-                                                str(config_path)
-                                            )
-                                            encoding = (
-                                                charset_results.best().encoding
-                                                if charset_results
-                                                else "utf-8"
-                                            )
-
                                             with open(
-                                                config_path, "r", encoding=encoding
+                                                config_path, "r", encoding="utf-8"
                                             ) as f:
-                                                config_data = json5.load(f)
+                                                config_data = json.load(f)
 
                                             qq_config = config_data.get(
                                                 "qq_wechat", {}

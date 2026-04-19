@@ -1,5 +1,5 @@
 """
-NagaAgent config_manager 兼容层
+弥娅配置管理器
 """
 
 import logging

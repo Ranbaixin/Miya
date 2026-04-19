@@ -45,8 +45,23 @@
     "lover_count": 0
   },
   "2026-04-16": {
-    "together_count": 6,
+    "together_count": 28,
     "user_count": 0,
+    "lover_count": 0
+  },
+  "2026-04-17": {
+    "together_count": 8,
+    "user_count": 0,
+    "lover_count": 0
+  },
+  "2026-04-18": {
+    "together_count": 35,
+    "user_count": 2,
+    "lover_count": 0
+  },
+  "2026-04-19": {
+    "together_count": 43,
+    "user_count": 2,
     "lover_count": 0
   }
 }

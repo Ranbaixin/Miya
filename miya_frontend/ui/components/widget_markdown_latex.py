@@ -1,13 +1,25 @@
-
 # markdown_latex_widget.py
 import re
 import os
 import tempfile
 from pathlib import Path
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTextEdit, QPushButton, QHBoxLayout, QApplication, QLabel, QSizePolicy
+from PyQt5.QtWidgets import (
+    QWidget,
+    QVBoxLayout,
+    QTextEdit,
+    QPushButton,
+    QHBoxLayout,
+    QApplication,
+    QLabel,
+    QSizePolicy,
+)
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtCore import Qt, QUrl
-from nagaagent_core.vendors.markdown import markdown
+
+try:
+    import markdown
+except ImportError:
+    markdown = None
 
 
 # ---------- 与 demo 相同的模板 ----------
@@ -45,25 +57,29 @@ th{{background:#f2f2f2;}}
 def md_tex_to_html(raw: str) -> str:
     """与 demo 完全一致"""
     block_cache = {}
+
     def block_save(m):
         key = f"___BLOCK_MATH_{len(block_cache)}___"
         block_cache[key] = m.group(0)
         return key
-    text = re.sub(r'\$\$(.*?)\$\$', block_save, raw, flags=re.S)
+
+    text = re.sub(r"\$\$(.*?)\$\$", block_save, raw, flags=re.S)
 
     inline_cache = {}
+
     def inline_save(m):
         key = f"___INLINE_MATH_{len(inline_cache)}___"
         inline_cache[key] = m.group(0)
         return key
-    text = re.sub(r'(?<!\$)\$(?!\$)(.+?)\$(?!\$)', inline_save, text)
+
+    text = re.sub(r"(?<!\$)\$(?!\$)(.+?)\$(?!\$)", inline_save, text)
 
     for k, v in block_cache.items():
         text = text.replace(k, v)
     for k, v in inline_cache.items():
         text = text.replace(k, v)
 
-    html = markdown(text, extensions=['extra', 'codehilite'])
+    html = markdown(text, extensions=["extra", "codehilite"])
     return TEMPLATE.format(content=html)
 
 
@@ -71,7 +87,7 @@ def md_tex_to_html(raw: str) -> str:
 class MarkdownLatexWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._temp_files = []          # 用于清理
+        self._temp_files = []  # 用于清理
         self._build_ui()
 
     def _build_ui(self):
@@ -104,8 +120,9 @@ class MarkdownLatexWidget(QWidget):
     # 对外唯一接口
     def set_text(self, markdown_text: str):
         html = md_tex_to_html(markdown_text)
-        temp = tempfile.NamedTemporaryFile(mode='w', suffix='.html',
-                                           delete=False, encoding='utf-8')
+        temp = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".html", delete=False, encoding="utf-8"
+        )
         temp.write(html)
         temp.close()
         self.browser.load(QUrl.fromLocalFile(temp.name))
@@ -124,6 +141,8 @@ class MarkdownLatexWidget(QWidget):
             except Exception:
                 pass
         event.accept()
+
+
 # 在你的主窗口代码里
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
 
@@ -163,7 +182,7 @@ print("hello")
         """)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = QApplication([])
     w = MainWindow()
     w.show()

@@ -774,5 +774,20 @@
       "sender": "",
       "chat_label": "群聊_1092980378"
     }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，这个是我做的我理想中的你的基本形态的图片",
+    "timestamp": "2026-04-18T23:31:19.208063",
+    "session_id": "qq_0",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "0",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "",
+      "chat_label": "私聊"
+    }
   }
 ]

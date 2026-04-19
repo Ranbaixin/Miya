@@ -1,27 +1,78 @@
 """
 弥娅功能适配层 - 为桌面端提供弥娅核心功能
-支持双端口连接:
-- localhost:8000 (Web API) - 聊天
-- localhost:8001 (Runtime API) - 完整功能(personality, tools等)
+统一接口层，自动检测并连接弥娅后端服务
+
+特性:
+- 自动检测可用端口(8000/8001)
+- 双端口协同: Web API(聊天) + Runtime API(管理)
+- 完整的类型提示
+- 连接状态检测
 """
 
 import logging
+import socket
 import httpx
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 logger = logging.getLogger(__name__)
 
-CHAT_API_BASE = "http://localhost:8000"
-RUNTIME_API_BASE = "http://localhost:8001"
+# 默认端口
+DEFAULT_CHAT_PORT = 8000
+DEFAULT_RUNTIME_PORT = 8001
+REQUEST_TIMEOUT = 30
+
+
+def find_available_port(start_port: int = 8000, max_attempts: int = 10) -> int:
+    """查找可用的 API 端口，优先检测8003"""
+    # 优先检测常用端口
+    for port in [8003, 8000, 8001, 8002, 8004, 8005]:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(0.5)
+                if s.connect_ex(("127.0.0.1", port)) == 0:
+                    try:
+                        resp = httpx.get(
+                            f"http://127.0.0.1:{port}/api/health", timeout=1
+                        )
+                        if resp.status_code == 200:
+                            logger.info(f"[MiyaAdapter] 检测到可用API端口: {port}")
+                            return port
+                    except:
+                        pass
+        except:
+            pass
+    return 8003  # 默认返回8003
 
 
 class MiyaFeatureAdapter:
-    """弥娅功能适配器"""
+    """弥娅功能适配器 - 统一接口层"""
 
-    def __init__(self):
-        self.chat_base = CHAT_API_BASE
-        self.runtime_base = RUNTIME_API_BASE
-        logger.info("[MiyaAdapter] 双端口适配器已初始化")
+    def __init__(self, chat_port: int = None, runtime_port: int = None):
+        # 自动检测可用端口
+        self.chat_port = chat_port or find_available_port(DEFAULT_CHAT_PORT)
+        self.runtime_port = runtime_port or find_available_port(DEFAULT_RUNTIME_PORT)
+
+        self.chat_base = f"http://localhost:{self.chat_port}"
+        self.runtime_base = f"http://localhost:{self.runtime_port}"
+
+        self._connected = False
+        self._check_connection()
+
+        logger.info(
+            f"[MiyaAdapter] 初始化完成 - Chat: {self.chat_port}, Runtime: {self.runtime_port}"
+        )
+
+    def _check_connection(self):
+        """检查连接状态"""
+        try:
+            resp = httpx.get(f"{self.chat_base}/api/health", timeout=5)
+            self._connected = resp.status_code == 200
+        except:
+            self._connected = False
+
+    @property
+    def is_connected(self) -> bool:
+        return self._connected
 
     def _request(
         self,

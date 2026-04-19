@@ -8,83 +8,119 @@ import os
 import json
 
 # 添加项目根目录到path，以便导入配置
-project_root = os.path.abspath(os.path.dirname(__file__) + '/..')
+project_root = os.path.abspath(os.path.dirname(__file__) + "/..")
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-# 添加nagaagent-core目录到path，以便导入PyQt5
-nagaagent_core_dir = os.path.join(project_root, "nagaagent-core")
-if nagaagent_core_dir not in sys.path:
-    sys.path.insert(0, nagaagent_core_dir)
+# 添加项目根目录到path (miya_frontend 自包含)
 
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                            QPushButton, QLineEdit, QCheckBox, QSpinBox, 
-                            QDoubleSpinBox, QComboBox, QFrame, QScrollArea,
-                            QSlider, QTextEdit, QGroupBox, QGridLayout, QFileDialog)  # 统一入口 #
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QPropertyAnimation, QEasingCurve  # 统一入口 #
+from PyQt5.QtWidgets import (
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QLineEdit,
+    QCheckBox,
+    QSpinBox,
+    QDoubleSpinBox,
+    QComboBox,
+    QFrame,
+    QScrollArea,
+    QSlider,
+    QTextEdit,
+    QGroupBox,
+    QGridLayout,
+    QFileDialog,
+)  # 统一入口 #
+from PyQt5.QtCore import (
+    Qt,
+    pyqtSignal,
+    QTimer,
+    QPropertyAnimation,
+    QEasingCurve,
+)  # 统一入口 #
 from PyQt5.QtGui import QFont, QPainter, QColor  # 统一入口 #
 
 from system.config import config, AI_NAME, UIConfig, Live2DConfig
 from ui.styles.settings_styles import (
-    SYSTEM_PROMPT_CARD_STYLE, SYSTEM_PROMPT_EDITOR_STYLE, 
-    SYSTEM_PROMPT_TITLE_STYLE, SYSTEM_PROMPT_DESC_STYLE,
-    SETTING_CARD_BASE_STYLE, SETTING_CARD_TITLE_STYLE, SETTING_CARD_DESC_STYLE,
-    SETTING_GROUP_HEADER_CONTAINER_STYLE, SETTING_GROUP_HEADER_BUTTON_STYLE,
-    SETTING_GROUP_RIGHT_LABEL_STYLE, SCROLL_AREA_STYLE, SCROLL_CONTENT_STYLE,
-    STATUS_LABEL_STYLE, SAVE_BUTTON_STYLE, RESET_BUTTON_STYLE,
-    NAGA_PORTAL_BUTTON_STYLE, VOICE_MODE_DISABLED_STYLE, TEST_WINDOW_STYLE,
-    INPUT_STYLE, COMBO_STYLE, CHECKBOX_STYLE, SLIDER_STYLE, SPIN_STYLE,
-    LABEL_STYLE
+    SYSTEM_PROMPT_CARD_STYLE,
+    SYSTEM_PROMPT_EDITOR_STYLE,
+    SYSTEM_PROMPT_TITLE_STYLE,
+    SYSTEM_PROMPT_DESC_STYLE,
+    SETTING_CARD_BASE_STYLE,
+    SETTING_CARD_TITLE_STYLE,
+    SETTING_CARD_DESC_STYLE,
+    SETTING_GROUP_HEADER_CONTAINER_STYLE,
+    SETTING_GROUP_HEADER_BUTTON_STYLE,
+    SETTING_GROUP_RIGHT_LABEL_STYLE,
+    SCROLL_AREA_STYLE,
+    SCROLL_CONTENT_STYLE,
+    STATUS_LABEL_STYLE,
+    SAVE_BUTTON_STYLE,
+    RESET_BUTTON_STYLE,
+    VOICE_MODE_DISABLED_STYLE,
+    TEST_WINDOW_STYLE,
+    INPUT_STYLE,
+    COMBO_STYLE,
+    CHECKBOX_STYLE,
+    SLIDER_STYLE,
+    SPIN_STYLE,
+    LABEL_STYLE,
 )
+
 
 class SettingCard(QWidget):
     """单个设置卡片"""
+
     value_changed = pyqtSignal(str, object)  # 设置名, 新值
-    
-    def __init__(self, title, description, control_widget, setting_key=None, parent=None):
+
+    def __init__(
+        self, title, description, control_widget, setting_key=None, parent=None
+    ):
         super().__init__(parent)
         self.setting_key = setting_key
         self.control_widget = control_widget
         self.setup_ui(title, description)
-        
+
     def setup_ui(self, title, description):
         """初始化卡片UI"""
         self.setFixedHeight(80)
         self.setStyleSheet(SETTING_CARD_BASE_STYLE)
-        
+
         layout = QHBoxLayout(self)
         layout.setContentsMargins(16, 12, 16, 12)
         layout.setSpacing(12)
-        
+
         # 左侧文本区域
         text_layout = QVBoxLayout()
         text_layout.setSpacing(2)
-        
+
         # 标题
         title_label = QLabel(title)
         title_label.setStyleSheet(SETTING_CARD_TITLE_STYLE)
         text_layout.addWidget(title_label)
-        
+
         # 描述
         desc_label = QLabel(description)
         desc_label.setStyleSheet(SETTING_CARD_DESC_STYLE)
         desc_label.setWordWrap(True)
         text_layout.addWidget(desc_label)
-        
+
         layout.addLayout(text_layout, 1)
-        
+
         # 右侧控件区域
         control_container = QWidget()
         control_container.setFixedWidth(400)  # 增加到两倍宽度
         control_layout = QHBoxLayout(control_container)
         control_layout.setContentsMargins(0, 0, 0, 0)
         control_layout.addWidget(self.control_widget)
-        
+
         layout.addWidget(control_container)
-        
+
         # 连接控件信号
         self.connect_signals()
-        
+
     def connect_signals(self):
         """连接控件信号"""
         if isinstance(self.control_widget, QLineEdit):
@@ -97,15 +133,16 @@ class SettingCard(QWidget):
             self.control_widget.currentTextChanged.connect(self.on_value_changed)
         elif isinstance(self.control_widget, QSlider):
             self.control_widget.valueChanged.connect(self.on_value_changed)
-            
+
     def on_value_changed(self, value):
         """处理值变化"""
         if self.setting_key:
             self.value_changed.emit(self.setting_key, value)
 
+
 class SettingGroup(QWidget):
     """设置组(支持展开/收起)"""
-    
+
     def __init__(self, title, parent=None):
         super().__init__(parent)
         self.cards = []  # 卡片列表 #
@@ -113,13 +150,13 @@ class SettingGroup(QWidget):
         self._expanded = False  # 默认收起 #
         self.setup_ui(title)  # 初始化UI #
         self.set_collapsed(True, animate=False)  # 初始直接收起(无动画) #
-        
+
     def setup_ui(self, title):
         """初始化组UI(带可点击头部)"""
         layout = QVBoxLayout(self)  # 主布局 #
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
-        
+
         # 头部容器(按钮+右侧文本) #
         self.header_container = QWidget()  # 容器 #
         self.header_container.setStyleSheet(SETTING_GROUP_HEADER_CONTAINER_STYLE)
@@ -143,7 +180,7 @@ class SettingGroup(QWidget):
         self.header_layout.addWidget(self.header_right_label, 0, Qt.AlignRight)
 
         layout.addWidget(self.header_container)
-        
+
         # 卡片容器 #
         self.cards_container = QWidget()
         self.cards_layout = QVBoxLayout(self.cards_container)
@@ -151,25 +188,27 @@ class SettingGroup(QWidget):
         self.cards_layout.setSpacing(4)
         self.cards_container.setVisible(False)  # 初始隐藏 #
         self.cards_container.setMaximumHeight(0)  # 初始高度为0用于动画 #
-        
+
         # 动画：最大高度属性动画 #
-        self.animation = QPropertyAnimation(self.cards_container, b"maximumHeight", self)  # 动画对象 #
+        self.animation = QPropertyAnimation(
+            self.cards_container, b"maximumHeight", self
+        )  # 动画对象 #
         self.animation.setDuration(220)  # 时长 #
         self.animation.setEasingCurve(QEasingCurve.OutCubic)  # 缓动曲线 #
         self.animation.finished.connect(self._on_animation_finished)  # 动画结束处理 #
         layout.addWidget(self.cards_container)
-        
+
     def on_header_clicked(self, checked):
         """头部点击切换展开/收起"""
         self.set_collapsed(not checked)  # 与按钮选中状态相反为收起 #
-        
+
     def set_collapsed(self, collapsed, animate=True):
         """设置收起/展开状态"""
         self._expanded = not collapsed  # 同步内部状态 #
         arrow = "▼" if not collapsed else "▶"  # 箭头符号 #
         self.header_button.setChecked(not collapsed)  # 同步按钮 #
         self.header_button.setText(f"{arrow} {self._title}")  # 更新标题 #
-        
+
         if not animate:  # 立即切换 #
             self.cards_container.setVisible(not collapsed)  # 直接显隐 #
             if collapsed:
@@ -178,7 +217,7 @@ class SettingGroup(QWidget):
                 self.cards_container.setMaximumHeight(16777215)  # 展开恢复最大 #
             self.updateGeometry()  # 刷新布局 #
             return
-        
+
         # 动画切换 #
         self.animation.stop()  # 停止旧动画 #
         if collapsed:
@@ -186,7 +225,9 @@ class SettingGroup(QWidget):
             self.cards_container.setVisible(True)  # 动画期间保持可见 #
             start_h = self.cards_container.maximumHeight()  # 当前最大高度 #
             if start_h == 16777215:
-                start_h = self.cards_container.sizeHint().height()  # 若为无穷大则取内容高度 #
+                start_h = (
+                    self.cards_container.sizeHint().height()
+                )  # 若为无穷大则取内容高度 #
             self.animation.setStartValue(max(0, start_h))  # 起始值 #
             self.animation.setEndValue(0)  # 结束值 #
         else:
@@ -197,16 +238,18 @@ class SettingGroup(QWidget):
             self.animation.setStartValue(0)  # 起始值 #
             self.animation.setEndValue(max(0, end_h))  # 结束值 #
         self.animation.start()  # 开始动画 #
-        
+
     def add_card(self, card):
         """添加设置卡片或普通控件"""
-        if hasattr(card, 'value_changed'):  # 是SettingCard #
+        if hasattr(card, "value_changed"):  # 是SettingCard #
             self.cards.append(card)  # 保存引用 #
         self.cards_layout.addWidget(card)  # 加入布局 #
         # 若在展开状态下新增卡片，更新容器高度以避免裁剪 #
         if self._expanded and self.cards_container.isVisible():  # 展开中 #
             # 动态调整到新的内容高度 #
-            self.cards_container.setMaximumHeight(self.cards_container.sizeHint().height())  # 更新高度 #
+            self.cards_container.setMaximumHeight(
+                self.cards_container.sizeHint().height()
+            )  # 更新高度 #
             self.updateGeometry()  # 刷新布局 #
 
     def _on_animation_finished(self):
@@ -228,12 +271,16 @@ class SettingGroup(QWidget):
         # 先隐藏右侧文本 #
         self.header_right_label.setVisible(False)
         # 移除已存在的右侧控件 #
-        if hasattr(self, 'header_right_widget') and self.header_right_widget is not None:
+        if (
+            hasattr(self, "header_right_widget")
+            and self.header_right_widget is not None
+        ):
             self.header_layout.removeWidget(self.header_right_widget)
             self.header_right_widget.setParent(None)
         self.header_right_widget = widget  # 保存引用 #
         if widget is not None:
             self.header_layout.addWidget(widget, 0, Qt.AlignRight)  # 添加到右侧 #
+
 
 class ElegantSettingsWidget(QWidget):
     """优雅的设置界面"""
@@ -250,21 +297,24 @@ class ElegantSettingsWidget(QWidget):
         """处理滚轮事件 - 传递给滚动区域"""
         # 不处理，让默认滚动行为工作
         event.ignore()
-        
+
         # 添加配置变更监听器，实现实时更新
         try:
             from system.config import add_config_listener
+
             add_config_listener(self.on_config_reloaded)
         except ImportError as e:
             # 如果导入失败，尝试重新设置路径
             import sys
             import os
-            project_root = os.path.abspath(os.path.dirname(__file__) + '/..')
+
+            project_root = os.path.abspath(os.path.dirname(__file__) + "/..")
             if project_root not in sys.path:
                 sys.path.insert(0, project_root)
             from system.config import add_config_listener
+
             add_config_listener(self.on_config_reloaded)
-        
+
     def on_config_reloaded(self):
         """配置重新加载后的处理"""
         # 重新加载当前设置到界面
@@ -273,42 +323,41 @@ class ElegantSettingsWidget(QWidget):
         self.pending_changes.clear()
         # 更新状态标签
         self.update_status_label("✓ 配置已重新加载，界面已更新")
-        
+
     def setup_ui(self):
         """初始化UI"""
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
-        
+
         # 滚动区域
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll_area.setStyleSheet(SCROLL_AREA_STYLE)
-        
+
         # 滚动内容
         scroll_content = QWidget()
         scroll_content.setStyleSheet(SCROLL_CONTENT_STYLE)
         scroll_layout = QVBoxLayout(scroll_content)
         scroll_layout.setContentsMargins(12, 12, 12, 12)
         scroll_layout.setSpacing(20)
-        
+
         # 创建设置组
         self.create_system_group(scroll_layout)
         self.create_ui_style_group(scroll_layout)
-        self.create_naga_portal_group(scroll_layout)
         self.create_api_group(scroll_layout)
         self.create_xiayuan_group(scroll_layout)
         self.create_voice_input_group(scroll_layout)  # 语音输入设置（ASR）
         self.create_voice_output_group(scroll_layout)  # 语音输出设置（TTS）
         self.create_mqtt_group(scroll_layout)
         self.create_save_section(scroll_layout)
-        
+
         scroll_layout.addStretch()
         scroll_area.setWidget(scroll_content)
         main_layout.addWidget(scroll_area)
-        
+
     def create_api_group(self, parent_layout):
         group = SettingGroup("API 配置")
         # API Key
@@ -316,7 +365,9 @@ class ElegantSettingsWidget(QWidget):
             api_key_input = QLineEdit()
             api_key_input.setText(config.api.api_key)
             api_key_input.setStyleSheet(INPUT_STYLE)
-            api_key_card = SettingCard("API Key", "用于连接API的密钥", api_key_input, "api.api_key")
+            api_key_card = SettingCard(
+                "API Key", "用于连接API的密钥", api_key_input, "api.api_key"
+            )
             api_key_card.value_changed.connect(self.on_setting_changed)
             group.add_card(api_key_card)
             self.api_key_input = api_key_input
@@ -325,7 +376,9 @@ class ElegantSettingsWidget(QWidget):
             base_url_input = QLineEdit()
             base_url_input.setText(config.api.base_url)
             base_url_input.setStyleSheet(INPUT_STYLE)
-            base_url_card = SettingCard("API Base URL", "API基础URL", base_url_input, "api.base_url")
+            base_url_card = SettingCard(
+                "API Base URL", "API基础URL", base_url_input, "api.base_url"
+            )
             base_url_card.value_changed.connect(self.on_setting_changed)
             group.add_card(base_url_card)
             self.base_url_input = base_url_input
@@ -335,69 +388,101 @@ class ElegantSettingsWidget(QWidget):
             model_combo.addItems([config.api.model])
             model_combo.setCurrentText(config.api.model)
             model_combo.setStyleSheet(COMBO_STYLE)
-            model_card = SettingCard("AI模型", "选择用于对话的AI模型", model_combo, "api.model")
+            model_card = SettingCard(
+                "AI模型", "选择用于对话的AI模型", model_combo, "api.model"
+            )
             model_card.value_changed.connect(self.on_setting_changed)
             group.add_card(model_card)
             self.model_combo = model_combo
-        
+
         # 电脑控制配置
         if hasattr(config, "computer_control"):
             # 电脑控制模型
             computer_control_model_input = QLineEdit()
             computer_control_model_input.setText(config.computer_control.model)
             computer_control_model_input.setStyleSheet(INPUT_STYLE)
-            computer_control_model_card = SettingCard("电脑控制模型", "用于电脑控制任务的主要模型", computer_control_model_input, "computer_control.model")
+            computer_control_model_card = SettingCard(
+                "电脑控制模型",
+                "用于电脑控制任务的主要模型",
+                computer_control_model_input,
+                "computer_control.model",
+            )
             computer_control_model_card.value_changed.connect(self.on_setting_changed)
             group.add_card(computer_control_model_card)
             self.computer_control_model_input = computer_control_model_input
-            
+
             # 电脑控制API地址
             computer_control_url_input = QLineEdit()
             computer_control_url_input.setText(config.computer_control.model_url)
             computer_control_url_input.setStyleSheet(INPUT_STYLE)
-            computer_control_url_card = SettingCard("电脑控制API地址", "电脑控制模型的API地址", computer_control_url_input, "computer_control.model_url")
+            computer_control_url_card = SettingCard(
+                "电脑控制API地址",
+                "电脑控制模型的API地址",
+                computer_control_url_input,
+                "computer_control.model_url",
+            )
             computer_control_url_card.value_changed.connect(self.on_setting_changed)
             group.add_card(computer_control_url_card)
             self.computer_control_url_input = computer_control_url_input
-            
+
             # 电脑控制API密钥
             computer_control_api_key_input = QLineEdit()
             computer_control_api_key_input.setText(config.computer_control.api_key)
             computer_control_api_key_input.setEchoMode(QLineEdit.Password)
             computer_control_api_key_input.setStyleSheet(INPUT_STYLE)
-            computer_control_api_key_card = SettingCard("电脑控制API密钥", "电脑控制模型的API密钥", computer_control_api_key_input, "computer_control.api_key")
+            computer_control_api_key_card = SettingCard(
+                "电脑控制API密钥",
+                "电脑控制模型的API密钥",
+                computer_control_api_key_input,
+                "computer_control.api_key",
+            )
             computer_control_api_key_card.value_changed.connect(self.on_setting_changed)
             group.add_card(computer_control_api_key_card)
             self.computer_control_api_key_input = computer_control_api_key_input
-            
+
             # 定位模型
             grounding_model_input = QLineEdit()
             grounding_model_input.setText(config.computer_control.grounding_model)
             grounding_model_input.setStyleSheet(INPUT_STYLE)
-            grounding_model_card = SettingCard("定位模型", "用于元素定位和坐标识别的模型", grounding_model_input, "computer_control.grounding_model")
+            grounding_model_card = SettingCard(
+                "定位模型",
+                "用于元素定位和坐标识别的模型",
+                grounding_model_input,
+                "computer_control.grounding_model",
+            )
             grounding_model_card.value_changed.connect(self.on_setting_changed)
             group.add_card(grounding_model_card)
             self.grounding_model_input = grounding_model_input
-            
+
             # 定位模型API地址
             grounding_url_input = QLineEdit()
             grounding_url_input.setText(config.computer_control.grounding_url)
             grounding_url_input.setStyleSheet(INPUT_STYLE)
-            grounding_url_card = SettingCard("定位模型API地址", "定位模型的API地址", grounding_url_input, "computer_control.grounding_url")
+            grounding_url_card = SettingCard(
+                "定位模型API地址",
+                "定位模型的API地址",
+                grounding_url_input,
+                "computer_control.grounding_url",
+            )
             grounding_url_card.value_changed.connect(self.on_setting_changed)
             group.add_card(grounding_url_card)
             self.grounding_url_input = grounding_url_input
-            
+
             # 定位模型API密钥
             grounding_api_key_input = QLineEdit()
             grounding_api_key_input.setText(config.computer_control.grounding_api_key)
             grounding_api_key_input.setEchoMode(QLineEdit.Password)
             grounding_api_key_input.setStyleSheet(INPUT_STYLE)
-            grounding_api_key_card = SettingCard("定位模型API密钥", "定位模型的API密钥", grounding_api_key_input, "computer_control.grounding_api_key")
+            grounding_api_key_card = SettingCard(
+                "定位模型API密钥",
+                "定位模型的API密钥",
+                grounding_api_key_input,
+                "computer_control.grounding_api_key",
+            )
             grounding_api_key_card.value_changed.connect(self.on_setting_changed)
             group.add_card(grounding_api_key_card)
             self.grounding_api_key_input = grounding_api_key_input
-        
+
         parent_layout.addWidget(group)
 
     def create_system_group(self, parent_layout):
@@ -408,9 +493,14 @@ class ElegantSettingsWidget(QWidget):
 
         # AI 名称输入框（写入 config.system.ai_name） #
         ai_name_input = QLineEdit()
-        ai_name_input.setText(getattr(config.system, 'ai_name', ''))
+        ai_name_input.setText(getattr(config.system, "ai_name", ""))
         ai_name_input.setStyleSheet(INPUT_STYLE)
-        ai_name_card = SettingCard("AI 名称", "修改后将写入config.json的system.ai_name", ai_name_input, "system.ai_name")
+        ai_name_card = SettingCard(
+            "AI 名称",
+            "修改后将写入config.json的system.ai_name",
+            ai_name_input,
+            "system.ai_name",
+        )
         ai_name_card.value_changed.connect(self.on_setting_changed)
         group.add_card(ai_name_card)
         self.ai_name_input = ai_name_input  # 保存引用 #
@@ -421,7 +511,12 @@ class ElegantSettingsWidget(QWidget):
             max_tokens_spin.setRange(100, 32768)
             max_tokens_spin.setValue(config.api.max_tokens)
             max_tokens_spin.setStyleSheet(SPIN_STYLE)
-            max_tokens_card = SettingCard("最大Token数", "单次对话的最大长度限制", max_tokens_spin, "api.max_tokens")
+            max_tokens_card = SettingCard(
+                "最大Token数",
+                "单次对话的最大长度限制",
+                max_tokens_spin,
+                "api.max_tokens",
+            )
             max_tokens_card.value_changed.connect(self.on_setting_changed)
             group.add_card(max_tokens_card)
             self.max_tokens_spin = max_tokens_spin
@@ -432,7 +527,12 @@ class ElegantSettingsWidget(QWidget):
             history_spin.setRange(1, 200)
             history_spin.setValue(config.api.max_history_rounds)
             history_spin.setStyleSheet(SPIN_STYLE)
-            history_card = SettingCard("历史轮数", "上下文对话轮数（系统会保留最近多少轮对话内容作为上下文）", history_spin, "api.max_history_rounds")
+            history_card = SettingCard(
+                "历史轮数",
+                "上下文对话轮数（系统会保留最近多少轮对话内容作为上下文）",
+                history_spin,
+                "api.max_history_rounds",
+            )
             history_card.value_changed.connect(self.on_setting_changed)
             group.add_card(history_card)
             self.history_spin = history_spin
@@ -443,25 +543,35 @@ class ElegantSettingsWidget(QWidget):
             context_days_spin.setRange(1, 30)
             context_days_spin.setValue(config.api.context_load_days)
             context_days_spin.setStyleSheet(SPIN_STYLE)
-            context_days_card = SettingCard("加载天数", "从最近几天的日志文件中加载历史对话", context_days_spin, "api.context_load_days")
+            context_days_card = SettingCard(
+                "加载天数",
+                "从最近几天的日志文件中加载历史对话",
+                context_days_spin,
+                "api.context_load_days",
+            )
             context_days_card.value_changed.connect(self.on_setting_changed)
             group.add_card(context_days_card)
             self.context_days_spin = context_days_spin
 
         # 系统提示词编辑（对接 system/prompts/naga_system_prompt.txt） #
         prompt_editor = QTextEdit()
-        prompt_editor.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)  # 禁用垂直滚动条 #
-        prompt_editor.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)  # 禁用水平滚动条 #
+        prompt_editor.setVerticalScrollBarPolicy(
+            Qt.ScrollBarAlwaysOff
+        )  # 禁用垂直滚动条 #
+        prompt_editor.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarAlwaysOff
+        )  # 禁用水平滚动条 #
         prompt_editor.setStyleSheet(SYSTEM_PROMPT_EDITOR_STYLE)
-        
+
         try:
             from system.config import get_prompt  # 懒加载 #
+
             # 直接读取对话风格提示词文件 #
-            preview_text = get_prompt('conversation_style_prompt')
+            preview_text = get_prompt("conversation_style_prompt")
         except Exception:
             preview_text = ""
         prompt_editor.setPlainText(preview_text)
-        
+
         # 自动调整高度 #
         def adjust_height():
             try:
@@ -470,34 +580,36 @@ class ElegantSettingsWidget(QWidget):
                 # 计算文本高度，增加更多边距 #
                 text_height = int(doc.size().height())
                 padding = 40  # 增加内边距 #
-                new_height = min(max(text_height + padding, 80), 200)  # 最小80px，最大200px #
+                new_height = min(
+                    max(text_height + padding, 80), 200
+                )  # 最小80px，最大200px #
                 if prompt_editor.height() != new_height:  # 避免重复设置相同高度 #
                     prompt_editor.setFixedHeight(new_height)
             except Exception as e:
                 print(f"调整高度失败: {e}")  # 调试信息 #
-        
+
         # 为系统提示词创建特殊的全宽卡片 #
         prompt_card = QWidget()
         # 不设置固定高度，让内容决定高度 #
         prompt_card.setStyleSheet(SYSTEM_PROMPT_CARD_STYLE)
-        
+
         prompt_layout = QVBoxLayout(prompt_card)
         prompt_layout.setContentsMargins(16, 12, 16, 12)
         prompt_layout.setSpacing(8)
-        
+
         # 标题和描述 #
         title_label = QLabel("系统提示词")
         title_label.setStyleSheet(SYSTEM_PROMPT_TITLE_STYLE)
         prompt_layout.addWidget(title_label)
-        
+
         desc_label = QLabel("编辑对话风格提示词，影响AI的回复风格和语言特点")
         desc_label.setStyleSheet(SYSTEM_PROMPT_DESC_STYLE)
         desc_label.setWordWrap(True)
         prompt_layout.addWidget(desc_label)
-        
+
         # 提示词编辑器占满剩余空间 #
         prompt_layout.addWidget(prompt_editor)
-        
+
         group.add_card(prompt_card)
         self.system_prompt_editor = prompt_editor  # 保存引用 #
 
@@ -509,26 +621,26 @@ class ElegantSettingsWidget(QWidget):
                 # 记录提示词更改 #
                 preview_text = self.system_prompt_editor.toPlainText()
                 # 保存到对话风格提示词文件 #
-                if not hasattr(self, 'pending_prompts'):
+                if not hasattr(self, "pending_prompts"):
                     self.pending_prompts = {}
-                self.pending_prompts['conversation_style_prompt'] = preview_text
+                self.pending_prompts["conversation_style_prompt"] = preview_text
                 self.update_status_label("● 系统提示词 已修改")
             except Exception as e:
                 print(f"文本变化处理失败: {e}")
-        
+
         # 连接文本变化信号 #
         prompt_editor.textChanged.connect(_on_text_changed)
-        
+
         # 保存原始的resizeEvent方法 #
         original_resize_event = prompt_editor.resizeEvent
-        
+
         def custom_resize_event(event):
             try:
                 original_resize_event(event)  # 调用原始方法 #
                 adjust_height()  # 调整高度 #
             except Exception as e:
                 print(f"resize事件处理失败: {e}")
-        
+
         prompt_editor.resizeEvent = custom_resize_event
 
         # 初始调整 #
@@ -536,13 +648,15 @@ class ElegantSettingsWidget(QWidget):
 
         # 主动交流模式开关
         active_comm_checkbox = QCheckBox("启用主动交流")
-        active_comm_checkbox.setChecked(getattr(config.system, 'active_communication', False))
+        active_comm_checkbox.setChecked(
+            getattr(config.system, "active_communication", False)
+        )
         active_comm_checkbox.setStyleSheet(CHECKBOX_STYLE)
         active_comm_card = SettingCard(
             "主动交流模式",
             "AI会主动发起对话，需要定期检查是否有新的话题",
             active_comm_checkbox,
-            "system.active_communication"
+            "system.active_communication",
         )
         active_comm_card.value_changed.connect(self.on_setting_changed)
         group.add_card(active_comm_card)
@@ -550,13 +664,15 @@ class ElegantSettingsWidget(QWidget):
 
         # 声纹识别系统开关
         voiceprint_checkbox = QCheckBox("启用声纹识别")
-        voiceprint_checkbox.setChecked(getattr(config.system, 'voiceprint_enabled', False))
+        voiceprint_checkbox.setChecked(
+            getattr(config.system, "voiceprint_enabled", False)
+        )
         voiceprint_checkbox.setStyleSheet(CHECKBOX_STYLE)
         voiceprint_card = SettingCard(
             "声纹识别系统",
             "AI只与声纹主人交互，需要先录制主人声纹",
             voiceprint_checkbox,
-            "system.voiceprint_enabled"
+            "system.voiceprint_enabled",
         )
         voiceprint_card.value_changed.connect(self.on_setting_changed)
         group.add_card(voiceprint_card)
@@ -564,13 +680,13 @@ class ElegantSettingsWidget(QWidget):
 
         # 声纹主人姓名输入
         owner_name_input = QLineEdit()
-        owner_name_input.setText(getattr(config.system, 'voiceprint_owner_name', ''))
+        owner_name_input.setText(getattr(config.system, "voiceprint_owner_name", ""))
         owner_name_input.setStyleSheet(INPUT_STYLE)
         owner_name_card = SettingCard(
             "声纹主人姓名",
             "设置声纹主人的名称，AI只会与该用户交互",
             owner_name_input,
-            "system.voiceprint_owner_name"
+            "system.voiceprint_owner_name",
         )
         owner_name_card.value_changed.connect(self.on_setting_changed)
         group.add_card(owner_name_card)
@@ -621,13 +737,15 @@ class ElegantSettingsWidget(QWidget):
 
         # AI日记功能开关
         diary_enabled_checkbox = QCheckBox("启用AI日记")
-        diary_enabled_checkbox.setChecked(getattr(config.system, 'diary_enabled', False))
+        diary_enabled_checkbox.setChecked(
+            getattr(config.system, "diary_enabled", False)
+        )
         diary_enabled_checkbox.setStyleSheet(CHECKBOX_STYLE)
         diary_enabled_card = SettingCard(
             "AI日记功能",
             "AI会根据对话内容自动写日记，使用人设口吻记录",
             diary_enabled_checkbox,
-            "system.diary_enabled"
+            "system.diary_enabled",
         )
         diary_enabled_card.value_changed.connect(self.on_setting_changed)
         group.add_card(diary_enabled_card)
@@ -635,13 +753,15 @@ class ElegantSettingsWidget(QWidget):
 
         # 日记自动保存开关
         diary_auto_save_checkbox = QCheckBox("自动保存日记")
-        diary_auto_save_checkbox.setChecked(getattr(config.system, 'diary_auto_save', True))
+        diary_auto_save_checkbox.setChecked(
+            getattr(config.system, "diary_auto_save", True)
+        )
         diary_auto_save_checkbox.setStyleSheet(CHECKBOX_STYLE)
         diary_auto_save_card = SettingCard(
             "自动保存日记",
             "AI写日记后自动保存到本地",
             diary_auto_save_checkbox,
-            "system.diary_auto_save"
+            "system.diary_auto_save",
         )
         diary_auto_save_card.value_changed.connect(self.on_setting_changed)
         group.add_card(diary_auto_save_card)
@@ -662,7 +782,9 @@ class ElegantSettingsWidget(QWidget):
         user_name_input = QLineEdit()
         user_name_input.setText(config.ui.user_name)
         user_name_input.setStyleSheet(INPUT_STYLE)
-        user_name_card = SettingCard("用户昵称", "聊天窗口显示的用户昵称", user_name_input, "ui.user_name")
+        user_name_card = SettingCard(
+            "用户昵称", "聊天窗口显示的用户昵称", user_name_input, "ui.user_name"
+        )
         user_name_card.value_changed.connect(self.on_setting_changed)
         group.add_card(user_name_card)
         self.ui_user_name_input = user_name_input
@@ -673,7 +795,12 @@ class ElegantSettingsWidget(QWidget):
         bg_alpha_spin.setSingleStep(0.05)
         bg_alpha_spin.setValue(config.ui.bg_alpha)
         bg_alpha_spin.setStyleSheet(SPIN_STYLE)  # 使用统一的样式
-        bg_alpha_card = SettingCard("聊天背景透明度", "影响聊天区域卡片背景的透明度（0=完全透明）", bg_alpha_spin, "ui.bg_alpha")
+        bg_alpha_card = SettingCard(
+            "聊天背景透明度",
+            "影响聊天区域卡片背景的透明度（0=完全透明）",
+            bg_alpha_spin,
+            "ui.bg_alpha",
+        )
         bg_alpha_card.value_changed.connect(self.on_setting_changed)
         group.add_card(bg_alpha_card)
         self.ui_bg_alpha_spin = bg_alpha_spin
@@ -682,7 +809,12 @@ class ElegantSettingsWidget(QWidget):
         window_alpha_spin.setRange(0, 255)
         window_alpha_spin.setValue(config.ui.window_bg_alpha)
         window_alpha_spin.setStyleSheet(SPIN_STYLE)
-        window_alpha_card = SettingCard("窗口背景透明度", "控制主窗口背景的不透明度", window_alpha_spin, "ui.window_bg_alpha")
+        window_alpha_card = SettingCard(
+            "窗口背景透明度",
+            "控制主窗口背景的不透明度",
+            window_alpha_spin,
+            "ui.window_bg_alpha",
+        )
         window_alpha_card.value_changed.connect(self.on_setting_changed)
         group.add_card(window_alpha_card)
         self.ui_window_alpha_spin = window_alpha_spin
@@ -691,7 +823,12 @@ class ElegantSettingsWidget(QWidget):
         mac_btn_size_spin.setRange(10, 100)
         mac_btn_size_spin.setValue(config.ui.mac_btn_size)
         mac_btn_size_spin.setStyleSheet(SPIN_STYLE)
-        mac_btn_size_card = SettingCard("标题栏按钮尺寸", "调整标题栏圆形按钮的大小", mac_btn_size_spin, "ui.mac_btn_size")
+        mac_btn_size_card = SettingCard(
+            "标题栏按钮尺寸",
+            "调整标题栏圆形按钮的大小",
+            mac_btn_size_spin,
+            "ui.mac_btn_size",
+        )
         mac_btn_size_card.value_changed.connect(self.on_setting_changed)
         group.add_card(mac_btn_size_card)
         self.ui_mac_btn_size_spin = mac_btn_size_spin
@@ -700,7 +837,12 @@ class ElegantSettingsWidget(QWidget):
         mac_btn_margin_spin.setRange(0, 50)
         mac_btn_margin_spin.setValue(config.ui.mac_btn_margin)
         mac_btn_margin_spin.setStyleSheet(SPIN_STYLE)
-        mac_btn_margin_card = SettingCard("标题栏按钮边距", "调整按钮距离窗口右侧的边距", mac_btn_margin_spin, "ui.mac_btn_margin")
+        mac_btn_margin_card = SettingCard(
+            "标题栏按钮边距",
+            "调整按钮距离窗口右侧的边距",
+            mac_btn_margin_spin,
+            "ui.mac_btn_margin",
+        )
         mac_btn_margin_card.value_changed.connect(self.on_setting_changed)
         group.add_card(mac_btn_margin_card)
         self.ui_mac_btn_margin_spin = mac_btn_margin_spin
@@ -709,7 +851,12 @@ class ElegantSettingsWidget(QWidget):
         mac_btn_gap_spin.setRange(0, 30)
         mac_btn_gap_spin.setValue(config.ui.mac_btn_gap)
         mac_btn_gap_spin.setStyleSheet(SPIN_STYLE)
-        mac_btn_gap_card = SettingCard("标题栏按钮间距", "调整两个按钮之间的距离", mac_btn_gap_spin, "ui.mac_btn_gap")
+        mac_btn_gap_card = SettingCard(
+            "标题栏按钮间距",
+            "调整两个按钮之间的距离",
+            mac_btn_gap_spin,
+            "ui.mac_btn_gap",
+        )
         mac_btn_gap_card.value_changed.connect(self.on_setting_changed)
         group.add_card(mac_btn_gap_card)
         self.ui_mac_btn_gap_spin = mac_btn_gap_spin
@@ -719,14 +866,24 @@ class ElegantSettingsWidget(QWidget):
         animation_duration_spin.setSingleStep(50)
         animation_duration_spin.setValue(config.ui.animation_duration)
         animation_duration_spin.setStyleSheet(SPIN_STYLE)
-        animation_duration_card = SettingCard("界面动画时长", "控制侧边栏等动画的持续时间（毫秒）", animation_duration_spin, "ui.animation_duration")
+        animation_duration_card = SettingCard(
+            "界面动画时长",
+            "控制侧边栏等动画的持续时间（毫秒）",
+            animation_duration_spin,
+            "ui.animation_duration",
+        )
         animation_duration_card.value_changed.connect(self.on_setting_changed)
         group.add_card(animation_duration_card)
         self.ui_animation_duration_spin = animation_duration_spin
 
         live2d_enabled_checkbox = QCheckBox()
         live2d_enabled_checkbox.setChecked(config.live2d.enabled)
-        live2d_enabled_card = SettingCard("启用Live2D", "控制是否启用Live2D功能（需要重启或切换模式生效）", live2d_enabled_checkbox, "live2d.enabled")
+        live2d_enabled_card = SettingCard(
+            "启用Live2D",
+            "控制是否启用Live2D功能（需要重启或切换模式生效）",
+            live2d_enabled_checkbox,
+            "live2d.enabled",
+        )
         live2d_enabled_card.value_changed.connect(self.on_setting_changed)
         group.add_card(live2d_enabled_card)
         self.live2d_enabled_checkbox = live2d_enabled_checkbox
@@ -756,7 +913,10 @@ class ElegantSettingsWidget(QWidget):
             "ui_mac_btn_size_spin": ("setValue", updates["ui.mac_btn_size"]),
             "ui_mac_btn_margin_spin": ("setValue", updates["ui.mac_btn_margin"]),
             "ui_mac_btn_gap_spin": ("setValue", updates["ui.mac_btn_gap"]),
-            "ui_animation_duration_spin": ("setValue", updates["ui.animation_duration"]),
+            "ui_animation_duration_spin": (
+                "setValue",
+                updates["ui.animation_duration"],
+            ),
             "live2d_enabled_checkbox": ("setChecked", updates["live2d.enabled"]),
         }
 
@@ -779,36 +939,6 @@ class ElegantSettingsWidget(QWidget):
         self.pending_changes.update(updates)
         self.update_status_label("UI 风格已恢复默认值，记得保存生效")
 
-    def create_naga_portal_group(self, parent_layout):
-        group = SettingGroup("娜迦官网API申请")  # 折叠组 #
-
-        # 标题栏右侧跳转按钮 #
-        portal_btn = QPushButton("访问官网")
-        portal_btn.setStyleSheet(NAGA_PORTAL_BUTTON_STYLE)
-        portal_btn.clicked.connect(self.open_naga_api)  # 复用原跳转 #
-        group.set_right_widget(portal_btn)  # 放置在右侧 #
-
-        # 用户名 #
-        naga_user_input = QLineEdit()
-        naga_user_input.setText(getattr(config.naga_portal, 'username', ''))
-        naga_user_input.setStyleSheet(INPUT_STYLE)
-        naga_user_card = SettingCard("用户名", "娜迦官网登录用户名", naga_user_input, "naga_portal.username")
-        naga_user_card.value_changed.connect(self.on_setting_changed)
-        group.add_card(naga_user_card)
-
-        # 密码 #
-        naga_pwd_input = QLineEdit()
-        naga_pwd_input.setText(getattr(config.naga_portal, 'password', ''))
-        naga_pwd_input.setEchoMode(QLineEdit.Password)
-        naga_pwd_input.setStyleSheet(INPUT_STYLE)
-        naga_pwd_card = SettingCard("密码", "娜迦官网登录密码", naga_pwd_input, "naga_portal.password")
-        naga_pwd_card.value_changed.connect(self.on_setting_changed)
-        group.add_card(naga_pwd_card)
-
-        group.set_collapsed(True)  # 默认收起 #
-        parent_layout.addWidget(group)
-
-        
     def create_xiayuan_group(self, parent_layout):
         group = SettingGroup("夏园记忆系统")
         # grag部分
@@ -816,14 +946,21 @@ class ElegantSettingsWidget(QWidget):
             neo4j_uri_input = QLineEdit()
             neo4j_uri_input.setText(config.grag.neo4j_uri)
             neo4j_uri_input.setStyleSheet(INPUT_STYLE)
-            neo4j_uri_card = SettingCard("Neo4j URI", "知识图谱数据库地址", neo4j_uri_input, "grag.neo4j_uri")
+            neo4j_uri_card = SettingCard(
+                "Neo4j URI", "知识图谱数据库地址", neo4j_uri_input, "grag.neo4j_uri"
+            )
             neo4j_uri_card.value_changed.connect(self.on_setting_changed)
             group.add_card(neo4j_uri_card)
         if hasattr(config.grag, "neo4j_user"):
             neo4j_user_input = QLineEdit()
             neo4j_user_input.setText(config.grag.neo4j_user)
             neo4j_user_input.setStyleSheet(INPUT_STYLE)
-            neo4j_user_card = SettingCard("Neo4j 用户名", "知识图谱数据库用户名", neo4j_user_input, "grag.neo4j_user")
+            neo4j_user_card = SettingCard(
+                "Neo4j 用户名",
+                "知识图谱数据库用户名",
+                neo4j_user_input,
+                "grag.neo4j_user",
+            )
             neo4j_user_card.value_changed.connect(self.on_setting_changed)
             group.add_card(neo4j_user_card)
         if hasattr(config.grag, "neo4j_password"):
@@ -831,28 +968,37 @@ class ElegantSettingsWidget(QWidget):
             neo4j_pwd_input.setText(config.grag.neo4j_password)
             neo4j_pwd_input.setEchoMode(QLineEdit.Password)
             neo4j_pwd_input.setStyleSheet(INPUT_STYLE)
-            neo4j_pwd_card = SettingCard("Neo4j 密码", "知识图谱数据库密码", neo4j_pwd_input, "grag.neo4j_password")
+            neo4j_pwd_card = SettingCard(
+                "Neo4j 密码",
+                "知识图谱数据库密码",
+                neo4j_pwd_input,
+                "grag.neo4j_password",
+            )
             neo4j_pwd_card.value_changed.connect(self.on_setting_changed)
             group.add_card(neo4j_pwd_card)
 
-            
         # Similarity Threshold
         if hasattr(config.grag, "similarity_threshold"):
             sim_slider = QSlider(Qt.Horizontal)
             sim_slider.setRange(0, 100)
             sim_slider.setValue(int(config.grag.similarity_threshold * 100))
             sim_slider.setStyleSheet(SLIDER_STYLE)
-            sim_card = SettingCard("相似度阈值", "知识图谱检索的相似度阈值", sim_slider, "grag.similarity_threshold")
+            sim_card = SettingCard(
+                "相似度阈值",
+                "知识图谱检索的相似度阈值",
+                sim_slider,
+                "grag.similarity_threshold",
+            )
             sim_card.value_changed.connect(self.on_setting_changed)
             group.add_card(sim_card)
             self.sim_slider = sim_slider
-            
+
         parent_layout.addWidget(group)
 
     def create_voice_input_group(self, parent_layout):
         """创建语音输入设置组（ASR）"""
         group = SettingGroup("语音输入设置")
-        
+
         # 如果配置存在，显示语音输入设置
         if hasattr(config, "voice_realtime"):
             # === 基础设置 ===
@@ -861,10 +1007,10 @@ class ElegantSettingsWidget(QWidget):
             voice_input_enabled_checkbox.setChecked(config.voice_realtime.enabled)
             voice_input_enabled_checkbox.setStyleSheet(CHECKBOX_STYLE)
             voice_input_enabled_card = SettingCard(
-                "启用语音输入", 
-                "启用语音识别（ASR）功能，支持实时语音转文本", 
-                voice_input_enabled_checkbox, 
-                "voice_realtime.enabled"
+                "启用语音输入",
+                "启用语音识别（ASR）功能，支持实时语音转文本",
+                voice_input_enabled_checkbox,
+                "voice_realtime.enabled",
             )
             voice_input_enabled_card.value_changed.connect(self.on_setting_changed)
             group.add_card(voice_input_enabled_card)
@@ -872,14 +1018,14 @@ class ElegantSettingsWidget(QWidget):
             # 语音模式选择
             mode_combo = QComboBox()
             mode_combo.addItems(["auto", "local", "end2end", "hybrid", "windows"])
-            current_mode = getattr(config.voice_realtime, 'voice_mode', 'auto')
+            current_mode = getattr(config.voice_realtime, "voice_mode", "auto")
             mode_combo.setCurrentText(current_mode)
             mode_combo.setStyleSheet(COMBO_STYLE)
             mode_card = SettingCard(
                 "语音模式",
                 "auto:自动选择 | local:本地FunASR | windows:Windows语音 | end2end:端到端 | hybrid:混合模式",
                 mode_combo,
-                "voice_realtime.voice_mode"
+                "voice_realtime.voice_mode",
             )
             mode_card.value_changed.connect(self.on_setting_changed)
             mode_card.value_changed.connect(self.on_voice_mode_changed)  # 监听模式变化
@@ -895,23 +1041,27 @@ class ElegantSettingsWidget(QWidget):
                 "ASR服务提供商",
                 "local:本地FunASR | qwen:通义千问 | openai:OpenAI",
                 provider_combo,
-                "voice_realtime.provider"
+                "voice_realtime.provider",
             )
             self.provider_card.value_changed.connect(self.on_setting_changed)
-            self.provider_card.value_changed.connect(self.on_voice_provider_changed)  # 监听提供商变化
+            self.provider_card.value_changed.connect(
+                self.on_voice_provider_changed
+            )  # 监听提供商变化
             group.add_card(self.provider_card)
             self.voice_provider_combo = provider_combo  # 保存引用
 
             # === 本地模式专用设置 ===
             # ASR服务地址（本地模式）
             asr_host_input = QLineEdit()
-            asr_host_input.setText(getattr(config.voice_realtime, 'asr_host', 'localhost'))
+            asr_host_input.setText(
+                getattr(config.voice_realtime, "asr_host", "localhost")
+            )
             asr_host_input.setStyleSheet(INPUT_STYLE)
             self.asr_host_card = SettingCard(
                 "ASR服务地址",
                 "本地FunASR服务地址（仅本地模式）",
                 asr_host_input,
-                "voice_realtime.asr_host"
+                "voice_realtime.asr_host",
             )
             self.asr_host_card.value_changed.connect(self.on_setting_changed)
             group.add_card(self.asr_host_card)
@@ -919,13 +1069,13 @@ class ElegantSettingsWidget(QWidget):
             # ASR服务端口（本地模式）
             asr_port_spin = QSpinBox()
             asr_port_spin.setRange(1, 65535)
-            asr_port_spin.setValue(getattr(config.voice_realtime, 'asr_port', 5000))
+            asr_port_spin.setValue(getattr(config.voice_realtime, "asr_port", 5000))
             asr_port_spin.setStyleSheet(SPIN_STYLE)
             self.asr_port_card = SettingCard(
                 "ASR服务端口",
                 "本地FunASR服务端口（仅本地模式）",
                 asr_port_spin,
-                "voice_realtime.asr_port"
+                "voice_realtime.asr_port",
             )
             self.asr_port_card.value_changed.connect(self.on_setting_changed)
             group.add_card(self.asr_port_card)
@@ -933,13 +1083,15 @@ class ElegantSettingsWidget(QWidget):
             # 录音时长（本地模式）
             record_duration_spin = QSpinBox()
             record_duration_spin.setRange(5, 60)
-            record_duration_spin.setValue(getattr(config.voice_realtime, 'record_duration', 10))
+            record_duration_spin.setValue(
+                getattr(config.voice_realtime, "record_duration", 10)
+            )
             record_duration_spin.setStyleSheet(SPIN_STYLE)
             self.record_duration_card = SettingCard(
                 "最大录音时长",
                 "本地模式最大录音时长（秒）",
                 record_duration_spin,
-                "voice_realtime.record_duration"
+                "voice_realtime.record_duration",
             )
             self.record_duration_card.value_changed.connect(self.on_setting_changed)
             group.add_card(self.record_duration_card)
@@ -954,7 +1106,7 @@ class ElegantSettingsWidget(QWidget):
                 "API密钥",
                 "语音服务API密钥（云端模式）",
                 api_key_input,
-                "voice_realtime.api_key"
+                "voice_realtime.api_key",
             )
             self.api_key_card.value_changed.connect(self.on_setting_changed)
             group.add_card(self.api_key_card)
@@ -967,11 +1119,10 @@ class ElegantSettingsWidget(QWidget):
                 "ASR模型名称",
                 "语音识别模型名称（云端模式）",
                 model_input,
-                "voice_realtime.model"
+                "voice_realtime.model",
             )
             self.model_card.value_changed.connect(self.on_setting_changed)
             group.add_card(self.model_card)
-
 
             # VAD阈值（云端模式）
             vad_slider = QSlider(Qt.Horizontal)
@@ -980,7 +1131,9 @@ class ElegantSettingsWidget(QWidget):
             vad_slider.setStyleSheet(SLIDER_STYLE)
             vad_label = QLabel(f"{config.voice_realtime.vad_threshold:.2f}")
             vad_label.setStyleSheet(LABEL_STYLE)
-            vad_slider.valueChanged.connect(lambda v: vad_label.setText(f"{v/100:.2f}"))
+            vad_slider.valueChanged.connect(
+                lambda v: vad_label.setText(f"{v / 100:.2f}")
+            )
             vad_container = QWidget()
             vad_layout = QHBoxLayout(vad_container)
             vad_layout.setContentsMargins(0, 0, 0, 0)
@@ -990,7 +1143,7 @@ class ElegantSettingsWidget(QWidget):
                 "静音检测阈值",
                 "VAD静音检测灵敏度（云端模式）",
                 vad_container,
-                "voice_realtime.vad_threshold"
+                "voice_realtime.vad_threshold",
             )
             self.vad_card.value_changed.connect(self.on_setting_changed)
             group.add_card(self.vad_card)
@@ -1032,16 +1185,19 @@ class ElegantSettingsWidget(QWidget):
             self.update_voice_cards_visibility()
 
             # 初始化时检查模式，如果是local或windows模式则禁用provider选择
-            if hasattr(self, 'voice_mode_combo') and hasattr(self, 'voice_provider_combo'):
+            if hasattr(self, "voice_mode_combo") and hasattr(
+                self, "voice_provider_combo"
+            ):
                 current_mode = self.voice_mode_combo.currentText()
-                if current_mode in ['local', 'windows']:
-                    self.voice_provider_combo.setCurrentText('local')
+                if current_mode in ["local", "windows"]:
+                    self.voice_provider_combo.setCurrentText("local")
                     self.voice_provider_combo.setEnabled(False)
                     # 应用禁用样式
-                    self.voice_provider_combo.setStyleSheet(COMBO_STYLE + VOICE_MODE_DISABLED_STYLE)
+                    self.voice_provider_combo.setStyleSheet(
+                        COMBO_STYLE + VOICE_MODE_DISABLED_STYLE
+                    )
 
         parent_layout.addWidget(group)
-
 
     def create_voice_output_group(self, parent_layout):
         """创建语音输出设置组（TTS）"""
@@ -1056,7 +1212,7 @@ class ElegantSettingsWidget(QWidget):
                 "启用流式输出",
                 "实时显示AI回复内容（关闭后等待完整回复再显示）",
                 stream_mode_checkbox,
-                "system.stream_mode"
+                "system.stream_mode",
             )
             self.stream_mode_card.value_changed.connect(self.on_setting_changed)
             group.add_card(self.stream_mode_card)
@@ -1066,14 +1222,14 @@ class ElegantSettingsWidget(QWidget):
             # TTS引擎选择
             tts_engine_combo = QComboBox()
             tts_engine_combo.addItems(["edge_tts", "gpt_sovits", "vits"])
-            current_engine = getattr(config.tts, 'default_engine', 'edge_tts')
+            current_engine = getattr(config.tts, "default_engine", "edge_tts")
             tts_engine_combo.setCurrentText(current_engine)
             tts_engine_combo.setStyleSheet(COMBO_STYLE)
             tts_engine_card = SettingCard(
                 "TTS引擎",
                 "选择语音合成引擎：edge_tts(在线免费)|gpt_sovits(本地定制)|vits(高效本地)",
                 tts_engine_combo,
-                "tts.default_engine"
+                "tts.default_engine",
             )
             tts_engine_card.value_changed.connect(self.on_tts_engine_changed)
             group.add_card(tts_engine_card)
@@ -1082,21 +1238,23 @@ class ElegantSettingsWidget(QWidget):
             # Edge-TTS语音选择
             tts_voice_combo = QComboBox()
             tts_voices = [
-                "zh-CN-XiaoyiNeural",     # 中文女声
-                "zh-CN-YunxiNeural",      # 中文男声
-                "zh-CN-XiaoxiaoNeural",   # 中文女童
-                "en-US-JennyNeural",      # 英文女声
-                "en-US-GuyNeural",        # 英文男声
+                "zh-CN-XiaoyiNeural",  # 中文女声
+                "zh-CN-YunxiNeural",  # 中文男声
+                "zh-CN-XiaoxiaoNeural",  # 中文女童
+                "en-US-JennyNeural",  # 英文女声
+                "en-US-GuyNeural",  # 英文男声
             ]
             tts_voice_combo.addItems(tts_voices)
-            current_tts_voice = getattr(config.tts, 'default_voice', 'zh-CN-XiaoyiNeural')
+            current_tts_voice = getattr(
+                config.tts, "default_voice", "zh-CN-XiaoyiNeural"
+            )
             tts_voice_combo.setCurrentText(current_tts_voice)
             tts_voice_combo.setStyleSheet(COMBO_STYLE)
             self.tts_voice_card = SettingCard(
                 "默认语音",
                 "文本转语音的声音选择（仅Edge-TTS）",
                 tts_voice_combo,
-                "tts.default_voice"
+                "tts.default_voice",
             )
             self.tts_voice_card.value_changed.connect(self.on_setting_changed)
             group.add_card(self.tts_voice_card)
@@ -1107,10 +1265,7 @@ class ElegantSettingsWidget(QWidget):
             tts_port_spin.setValue(config.tts.port)
             tts_port_spin.setStyleSheet(SPIN_STYLE)
             tts_port_card = SettingCard(
-                "TTS服务端口",
-                "Edge-TTS服务端口",
-                tts_port_spin,
-                "tts.port"
+                "TTS服务端口", "Edge-TTS服务端口", tts_port_spin, "tts.port"
             )
             tts_port_card.value_changed.connect(self.on_setting_changed)
             group.add_card(tts_port_card)
@@ -1118,26 +1273,30 @@ class ElegantSettingsWidget(QWidget):
             # === GPT-SoVITS配置 ===
             # 启用GPT-SoVITS
             gpt_sovits_enabled_checkbox = QCheckBox()
-            gpt_sovits_enabled_checkbox.setChecked(getattr(config.tts, 'gpt_sovits_enabled', False))
+            gpt_sovits_enabled_checkbox.setChecked(
+                getattr(config.tts, "gpt_sovits_enabled", False)
+            )
             gpt_sovits_enabled_checkbox.setStyleSheet(CHECKBOX_STYLE)
             self.gpt_sovits_enabled_card = SettingCard(
                 "启用GPT-SoVITS",
                 "启用GPT-SoVITS本地TTS引擎（需要部署GPT-SoVITS服务）",
                 gpt_sovits_enabled_checkbox,
-                "tts.gpt_sovits_enabled"
+                "tts.gpt_sovits_enabled",
             )
             self.gpt_sovits_enabled_card.value_changed.connect(self.on_setting_changed)
             group.add_card(self.gpt_sovits_enabled_card)
 
             # GPT-SoVITS URL
             gpt_sovits_url_input = QLineEdit()
-            gpt_sovits_url_input.setText(getattr(config.tts, 'gpt_sovits_url', 'http://127.0.0.1:9880'))
+            gpt_sovits_url_input.setText(
+                getattr(config.tts, "gpt_sovits_url", "http://127.0.0.1:9880")
+            )
             gpt_sovits_url_input.setStyleSheet(INPUT_STYLE)
             self.gpt_sovits_url_card = SettingCard(
                 "GPT-SoVITS地址",
                 "GPT-SoVITS服务地址",
                 gpt_sovits_url_input,
-                "tts.gpt_sovits_url"
+                "tts.gpt_sovits_url",
             )
             self.gpt_sovits_url_card.value_changed.connect(self.on_setting_changed)
             group.add_card(self.gpt_sovits_url_card)
@@ -1146,20 +1305,22 @@ class ElegantSettingsWidget(QWidget):
             gpt_sovits_speed_spin = QDoubleSpinBox()
             gpt_sovits_speed_spin.setRange(0.1, 3.0)
             gpt_sovits_speed_spin.setSingleStep(0.1)
-            gpt_sovits_speed_spin.setValue(getattr(config.tts, 'gpt_sovits_speed', 1.0))
+            gpt_sovits_speed_spin.setValue(getattr(config.tts, "gpt_sovits_speed", 1.0))
             gpt_sovits_speed_spin.setStyleSheet(SPIN_STYLE)
             gpt_sovits_speed_card = SettingCard(
                 "GPT-SoVITS语速",
                 "GPT-SoVITS语音合成速度（0.1-3.0）",
                 gpt_sovits_speed_spin,
-                "tts.gpt_sovits_speed"
+                "tts.gpt_sovits_speed",
             )
             gpt_sovits_speed_card.value_changed.connect(self.on_setting_changed)
             group.add_card(gpt_sovits_speed_card)
 
             # GPT-SoVITS参考文本
             gpt_sovits_ref_text_input = QTextEdit()
-            gpt_sovits_ref_text_input.setPlainText(getattr(config.tts, 'gpt_sovits_ref_text', ''))
+            gpt_sovits_ref_text_input.setPlainText(
+                getattr(config.tts, "gpt_sovits_ref_text", "")
+            )
             gpt_sovits_ref_text_input.setMaximumHeight(60)
             gpt_sovits_ref_text_input.setStyleSheet("""
                 QTextEdit {
@@ -1174,7 +1335,7 @@ class ElegantSettingsWidget(QWidget):
                 "参考文本",
                 "GPT-SoVITS参考文本（用于语音风格定制）",
                 gpt_sovits_ref_text_input,
-                "tts.gpt_sovits_ref_text"
+                "tts.gpt_sovits_ref_text",
             )
             self.gpt_sovits_ref_text_card.value_changed.connect(self.on_setting_changed)
             group.add_card(self.gpt_sovits_ref_text_card)
@@ -1182,11 +1343,14 @@ class ElegantSettingsWidget(QWidget):
             # GPT-SoVITS参考音频路径
             gpt_sovits_ref_audio_layout = QHBoxLayout()
             gpt_sovits_ref_audio_input = QLineEdit()
-            gpt_sovits_ref_audio_input.setText(getattr(config.tts, 'gpt_sovits_ref_audio_path', ''))
+            gpt_sovits_ref_audio_input.setText(
+                getattr(config.tts, "gpt_sovits_ref_audio_path", "")
+            )
             gpt_sovits_ref_audio_input.setStyleSheet(INPUT_STYLE)
             gpt_sovits_ref_audio_input.setReadOnly(True)
 
             from PyQt5.QtWidgets import QPushButton
+
             gpt_sovits_ref_audio_btn = QPushButton("选择...")
             gpt_sovits_ref_audio_btn.setFixedWidth(60)
             gpt_sovits_ref_audio_btn.setStyleSheet("""
@@ -1201,7 +1365,9 @@ class ElegantSettingsWidget(QWidget):
                     background-color: #106ebe;
                 }
             """)
-            gpt_sovits_ref_audio_btn.clicked.connect(lambda: self.select_ref_audio_file())
+            gpt_sovits_ref_audio_btn.clicked.connect(
+                lambda: self.select_ref_audio_file()
+            )
 
             gpt_sovits_ref_audio_layout.addWidget(gpt_sovits_ref_audio_input)
             gpt_sovits_ref_audio_layout.addWidget(gpt_sovits_ref_audio_btn)
@@ -1214,71 +1380,80 @@ class ElegantSettingsWidget(QWidget):
                 "参考音频",
                 "GPT-SoVITS参考音频文件（用于语音风格定制）",
                 gpt_sovits_ref_audio_widget,
-                "tts.gpt_sovits_ref_audio_path"
+                "tts.gpt_sovits_ref_audio_path",
             )
             group.add_card(self.gpt_sovits_ref_audio_card)
 
             # GPT-SoVITS是否免参考
             gpt_sovits_ref_free_checkbox = QCheckBox()
-            gpt_sovits_ref_free_checkbox.setChecked(getattr(config.tts, 'gpt_sovits_ref_free', False))
+            gpt_sovits_ref_free_checkbox.setChecked(
+                getattr(config.tts, "gpt_sovits_ref_free", False)
+            )
             gpt_sovits_ref_free_checkbox.setStyleSheet(CHECKBOX_STYLE)
             gpt_sovits_ref_free_card = SettingCard(
                 "免参考模式",
                 "不使用参考音频和文本（仅使用模型默认风格）",
                 gpt_sovits_ref_free_checkbox,
-                "tts.gpt_sovits_ref_free"
+                "tts.gpt_sovits_ref_free",
             )
             gpt_sovits_ref_free_card.value_changed.connect(self.on_setting_changed)
             group.add_card(gpt_sovits_ref_free_card)
 
             # GPT-SoVITS文本过滤选项
             gpt_sovits_filter_brackets_checkbox = QCheckBox()
-            gpt_sovits_filter_brackets_checkbox.setChecked(getattr(config.tts, 'gpt_sovits_filter_brackets', False))
+            gpt_sovits_filter_brackets_checkbox.setChecked(
+                getattr(config.tts, "gpt_sovits_filter_brackets", False)
+            )
             gpt_sovits_filter_brackets_checkbox.setStyleSheet(CHECKBOX_STYLE)
             self.gpt_sovits_filter_brackets_card = SettingCard(
                 "过滤括号内容",
                 "自动移除文本中的括号及括号内的内容（如：注释、补充说明等）",
                 gpt_sovits_filter_brackets_checkbox,
-                "tts.gpt_sovits_filter_brackets"
+                "tts.gpt_sovits_filter_brackets",
             )
-            self.gpt_sovits_filter_brackets_card.value_changed.connect(self.on_setting_changed)
+            self.gpt_sovits_filter_brackets_card.value_changed.connect(
+                self.on_setting_changed
+            )
             group.add_card(self.gpt_sovits_filter_brackets_card)
 
             gpt_sovits_filter_special_chars_checkbox = QCheckBox()
-            gpt_sovits_filter_special_chars_checkbox.setChecked(getattr(config.tts, 'gpt_sovits_filter_special_chars', False))
+            gpt_sovits_filter_special_chars_checkbox.setChecked(
+                getattr(config.tts, "gpt_sovits_filter_special_chars", False)
+            )
             gpt_sovits_filter_special_chars_checkbox.setStyleSheet(CHECKBOX_STYLE)
             self.gpt_sovits_filter_special_chars_card = SettingCard(
                 "过滤特殊字符",
                 "移除文本中的特殊符号（【】《》「」『』等），保留基础标点",
                 gpt_sovits_filter_special_chars_checkbox,
-                "tts.gpt_sovits_filter_special_chars"
+                "tts.gpt_sovits_filter_special_chars",
             )
-            self.gpt_sovits_filter_special_chars_card.value_changed.connect(self.on_setting_changed)
+            self.gpt_sovits_filter_special_chars_card.value_changed.connect(
+                self.on_setting_changed
+            )
             group.add_card(self.gpt_sovits_filter_special_chars_card)
 
             # === VITS配置 ===
             # 启用VITS
             vits_enabled_checkbox = QCheckBox()
-            vits_enabled_checkbox.setChecked(getattr(config.tts, 'vits_enabled', False))
+            vits_enabled_checkbox.setChecked(getattr(config.tts, "vits_enabled", False))
             vits_enabled_checkbox.setStyleSheet(CHECKBOX_STYLE)
             self.vits_enabled_card = SettingCard(
                 "启用VITS",
                 "启用VITS本地TTS引擎（需要部署VITS服务）",
                 vits_enabled_checkbox,
-                "tts.vits_enabled"
+                "tts.vits_enabled",
             )
             self.vits_enabled_card.value_changed.connect(self.on_setting_changed)
             group.add_card(self.vits_enabled_card)
 
             # VITS URL
             vits_url_input = QLineEdit()
-            vits_url_input.setText(getattr(config.tts, 'vits_url', 'http://127.0.0.1:7860'))
+            vits_url_input.setText(
+                getattr(config.tts, "vits_url", "http://127.0.0.1:7860")
+            )
             vits_url_input.setStyleSheet(INPUT_STYLE)
             self.vits_url_card = SettingCard(
-                "VITS地址",
-                "VITS服务地址",
-                vits_url_input,
-                "tts.vits_url"
+                "VITS地址", "VITS服务地址", vits_url_input, "tts.vits_url"
             )
             self.vits_url_card.value_changed.connect(self.on_setting_changed)
             group.add_card(self.vits_url_card)
@@ -1286,13 +1461,13 @@ class ElegantSettingsWidget(QWidget):
             # VITS说话人ID
             vits_voice_id_spin = QSpinBox()
             vits_voice_id_spin.setRange(0, 100)
-            vits_voice_id_spin.setValue(getattr(config.tts, 'vits_voice_id', 0))
+            vits_voice_id_spin.setValue(getattr(config.tts, "vits_voice_id", 0))
             vits_voice_id_spin.setStyleSheet(SPIN_STYLE)
             vits_voice_id_card = SettingCard(
                 "VITS说话人ID",
                 "VITS的说话人ID（根据模型确定）",
                 vits_voice_id_spin,
-                "tts.vits_voice_id"
+                "tts.vits_voice_id",
             )
             vits_voice_id_card.value_changed.connect(self.on_setting_changed)
             group.add_card(vits_voice_id_card)
@@ -1301,33 +1476,35 @@ class ElegantSettingsWidget(QWidget):
         if hasattr(config, "voice_realtime"):
             # 自动播放
             auto_play_checkbox = QCheckBox()
-            auto_play_checkbox.setChecked(getattr(config.voice_realtime, 'auto_play', True))
+            auto_play_checkbox.setChecked(
+                getattr(config.voice_realtime, "auto_play", True)
+            )
             auto_play_checkbox.setStyleSheet(CHECKBOX_STYLE)
             auto_play_card = SettingCard(
                 "自动播放",
                 "AI回复后自动播放语音",
                 auto_play_checkbox,
-                "voice_realtime.auto_play"
+                "voice_realtime.auto_play",
             )
             auto_play_card.value_changed.connect(self.on_setting_changed)
             group.add_card(auto_play_card)
 
             # 打断播放
             interrupt_playback_checkbox = QCheckBox()
-            interrupt_playback_checkbox.setChecked(getattr(config.voice_realtime, 'interrupt_playback', True))
+            interrupt_playback_checkbox.setChecked(
+                getattr(config.voice_realtime, "interrupt_playback", True)
+            )
             interrupt_playback_checkbox.setStyleSheet(CHECKBOX_STYLE)
             interrupt_playback_card = SettingCard(
                 "允许打断",
                 "用户说话时自动打断AI语音播放",
                 interrupt_playback_checkbox,
-                "voice_realtime.interrupt_playback"
+                "voice_realtime.interrupt_playback",
             )
             interrupt_playback_card.value_changed.connect(self.on_setting_changed)
             group.add_card(interrupt_playback_card)
 
         parent_layout.addWidget(group)
-
-
 
     def create_mqtt_group(self, parent_layout):
         group = SettingGroup("MQTT 配置")
@@ -1335,7 +1512,9 @@ class ElegantSettingsWidget(QWidget):
             mqtt_broker_input = QLineEdit()
             mqtt_broker_input.setText(config.mqtt.broker)
             mqtt_broker_input.setStyleSheet(INPUT_STYLE)
-            mqtt_broker_card = SettingCard("MQTT Broker", "MQTT服务器地址", mqtt_broker_input, "mqtt.broker")
+            mqtt_broker_card = SettingCard(
+                "MQTT Broker", "MQTT服务器地址", mqtt_broker_input, "mqtt.broker"
+            )
             mqtt_broker_card.value_changed.connect(self.on_setting_changed)
             group.add_card(mqtt_broker_card)
         if hasattr(config.mqtt, "port"):
@@ -1343,14 +1522,18 @@ class ElegantSettingsWidget(QWidget):
             mqtt_port_spin.setRange(1, 65535)
             mqtt_port_spin.setValue(config.mqtt.port)
             mqtt_port_spin.setStyleSheet(SPIN_STYLE)
-            mqtt_port_card = SettingCard("MQTT端口", "MQTT服务器端口", mqtt_port_spin, "mqtt.port")
+            mqtt_port_card = SettingCard(
+                "MQTT端口", "MQTT服务器端口", mqtt_port_spin, "mqtt.port"
+            )
             mqtt_port_card.value_changed.connect(self.on_setting_changed)
             group.add_card(mqtt_port_card)
         if hasattr(config.mqtt, "username"):
             mqtt_user_input = QLineEdit()
             mqtt_user_input.setText(config.mqtt.username)
             mqtt_user_input.setStyleSheet(INPUT_STYLE)
-            mqtt_user_card = SettingCard("MQTT用户名", "MQTT服务器用户名", mqtt_user_input, "mqtt.username")
+            mqtt_user_card = SettingCard(
+                "MQTT用户名", "MQTT服务器用户名", mqtt_user_input, "mqtt.username"
+            )
             mqtt_user_card.value_changed.connect(self.on_setting_changed)
             group.add_card(mqtt_user_card)
         if hasattr(config.mqtt, "password"):
@@ -1358,42 +1541,43 @@ class ElegantSettingsWidget(QWidget):
             mqtt_pwd_input.setText(config.mqtt.password)
             mqtt_pwd_input.setEchoMode(QLineEdit.Password)
             mqtt_pwd_input.setStyleSheet(INPUT_STYLE)
-            mqtt_pwd_card = SettingCard("MQTT密码", "MQTT服务器密码", mqtt_pwd_input, "mqtt.password")
+            mqtt_pwd_card = SettingCard(
+                "MQTT密码", "MQTT服务器密码", mqtt_pwd_input, "mqtt.password"
+            )
             mqtt_pwd_card.value_changed.connect(self.on_setting_changed)
             group.add_card(mqtt_pwd_card)
         parent_layout.addWidget(group)
-        
+
     def create_save_section(self, parent_layout):
         """创建保存区域"""
         save_container = QWidget()
         save_container.setFixedHeight(60)
         save_layout = QHBoxLayout(save_container)
         save_layout.setContentsMargins(0, 10, 0, 10)
-        
+
         # 状态提示
         self.status_label = QLabel("")
         self.status_label.setStyleSheet(STATUS_LABEL_STYLE)
         save_layout.addWidget(self.status_label)
-        
+
         save_layout.addStretch()
-        
+
         # 重置按钮
         reset_btn = QPushButton("重置")
         reset_btn.setFixedSize(80, 36)
         reset_btn.setStyleSheet(RESET_BUTTON_STYLE)
         reset_btn.clicked.connect(self.reset_settings)
         save_layout.addWidget(reset_btn)
-        
+
         # 保存按钮
         self.save_btn = QPushButton("保存设置")
         self.save_btn.setFixedSize(100, 36)
         self.save_btn.setStyleSheet(SAVE_BUTTON_STYLE)
         self.save_btn.clicked.connect(self.save_settings)
         save_layout.addWidget(self.save_btn)
-        
+
         parent_layout.addWidget(save_container)
-        
-        
+
     def on_setting_changed(self, setting_key, value):
         """处理设置变化"""
         # 统一转换为新式键名，兼容旧逻辑 #
@@ -1414,45 +1598,47 @@ class ElegantSettingsWidget(QWidget):
         self.on_setting_changed(setting_key, value)
 
         # 更新相关配置项的可见性
-        if hasattr(self, 'tts_engine_combo'):
+        if hasattr(self, "tts_engine_combo"):
             engine = self.tts_engine_combo.currentText()
 
             # Edge-TTS特定配置
-            if hasattr(self, 'tts_voice_card'):
-                self.tts_voice_card.setVisible(engine == 'edge_tts')
+            if hasattr(self, "tts_voice_card"):
+                self.tts_voice_card.setVisible(engine == "edge_tts")
 
             # GPT-SoVITS特定配置
-            if hasattr(self, 'gpt_sovits_enabled_card'):
+            if hasattr(self, "gpt_sovits_enabled_card"):
                 self.gpt_sovits_enabled_card.setVisible(True)
-            if hasattr(self, 'gpt_sovits_url_card'):
-                self.gpt_sovits_url_card.setVisible(engine == 'gpt_sovits')
-            if hasattr(self, 'gpt_sovits_speed_card'):
-                self.gpt_sovits_speed_card.setVisible(engine == 'gpt_sovits')
-            if hasattr(self, 'gpt_sovits_ref_text_card'):
-                self.gpt_sovits_ref_text_card.setVisible(engine == 'gpt_sovits')
-            if hasattr(self, 'gpt_sovits_ref_audio_card'):
-                self.gpt_sovits_ref_audio_card.setVisible(engine == 'gpt_sovits')
-            if hasattr(self, 'gpt_sovits_ref_free_card'):
-                self.gpt_sovits_ref_free_card.setVisible(engine == 'gpt_sovits')
-            if hasattr(self, 'gpt_sovits_filter_brackets_card'):
-                self.gpt_sovits_filter_brackets_card.setVisible(engine == 'gpt_sovits')
-            if hasattr(self, 'gpt_sovits_filter_special_chars_card'):
-                self.gpt_sovits_filter_special_chars_card.setVisible(engine == 'gpt_sovits')
-                self.gpt_sovits_ref_free_card.setVisible(engine == 'gpt_sovits')
+            if hasattr(self, "gpt_sovits_url_card"):
+                self.gpt_sovits_url_card.setVisible(engine == "gpt_sovits")
+            if hasattr(self, "gpt_sovits_speed_card"):
+                self.gpt_sovits_speed_card.setVisible(engine == "gpt_sovits")
+            if hasattr(self, "gpt_sovits_ref_text_card"):
+                self.gpt_sovits_ref_text_card.setVisible(engine == "gpt_sovits")
+            if hasattr(self, "gpt_sovits_ref_audio_card"):
+                self.gpt_sovits_ref_audio_card.setVisible(engine == "gpt_sovits")
+            if hasattr(self, "gpt_sovits_ref_free_card"):
+                self.gpt_sovits_ref_free_card.setVisible(engine == "gpt_sovits")
+            if hasattr(self, "gpt_sovits_filter_brackets_card"):
+                self.gpt_sovits_filter_brackets_card.setVisible(engine == "gpt_sovits")
+            if hasattr(self, "gpt_sovits_filter_special_chars_card"):
+                self.gpt_sovits_filter_special_chars_card.setVisible(
+                    engine == "gpt_sovits"
+                )
+                self.gpt_sovits_ref_free_card.setVisible(engine == "gpt_sovits")
 
             # VITS特定配置
-            if hasattr(self, 'vits_enabled_card'):
+            if hasattr(self, "vits_enabled_card"):
                 self.vits_enabled_card.setVisible(True)
-            if hasattr(self, 'vits_url_card'):
-                self.vits_url_card.setVisible(engine == 'vits')
-            if hasattr(self, 'vits_voice_id_card'):
-                self.vits_voice_id_card.setVisible(engine == 'vits')
+            if hasattr(self, "vits_url_card"):
+                self.vits_url_card.setVisible(engine == "vits")
+            if hasattr(self, "vits_voice_id_card"):
+                self.vits_voice_id_card.setVisible(engine == "vits")
 
         # 显示提示信息
         engine_name_map = {
-            'edge_tts': 'Edge-TTS',
-            'gpt_sovits': 'GPT-SoVITS',
-            'vits': 'VITS'
+            "edge_tts": "Edge-TTS",
+            "gpt_sovits": "GPT-SoVITS",
+            "vits": "VITS",
         }
         engine_name = engine_name_map.get(value, value)
         self.update_status_label(f"● 已切换到 {engine_name} 引擎")
@@ -1466,15 +1652,12 @@ class ElegantSettingsWidget(QWidget):
 
         # 打开文件选择对话框
         file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "选择参考音频文件",
-            "",
-            audio_filters
+            self, "选择参考音频文件", "", audio_filters
         )
 
         if file_path:
             # 更新输入框
-            if hasattr(self, 'gpt_sovits_ref_audio_input'):
+            if hasattr(self, "gpt_sovits_ref_audio_input"):
                 self.gpt_sovits_ref_audio_input.setText(file_path)
 
                 # 添加到待保存的更改
@@ -1490,29 +1673,31 @@ class ElegantSettingsWidget(QWidget):
         self.on_setting_changed(setting_key, value)
 
         # 处理不同模式的逻辑
-        if value == 'local' and hasattr(self, 'voice_provider_combo'):
+        if value == "local" and hasattr(self, "voice_provider_combo"):
             # local模式：强制设置provider为local并禁用
-            self.voice_provider_combo.setCurrentText('local')
+            self.voice_provider_combo.setCurrentText("local")
             self.voice_provider_combo.setEnabled(False)
             # 更新样式显示禁用状态
-            self.voice_provider_combo.setStyleSheet(COMBO_STYLE + VOICE_MODE_DISABLED_STYLE)
+            self.voice_provider_combo.setStyleSheet(
+                COMBO_STYLE + VOICE_MODE_DISABLED_STYLE
+            )
             # 同时更新配置
-            self.on_setting_changed('voice_realtime.provider', 'local')
+            self.on_setting_changed("voice_realtime.provider", "local")
 
-        elif value == 'auto' and hasattr(self, 'voice_provider_combo'):
+        elif value == "auto" and hasattr(self, "voice_provider_combo"):
             # auto模式：允许选择provider，根据provider自动决定实际模式
             self.voice_provider_combo.setEnabled(True)
             self.voice_provider_combo.setStyleSheet(COMBO_STYLE)
             # auto模式不改变当前provider选择
 
-        elif value in ['end2end', 'hybrid'] and hasattr(self, 'voice_provider_combo'):
+        elif value in ["end2end", "hybrid"] and hasattr(self, "voice_provider_combo"):
             # end2end和hybrid模式：需要云端provider
             self.voice_provider_combo.setEnabled(True)
             self.voice_provider_combo.setStyleSheet(COMBO_STYLE)
             # 如果当前是local，切换到qwen
-            if self.voice_provider_combo.currentText() == 'local':
-                self.voice_provider_combo.setCurrentText('qwen')
-                self.on_setting_changed('voice_realtime.provider', 'qwen')
+            if self.voice_provider_combo.currentText() == "local":
+                self.voice_provider_combo.setCurrentText("qwen")
+                self.on_setting_changed("voice_realtime.provider", "qwen")
 
         # 更新卡片显示状态
         self.update_voice_cards_visibility()
@@ -1523,9 +1708,9 @@ class ElegantSettingsWidget(QWidget):
         self.on_setting_changed(setting_key, value)
 
         # 如果在auto模式下选择了local provider，可以提示用户考虑切换到local模式
-        if hasattr(self, 'voice_mode_combo'):
+        if hasattr(self, "voice_mode_combo"):
             current_mode = self.voice_mode_combo.currentText()
-            if current_mode == 'auto' and value == 'local':
+            if current_mode == "auto" and value == "local":
                 # 可选：自动切换到local模式
                 # self.voice_mode_combo.setCurrentText('local')
                 # self.on_voice_mode_changed('voice_realtime.voice_mode', 'local')
@@ -1536,46 +1721,56 @@ class ElegantSettingsWidget(QWidget):
 
     def update_voice_cards_visibility(self):
         """根据当前语音模式和提供商动态显示/隐藏设置卡片"""
-        if not hasattr(self, 'voice_mode_combo'):
+        if not hasattr(self, "voice_mode_combo"):
             return
 
         # 获取当前模式和提供商
-        mode = self.voice_mode_combo.currentText() if hasattr(self, 'voice_mode_combo') else 'auto'
-        provider = self.voice_provider_combo.currentText() if hasattr(self, 'voice_provider_combo') else 'qwen'
+        mode = (
+            self.voice_mode_combo.currentText()
+            if hasattr(self, "voice_mode_combo")
+            else "auto"
+        )
+        provider = (
+            self.voice_provider_combo.currentText()
+            if hasattr(self, "voice_provider_combo")
+            else "qwen"
+        )
 
         # 如果是auto模式，根据provider推断实际模式
-        if mode == 'auto':
-            if provider == 'local':
-                actual_mode = 'local'
-            elif hasattr(self, 'pending_changes') and self.pending_changes.get('voice_realtime.use_api_server'):
-                actual_mode = 'hybrid'
+        if mode == "auto":
+            if provider == "local":
+                actual_mode = "local"
+            elif hasattr(self, "pending_changes") and self.pending_changes.get(
+                "voice_realtime.use_api_server"
+            ):
+                actual_mode = "hybrid"
             else:
-                actual_mode = 'end2end'
+                actual_mode = "end2end"
         else:
             actual_mode = mode
 
         # 本地模式专用设置
         local_cards = [
-            getattr(self, 'asr_host_card', None),
-            getattr(self, 'asr_port_card', None),
-            getattr(self, 'record_duration_card', None),
+            getattr(self, "asr_host_card", None),
+            getattr(self, "asr_port_card", None),
+            getattr(self, "record_duration_card", None),
         ]
 
         # 云端模式专用设置
         cloud_cards = [
-            getattr(self, 'api_key_card', None),
-            getattr(self, 'model_card', None),
-            getattr(self, 'voice_role_card', None),
-            getattr(self, 'vad_card', None),
+            getattr(self, "api_key_card", None),
+            getattr(self, "model_card", None),
+            getattr(self, "voice_role_card", None),
+            getattr(self, "vad_card", None),
         ]
 
         # TTS设置（本地和混合模式）
         tts_cards = [
-            getattr(self, 'tts_voice_card', None),
+            getattr(self, "tts_voice_card", None),
         ]
 
         # 根据模式显示/隐藏卡片
-        if actual_mode == 'local':
+        if actual_mode == "local":
             # 本地模式：显示本地设置和TTS，隐藏云端设置
             for card in local_cards:
                 if card:
@@ -1586,7 +1781,7 @@ class ElegantSettingsWidget(QWidget):
             for card in tts_cards:
                 if card:
                     card.setVisible(True)
-        elif actual_mode == 'end2end':
+        elif actual_mode == "end2end":
             # 端到端模式：显示云端设置，隐藏本地和TTS设置
             for card in local_cards:
                 if card:
@@ -1597,7 +1792,7 @@ class ElegantSettingsWidget(QWidget):
             for card in tts_cards:
                 if card:
                     card.setVisible(False)
-        elif actual_mode == 'hybrid':
+        elif actual_mode == "hybrid":
             # 混合模式：显示云端设置和TTS，隐藏本地设置
             for card in local_cards:
                 if card:
@@ -1608,142 +1803,154 @@ class ElegantSettingsWidget(QWidget):
             for card in tts_cards:
                 if card:
                     card.setVisible(True)
-        
-    
+
     def update_status_label(self, text):
         """更新状态标签"""
         self.status_label.setText(text)
         # 3秒后清空状态
         QTimer.singleShot(3000, lambda: self.status_label.setText(""))
-        
+
     def load_current_settings(self):
         """加载当前设置"""
         try:
             # API设置 - 优先从.env文件读取API密钥
-            if hasattr(self, 'api_key_input'):
+            if hasattr(self, "api_key_input"):
                 env_api_key = self.read_api_key_from_env()
                 if env_api_key:
                     self.api_key_input.setText(env_api_key)
                 else:
-                    self.api_key_input.setText(config.api.api_key if config.api.api_key != "sk-placeholder-key-not-set" else "")
-            
-            if hasattr(self, 'base_url_input'):
+                    self.api_key_input.setText(
+                        config.api.api_key
+                        if config.api.api_key != "sk-placeholder-key-not-set"
+                        else ""
+                    )
+
+            if hasattr(self, "base_url_input"):
                 self.base_url_input.setText(config.api.base_url)
-            
-            if hasattr(self, 'model_combo'):
+
+            if hasattr(self, "model_combo"):
                 index = self.model_combo.findText(config.api.model)
                 if index >= 0:
                     self.model_combo.setCurrentIndex(index)
-                    
+
             # 系统设置
-            if hasattr(self, 'max_tokens_spin'):
+            if hasattr(self, "max_tokens_spin"):
                 self.max_tokens_spin.setValue(config.api.max_tokens)
-            if hasattr(self, 'history_spin'):
+            if hasattr(self, "history_spin"):
                 self.history_spin.setValue(config.api.max_history_rounds)
-            if hasattr(self, 'context_days_spin'):
+            if hasattr(self, "context_days_spin"):
                 self.context_days_spin.setValue(config.api.context_load_days)
-            if hasattr(self, 'ui_user_name_input'):
+            if hasattr(self, "ui_user_name_input"):
                 self.ui_user_name_input.setText(config.ui.user_name)
-            if hasattr(self, 'ui_bg_alpha_spin'):
+            if hasattr(self, "ui_bg_alpha_spin"):
                 self.ui_bg_alpha_spin.setValue(config.ui.bg_alpha)
-            if hasattr(self, 'ui_window_alpha_spin'):
+            if hasattr(self, "ui_window_alpha_spin"):
                 self.ui_window_alpha_spin.setValue(config.ui.window_bg_alpha)
-            if hasattr(self, 'ui_mac_btn_size_spin'):
+            if hasattr(self, "ui_mac_btn_size_spin"):
                 self.ui_mac_btn_size_spin.setValue(config.ui.mac_btn_size)
-            if hasattr(self, 'ui_mac_btn_margin_spin'):
+            if hasattr(self, "ui_mac_btn_margin_spin"):
                 self.ui_mac_btn_margin_spin.setValue(config.ui.mac_btn_margin)
-            if hasattr(self, 'ui_mac_btn_gap_spin'):
+            if hasattr(self, "ui_mac_btn_gap_spin"):
                 self.ui_mac_btn_gap_spin.setValue(config.ui.mac_btn_gap)
-            if hasattr(self, 'ui_animation_duration_spin'):
+            if hasattr(self, "ui_animation_duration_spin"):
                 self.ui_animation_duration_spin.setValue(config.ui.animation_duration)
-            
+
             # 电脑控制设置
-            if hasattr(self, 'computer_control_model_input'):
+            if hasattr(self, "computer_control_model_input"):
                 self.computer_control_model_input.setText(config.computer_control.model)
-            if hasattr(self, 'computer_control_url_input'):
-                self.computer_control_url_input.setText(config.computer_control.model_url)
-            if hasattr(self, 'computer_control_api_key_input'):
-                self.computer_control_api_key_input.setText(config.computer_control.api_key)
-            if hasattr(self, 'grounding_model_input'):
-                self.grounding_model_input.setText(config.computer_control.grounding_model)
-            if hasattr(self, 'grounding_url_input'):
+            if hasattr(self, "computer_control_url_input"):
+                self.computer_control_url_input.setText(
+                    config.computer_control.model_url
+                )
+            if hasattr(self, "computer_control_api_key_input"):
+                self.computer_control_api_key_input.setText(
+                    config.computer_control.api_key
+                )
+            if hasattr(self, "grounding_model_input"):
+                self.grounding_model_input.setText(
+                    config.computer_control.grounding_model
+                )
+            if hasattr(self, "grounding_url_input"):
                 self.grounding_url_input.setText(config.computer_control.grounding_url)
-            if hasattr(self, 'grounding_api_key_input'):
-                self.grounding_api_key_input.setText(config.computer_control.grounding_api_key)
-            
+            if hasattr(self, "grounding_api_key_input"):
+                self.grounding_api_key_input.setText(
+                    config.computer_control.grounding_api_key
+                )
+
             # 界面设置
-            if hasattr(self, 'voice_checkbox'):
+            if hasattr(self, "voice_checkbox"):
                 self.voice_checkbox.setChecked(config.system.voice_enabled)
-            if hasattr(self, 'debug_checkbox'):
+            if hasattr(self, "debug_checkbox"):
                 self.debug_checkbox.setChecked(config.system.debug)
-            if hasattr(self, 'log_combo'):
+            if hasattr(self, "log_combo"):
                 index = self.log_combo.findText(config.system.log_level)
                 if index >= 0:
                     self.log_combo.setCurrentIndex(index)
-            
+
             # 高级设置
-            if hasattr(self, 'sim_slider'):
+            if hasattr(self, "sim_slider"):
                 self.sim_slider.setValue(int(config.grag.similarity_threshold * 100))
 
             # 系统提示词与AI名称回填 #
-            if hasattr(self, 'ai_name_input'):
-                self.ai_name_input.setText(getattr(config.system, 'ai_name', ''))
-            if hasattr(self, 'system_prompt_editor'):
+            if hasattr(self, "ai_name_input"):
+                self.ai_name_input.setText(getattr(config.system, "ai_name", ""))
+            if hasattr(self, "system_prompt_editor"):
                 try:
                     from system.config import get_prompt  # 延迟导入 #
+
                     # 直接读取对话风格提示词文件 #
-                    content = get_prompt('conversation_style_prompt')
+                    content = get_prompt("conversation_style_prompt")
                 except Exception:
                     content = ""
                 # 避免触发textChanged循环 #
                 self.system_prompt_editor.blockSignals(True)
                 self.system_prompt_editor.setPlainText(content)
                 self.system_prompt_editor.blockSignals(False)
-                
+
         except Exception as e:
             print(f"加载设置失败: {e}")
-    
+
     def read_api_key_from_env(self):
         """从.env文件读取API密钥"""
-        env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
+        env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
         if os.path.exists(env_path):
-            with open(env_path, 'r', encoding='utf-8') as f:
+            with open(env_path, "r", encoding="utf-8") as f:
                 for line in f:
-                    if line.strip().startswith('API_KEY'):
-                        return line.strip().split('=', 1)[-1].strip()
+                    if line.strip().startswith("API_KEY"):
+                        return line.strip().split("=", 1)[-1].strip()
         return ""
-    
+
     def write_api_key_to_env(self, new_key):
         """将API密钥写入.env文件"""
-        env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
+        env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
         env_lines = []
         found = False
-        
+
         if os.path.exists(env_path):
-            with open(env_path, 'r', encoding='utf-8') as f:
+            with open(env_path, "r", encoding="utf-8") as f:
                 env_lines = f.readlines()
             for i, line in enumerate(env_lines):
-                if line.strip().startswith('API_KEY'):
-                    env_lines[i] = f'API_KEY={new_key}\n'
+                if line.strip().startswith("API_KEY"):
+                    env_lines[i] = f"API_KEY={new_key}\n"
                     found = True
                     break
         if not found:
-            env_lines.append(f'API_KEY={new_key}\n')
-        with open(env_path, 'w', encoding='utf-8') as f:
+            env_lines.append(f"API_KEY={new_key}\n")
+        with open(env_path, "w", encoding="utf-8") as f:
             f.writelines(env_lines)
-            
+
     def save_settings(self):
         """保存所有设置到config.json"""
         try:
             changes_count = len(self.pending_changes)
-            prompt_changes_count = len(getattr(self, 'pending_prompts', {}))
-            
+            prompt_changes_count = len(getattr(self, "pending_prompts", {}))
+
             if changes_count == 0:
                 # 没有config更改，若有提示词更改也继续保存 #
                 if prompt_changes_count == 0:
                     self.update_status_label("● 没有需要保存的更改")
                     return
-            
+
             # 使用配置管理器进行统一的配置更新
             try:
                 from system.config_manager import update_config
@@ -1751,19 +1958,20 @@ class ElegantSettingsWidget(QWidget):
                 # 如果导入失败，尝试重新设置路径
                 import sys
                 import os
-                project_root = os.path.abspath(os.path.dirname(__file__) + '/..')
+
+                project_root = os.path.abspath(os.path.dirname(__file__) + "/..")
                 if project_root not in sys.path:
                     sys.path.insert(0, project_root)
                 from system.config_manager import update_config
             # 将扁平化的配置键值对转换为嵌套字典格式
             nested_updates = self._convert_to_nested_updates(self.pending_changes)
-            
-            ui_updates = nested_updates.get('ui', {}) if nested_updates else {}
+
+            ui_updates = nested_updates.get("ui", {}) if nested_updates else {}
 
             # 特殊处理API密钥 - 先写入.env文件
-            if 'api.api_key' in self.pending_changes:
-                self.write_api_key_to_env(self.pending_changes['api.api_key'])
-            
+            if "api.api_key" in self.pending_changes:
+                self.write_api_key_to_env(self.pending_changes["api.api_key"])
+
             # 通过配置管理器更新配置（会自动写入config.json并触发热更新）
             success = True
             if changes_count > 0:
@@ -1779,7 +1987,11 @@ class ElegantSettingsWidget(QWidget):
                         setattr(config.ui, attr, value)
                     except Exception:
                         pass
-            if success and hasattr(config, 'window') and getattr(config, 'window', None):
+            if (
+                success
+                and hasattr(config, "window")
+                and getattr(config, "window", None)
+            ):
                 try:
                     config.window.apply_ui_style()
                 except Exception:
@@ -1788,66 +2000,61 @@ class ElegantSettingsWidget(QWidget):
             if prompt_changes_count > 0:
                 try:
                     from system.config import save_prompt  # 延迟导入 #
+
                     for name, content in self.pending_prompts.items():
                         save_prompt(name, content)
                 except Exception as e:
                     self.update_status_label(f"✗ 提示词保存失败: {e}")
                     return
-                    
-            self.update_status_label(f"✓ 已保存 配置{changes_count}项/提示词{prompt_changes_count}项")
+
+            self.update_status_label(
+                f"✓ 已保存 配置{changes_count}项/提示词{prompt_changes_count}项"
+            )
             self.pending_changes.clear()
-            if hasattr(self, 'pending_prompts'):
+            if hasattr(self, "pending_prompts"):
                 self.pending_prompts.clear()
-            
+
             # 等待配置重新加载完成
             import time
+
             time.sleep(0.2)
-            
+
             # 重新加载设置到界面，确保显示最新值
             self.load_current_settings()
-            
+
             # 发送设置变化信号
             self.settings_changed.emit("all", None)
-            
+
         except Exception as e:
             error_msg = str(e)
             print(f"设置保存失败: {error_msg}")  # 打印详细错误信息到控制台
             self.update_status_label(f"✗ 保存失败: {error_msg}")
-            
-            
-    def open_naga_api(self):
-        """打开娜迦API网站"""
-        import webbrowser
-        try:
-            webbrowser.open("https://naga.furina.chat/")
-        except Exception as e:
-            print(f"打开娜迦API网站失败: {e}")
-    
+
     def _convert_to_nested_updates(self, flat_updates: dict) -> dict:
         """将扁平化的配置键值对转换为嵌套字典格式"""
         nested_updates = {}
-        
+
         for setting_key, value in flat_updates.items():
             # 解析嵌套的配置键 (例如 "api.api_key")
-            keys = setting_key.split('.')
+            keys = setting_key.split(".")
             current = nested_updates
-            
+
             # 导航到父级
             for key in keys[:-1]:
                 if key not in current:
                     current[key] = {}
                 current = current[key]
-            
+
             # 设置值，处理特殊转换
             final_key = keys[-1]
-            if setting_key in ['api.temperature', 'grag.similarity_threshold']:
+            if setting_key in ["api.temperature", "grag.similarity_threshold"]:
                 # 温度、相似度值从0-100转换为0.0-1.0
                 current[final_key] = value / 100.0
             else:
                 current[final_key] = value
-        
+
         return nested_updates
-    
+
     def reset_settings(self):
         """重置所有设置"""
         self.pending_changes.clear()
@@ -1860,7 +2067,14 @@ class ElegantSettingsWidget(QWidget):
             from voice.input.windows_voice_input import get_windows_voice_input
 
             # 创建测试对话框
-            from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit, QPushButton
+            from PyQt5.QtWidgets import (
+                QDialog,
+                QVBoxLayout,
+                QHBoxLayout,
+                QLabel,
+                QTextEdit,
+                QPushButton,
+            )
 
             dialog = QDialog(self)
             dialog.setWindowTitle("测试语音输入")
@@ -1886,7 +2100,9 @@ class ElegantSettingsWidget(QWidget):
             layout.addWidget(title_label)
 
             # 说明
-            info_label = QLabel("点击\"开始录音\"按钮开始语音识别，识别结果将显示在下方。")
+            info_label = QLabel(
+                '点击"开始录音"按钮开始语音识别，识别结果将显示在下方。'
+            )
             info_label.setStyleSheet("""
                 color: #666;
                 font-size: 12px;
@@ -2016,9 +2232,7 @@ class ElegantSettingsWidget(QWidget):
                 try:
                     voice_input = get_windows_voice_input()
                     success = voice_input.start(
-                        on_text=on_text,
-                        on_error=on_error,
-                        on_status=on_status
+                        on_text=on_text, on_error=on_error, on_status=on_status
                     )
                     if success:
                         is_recording = True
@@ -2033,10 +2247,13 @@ class ElegantSettingsWidget(QWidget):
                             font-weight: bold;
                         """)
                     else:
-                        result_text.append("❌ 无法启动语音识别，请检查依赖库是否已安装")
+                        result_text.append(
+                            "❌ 无法启动语音识别，请检查依赖库是否已安装"
+                        )
                 except Exception as e:
                     result_text.append(f"❌ 启动失败: {e}")
                     import traceback
+
                     traceback.print_exc()
 
             def stop_recording():
@@ -2062,6 +2279,7 @@ class ElegantSettingsWidget(QWidget):
 
         except Exception as e:
             import traceback
+
             traceback.print_exc()
             self.update_status_label(f"❌ 打开语音测试失败: {e}")
 
@@ -2074,7 +2292,8 @@ class ElegantSettingsWidget(QWidget):
             # 延迟导入，避免循环导入
             import sys
             import os
-            project_root = os.path.abspath(os.path.dirname(__file__) + '/..')
+
+            project_root = os.path.abspath(os.path.dirname(__file__) + "/..")
             if project_root not in sys.path:
                 sys.path.insert(0, project_root)
 
@@ -2108,22 +2327,35 @@ class ElegantSettingsWidget(QWidget):
 
         except ImportError as e:
             import traceback
+
             error_msg = f"✗ 导入失败: {e}"
             self.update_status_label(error_msg)
             print(f"{error_msg}\n{traceback.format_exc()}")
         except Exception as e:
             import traceback
+
             error_msg = f"✗ 打开语音认证面板失败: {e}"
             self.update_status_label(error_msg)
             print(f"{error_msg}\n{traceback.format_exc()}")
 
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QWidget, QTextEdit, QSizePolicy, QHBoxLayout, QLabel, QVBoxLayout, QStackedWidget, QScrollArea, QSplitter
+from PyQt5.QtWidgets import (
+    QWidget,
+    QTextEdit,
+    QSizePolicy,
+    QHBoxLayout,
+    QLabel,
+    QVBoxLayout,
+    QStackedWidget,
+    QScrollArea,
+    QSplitter,
+)
 from ui.controller import setting
 
+
 class SettingWidget(QWidget):
-    def __init__(self, parent:QWidget=None):
+    def __init__(self, parent: QWidget = None):
         super().__init__(parent)
         self.setObjectName("SettingsPage")
         self.setStyleSheet("""
@@ -2181,25 +2413,26 @@ class SettingWidget(QWidget):
         scroll_area.setWidget(scroll_content)
         layout.addWidget(scroll_area, 1)
 
+
 if __name__ == "__main__":
     from PyQt5.QtWidgets import QApplication  # 统一入口 # type: ignore
-    
+
     app = QApplication([])
-    
+
     # 创建测试窗口
     test_window = QWidget()
     test_window.setStyleSheet(TEST_WINDOW_STYLE)
     test_window.resize(800, 600)
-    
+
     layout = QVBoxLayout(test_window)
-    
+
     # 添加设置界面
     settings = ElegantSettingsWidget()
     settings.settings_changed.connect(
         lambda key, value: print(f"设置变化: {key} = {value}")
     )
-    
+
     layout.addWidget(settings)
-    
+
     test_window.show()
-    app.exec_() 
+    app.exec_()

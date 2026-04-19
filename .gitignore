@@ -95,36 +95,9 @@ data/emoji/user_uploaded/*.gif
 data/emoji/user_uploaded/*.png
 data/emoji/user_uploaded/*.jpeg
 
-# Runtime Data (not committed - generated during runtime)
-data/conversations/
-data/memory/backups/
-data/memory/dialogue/
-data/memory/short_term/
-data/memory/long_term/
-data/user_personas/
-data/emoji/*.json
-data/emoji/user_uploaded/
-data/lifebook/lover/2026/05/
-data/lifebook/together/2026/05/
-data/lifebook/user/2026/05/
-data/lifebook/index.json
-data/blog/
-data/blog_cache/
-data/downloads/
-data/backups/
-data/tasks.db
-data/auth.db
-
-# Keep these static data files
-data/memory/index.json
-data/memory/tag_index.json
-data/memory_config.example.json
-data/memory_anchors_identity.json
-data/memory_anchors_user.json
-data/interaction_scenarios/
-data/.emoji_backups/
-data/stickers/
-data/auth/
+# Runtime Data - Keep all data files as requested
+# (All data directory contents should be uploaded per user request)
+# Note: API key files and generated memory files are excluded above in Config section
 
 # Cache
 Cache/
