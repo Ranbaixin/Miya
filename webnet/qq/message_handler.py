@@ -207,7 +207,10 @@ class QQMessageHandler:
     async def _handle_group_message(self, event: Dict[str, Any]) -> Optional[QQMessage]:
         """处理群消息"""
         group_id = event.get("group_id", 0)
+        # 【修复】优先从 sender 获取 user_id，如果为 0 则从 event 顶层获取
         sender_id = event.get("sender", {}).get("user_id", 0)
+        if sender_id == 0:
+            sender_id = event.get("user_id", 0)
 
         if not self._is_group_allowed(group_id):
             return None
@@ -344,13 +347,16 @@ class QQMessageHandler:
                 return None
 
             sender = reply_msg.get("sender", {})
+            # 【修复】正确获取发送者ID
             if isinstance(sender, dict):
+                sender_id = sender.get("user_id", 0)
                 sender_name = (
-                    sender.get("nickname")
-                    or sender.get("card")
-                    or str(sender.get("user_id", "未知"))
+                    sender.get("nickname") or sender.get("card") or str(sender_id)
+                    if sender_id
+                    else "未知"
                 )
             else:
+                sender_id = 0
                 sender_name = "未知"
 
             message_content = reply_msg.get("message", [])
@@ -384,6 +390,7 @@ class QQMessageHandler:
                 message_id=message_id,
                 sender_name=sender_name,
                 content=content[:200],
+                sender_id=sender_id,  # 【修复】添加 sender_id
                 image_url=image_url,
             )
         except Exception as e:

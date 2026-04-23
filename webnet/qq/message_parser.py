@@ -27,6 +27,7 @@ class ReplyInfo:
     message_id: int
     sender_name: str
     content: str
+    sender_id: int = 0  # 【新增】保存发送者ID
 
 
 @dataclass
@@ -140,8 +141,12 @@ class QQMessageParser:
             if seg_type == "reply":
                 reply_info = await self._parse_reply(data)
                 if reply_info:
+                    # 【修复】包含发送者ID
+                    sender_id_str = (
+                        str(reply_info.sender_id) if reply_info.sender_id else "未知"
+                    )
                     texts.append(
-                        f'<quote sender="{reply_info.sender_name}">{reply_info.content}</quote>'
+                        f'<quote sender="{reply_info.sender_name}" sender_id="{sender_id_str}">{reply_info.content}</quote>'
                     )
                 else:
                     rid = data.get("id", "")
@@ -185,13 +190,16 @@ class QQMessageParser:
                 return None
 
             sender = reply_msg.get("sender", {})
+            # 【修复】正确获取发送者ID和名称
             if isinstance(sender, dict):
+                sender_id = sender.get("user_id", 0)
                 sender_name = (
-                    sender.get("nickname")
-                    or sender.get("card")
-                    or str(sender.get("user_id", "未知"))
+                    sender.get("nickname") or sender.get("card") or str(sender_id)
+                    if sender_id
+                    else "未知"
                 )
             else:
+                sender_id = 0
                 sender_name = "未知"
 
             content = self.extract_text(

@@ -1649,6 +1649,7 @@ class DecisionHub:
                     sender=context.get("sender_name", "未知"),
                     content=content,
                     is_at_bot=context.get("is_at_bot", False),
+                    sender_id=context.get("user_id", 0),  # 【修复】传入发送者ID
                 )
                 group_chat_context = wm.build_prompt_context(group_id_str)
                 if group_chat_context:
@@ -1663,6 +1664,7 @@ class DecisionHub:
                     sender=context.get("sender_name", "用户"),
                     content=content,
                     is_at_bot=context.get("is_at_bot", False),
+                    sender_id=user_id,  # 【修复】传入发送者ID
                 )
                 group_chat_context = wm.build_prompt_context(private_key)
                 if group_chat_context:

@@ -58,6 +58,8 @@ class WorkingMemoryState:
     current_topic: Optional[TopicSegment] = None
     background_topics: List[TopicSegment] = field(default_factory=list)
     recent_messages: List[str] = field(default_factory=list)
+    # 【新增】保存发送者ID用于区分同名用户
+    recent_senders: Dict[int, str] = field(default_factory=dict)
     topic_switch_count: int = 0
     last_update: float = 0.0
     # 专门保存图片/文件分析结果
@@ -280,11 +282,22 @@ class WorkingMemoryManager:
         return self._states[group_id]
 
     def add_message(
-        self, group_id: str, sender: str, content: str, is_at_bot: bool = False
+        self,
+        group_id: str,
+        sender: str,
+        content: str,
+        is_at_bot: bool = False,
+        sender_id: int = 0,
     ) -> Dict:
         """
         添加消息并更新工作记忆状态
 
+        Args:
+            group_id: 群ID或会话ID
+            sender: 发送者名字
+            content: 消息内容
+            is_at_bot: 是否@机器人
+            sender_id: 发送者ID（用于区分同名用户）【新增】
         Returns:
             包含话题状态信息的字典
         """
@@ -298,7 +311,13 @@ class WorkingMemoryManager:
         is_low_info = self._is_low_info(content)
 
         # 3. 更新工作记忆
-        state.recent_messages.append(f"{sender}: {content}")
+        # 【修复】消息格式中加入发送者ID，用于区分同名用户
+        if sender_id:
+            message_with_id = f"{sender}[{sender_id}]: {content}"
+            state.recent_senders[sender_id] = sender
+        else:
+            message_with_id = f"{sender}: {content}"
+        state.recent_messages.append(message_with_id)
         if len(state.recent_messages) > self.max_recent:
             state.recent_messages = state.recent_messages[-self.max_recent :]
 
@@ -312,10 +331,17 @@ class WorkingMemoryManager:
             state.topic_switch_count += 1
 
         # 5. 更新或创建当前话题
-        if is_drift or state.current_topic is None:
-            state.current_topic = self._create_new_topic(group_id, sender, content)
+        # 【修复】话题消息也加入发送者ID
+        if sender_id:
+            topic_msg = f"{sender}[{sender_id}]: {content}"
         else:
-            state.current_topic.messages.append(f"{sender}: {content}")
+            topic_msg = f"{sender}: {content}"
+        if is_drift or state.current_topic is None:
+            state.current_topic = self._create_new_topic(
+                group_id, sender, content, sender_id
+            )
+        else:
+            state.current_topic.messages.append(topic_msg)
             state.current_topic.last_active = time.time()
             state.current_topic.message_count += 1
             # 更新关键词
@@ -379,16 +405,21 @@ class WorkingMemoryManager:
         return False
 
     def _create_new_topic(
-        self, group_id: str, sender: str, content: str
+        self, group_id: str, sender: str, content: str, sender_id: int = 0
     ) -> TopicSegment:
         """创建新话题"""
         topic_id = hashlib.md5(f"{group_id}_{time.time()}".encode()).hexdigest()[:8]
         keywords = list(self.drift_detector.get_current_topic_keywords(group_id))
+        # 【修复】新话题消息也加入发送者ID
+        if sender_id:
+            first_msg = f"{sender}[{sender_id}]: {content}"
+        else:
+            first_msg = f"{sender}: {content}"
 
         return TopicSegment(
             topic_id=topic_id,
             keywords=keywords,
-            messages=[f"{sender}: {content}"],
+            messages=[first_msg],
             summary=f"[新话题] {sender}: {content[:30]}...",
             start_time=time.time(),
             last_active=time.time(),
