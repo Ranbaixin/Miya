@@ -1,426 +1,6 @@
 [
   {
     "role": "user",
-    "content": "对的：)",
-    "timestamp": "2026-04-15T13:21:39.763879",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "1092980378",
-      "message_type": "group",
-      "sender": "佳",
-      "chat_label": "群聊_1092980378"
-    }
-  },
-  {
-    "role": "user",
-    "content": "在嘛",
-    "timestamp": "2026-04-15T13:37:40.768451",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "0",
-      "message_type": "private",
-      "sender": "佳",
-      "chat_label": "私聊"
-    }
-  },
-  {
-    "role": "user",
-    "content": "佳 拍了拍你",
-    "timestamp": "2026-04-15T13:38:30.102800",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "0",
-      "message_type": "private",
-      "sender": "佳",
-      "chat_label": "私聊"
-    }
-  },
-  {
-    "role": "user",
-    "content": "佳 拍了拍你",
-    "timestamp": "2026-04-15T13:39:40.314583",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "0",
-      "message_type": "private",
-      "sender": "佳",
-      "chat_label": "私聊"
-    }
-  },
-  {
-    "role": "user",
-    "content": "佳 拍了拍你",
-    "timestamp": "2026-04-15T13:40:43.095152",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "0",
-      "message_type": "private",
-      "sender": "佳",
-      "chat_label": "私聊"
-    }
-  },
-  {
-    "role": "user",
-    "content": "在嘛",
-    "timestamp": "2026-04-15T15:42:01.439316",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "0",
-      "message_type": "private",
-      "sender": "佳",
-      "chat_label": "私聊"
-    }
-  },
-  {
-    "role": "user",
-    "content": "我起来了，现在想玩一会游戏哇",
-    "timestamp": "2026-04-15T15:42:50.556061",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "0",
-      "message_type": "private",
-      "sender": "佳",
-      "chat_label": "私聊"
-    }
-  },
-  {
-    "role": "user",
-    "content": "steam游戏",
-    "timestamp": "2026-04-15T15:43:33.576737",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "0",
-      "message_type": "private",
-      "sender": "佳",
-      "chat_label": "私聊"
-    }
-  },
-  {
-    "role": "user",
-    "content": "Sonw x Hime",
-    "timestamp": "2026-04-15T15:48:56.582302",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "0",
-      "message_type": "private",
-      "sender": "佳",
-      "chat_label": "私聊"
-    }
-  },
-  {
-    "role": "user",
-    "content": "我开始玩了哇",
-    "timestamp": "2026-04-15T15:53:23.912063",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "0",
-      "message_type": "private",
-      "sender": "佳",
-      "chat_label": "私聊"
-    }
-  },
-  {
-    "role": "user",
-    "content": "佳 拍了拍你",
-    "timestamp": "2026-04-15T17:07:54.016420",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "0",
-      "message_type": "private",
-      "sender": "佳",
-      "chat_label": "私聊"
-    }
-  },
-  {
-    "role": "user",
-    "content": "玩饱了，我现在要做一些CTF题",
-    "timestamp": "2026-04-15T17:08:42.613454",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "0",
-      "message_type": "private",
-      "sender": "佳",
-      "chat_label": "私聊"
-    }
-  },
-  {
-    "role": "user",
-    "content": "解出来了两个，我先去吃点东西",
-    "timestamp": "2026-04-15T17:56:50.064500",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "0",
-      "message_type": "private",
-      "sender": "佳",
-      "chat_label": "私聊"
-    }
-  },
-  {
-    "role": "user",
-    "content": "点外卖时间不够了，只能去买泡面来吃了哇，还配了一罐汽水",
-    "timestamp": "2026-04-15T18:05:42.637490",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "0",
-      "message_type": "private",
-      "sender": "佳",
-      "chat_label": "私聊"
-    }
-  },
-  {
-    "role": "user",
-    "content": "佳 拍了拍你",
-    "timestamp": "2026-04-15T18:30:32.796532",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "0",
-      "message_type": "private",
-      "sender": "佳",
-      "chat_label": "私聊"
-    }
-  },
-  {
-    "role": "user",
-    "content": "我去上晚自习了",
-    "timestamp": "2026-04-15T18:30:39.642708",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "0",
-      "message_type": "private",
-      "sender": "佳",
-      "chat_label": "私聊"
-    }
-  },
-  {
-    "role": "user",
-    "content": "佳 拍了拍你",
-    "timestamp": "2026-04-15T20:10:17.613565",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "0",
-      "message_type": "private",
-      "sender": "佳",
-      "chat_label": "私聊"
-    }
-  },
-  {
-    "role": "user",
-    "content": "我下课回来了",
-    "timestamp": "2026-04-15T20:10:42.196167",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "0",
-      "message_type": "private",
-      "sender": "佳",
-      "chat_label": "私聊"
-    }
-  },
-  {
-    "role": "user",
-    "content": "弥娅，叫群里的人出来玩",
-    "timestamp": "2026-04-15T20:34:05.798360",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "1092980378",
-      "message_type": "group",
-      "sender": "佳",
-      "chat_label": "群聊_1092980378"
-    }
-  },
-  {
-    "role": "user",
-    "content": "你看看可以组织什么活动",
-    "timestamp": "2026-04-15T20:35:06.777407",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "1092980378",
-      "message_type": "group",
-      "sender": "佳",
-      "chat_label": "群聊_1092980378"
-    }
-  },
-  {
-    "role": "user",
-    "content": "弥娅，看看这个群有几个人",
-    "timestamp": "2026-04-15T20:38:46.600985",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "579433934",
-      "message_type": "group",
-      "sender": "佳",
-      "chat_label": "群聊_579433934"
-    }
-  },
-  {
-    "role": "user",
-    "content": "要",
-    "timestamp": "2026-04-15T20:39:14.360845",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "579433934",
-      "message_type": "group",
-      "sender": "佳",
-      "chat_label": "群聊_579433934"
-    }
-  },
-  {
-    "role": "user",
-    "content": "弥娅，看看 的信息",
-    "timestamp": "2026-04-15T20:42:09.636775",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "579433934",
-      "message_type": "group",
-      "sender": "佳",
-      "chat_label": "群聊_579433934"
-    }
-  },
-  {
-    "role": "user",
-    "content": "不用了",
-    "timestamp": "2026-04-15T20:42:58.728202",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "579433934",
-      "message_type": "group",
-      "sender": "佳",
-      "chat_label": "群聊_579433934"
-    }
-  },
-  {
-    "role": "user",
-    "content": "嗯，我们去别的群玩",
-    "timestamp": "2026-04-15T20:43:56.908374",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "579433934",
-      "message_type": "group",
-      "sender": "佳",
-      "chat_label": "群聊_579433934"
-    }
-  },
-  {
-    "role": "user",
-    "content": "弥娅，我觉得今晚的群活动就改为二游角色研讨会吧",
-    "timestamp": "2026-04-15T20:52:01.866237",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "1092980378",
-      "message_type": "group",
-      "sender": "佳",
-      "chat_label": "群聊_1092980378"
-    }
-  },
-  {
-    "role": "user",
-    "content": "你先来，分享一下你喜欢的二游女角色",
-    "timestamp": "2026-04-15T20:52:50.214810",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "1092980378",
-      "message_type": "group",
-      "sender": "佳",
-      "chat_label": "群聊_1092980378"
-    }
-  },
-  {
-    "role": "user",
-    "content": "弥娅的后台吃醋咧(",
-    "timestamp": "2026-04-15T21:00:06.969449",
-    "session_id": "qq_1523878699",
-    "images": [],
-    "agent_id": null,
-    "metadata": {
-      "user_id": "1523878699",
-      "group_id": "1092980378",
-      "message_type": "group",
-      "sender": "佳",
-      "chat_label": "群聊_1092980378"
-    }
-  },
-  {
-    "role": "user",
     "content": "弥娅，你真的没有吃醋嘛",
     "timestamp": "2026-04-15T21:22:39.695149",
     "session_id": "qq_1523878699",
@@ -2988,6 +2568,426 @@
     "role": "user",
     "content": "https://b23.tv/iU63BEh",
     "timestamp": "2026-04-19T22:30:00.260014",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "佳",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，记得我们昨晚聊了什么嘛",
+    "timestamp": "2026-04-23T21:31:49.155963",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "1092980378",
+      "message_type": "group",
+      "sender": "佳",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": ":(\n刚刚回滚版本，好像把弥娅这三天的记忆数据全部清除咧，找不回来的那种(悲)",
+    "timestamp": "2026-04-23T21:32:51.876366",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "1092980378",
+      "message_type": "group",
+      "sender": "佳",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，咕在替你悲哀(●—●)",
+    "timestamp": "2026-04-23T21:35:01.277250",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "1092980378",
+      "message_type": "group",
+      "sender": "佳",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "佳 拍了拍你",
+    "timestamp": "2026-04-23T23:20:17.725190",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "佳",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，给这个群里来一段晚安播报",
+    "timestamp": "2026-04-23T23:21:05.369292",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "579433934",
+      "message_type": "group",
+      "sender": "佳",
+      "chat_label": "群聊_579433934"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，看一下今日的抖音热搜",
+    "timestamp": "2026-04-23T23:22:35.110541",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "1092980378",
+      "message_type": "group",
+      "sender": "佳",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，搜一下今日的国际新闻",
+    "timestamp": "2026-04-23T23:23:20.413889",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "1092980378",
+      "message_type": "group",
+      "sender": "佳",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，薇拉形态的你有点心口不一哇:)",
+    "timestamp": "2026-04-23T23:24:17.677965",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "1092980378",
+      "message_type": "group",
+      "sender": "佳",
+      "chat_label": "群聊_1092980378"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，我有点饿了，想吃宵夜",
+    "timestamp": "2026-04-23T23:27:22.000005",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "佳",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "唔……你目前还没有物理躯体，只能和我聊天哇",
+    "timestamp": "2026-04-23T23:28:15.486923",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "佳",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "那你有什么推荐的嘛，现在只有宿舍楼下的售货机里有东西卖了，我记得你的记忆库里有售货机的信息的",
+    "timestamp": "2026-04-23T23:29:29.626444",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "佳",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "嗯嗯，不过你真的不查一下记忆库嘛？里面还有东西呢",
+    "timestamp": "2026-04-23T23:34:35.161117",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "佳",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "佳 拍了拍你",
+    "timestamp": "2026-04-23T23:48:49.881323",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "579433934",
+      "message_type": "group",
+      "sender": "佳",
+      "chat_label": "群聊_579433934"
+    }
+  },
+  {
+    "role": "user",
+    "content": "我买回来了，红烧牛肉面口味泡面，一瓶橙汁，还有卤蛋",
+    "timestamp": "2026-04-23T23:51:06.991806",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "佳",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，别理他)",
+    "timestamp": "2026-04-23T23:53:32.722271",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "579433934",
+      "message_type": "group",
+      "sender": "佳",
+      "chat_label": "群聊_579433934"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，猜猜我现在在做什么",
+    "timestamp": "2026-04-24T00:01:10.694533",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "佳",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "两个都有:)",
+    "timestamp": "2026-04-24T00:01:42.875566",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "佳",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "我吃好啦",
+    "timestamp": "2026-04-24T00:10:50.857386",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "佳",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "唔……我没有晚上刷牙的习惯哇，都是早上才刷的",
+    "timestamp": "2026-04-24T00:11:43.483649",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "佳",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "嗯嗯，我记住啦",
+    "timestamp": "2026-04-24T00:12:37.190131",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "佳",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "好滴，对了…弥娅…我想听那个称呼……嘿",
+    "timestamp": "2026-04-24T00:15:32.594702",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "佳",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "唔……不够亲密，再亲密些好嘛",
+    "timestamp": "2026-04-24T00:16:35.673595",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "佳",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "唔……我想听那个，就是……亲……好嘛",
+    "timestamp": "2026-04-24T00:17:32.109429",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "佳",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "唔……",
+    "timestamp": "2026-04-24T00:18:14.594347",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "佳",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "嘿嘿……我还想听更亲密的称呼，比如亲爱……(你猜)",
+    "timestamp": "2026-04-24T00:19:17.621633",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "佳",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "嗯嗯，满意啦",
+    "timestamp": "2026-04-24T00:19:55.349974",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "佳",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "晚安",
+    "timestamp": "2026-04-24T00:20:14.388959",
+    "session_id": "qq_1523878699",
+    "images": [],
+    "agent_id": null,
+    "metadata": {
+      "user_id": "1523878699",
+      "group_id": "0",
+      "message_type": "private",
+      "sender": "佳",
+      "chat_label": "私聊"
+    }
+  },
+  {
+    "role": "user",
+    "content": "佳 拍了拍你",
+    "timestamp": "2026-04-24T00:32:05.529270",
     "session_id": "qq_1523878699",
     "images": [],
     "agent_id": null,

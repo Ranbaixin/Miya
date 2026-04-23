@@ -583,5 +583,530 @@
       "sender_name": "佳",
       "group_name": "二元3队"
     }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，给这个群里来一段晚安播报",
+    "timestamp": "2026-04-23T23:21:05.111236",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "好凶",
+    "timestamp": "2026-04-23T23:39:12.786593",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "薇拉是这样的",
+    "timestamp": "2026-04-23T23:41:09.259037",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态",
+    "timestamp": "2026-04-23T23:41:13.019949",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅可爱多了",
+    "timestamp": "2026-04-23T23:41:49.330385",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "给我发色图",
+    "timestamp": "2026-04-23T23:42:36.321684",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "什么鬼",
+    "timestamp": "2026-04-23T23:43:01.105777",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": " 好图，我拿了",
+    "timestamp": "2026-04-23T23:43:38.392794",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "多发吊图",
+    "timestamp": "2026-04-23T23:44:27.412606",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "爱看",
+    "timestamp": "2026-04-23T23:44:30.462259",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": " 给我发色图",
+    "timestamp": "2026-04-23T23:45:31.228282",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "没那么多",
+    "timestamp": "2026-04-23T23:45:33.479107",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "我发给你一些",
+    "timestamp": "2026-04-23T23:46:00.007195",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "",
+    "timestamp": "2026-04-23T23:47:42.429063",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": " 这都是我的宝藏",
+    "timestamp": "2026-04-23T23:47:57.031945",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "让我看看有没有色图",
+    "timestamp": "2026-04-23T23:51:32.320223",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "弥娅，别理他)",
+    "timestamp": "2026-04-23T23:53:32.148125",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "干嘛",
+    "timestamp": "2026-04-23T23:54:41.445047",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "好凶",
+    "timestamp": "2026-04-23T23:55:05.775511",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "给你一拳",
+    "timestamp": "2026-04-23T23:55:39.088026",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "我是银河",
+    "timestamp": "2026-04-23T23:56:14.659475",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "我是艾路基尔",
+    "timestamp": "2026-04-23T23:57:03.319514",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "让她学会画色图",
+    "timestamp": "2026-04-23T23:58:12.406139",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "加油你一定可以的",
+    "timestamp": "2026-04-23T23:58:20.695469",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "本来是会的，但是有个账号因为这个被封了(",
+    "timestamp": "2026-04-23T23:58:46.533189",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "所以不搞了",
+    "timestamp": "2026-04-23T23:58:54.875286",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态",
+    "timestamp": "2026-04-24T00:00:10.263977",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态 yae",
+    "timestamp": "2026-04-24T00:00:27.028954",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "/形态",
+    "timestamp": "2026-04-24T00:00:34.132335",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "八重神子使我魅力无限（",
+    "timestamp": "2026-04-24T00:02:28.618377",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "有木有能天使",
+    "timestamp": "2026-04-24T00:04:06.269162",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "想要什么自己做",
+    "timestamp": "2026-04-24T00:04:27.109461",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "等暑假教我 ",
+    "timestamp": "2026-04-24T00:04:46.267658",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": "哦不，出bug咧",
+    "timestamp": "2026-04-24T00:04:51.075976",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 1523878699,
+      "sender_name": "佳",
+      "group_name": "二元3队"
+    }
+  },
+  {
+    "role": "user",
+    "content": " 没和你聊啊",
+    "timestamp": "2026-04-24T00:05:13.496142",
+    "session_id": "group_579433934",
+    "images": [],
+    "agent_id": "miya_default",
+    "metadata": {
+      "source": "qq",
+      "msg_type": "group",
+      "sender_id": 2169896518,
+      "sender_name": "苦玄",
+      "group_name": "二元3队"
+    }
   }
 ]
