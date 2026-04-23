@@ -63,6 +63,11 @@ config/terminal_whitelist.json
 config/api_keys.json
 config/api_keys.example.json
 
+# Memory and conversation data (runtime generated)
+data/memory/
+data/conversations/
+data/user_personas/
+
 # Claude settings (may contain API keys)
 .claude/settings.json
 .claude/settings.local.json

@@ -141,6 +141,15 @@
       "permission_groups": ["Admin", "Developer"],
       "description": "超级管理员 - 拥有所有权限",
       "created_at": "2026-03-15T10:00:00"
+    },
+    {
+      "user_id": "desktop_user",
+      "username": "佳",
+      "platform": "desktop",
+      "linked_to": "1523878699",
+      "permission_groups": ["Admin", "Developer"],
+      "description": "桌面端用户 - 关联到QQ的佳",
+      "created_at": "2026-04-23T14:00:00"
     }
   ],
 

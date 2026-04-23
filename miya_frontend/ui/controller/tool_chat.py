@@ -288,6 +288,7 @@ class ChatTool(QObject):
             "stream": stream,
             "use_self_game": use_self_game,
             "session_id": self._get_current_session_id(),
+            "user_id": "desktop_user",  # 用于跨平台身份识别
             "platform": "desktop",
         }
         from system.config import config as _cfg

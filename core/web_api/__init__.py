@@ -213,11 +213,36 @@ class WebAPI:
 
                 platform = request.platform or "web"
 
+                # 用户身份链接处理
+                # 优先使用 user_id 字段（桌面端专用），其次用 session_id
+                lookup_id = request.user_id or request.session_id
+                user_id = lookup_id
+                sender_name = f"{platform}用户-{lookup_id[:8]}"
+
+                # 从 permissions.json 检查用户链接配置
+                try:
+                    import json
+                    from pathlib import Path
+
+                    perms_file = Path("config/permissions.json")
+                    if perms_file.exists():
+                        perms_data = json.loads(perms_file.read_text(encoding="utf-8"))
+                        users = perms_data.get("users", [])
+                        for u in users:
+                            if u.get("user_id") == lookup_id:
+                                linked_to = u.get("linked_to")
+                                if linked_to:
+                                    user_id = linked_to
+                                    sender_name = u.get("username", sender_name)
+                                break
+                except Exception:
+                    pass
+
                 perception = {
                     "platform": platform,
                     "content": request.message,
-                    "user_id": request.session_id,
-                    "sender_name": f"{platform}用户-{request.session_id[:8]}",
+                    "user_id": user_id,
+                    "sender_name": sender_name,
                 }
 
                 message = Message(
