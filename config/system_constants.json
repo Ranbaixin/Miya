@@ -2,20 +2,6 @@
   "description": "系统常量配置 - 超时/重试/限制等参数",
 
   "database": {
-    "redis": {
-      "default_port": 6379,
-      "default_db": 0,
-      "connection_timeout": 30,
-      "socket_timeout": 30
-    },
-    "milvus": {
-      "default_port": 19530,
-      "default_index_type": "IVF_FLAT"
-    },
-    "neo4j": {
-      "default_port": 7687,
-      "default_http_port": 7474
-    },
     "chromadb": {
       "default_port": 8000
     }

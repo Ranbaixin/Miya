@@ -768,10 +768,6 @@ class MiyaMemoryCore:
         short_term_ttl: int = 3600,
         enable_backup: bool = True,
         embedding_client=None,
-        # 以下参数保留但已废弃，仅用于向后兼容
-        redis_client=None,
-        milvus_client=None,
-        neo4j_client=None,
     ):
         self.data_dir = Path(data_dir)
         self.short_term_ttl = short_term_ttl
@@ -2119,10 +2115,6 @@ _global_core: Optional[MiyaMemoryCore] = None
 async def get_memory_core(
     data_dir: Union[str, Path] = "data/memory",
     embedding_client=None,
-    # 以下参数已废弃，仅用于向后兼容
-    redis_client=None,
-    milvus_client=None,
-    neo4j_client=None,
 ) -> MiyaMemoryCore:
     """获取全局核心实例 - 从 multi_model_config.json 自动加载 embedding 配置"""
     global _global_core

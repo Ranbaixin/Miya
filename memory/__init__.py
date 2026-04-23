@@ -250,9 +250,6 @@ class MiyaMemory:
     async def get_instance(
         cls,
         data_dir: Union[str, Path] = "data/memory",
-        redis_client=None,
-        milvus_client=None,
-        neo4j_client=None,
     ) -> "MiyaMemory":
         """获取实例"""
         if cls._instance is None:
@@ -261,9 +258,6 @@ class MiyaMemory:
         if cls._instance._core is None:
             cls._instance._core = await get_memory_core(
                 data_dir=data_dir,
-                redis_client=redis_client,
-                milvus_client=milvus_client,
-                neo4j_client=neo4j_client,
             )
 
         return cls._instance

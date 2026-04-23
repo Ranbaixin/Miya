@@ -1,6 +1,7 @@
 """
 健康检查接口
 """
+
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -13,26 +14,10 @@ sys.path.insert(0, str(project_root))
 def check_storage():
     """检查存储连接"""
     print("\n检查存储连接...")
-
-    try:
-        from storage import RedisAsyncClient, MilvusClient, Neo4jClient
-
-        redis = RedisAsyncClient()
-        # 注意：这里需要await，但健康检查可以简化
-        redis.set('health_check', 'ok')
-        result = redis.get('health_check')
-        print(f"  ✓ Redis: {'正常' if result == 'ok' else '异常'}")
-
-        milvus = MilvusClient()
-        print(f"  ✓ Milvus: 已连接")
-
-        neo4j = Neo4jClient()
-        print(f"  ✓ Neo4j: 已连接")
-
-        return True
-    except Exception as e:
-        print(f"  ✗ 存储检查失败: {e}")
-        return False
+    print(f"  • Redis: 已禁用 (使用 SQLite)")
+    print(f"  • Milvus: 已禁用")
+    print(f"  • Neo4j: 已禁用")
+    return True
 
 
 def check_modules():
@@ -41,27 +26,35 @@ def check_modules():
 
     try:
         from core import Personality, Ethics, Identity, Arbitrator, Entropy
+
         print(f"  ✓ Core: 正常")
 
         from hub import MemoryEmotion, MemoryEngine, Emotion, Decision, Scheduler
+
         print(f"  ✓ Hub: 正常")
 
         from mlink import MLinkCore
+
         print(f"  ✓ M-Link: 正常")
 
         from perceive import PerceptualRing, AttentionGate
+
         print(f"  ✓ Perceive: 正常")
 
         from webnet import NetManager, CrossNetEngine
+
         print(f"  ✓ Webnet: 正常")
 
         from detect import TimeDetector, SpaceDetector, NodeDetector, EntropyDiffusion
+
         print(f"  ✓ Detect: 正常")
 
         from trust import TrustScore, TrustPropagation
+
         print(f"  ✓ Trust: 正常")
 
         from evolve import Sandbox, ABTest, UserCoPlay
+
         print(f"  ✓ Evolve: 正常")
 
         return True
@@ -76,6 +69,7 @@ def check_memory():
 
     try:
         import psutil
+
         process = psutil.Process()
         memory_info = process.memory_info()
 
@@ -100,9 +94,9 @@ def main():
     print(f"\n检查时间: {datetime.now()}")
 
     results = {
-        'modules': check_modules(),
-        'storage': check_storage(),
-        'memory': check_memory()
+        "modules": check_modules(),
+        "storage": check_storage(),
+        "memory": check_memory(),
     }
 
     print("\n" + "=" * 50)
@@ -121,5 +115,5 @@ def main():
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

@@ -35,14 +35,8 @@ class MemorySystemInitializer:
     def __init__(
         self,
         data_dir: Path = None,
-        redis_client=None,
-        milvus_client=None,
-        neo4j_client=None,
     ):
         self.data_dir = data_dir or Path("data")
-        self.redis_client = redis_client
-        self.milvus_client = milvus_client
-        self.neo4j_client = neo4j_client
 
         # 记忆系统实例
         self.conversation_history: ConversationHistoryManager = None
@@ -89,39 +83,7 @@ class MemorySystemInitializer:
 
             # 3. 初始化潮汐记忆/梦境压缩引擎
             logger.info("\n[3/3] 初始化潮汐记忆/梦境压缩引擎...")
-            self.memory_engine = MemoryEngine(
-                redis_client=self.redis_client,
-                milvus_client=self.milvus_client,
-                neo4j_client=self.neo4j_client,
-            )
-
-            # 检查数据库连接
-            if self.redis_client:
-                if (
-                    hasattr(self.redis_client, "is_mock_mode")
-                    and self.redis_client.is_mock_mode()
-                ):
-                    logger.info(f"  [OK] Redis: 模拟模式")
-                else:
-                    logger.info(f"  [OK] Redis: 已连接")
-
-            if self.milvus_client:
-                if (
-                    hasattr(self.milvus_client, "is_mock_mode")
-                    and self.milvus_client.is_mock_mode()
-                ):
-                    logger.info(f"  [OK] Milvus: 模拟模式")
-                else:
-                    logger.info(f"  [OK] Milvus: 已连接")
-
-            if self.neo4j_client:
-                if (
-                    hasattr(self.neo4j_client, "is_mock_mode")
-                    and self.neo4j_client.is_mock_mode()
-                ):
-                    logger.info(f"  [OK] Neo4j: 模拟模式")
-                else:
-                    logger.info(f"  [OK] Neo4j: 已连接")
+            self.memory_engine = MemoryEngine()
 
             self._initialized = True
 
@@ -135,36 +97,9 @@ class MemorySystemInitializer:
             logger.info(
                 f"  • 手动记忆: {self.data_dir / 'memory' / 'undefined_memory.json'}"
             )
-            redis_status = (
-                "已连接"
-                if self.redis_client
-                and not (
-                    hasattr(self.redis_client, "is_mock_mode")
-                    and self.redis_client.is_mock_mode()
-                )
-                else "模拟模式"
-            )
-            milvus_status = (
-                "已连接"
-                if self.milvus_client
-                and not (
-                    hasattr(self.milvus_client, "is_mock_mode")
-                    and self.milvus_client.is_mock_mode()
-                )
-                else "模拟模式"
-            )
-            neo4j_status = (
-                "已连接"
-                if self.neo4j_client
-                and not (
-                    hasattr(self.neo4j_client, "is_mock_mode")
-                    and self.neo4j_client.is_mock_mode()
-                )
-                else "模拟模式"
-            )
-            logger.info(f"  • Redis: {redis_status}")
-            logger.info(f"  • Milvus: {milvus_status}")
-            logger.info(f"  • Neo4j: {neo4j_status}")
+            logger.info(f"  • Redis: 已禁用")
+            logger.info(f"  • Milvus: 已禁用")
+            logger.info(f"  • Neo4j: 已禁用")
 
             return True
 
@@ -285,26 +220,18 @@ _global_initializer: MemorySystemInitializer = None
 
 
 async def get_memory_system_initializer(
-    data_dir: Path = None, redis_client=None, milvus_client=None, neo4j_client=None
+    data_dir: Path = None,
 ) -> MemorySystemInitializer:
     """获取全局记忆系统初始化器（单例）- 默认禁用外部数据库"""
     global _global_initializer
 
-    # 检查是否启用外部数据库（默认禁用，SQLite 已替代）
-    enable_external = os.getenv("ENABLE_DATABASES", "").lower() == "true"
-
-    if not enable_external:
-        # 直接返回禁用外部数据库的初始化器
-        logger.info("外部数据库已禁用（SQLite 已替代 Redis/Milvus/Neo4j）")
-        if _global_initializer is None:
-            _global_initializer = MemorySystemInitializer(
-                data_dir=data_dir,
-                redis_client=None,
-                milvus_client=None,
-                neo4j_client=None,
-            )
-            await _global_initializer.initialize()
-        return _global_initializer
+    logger.info("外部数据库已禁用（SQLite 已替代 Redis/Milvus/Neo4j）")
+    if _global_initializer is None:
+        _global_initializer = MemorySystemInitializer(
+            data_dir=data_dir,
+        )
+        await _global_initializer.initialize()
+    return _global_initializer
 
     # 以下是旧的外部数据库连接逻辑（仅当 ENABLE_DATABASES=true 时启用）
     # 自动初始化 Redis 客户端

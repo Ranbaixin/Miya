@@ -66,9 +66,6 @@
     "web_api": {
       "base_url": "http://localhost:8000"
     },
-    "milvus": {
-      "uri": "http://localhost:19530"
-    },
     "homeassistant": {
       "url": "http://homeassistant.local:8123"
     }

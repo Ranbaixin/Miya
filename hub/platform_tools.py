@@ -60,7 +60,6 @@ class PlatformToolsManager:
             "terminal_command",
             "terminal_exec",
             "multi_terminal",
-            "wsl_manager",
             # Terminal Ultra 工具
             "file_read",
             "file_write",
@@ -112,7 +111,6 @@ class PlatformToolsManager:
             "terminal_command",
             "terminal_exec",
             "multi_terminal",
-            "wsl_manager",
             "system_info",
             "environment_detector",
             # 跨端工具
@@ -190,7 +188,6 @@ class PlatformToolsManager:
             "terminal_command",
             "terminal_exec",
             "multi_terminal",
-            "wsl_manager",
             # 文件操作
             "file_read",
             "file_write",

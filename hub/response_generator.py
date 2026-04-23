@@ -44,7 +44,6 @@ PLATFORM_TOOL_MAP = {
     "terminal": [
         "terminal_command",
         "multi_terminal",
-        "wsl_manager",
         "system_info",
         "environment_detector",
         "send_to_qq",
