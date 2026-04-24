@@ -62,8 +62,8 @@
       "latency": "fast",
       "quality": "good"
     },
-    "deepseek_v3_official": {
-      "name": "deepseek-chat",
+    "deepseek_v4_flash_official": {
+      "name": "deepseek-v4-flash",
       "provider": "openai",
       "base_url": "https://api.deepseek.com/v1",
       "api_key": "sk-c3e2611d73c04263bf0cb65cbaae7e04",
@@ -81,8 +81,8 @@
       "latency": "fast",
       "quality": "excellent"
     },
-    "deepseek_r1_official": {
-      "name": "deepseek-reasoner",
+    "deepseek_v4_pro_official": {
+      "name": "deepseek-v4-pro",
       "provider": "openai",
       "base_url": "https://api.deepseek.com/v1",
       "api_key": "sk-c3e2611d73c04263bf0cb65cbaae7e04",
@@ -319,45 +319,45 @@
   },
   "routing_strategy": {
     "simple_chat": {
-      "primary": "deepseek_v3_official",
+      "primary": "deepseek_v4_flash_official",
       "secondary": "qwen_72b",
       "fallback": "qwen_7b"
     },
     "complex_reasoning": {
-      "primary": "deepseek_r1_official",
+      "primary": "deepseek_v4_pro_official",
       "secondary": "deepseek_r1_distill_7b",
-      "third": "deepseek_v3_official",
+      "third": "deepseek_v4_flash_official",
       "fallback": "qwen_72b"
     },
     "code_analysis": {
-      "primary": "deepseek_v3_official",
+      "primary": "deepseek_v4_flash_official",
       "secondary": "qwen_72b",
       "fallback": "deepseek_r1_distill_7b"
     },
     "code_generation": {
-      "primary": "deepseek_v3_official",
+      "primary": "deepseek_v4_flash_official",
       "secondary": "qwen_72b",
       "fallback": "gemma_2_9b"
     },
     "tool_calling": {
-      "primary": "deepseek_v3_official",
+      "primary": "deepseek_v4_flash_official",
       "secondary": "qwen_72b",
-      "fallback": "deepseek_v3_official"
+      "fallback": "deepseek_v4_flash_official"
     },
     "creative_writing": {
-      "primary": "deepseek_r1_official",
+      "primary": "deepseek_v4_pro_official",
       "secondary": "qwen_72b",
-      "fallback": "deepseek_v3_official"
+      "fallback": "deepseek_v4_flash_official"
     },
     "chinese_understanding": {
-      "primary": "deepseek_v3_official",
+      "primary": "deepseek_v4_flash_official",
       "secondary": "qwen_72b",
-      "fallback": "deepseek_v3_official"
+      "fallback": "deepseek_v4_flash_official"
     },
     "summarization": {
       "primary": "llama_3_1_8b",
       "secondary": "qwen_7b",
-      "fallback": "deepseek_v3_official"
+      "fallback": "deepseek_v4_flash_official"
     },
     "image_description": {
       "primary": "zhipu_glm_46v_flash",
@@ -372,7 +372,7 @@
     "computer_use": {
       "primary": "claude_sonnet",
       "secondary": "claude_haiku",
-      "fallback": "deepseek_v3_official"
+      "fallback": "deepseek_v4_flash_official"
     }
   },
   "budget_control": {
@@ -457,35 +457,35 @@
     "role_collaboration": {
       "role_mapping": {
         "code_analysis": {
-          "analyst": "deepseek_r1_official",
-          "creator": "deepseek_v3_official",
+          "analyst": "deepseek_v4_pro_official",
+          "creator": "deepseek_v4_flash_official",
           "reviewer": "qwen_72b"
         },
         "code_generation": {
-          "analyst": "deepseek_v3_official",
+          "analyst": "deepseek_v4_flash_official",
           "creator": "qwen_72b",
-          "reviewer": "deepseek_r1_official"
+          "reviewer": "deepseek_v4_pro_official"
         },
         "creative_writing": {
           "analyst": "qwen_72b",
-          "creator": "deepseek_r1_official",
-          "reviewer": "deepseek_v3_official"
+          "creator": "deepseek_v4_pro_official",
+          "reviewer": "deepseek_v4_flash_official"
         },
         "complex_reasoning": {
-          "analyst": "deepseek_r1_official",
+          "analyst": "deepseek_v4_pro_official",
           "creator": "qwen_72b",
-          "reviewer": "deepseek_v3_official"
+          "reviewer": "deepseek_v4_flash_official"
         },
         "task_planning": {
-          "analyst": "deepseek_r1_official",
-          "creator": "deepseek_v3_official",
+          "analyst": "deepseek_v4_pro_official",
+          "creator": "deepseek_v4_flash_official",
           "reviewer": "qwen_72b"
         }
       },
       "default_role_assignment": {
-        "analyst": "deepseek_v3_official",
+        "analyst": "deepseek_v4_flash_official",
         "creator": "qwen_72b",
-        "reviewer": "deepseek_v3_official"
+        "reviewer": "deepseek_v4_flash_official"
       },
       "role_prompts": {
         "analyst": "你是一个专业分析师，请深入分析问题的核心要点、关键约束和潜在风险。",
@@ -556,5 +556,9 @@
         }
       }
     }
+  },
+  "system_defaults": {
+    "soul_model": "deepseek_v4_flash_official",
+    "description": "系统各模块使用的默认模型"
   }
 }

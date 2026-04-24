@@ -483,9 +483,15 @@ class OpenAIClient(BaseAIClient):
                         msg_dict["tool_calls"] = msg.tool_calls
                     if msg.tool_call_id:
                         msg_dict["tool_call_id"] = msg.tool_call_id
-                    # 支持 DeepSeek V4 thinking mode
-                    if msg.reasoning_content:
-                        msg_dict["reasoning_content"] = msg.reasoning_content
+                    # 支持 DeepSeek V4 thinking mode - 使用getattr确保正确获取
+                    # 注意：当 assistant 消息有 tool_calls 时，必须传回 reasoning_content（即使为空）
+                    reasoning = getattr(msg, "reasoning_content", None)
+                    if msg.tool_calls:
+                        # 有工具调用，必须传回 reasoning_content
+                        msg_dict["reasoning_content"] = reasoning if reasoning else ""
+                    elif reasoning:
+                        # 有思考过程且无工具调用，正常传递
+                        msg_dict["reasoning_content"] = reasoning
                     openai_messages.append(msg_dict)
 
                 # 构建请求参数
@@ -694,7 +700,7 @@ class OpenAIClient(BaseAIClient):
                         )
                         return tool_call, f"工具执行异常: {str(e)}"
 
-                # 只有当多个工具之间没有依赖关系时才并发执行
+                # 强制串行执行以避免消息乱序问题
                 concurrent_tool_names = [
                     "get_recent_messages",
                     "get_user_info",
@@ -706,28 +712,30 @@ class OpenAIClient(BaseAIClient):
                     "web_search",
                     "web_research",
                 ]
-
-                can_concurrent = (
-                    any(tc.function.name in concurrent_tool_names for tc in tool_calls)
-                    and len(tool_calls) > 1
-                )
+                can_concurrent = False  # 禁用并发，避免工具响应乱序
 
                 if can_concurrent:
                     # 并发执行多个工具调用
                     logger.info(f"[AIClient] 并发执行 {len(tool_calls)} 个工具调用")
-                    tool_results = await asyncio.gather(
+                    tool_results_list = await asyncio.gather(
                         *[execute_single_tool(tc) for tc in tool_calls],
                         return_exceptions=True,
                     )
 
-                    # 处理结果
+                    # 按原始 tool_calls 顺序添加响应消息
+                    tool_call_id_to_result = {}
                     final_detected = False
-                    for tool_result in tool_results:
-                        if isinstance(tool_result, Exception):
-                            logger.error(f"[AIClient] 并发工具执行异常: {tool_result}")
+                    for tr in tool_results_list:
+                        if isinstance(tr, Exception):
+                            logger.error(f"[AIClient] 并发工具执行异常: {tr}")
                             continue
+                        tool_call, result = tr
+                        tool_call_id_to_result[tool_call.id] = (tool_call, result)
 
-                        tool_call, result = tool_result
+                    for tc in tool_calls:
+                        if tc.id not in tool_call_id_to_result:
+                            continue
+                        tool_call, result = tool_call_id_to_result[tc.id]
 
                         # 检查工具结果是否包含 FINAL 标记
                         if result and result.startswith("[FINAL]"):
@@ -975,9 +983,15 @@ class DeepSeekClient(BaseAIClient):
                         msg_dict["tool_calls"] = msg.tool_calls
                     if msg.tool_call_id:
                         msg_dict["tool_call_id"] = msg.tool_call_id
-                    # 支持 DeepSeek V4 thinking mode
-                    if msg.reasoning_content:
-                        msg_dict["reasoning_content"] = msg.reasoning_content
+                    # 支持 DeepSeek V4 thinking mode - 使用getattr确保正确获取
+                    # 注意：当 assistant 消息有 tool_calls 时，必须传回 reasoning_content（即使为空）
+                    reasoning = getattr(msg, "reasoning_content", None)
+                    if msg.tool_calls:
+                        # 有工具调用，必须传回 reasoning_content
+                        msg_dict["reasoning_content"] = reasoning if reasoning else ""
+                    elif reasoning:
+                        # 有思考过程且无工具调用，正常传递
+                        msg_dict["reasoning_content"] = reasoning
                     openai_messages.append(msg_dict)
 
                 # 构建请求参数
@@ -1183,46 +1197,53 @@ class DeepSeekClient(BaseAIClient):
 
                         return tool_call, result
 
-                # 判断是否可以并发执行
-                concurrent_tool_names = [
-                    "get_recent_messages",
-                    "get_user_info",
-                    "get_current_time",
-                    "search_knowledge",
-                    "search_memory",
-                    "get_profile",
-                    "bilibili_video",
-                    "web_search",
-                    "web_research",
-                ]
-
-                can_concurrent = (
-                    any(tc.function.name in concurrent_tool_names for tc in tool_calls)
-                    and len(tool_calls) > 1
-                )
+                # 判断是否可以并发执行（目前强制串行以避免乱序问题）
+                can_concurrent = False
+                # concurrent_tool_names = [
+                #     "get_recent_messages",
+                #     "get_user_info",
+                #     "get_current_time",
+                #     "search_knowledge",
+                #     "search_memory",
+                #     "get_profile",
+                #     "bilibili_video",
+                #     "web_search",
+                #     "web_research",
+                # ]
+                # can_concurrent = (
+                #     any(tc.function.name in concurrent_tool_names for tc in tool_calls)
+                #     and len(tool_calls) > 1
+                # )
 
                 if can_concurrent:
                     # 并发执行多个工具调用
                     logger.info(f"[AIClient] 并发执行 {len(tool_calls)} 个工具调用")
-                    tool_results = await asyncio.gather(
+                    tool_results_list = await asyncio.gather(
                         *[execute_single_tool_deepseek(tc) for tc in tool_calls],
                         return_exceptions=True,
                     )
 
-                    # 处理并发结果并添加到消息中
-                    for tool_result in tool_results:
+                    # 建立 tool_call_id 到结果的映射，确保按原始顺序添加
+                    tool_call_id_to_result = {}
+                    for tool_result in tool_results_list:
                         if isinstance(tool_result, Exception):
                             logger.error(f"[AIClient] 并发工具执行异常: {tool_result}")
                             continue
-
                         tool_call, result = tool_result
+                        tool_call_id_to_result[tool_call.id] = result
+
+                    # 按原始 tool_calls 顺序添加响应消息
+                    for tc in tool_calls:
+                        if tc.id not in tool_call_id_to_result:
+                            continue
+                        result = tool_call_id_to_result[tc.id]
 
                         # 检查工具结果是否包含 FINAL 标记
                         if result and result.startswith("[FINAL]"):
                             logger.info(
                                 f"[AIClient] 检测到 FINAL 标记，停止工具调用: {result[:80]}"
                             )
-                            return None  # 返回 None 表示直接退出
+                            return None
 
                         # 检查是否是直接返回工具
                         direct_return_tools = [
@@ -1231,13 +1252,11 @@ class DeepSeekClient(BaseAIClient):
                             "terminal_command",
                             "multi_terminal",
                         ]
-                        if tool_call.function.name in direct_return_tools:
+                        if tc.function.name in direct_return_tools:
                             return result
 
                         current_messages.append(
-                            AIMessage(
-                                role="tool", content=result, tool_call_id=tool_call.id
-                            )
+                            AIMessage(role="tool", content=result, tool_call_id=tc.id)
                         )
                 else:
                     # 串行执行
