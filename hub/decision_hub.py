@@ -1812,10 +1812,16 @@ class DecisionHub:
                                 ai_client_for_soul = None
                                 if self.model_pool:
                                     try:
-                                        # 使用 deepseek_v3_official 作为默认情绪分析模型
+                                        # 从multi_model_config.json读取系统默认模型配置
+                                        multi_config = self.model_pool._config
+                                        soul_model_id = multi_config.get(
+                                            "system_defaults", {}
+                                        ).get(
+                                            "soul_model", "deepseek_v4_flash_official"
+                                        )
                                         ai_client_for_soul = (
                                             self.model_pool.create_ai_client(
-                                                "deepseek_v3_official"
+                                                soul_model_id
                                             )
                                         )
                                     except Exception:

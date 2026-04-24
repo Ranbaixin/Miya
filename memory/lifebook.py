@@ -501,10 +501,10 @@ class LifeBook:
         if not model_pool:
             return "（AI 不可用）"
 
-        ai_client_config = self._get_config_value("ai_client")
-        model_id = "deepseek_v3_official"
-        if ai_client_config:
-            model_id = ai_client_config.get("model_id", "deepseek_v3_official")
+        # 从multi_model_config.json读取系统默认模型配置
+        multi_config = model_pool._config
+        ai_client_config = multi_config.get("system_defaults", {})
+        model_id = ai_client_config.get("soul_model", "deepseek_v4_flash_official")
 
         model_cfg = model_pool._models.get(model_id)
         if not model_cfg:

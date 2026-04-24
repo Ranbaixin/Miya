@@ -3,7 +3,7 @@
   
   "enabled": true,
   
-  "model": "deepseek-chat",
+  "model": "deepseek-v4-flash",
   "timeout": 10,
   "max_responses_per_turn": 3,
   

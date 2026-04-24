@@ -547,7 +547,6 @@ if exist ".claude\settings.json" (
 echo.
 
 echo Critical Miya Files:
-call :check_file "config\miya_ultimate_config.json" && echo   [OK] Ultimate Config || echo   [MISSING] Ultimate Config
 call :check_file "config\multi_model_config.json" && echo   [OK] Multi Model Config || echo   [MISSING] Multi Model Config
 call :check_file "config\personalities\_default.yaml" && echo   [OK] Default Personality || echo   [MISSING] Default Personality
 call :check_file ".miya\database.db" && echo   [OK] Database || echo   [MISSING] Database

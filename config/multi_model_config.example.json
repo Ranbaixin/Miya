@@ -1,11 +1,11 @@
 {
   "models": {
-    "deepseek_v3_official": {
-      "name": "deepseek-chat",
+    "deepseek_v4_flash_official": {
+      "name": "deepseek-v4-flash",
       "provider": "openai",
       "base_url": "https://api.deepseek.com/v1",
       "api_key": "sk-deepseek-api-key-here",
-      "description": "DeepSeek V3 官方 - 快速响应的通用模型",
+      "description": "DeepSeek V4 Flash 官方 - 最新快速通用模型",
       "capabilities": [
         "simple_chat",
         "chinese_understanding",
@@ -19,12 +19,12 @@
       "latency": "fast",
       "quality": "excellent"
     },
-    "deepseek_r1_official": {
-      "name": "deepseek-reasoner",
+    "deepseek_v4_pro_official": {
+      "name": "deepseek-v4-pro",
       "provider": "openai",
       "base_url": "https://api.deepseek.com/v1",
       "api_key": "sk-deepseek-api-key-here",
-      "description": "DeepSeek R1 官方 - 深度推理模型",
+      "description": "DeepSeek V4 Pro 官方 - 最新高性能通用模型",
       "capabilities": [
         "complex_reasoning",
         "code_analysis",
@@ -250,13 +250,13 @@
     "simple_chat": {
       "primary": "qwen_7b",
       "secondary": "llama_3_1_8b",
-      "fallback": "deepseek_v3_official",
+      "fallback": "deepseek_v4_flash_official",
       "cost_priority": 1.0,
       "speed_priority": 0.9,
       "quality_priority": 0.7
     },
-    "complex_reasoning": {
-      "primary": "deepseek_r1_official",
+    "deep_conversation": {
+      "primary": "deepseek_v4_pro_official",
       "secondary": "deepseek_r1_distill_7b",
       "fallback": "qwen_72b",
       "cost_priority": 0.5,
@@ -265,7 +265,7 @@
     },
     "code_analysis": {
       "primary": "zhipu_glm_46v_flash",
-      "secondary": "deepseek_v3_official",
+      "secondary": "deepseek_v4_flash_official",
       "fallback": "deepseek_r1_distill_7b",
       "cost_priority": 0.6,
       "speed_priority": 0.7,
@@ -273,7 +273,7 @@
     },
     "code_generation": {
       "primary": "zhipu_glm_46v_flash",
-      "secondary": "deepseek_v3_official",
+      "secondary": "deepseek_v4_flash_official",
       "fallback": "gemma_2_9b",
       "cost_priority": 0.2,
       "speed_priority": 0.8,
@@ -281,24 +281,24 @@
     },
     "tool_calling": {
       "primary": "qwen_72b",
-      "secondary": "deepseek_v3_official",
-      "fallback": "deepseek_v3_official",
+      "secondary": "deepseek_v4_flash_official",
+      "fallback": "deepseek_v4_flash_official",
       "cost_priority": 0.7,
       "speed_priority": 0.6,
       "quality_priority": 0.95
     },
     "creative_writing": {
-      "primary": "deepseek_r1_official",
+      "primary": "deepseek_v4_pro_official",
       "secondary": "qwen_72b",
-      "fallback": "deepseek_v3_official",
+      "fallback": "deepseek_v4_flash_official",
       "cost_priority": 0.5,
       "speed_priority": 0.4,
       "quality_priority": 1.0
     },
     "chinese_understanding": {
-      "primary": "deepseek_v3_official",
+      "primary": "deepseek_v4_flash_official",
       "secondary": "qwen_72b",
-      "fallback": "deepseek_v3_official",
+      "fallback": "deepseek_v4_flash_official",
       "cost_priority": 0.1,
       "speed_priority": 0.9,
       "quality_priority": 0.85
@@ -306,7 +306,7 @@
     "summarization": {
       "primary": "llama_3_1_8b",
       "secondary": "qwen_7b",
-      "fallback": "deepseek_v3_official",
+      "fallback": "deepseek_v4_flash_official",
       "cost_priority": 0.2,
       "speed_priority": 0.8,
       "quality_priority": 0.9

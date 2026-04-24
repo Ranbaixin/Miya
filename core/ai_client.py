@@ -28,6 +28,7 @@ class AIMessage:
     content: str
     tool_calls: Optional[List[Dict]] = None
     tool_call_id: Optional[str] = None
+    reasoning_content: Optional[str] = None  # DeepSeek V4 thinking mode
 
 
 class BaseAIClient:
@@ -474,7 +475,7 @@ class OpenAIClient(BaseAIClient):
 
         while iteration < max_iterations:
             try:
-                # 转换为OpenAI格式
+                # 转换为OpenAI格式 - 支持 DeepSeek V4 thinking mode
                 openai_messages = []
                 for msg in current_messages:
                     msg_dict = {"role": msg.role, "content": msg.content}
@@ -482,6 +483,9 @@ class OpenAIClient(BaseAIClient):
                         msg_dict["tool_calls"] = msg.tool_calls
                     if msg.tool_call_id:
                         msg_dict["tool_call_id"] = msg.tool_call_id
+                    # 支持 DeepSeek V4 thinking mode
+                    if msg.reasoning_content:
+                        msg_dict["reasoning_content"] = msg.reasoning_content
                     openai_messages.append(msg_dict)
 
                 # 构建请求参数
@@ -508,6 +512,10 @@ class OpenAIClient(BaseAIClient):
                     ):
                         normalized_tool_choice = "auto"
                     request_params["tool_choice"] = normalized_tool_choice
+
+                # DeepSeek V4 内置联网搜索需要通过特定端点启用，目前API暂不支持
+                # if "deepseek" in self.model.lower() and "v4" in self.model.lower():
+                #     request_params["enable_search"] = True
 
                 response = await self.client.chat.completions.create(**request_params)
 
@@ -959,7 +967,7 @@ class DeepSeekClient(BaseAIClient):
 
         while iteration < max_iterations:
             try:
-                # 转换为OpenAI格式
+                # 转换为OpenAI格式 - 支持 DeepSeek V4 thinking mode
                 openai_messages = []
                 for msg in current_messages:
                     msg_dict = {"role": msg.role, "content": msg.content}
@@ -967,6 +975,9 @@ class DeepSeekClient(BaseAIClient):
                         msg_dict["tool_calls"] = msg.tool_calls
                     if msg.tool_call_id:
                         msg_dict["tool_call_id"] = msg.tool_call_id
+                    # 支持 DeepSeek V4 thinking mode
+                    if msg.reasoning_content:
+                        msg_dict["reasoning_content"] = msg.reasoning_content
                     openai_messages.append(msg_dict)
 
                 # 构建请求参数
@@ -993,6 +1004,10 @@ class DeepSeekClient(BaseAIClient):
                     ):
                         normalized_tool_choice = "auto"
                     request_params["tool_choice"] = normalized_tool_choice
+
+                # DeepSeek V4 内置联网搜索需要通过特定端点启用（API暂不支持）
+                # if "deepseek" in self.model.lower() and "v4" in self.model.lower():
+                #     request_params["enable_search"] = True
 
                 response = await self.client.chat.completions.create(**request_params)
 
@@ -1084,7 +1099,10 @@ class DeepSeekClient(BaseAIClient):
                     f"DeepSeek AI请求调用工具: {[tc.function.name for tc in tool_calls]}"
                 )
 
-                # 添加助手消息（包含工具调用）
+                # 添加助手消息（包含工具调用和思考过程）- 修复 V4 thinking mode 问题
+                reasoning_content = getattr(
+                    message, "reasoning_content", None
+                ) or getattr(message, "reasoning", None)
                 current_messages.append(
                     AIMessage(
                         role="assistant",
@@ -1100,6 +1118,7 @@ class DeepSeekClient(BaseAIClient):
                             }
                             for tc in tool_calls
                         ],
+                        reasoning_content=reasoning_content,
                     )
                 )
 
