@@ -232,12 +232,15 @@ class DiTingListener:
                 prefix = "@" if s.is_at_bot else "→"
                 layers.append(f"{prefix}{s.sender_name}: {s.content}")
 
-        # Layer 3: 当前话题（最近3条）
+        # Layer 3: 当前话题（最近3条，去重）
         recent = snippets[-3:]
         if recent:
             layers.append("\n【当前对话】")
+            seen_content = set()
             for s in recent:
-                layers.append(f"{s.sender_name}: {s.content}")
+                if s.content not in seen_content:
+                    layers.append(f"{s.sender_name}: {s.content}")
+                    seen_content.add(s.content)
 
         return "\n".join(layers)
 
