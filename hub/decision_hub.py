@@ -1864,25 +1864,38 @@ class DecisionHub:
                                     # 弥娅自己的情绪
                                     miya_emotions = soul_result.get("emotions", {})
                                     if miya_emotions:
-                                        miya_dominant = max(
-                                            miya_emotions, key=miya_emotions.get
+                                        # 支持多情绪显示
+                                        top_emotions = sorted(
+                                            miya_emotions.items(),
+                                            key=lambda x: x[1],
+                                            reverse=True,
+                                        )[:3]
+                                        miya_dominant = top_emotions[0][0]
+                                        miya_intensity = top_emotions[0][1]
+
+                                        # 构建多情绪显示字符串
+                                        emotion_str = " + ".join(
+                                            [
+                                                f"{name}({int(val)}%)"
+                                                for name, val in top_emotions
+                                            ]
                                         )
-                                        miya_intensity = miya_emotions[miya_dominant]
                                     else:
                                         miya_dominant = "平静"
                                         miya_intensity = 40
+                                        emotion_str = "平静"
 
                                     logger.info(
-                                        f"[灵魂] 主导情绪: {dominant} | 弥娅: {miya_dominant}({miya_intensity}%)"
+                                        f"[灵魂] 主导情绪: {dominant} | 弥娅: {emotion_str}"
                                     )
 
                                     # 使用美化输出
                                     from core.soul_generator import SoulDisplay
 
                                     SoulDisplay.emotion_analysis(
-                                        dominant,
-                                        soul_result.get("intensity", 50),
-                                        f"弥娅: {miya_dominant}({miya_intensity}%)",
+                                        miya_dominant,
+                                        miya_intensity,
+                                        f"多情绪: {emotion_str}",
                                     )
 
                                     # 构建情绪上下文，传递给协作引擎

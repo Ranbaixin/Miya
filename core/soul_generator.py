@@ -75,8 +75,8 @@ class SoulDisplay:
         return text
 
     @classmethod
-    def emotion_analysis(cls, emotion: str, intensity: int, reasoning: str = "") -> str:
-        """情绪分析结果"""
+    def emotion_analysis(cls, emotion: str, intensity: int, extra: str = "") -> str:
+        """情绪分析结果（支持多情绪）"""
         # 根据情绪强度选择颜色
         if intensity >= 70:
             color = cls.MAGENTA  # 强烈情绪
@@ -85,9 +85,14 @@ class SoulDisplay:
         else:
             color = cls.GRAY  # 平静
 
-        text = f"  {cls.CYAN}{cls.HEART} 情绪分析{cls.RESET} {color}{emotion}{cls.RESET} {cls.DIM}(强度: {intensity}%){cls.RESET}"
-        if reasoning:
-            text += f"\n    {cls.DIM}{reasoning[:60]}...{cls.RESET}"
+        # 检查是否是多情绪展示
+        if " + " in extra or ("多情绪:" in extra and "+" in extra):
+            text = f"  {cls.CYAN}{cls.HEART} 情绪分析{cls.RESET} {color}{emotion}{cls.RESET} {cls.DIM}(强度: {intensity}%){cls.RESET}"
+            text += f"\n    {cls.DIM}{extra}{cls.RESET}"
+        else:
+            text = f"  {cls.CYAN}{cls.HEART} 情绪分析{cls.RESET} {color}{emotion}{cls.RESET} {cls.DIM}(强度: {intensity}%){cls.RESET}"
+            if extra:
+                text += f"\n    {cls.DIM}{extra[:60]}...{cls.RESET}"
         cls._print(text)
         return text
 
@@ -1264,12 +1269,28 @@ class SoulGenerator:
                 return None
 
             result = json.loads(json_match.group())
-            # 使用美化输出
-            SoulDisplay.emotion_analysis(
-                result.get("dominant_emotion", "未知"),
-                result.get("intensity", 50),
-                result.get("reasoning", "")[:50],
-            )
+
+            # 多情绪格式
+            emotions = result.get("emotions", [])
+            if emotions:
+                # 展示所有情绪
+                emotion_parts = []
+                for emo in emotions:
+                    name = emo.get("name", "未知")
+                    intensity = emo.get("intensity", 50)
+                    emotion_parts.append(f"{name}({intensity}%)")
+                SoulDisplay.emotion_analysis(
+                    emotion_parts[0],
+                    emotions[0].get("intensity", 50),
+                    f"多情绪: {' + '.join(emotion_parts)}",
+                )
+            else:
+                # 兼容旧格式
+                SoulDisplay.emotion_analysis(
+                    result.get("dominant_emotion", "未知"),
+                    result.get("intensity", 50),
+                    result.get("reasoning", "")[:50],
+                )
             return result
 
         except Exception as e:
@@ -1280,8 +1301,22 @@ class SoulGenerator:
             return None
 
     def _apply_ai_emotion(self, ai_result: Dict):
-        """应用AI分析的情绪"""
+        """应用AI分析的情绪（支持多情绪）"""
         try:
+            # 新格式：emotions 数组
+            emotions = ai_result.get("emotions", [])
+            if emotions:
+                # 第一个是主导情绪
+                for i, emo in enumerate(emotions):
+                    name = emo.get("name", "")
+                    intensity = emo.get("intensity", 50)
+                    if name and intensity > 0:
+                        # 第一个情绪强度100%，后续递减
+                        scale = 1.0 if i == 0 else 0.6
+                        self._adjust_emotion(name, (intensity - 40) * scale)
+                return
+
+            # 旧格式兼容
             emotion_name = ai_result.get("dominant_emotion", "")
             intensity = ai_result.get("intensity", 50)
             tags = ai_result.get("emotion_tags", [])
@@ -1415,12 +1450,30 @@ class SoulGenerator:
         return max_emotion.category.value
 
     def _get_emotion_summary(self) -> Dict[str, float]:
-        """获取情绪摘要"""
+        """获取情绪摘要（多情绪）"""
         return {
             name: emp.value
             for name, emp in self.emotions.items()
             if emp.value > 20  # 只返回显著情绪
         }
+
+    def _get_top_emotions(self, limit: int = 3) -> List[Dict[str, Any]]:
+        """获取前N个显著情绪"""
+        if not self.emotions:
+            return [{"name": "平静", "value": 50}]
+
+        sorted_emotions = sorted(
+            self.emotions.items(), key=lambda x: x[1].value, reverse=True
+        )
+        return (
+            [
+                {"name": emo.category.value, "value": emo.value}
+                for _, emo in sorted_emotions[:limit]
+                if emo.value > 20
+            ][:limit]
+            if sorted_emotions
+            else [{"name": "平静", "value": 50}]
+        )
 
     def _check_pending_intents(self, context: Dict) -> Optional[str]:
         """检查待完成的意图"""
