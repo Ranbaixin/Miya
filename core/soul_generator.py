@@ -1185,7 +1185,9 @@ class SoulGenerator:
                     if isinstance(item, dict) and "name" in item:
                         ai_emotions_dict[item["name"]] = item.get("intensity", 50)
         else:
-            logger.warning("[灵魂] AI emotions为空，使用默认")
+            logger.warning("[灵魂] AI emotions为空，使用空字典")
+            # 修复：当AI分析失败时，不使用默认的70+情绪，返回空字典让上层处理
+            ai_emotions_dict = {}
 
         logger.warning(f"[灵魂] 返回的emotions: {ai_emotions_dict}")
 
@@ -1194,7 +1196,7 @@ class SoulGenerator:
             "dominant_emotion": self._get_dominant_emotion(),
             "emotions": ai_emotions_dict
             if ai_emotions_dict
-            else self._get_emotion_summary(),
+            else {},  # 修复：不再使用默认70+情绪
             "pending_intents": len(self.pending_intents),
             "context": context,
             # 顶层直接暴露这些字段，方便外部访问
