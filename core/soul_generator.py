@@ -1086,6 +1086,7 @@ class SoulGenerator:
         ai_inner_thought = None
         ai_attribution = None
         ai_reflection = None
+        ai_full_result = None  # 初始化
         ai_analysis_enabled = _CONFIG.get("AI_ANALYSIS_ENABLED", True)
         if ai_analysis_enabled and ai_client:
             # 一次性获取情绪分析 + 内心独白
@@ -1165,15 +1166,45 @@ class SoulGenerator:
             else (analysis.reflection if analysis.reflection else default_inner)
         )
 
+        # 保留情绪分析结果 - 保存AI原始分析的情绪
+        ai_emotion_tags = []
+        if ai_full_result:
+            ai_emotion_tags = ai_full_result.get("emotion_tags") or []
+        # 如果有AI情绪标签，转换为dict格式
+        ai_emotions_dict = {}
+        # 优先使用emotion_tags， fallback到emotions
+        if ai_emotion_tags:
+            for item in ai_emotion_tags:
+                if isinstance(item, dict) and "name" in item:
+                    ai_emotions_dict[item["name"]] = item.get("intensity", 50)
+        elif ai_full_result:
+            # AI返回的是emotions字段，不是emotion_tags
+            emotions_list = ai_full_result.get("emotions", [])
+            if emotions_list:
+                for item in emotions_list:
+                    if isinstance(item, dict) and "name" in item:
+                        ai_emotions_dict[item["name"]] = item.get("intensity", 50)
+        else:
+            logger.warning("[灵魂] AI emotions为空，使用默认")
+
+        logger.warning(f"[灵魂] 返回的emotions: {ai_emotions_dict}")
+
         return {
             "response": output,
             "dominant_emotion": self._get_dominant_emotion(),
-            "emotions": self._get_emotion_summary(),
+            "emotions": ai_emotions_dict
+            if ai_emotions_dict
+            else self._get_emotion_summary(),
             "pending_intents": len(self.pending_intents),
             "context": context,
+            # 顶层直接暴露这些字段，方便外部访问
+            "inner_thought": inner_thought,
+            "attribution": final_attribution,
+            "reflection": final_reflection,
             "analysis": {
                 "attribution": final_attribution,
-                "reflection": inner_thought,
+                "reflection": final_reflection,
+                "inner_thought": inner_thought,
                 "ai_emotion": ai_emotion_result,
             },
         }

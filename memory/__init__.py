@@ -42,6 +42,12 @@ from memory.core import (
     JsonBackend,
 )
 from memory.cognitive_engine import CognitiveEngine, get_cognitive_engine
+from memory.memory_enhancer import (
+    MemoryEnhancer,
+    get_memory_enhancer,
+    EmotionType,
+    MemoryLink,
+)
 
 import logging
 from typing import Dict, List, Optional, Any, Union
@@ -134,6 +140,191 @@ async def store_knowledge(
         obj=obj,
         metadata=metadata,
     )
+
+
+async def store_cognition(
+    thinking: str = "",
+    emotions: Dict[str, int] = None,
+    inner_thought: str = "",
+    attribution: str = "",
+    reflection: str = "",
+    user_id: str = "global",
+    metadata: Optional[Dict] = None,
+) -> str:
+    """
+    存储认知记忆 - 包含AI思考过程、情绪分析、内心独白等
+
+    用于弥娅形成连贯的思维链，让后续对话能参考之前的思考过程。
+
+    Args:
+        thinking: AI思考过程/推理内容
+        emotions: 情绪字典 {"情绪名": 强度值}
+        inner_thought: 内心独白
+        attribution: 归因分析
+        reflection: 反思内容
+        user_id: 用户ID
+        metadata: 额外元数据
+
+    Returns:
+        存储的记忆ID
+    """
+    print(
+        f"[store_cognition] 开始存储: thinking长度={len(thinking)}, user_id={user_id}"
+    )
+    if emotions is None:
+        emotions = {}
+
+    import json
+    from datetime import datetime
+    from pathlib import Path
+
+    cognition_content = (
+        f"【认知记录】\n"
+        f"思考过程: {thinking[:500] if thinking else '无'}\n"
+        f"情绪分析: {json.dumps(emotions, ensure_ascii=False) if emotions else '无'}\n"
+        f"内心独白: {inner_thought}\n"
+        f"归因分析: {attribution}\n"
+        f"反思: {reflection}"
+    )
+
+    core = await get_memory_core()
+    memory_id = await core.store(
+        content=cognition_content,
+        level=MemoryLevel.SHORT_TERM,
+        user_id=user_id,
+        source=MemorySource.AUTO_EXTRACT,
+        tags=["cognition", "thinking", "emotion_record"],
+        priority=0.6,
+        metadata={
+            **(metadata or {}),
+            "thinking": thinking,
+            "emotions": emotions,
+            "inner_thought": inner_thought,
+            "attribution": attribution,
+            "reflection": reflection,
+        },
+    )
+
+    # 同时写入 JSON 文件，方便可视化查看
+    try:
+        json_path = Path("data/memory/cognitive_memories.json")
+        json_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # 读取现有数据
+        existing_data = []
+        if json_path.exists():
+            with open(json_path, "r", encoding="utf-8") as f:
+                existing_data = json.load(f)
+
+        # 添加新记录
+        new_record = {
+            "id": memory_id,
+            "timestamp": datetime.now().isoformat(),
+            "user_id": user_id,
+            "thinking": thinking,
+            "emotions": emotions,
+            "inner_thought": inner_thought,
+            "attribution": attribution,
+            "reflection": reflection,
+        }
+        existing_data.insert(0, new_record)  # 最新记录放前面
+
+        # 保留最近50条
+        existing_data = existing_data[:50]
+
+        # 写回文件
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(existing_data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.debug(f"[认知记忆] JSON备份失败: {e}")
+
+    return memory_id
+
+
+async def retrieve_cognition(
+    user_id: str,
+    limit: int = 5,
+) -> List[Dict]:
+    """
+    检索认知记忆 - 获取最近的思考过程和情绪记录
+
+    用于在构建回复上下文时，让弥娅能参考之前的思维链。
+
+    Args:
+        user_id: 用户ID
+        limit: 返回数量
+
+    Returns:
+        认知记忆列表，每个包含 thinking, emotions, inner_thought 等
+    """
+    core = await get_memory_core()
+    results = await core.retrieve(
+        query="",
+        user_id=user_id,
+        tags=["cognition"],
+        limit=limit,
+    )
+
+    cognition_list = []
+    for item in results:
+        metadata = item.metadata or {}
+        cognition_list.append(
+            {
+                "id": item.id,
+                "timestamp": item.created_at,
+                "thinking": metadata.get("thinking", ""),
+                "emotions": metadata.get("emotions", {}),
+                "inner_thought": metadata.get("inner_thought", ""),
+                "attribution": metadata.get("attribution", ""),
+                "reflection": metadata.get("reflection", ""),
+                "content": item.content,
+            }
+        )
+
+    return cognition_list
+
+
+async def search_cognition(
+    query: str,
+    user_id: str,
+    limit: int = 5,
+) -> List[Dict]:
+    """
+    搜索认知记忆 - 按关键词搜索思考过程和情绪记录
+
+    Args:
+        query: 搜索关键词
+        user_id: 用户ID
+        limit: 返回数量
+
+    Returns:
+        认知记忆列表
+    """
+    core = await get_memory_core()
+    results = await core.retrieve(
+        query=query,
+        user_id=user_id,
+        tags=["cognition"],
+        limit=limit,
+    )
+
+    cognition_list = []
+    for item in results:
+        metadata = item.metadata or {}
+        cognition_list.append(
+            {
+                "id": item.id,
+                "timestamp": item.created_at,
+                "thinking": metadata.get("thinking", ""),
+                "emotions": metadata.get("emotions", {}),
+                "inner_thought": metadata.get("inner_thought", ""),
+                "attribution": metadata.get("attribution", ""),
+                "reflection": metadata.get("reflection", ""),
+                "content": item.content,
+            }
+        )
+
+    return cognition_list
 
 
 # ==================== 检索函数 ====================
@@ -524,4 +715,13 @@ __all__ = [
     "init_unified_memory",
     "get_undefined_memory_adapter",
     "create_memory_adapter",
+    # 认知
+    "store_cognition",
+    "retrieve_cognition",
+    "search_cognition",
+    # 记忆增强器
+    "MemoryEnhancer",
+    "get_memory_enhancer",
+    "EmotionType",
+    "MemoryLink",
 ]

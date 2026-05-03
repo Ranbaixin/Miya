@@ -691,7 +691,7 @@ class DecisionHub:
                     is_at_bot=is_at_bot,
                     reply_to_bot=reply_to_bot,
                 )
-                logger.warning(
+                logger.info(
                     f"[谛听] 记录: group={group_id}({group_name}), user={sender_name}, "
                     f"at_bot={is_at_bot}, reply_bot={reply_to_bot}"
                 )
@@ -719,12 +719,12 @@ class DecisionHub:
                 logger.debug(f"[决策层] 用户侧写更新失败: {e}")
 
         # 【新增】在最开始拦截快捷命令
-        logger.warning(
+        logger.debug(
             f"[决策层] ========== 命令检测 START ========== content={content[:30]}, personality={type(self.personality) if self.personality else None}"
         )
 
         # DEBUG: Check where we are in the code
-        logger.warning("[决策层-DEBUG] 1. 命令检测后，检查位置")
+        logger.debug("[决策层-DEBUG] 1. 命令检测后，检查位置")
 
         # 检查是否是图片消息并返回分析结果
         has_image = perception.get("has_image", False)
@@ -849,25 +849,6 @@ class DecisionHub:
             f"reply_to_bot={reply_to_bot}"
         )
 
-        # 谛听监听：记录所有群消息（不触发大模型）
-        if group_id and group_id != 0:
-            from memory.diteng_listener import get_diting
-
-            diteng = get_diting()
-            sender_name = perception.get("sender_name", "未知")
-            diteng.on_group_message(
-                group_id=str(group_id),
-                group_name=perception.get("group_name", ""),
-                user_id=str(perception.get("user_id", 0)),
-                user_name=sender_name,
-                content=content,
-                is_at_bot=is_at_bot,
-                reply_to_bot=reply_to_bot,
-            )
-            logger.info(
-                f"[谛听] 记录消息: group={group_id}, user={sender_name}, at_bot={is_at_bot}"
-            )
-
         # 群聊关键词列表：叫弥娅名字/亲昵称呼时触发回复 - 从配置获取
         from core.text_loader import get_chatbot_keywords
 
@@ -893,9 +874,7 @@ class DecisionHub:
             )
 
             if matched_keywords:
-                logger.warning(
-                    f"[决策层] 群聊关键词触发回复: 匹配到 {matched_keywords}"
-                )
+                logger.info(f"[决策层] 群聊关键词触发回复: 匹配到 {matched_keywords}")
                 # 关键词触发也标记为活跃对话
                 diteng.on_group_message(
                     group_id=str(group_id),
@@ -907,7 +886,7 @@ class DecisionHub:
                     reply_to_bot=reply_to_bot,
                 )
             elif user_active:
-                logger.warning(
+                logger.info(
                     f"[决策层] 谛听检测到用户仍在活跃对话中，触发回复 (user={user_id_str})"
                 )
 
@@ -1778,9 +1757,14 @@ class DecisionHub:
             ai_client_to_use = self.ai_client  # 默认使用传入的AI客户端
 
             if self.model_pool:
-                from core.model_pool import TaskType
+                from core.model_pool_compat import TaskType
 
-                task_type = await self.model_pool.classify_task(content, context)
+                # classify_task 可能是同步或异步方法
+                classify_result = self.model_pool.classify_task(content, context)
+                if asyncio.iscoroutine(classify_result):
+                    task_type = await classify_result
+                else:
+                    task_type = classify_result
 
                 # 尝试使用协作引擎处理
                 if self.collaboration_engine and self.collaboration_engine.enabled:
@@ -1941,6 +1925,7 @@ class DecisionHub:
                         # 记录协作结果
                         self._last_selected_model = ",".join(collab_result.models_used)
                         self._last_task_type = task_type.value
+                        print(f"[灵魂记忆] ===== 协作引擎流程 =====")
                         logger.info(
                             f"[决策层-协作引擎] 模式={collab_result.mode.value} | "
                             f"模型={collab_result.models_used} | "
@@ -1948,7 +1933,118 @@ class DecisionHub:
                             f"原因={collab_result.reasoning}"
                         )
 
-                        # 协作引擎已直接返回最终响应（情绪已在context中注入）
+                        # 【新增】协作引擎路径也存储情绪记忆（无论soul_result是否有效都存储）
+                        print(f"[灵魂记忆] ===== 开始协作引擎存储 =====")
+                        logger.info(
+                            f"[灵魂记忆] 协作引擎检查: soul_result={bool(soul_result)}, user_id={user_id}"
+                        )
+
+                        # 处理emotions格式 - 支持list或dict
+                        _emotions_raw = (
+                            soul_result.get("emotions", []) if soul_result else []
+                        )
+                        _emotions = {}
+                        if isinstance(_emotions_raw, list):
+                            for item in _emotions_raw:
+                                if isinstance(item, dict) and "name" in item:
+                                    _emotions[item["name"]] = item.get("intensity", 50)
+                        elif isinstance(_emotions_raw, dict):
+                            _emotions = _emotions_raw
+
+                        # 获取分析内容
+                        _analysis = (
+                            soul_result.get("analysis", {}) if soul_result else {}
+                        )
+                        _inner_thought = (
+                            soul_result.get("inner_thought", "")
+                            or _analysis.get("inner_thought", "")
+                            or _analysis.get("reflection", "")
+                        )
+                        _attribution = soul_result.get(
+                            "attribution", ""
+                        ) or _analysis.get("attribution", "")
+                        _reflection = soul_result.get(
+                            "reflection", ""
+                        ) or _analysis.get("reflection", "")
+                        _dominant = (
+                            soul_result.get("dominant_emotion", "未知")
+                            if soul_result
+                            else "未知"
+                        )
+                        _dominant = (
+                            soul_result.get("dominant_emotion", "未知")
+                            if soul_result
+                            else "未知"
+                        )
+
+                        # 获取AI思考过程
+                        _thinking = (
+                            getattr(collab_result, "reasoning_content", "") or ""
+                        )
+
+                        # B方案：存储情绪上下文到短期记忆
+                        from memory import store_auto
+                        import json
+
+                        emotion_memory_content = (
+                            f"【情绪记录】\n"
+                            f"- 主导情绪: {_dominant}\n"
+                            f"- 情绪池: {json.dumps(_emotions, ensure_ascii=False) if _emotions else '无'}\n"
+                            f"- 内心独白: {_inner_thought}\n"
+                            f"- 归因: {_attribution}\n"
+                            f"- 反思: {_reflection}\n"
+                            f"- AI思考过程: {_thinking[:200] if _thinking else '无'}"
+                        )
+                        try:
+                            await store_auto(
+                                emotion_memory_content,
+                                user_id,
+                                tags=["情绪记录", "emotion_context"],
+                                priority=0.5,
+                            )
+                            logger.info(f"[灵魂记忆] 协作引擎已存储")
+                        except Exception as store_err:
+                            logger.warning(f"[灵魂记忆] store_auto失败: {store_err}")
+
+                        # C方案：存入长期记忆，AI自行判断重要性
+                        significant_emotions = [
+                            e for e, i in _emotions.items() if i >= 60
+                        ]
+                        if significant_emotions:
+                            peak_content = f"【情绪记录】与佳互动时感到: {', '.join(significant_emotions)}"
+                            await store_auto(
+                                peak_content,
+                                user_id,
+                                tags=["#emotion_record", "#relation_history"],
+                                priority=0.6,
+                            )
+
+                        # 【新增】协作引擎路径也存储认知记忆（使用之前提取的soul_result数据）
+                        try:
+                            from memory import store_cognition
+
+                            # 获取AI思考过程 - 从协作引擎结果获取
+                            collab_thinking = ""
+                            if (
+                                hasattr(collab_result, "thinking")
+                                and collab_result.thinking
+                            ):
+                                collab_thinking = collab_result.thinking
+                            print(f"[DEBUG协作] thinking: {len(collab_thinking)} chars")
+
+                            # 直接使用之前从soul_result提取的数据
+                            await store_cognition(
+                                thinking=collab_thinking,
+                                emotions=_emotions,
+                                inner_thought=_inner_thought,
+                                attribution=_attribution,
+                                reflection=_reflection,
+                                user_id=str(user_id),
+                            )
+                            print("[DEBUG协作] 协作引擎路径存储完成")
+                        except Exception as cog_err:
+                            logger.warning(f"[认知记忆] 协作路径存储失败: {cog_err}")
+
                         return collab_result.response
 
                     except Exception as e:
@@ -1963,6 +2059,7 @@ class DecisionHub:
                 "group_id": perception.get("group_id"),
                 "is_group": (perception.get("message_type") == "group"),
             }
+            logger.info(f"[灵魂记忆] _soul_generator存在: {bool(self._soul_generator)}")
             if self._soul_generator:
                 try:
                     history = conversation_context if conversation_context else []
@@ -2000,12 +2097,21 @@ class DecisionHub:
                             f"[灵魂] 弥娅情绪: {miya_dominant} | 强度: {miya_intensity} | 情绪池: {miya_emotions}"
                         )
 
-                        # 获取AI生成的内心独白
-                        inner_thought = ""
-                        if _soul_result.get("analysis"):
-                            inner_thought = _soul_result["analysis"].get(
-                                "reflection", ""
-                            )
+                        # 获取AI生成的内心独白和反思（优先从顶层读取）
+                        inner_thought = _soul_result.get("inner_thought", "")
+                        _attr = _soul_result.get("attribution", "")
+                        _refl = _soul_result.get("reflection", "")
+
+                        # 如果顶层没有，从 analysis 读取（兼容旧格式）
+                        if not inner_thought:
+                            if _soul_result.get("analysis"):
+                                inner_thought = _soul_result["analysis"].get(
+                                    "inner_thought", ""
+                                ) or _soul_result["analysis"].get("reflection", "")
+                        if not _attr and _soul_result.get("analysis"):
+                            _attr = _soul_result["analysis"].get("attribution", "")
+                        if not _refl and _soul_result.get("analysis"):
+                            _refl = _soul_result["analysis"].get("reflection", "")
 
                         # 同时注入用户和弥娅的情绪，让AI根据双方情感自然回应
                         ai_emotion_context = (
@@ -2026,8 +2132,48 @@ class DecisionHub:
                 except Exception as e:
                     logger.warning(f"[灵魂] 处理失败: {e}")
 
-            # 调用 AI（注入情绪上下文）
+            # 【增强】检索认知记忆 - 优先从缓存读取，更可靠
+            cognition_context = ""
+            try:
+                # 方案1：优先从内存缓存读取（更快更可靠）
+                from memory.cognition_cache import get_cognition_cache
+
+                cache = get_cognition_cache()
+                cache_context = await cache.get_context_for_ai(user_id, limit=2)
+
+                if cache_context:
+                    cognition_context = "\n" + cache_context
+                    logger.info("[认知缓存] 从内存缓存读取成功")
+                else:
+                    # 方案2：回退到数据库检索
+                    from memory import retrieve_cognition
+
+                    recent_cognitions = await retrieve_cognition(user_id, limit=3)
+                    if recent_cognitions:
+                        cognition_parts = []
+                        for cog in recent_cognitions:
+                            if cog.get("thinking"):
+                                cognition_parts.append(
+                                    f"- 思考: {cog['thinking'][:150]}"
+                                )
+                            if cog.get("inner_thought"):
+                                cognition_parts.append(
+                                    f"- 想法: {cog['inner_thought'][:80]}"
+                                )
+                        if cognition_parts:
+                            cognition_context = "\n【近期思维参考】\n" + "\n".join(
+                                cognition_parts[:3]
+                            )
+                            logger.info(
+                                f"[认知记忆] 从数据库检索 {len(recent_cognitions)} 条思维记录"
+                            )
+            except Exception as cog_err:
+                logger.warning(f"[认知记忆] 检索失败: {cog_err}")
+
+            # 调用 AI（注入情绪上下文 + 认知记忆）
             user_msg = prompt_info["user"]
+            if cognition_context:
+                user_msg = user_msg + cognition_context
             if ai_emotion_context:
                 user_msg = user_msg + ai_emotion_context
             response = await ai_client_to_use.chat_with_system_prompt(
@@ -2036,6 +2182,209 @@ class DecisionHub:
                 tools=tools_schema if tools_schema else None,
                 tool_choice=tool_choice,
             )
+
+            # 【新增】存储情绪记忆 - 无论_soul_result是否有效都存储
+            print(f"[灵魂记忆] ===== 开始存储流程 =====")
+            logger.info(
+                f"[灵魂记忆] 检查存储: _soul_result={bool(_soul_result)}, user_id={user_id}"
+            )
+
+            # 如果_soul_result为空，尝试从AI响应中提取情绪信息
+            if not _soul_result:
+                logger.warning("[灵魂记忆] _soul_result为空，跳过存储")
+            else:
+                # 处理emotions格式 - 支持list或dict
+                _emotions_raw = _soul_result.get("emotions", []) if _soul_result else []
+                _emotions = {}
+                if isinstance(_emotions_raw, list):
+                    for item in _emotions_raw:
+                        if isinstance(item, dict) and "name" in item:
+                            _emotions[item["name"]] = item.get("intensity", 50)
+                elif isinstance(_emotions_raw, dict):
+                    _emotions = _emotions_raw
+
+                # 获取分析内容
+                _analysis = _soul_result.get("analysis", {}) if _soul_result else {}
+                _inner_thought = (
+                    _soul_result.get("inner_thought", "")
+                    or _analysis.get("inner_thought", "")
+                    or _analysis.get("reflection", "")
+                    or _analysis.get("reflection", "")
+                )
+                _attribution = _soul_result.get("attribution", "") or _analysis.get(
+                    "attribution", ""
+                )
+                _reflection = _soul_result.get("reflection", "") or _analysis.get(
+                    "reflection", ""
+                )
+                _dominant = (
+                    _soul_result.get("dominant_emotion", "未知")
+                    if _soul_result
+                    else "未知"
+                )
+
+                # 记录提取到的数据
+                logger.info(
+                    f"[灵魂记忆] 提取到: emotions={_emotions}, inner_thought={_inner_thought[:30]}, attribution={_attribution[:20]}"
+                )
+
+            # 获取AI思考过程
+            thinking_content = ""
+            if ai_client_to_use and hasattr(ai_client_to_use, "last_reasoning_content"):
+                thinking_content = ai_client_to_use.last_reasoning_content or ""
+
+            # B方案：存储情绪上下文到短期记忆（带 #emotion_context tag）
+            from memory import store_auto
+            import json
+
+            emotion_memory_content = (
+                f"【情绪记录】\n"
+                f"- 主导情绪: {_dominant}\n"
+                f"- 情绪池: {json.dumps(_emotions, ensure_ascii=False) if _emotions else '无'}\n"
+                f"- 内心独白: {_inner_thought}\n"
+                f"- 归因: {_attribution}\n"
+                f"- 反思: {_reflection}\n"
+                f"- AI思考过程: {thinking_content[:200] if thinking_content else '无'}"
+            )
+
+            # 使用 store_auto 存储，tag 使用不带#的格式（避免embedding问题）
+            try:
+                await store_auto(
+                    emotion_memory_content,
+                    user_id,
+                    tags=["情绪记录", "emotion_context"],
+                    priority=0.5,
+                )
+                logger.info(f"[灵魂记忆] 已存储情绪上下文")
+            except Exception as store_err:
+                # 如果存储失败，尝试用更简单的方式
+                logger.warning(f"[灵魂记忆] store_auto失败: {store_err}")
+
+            # C方案：存入长期记忆，让AI自己判断重要性
+            # 检测是否有显著的正面情绪（强度>=60）
+            significant_emotions = [e for e, i in _emotions.items() if i >= 60]
+            if significant_emotions:
+                peak_content = (
+                    f"【情绪记录】与佳互动时感到: {', '.join(significant_emotions)}"
+                )
+                try:
+                    await store_auto(
+                        peak_content,
+                        user_id,
+                        tags=["情绪记录", "relation_history"],
+                        priority=0.6,
+                    )
+                    logger.info(f"[灵魂记忆] 已存储情绪: {significant_emotions}")
+                except Exception as store_err2:
+                    logger.warning(f"[灵魂记忆] 情绪峰值存储失败: {store_err2}")
+
+            # 【增强】存储认知记忆 - 思考过程、情绪分析、内心独白 + 缓存
+            print("[DEBUG认知] 开始存储流程...")
+            try:
+                from memory import store_cognition
+                from memory.cognition_cache import CognitionRecord, get_cognition_cache
+                import uuid
+
+                # 获取灵魂发生器的思考（情绪分析过程）
+                soul_reasoning = ""
+                _emotions = {}
+                _inner_thought = ""
+                _attribution = ""
+                _reflection = ""
+
+                print(f"[DEBUG认知] _soul_result存在: {_soul_result is not None}")
+                if _soul_result:
+                    print(f"[DEBUG] _soul_result keys: {_soul_result.keys()}")
+
+                    # 打印soul_result的顶层内容
+                    print(
+                        f"[DEBUG] 顶层inner_thought: {_soul_result.get('inner_thought', 'EMPTY')[:30] if _soul_result.get('inner_thought') else 'EMPTY'}"
+                    )
+                    print(
+                        f"[DEBUG] 顶层attribution: {_soul_result.get('attribution', 'EMPTY')[:20] if _soul_result.get('attribution') else 'EMPTY'}"
+                    )
+                    print(
+                        f"[DEBUG] 顶层reflection: {_soul_result.get('reflection', 'EMPTY')[:20] if _soul_result.get('reflection') else 'EMPTY'}"
+                    )
+
+                    soul_reasoning = _soul_result.get("reasoning", "")
+                    print(
+                        f"[DEBUG] soul_reasoning: {soul_reasoning[:50] if soul_reasoning else 'empty'}"
+                    )
+                    # 处理emotions格式
+                    _emotions_raw = _soul_result.get("emotions", [])
+                    if isinstance(_emotions_raw, list):
+                        for item in _emotions_raw:
+                            if isinstance(item, dict) and "name" in item:
+                                _emotions[item["name"]] = item.get("intensity", 50)
+                    elif isinstance(_emotions_raw, dict):
+                        _emotions = _emotions_raw
+                    # 获取分析内容 - 优先从顶层获取
+                    _analysis = _soul_result.get("analysis", {})
+                    _inner_thought = _soul_result.get(
+                        "inner_thought", ""
+                    ) or _analysis.get("inner_thought", "")
+                    _attribution = _soul_result.get("attribution", "") or _analysis.get(
+                        "attribution", ""
+                    )
+                    _reflection = _soul_result.get("reflection", "") or _analysis.get(
+                        "reflection", ""
+                    )
+
+                # 获取AI客户端的思考（回复生成过程）
+                ai_reasoning = ""
+                if ai_client_to_use and hasattr(
+                    ai_client_to_use, "last_reasoning_content"
+                ):
+                    ai_reasoning = ai_client_to_use.last_reasoning_content or ""
+
+                # 合并两个思考过程
+                thinking_content = ""
+                if soul_reasoning and ai_reasoning:
+                    thinking_content = f"[情绪分析] {soul_reasoning[:300]}\n\n[回复生成] {ai_reasoning[:500]}"
+                elif soul_reasoning:
+                    thinking_content = soul_reasoning[:500]
+                elif ai_reasoning:
+                    thinking_content = ai_reasoning[:500]
+
+                # 如果没有数据，至少记录回复内容
+                if not thinking_content and response:
+                    thinking_content = f"[回复内容片段] {response[:200]}"
+
+                print(
+                    f"[DEBUG认知] soul_reasoning={bool(soul_reasoning)}, ai_reasoning={bool(ai_reasoning)}, _emotions={_emotions}, thinking_content长度={len(thinking_content)}"
+                )
+
+                # 存储到持久化存储
+                memory_id = await store_cognition(
+                    thinking=thinking_content,
+                    emotions=_emotions,
+                    inner_thought=_inner_thought,
+                    attribution=_attribution,
+                    reflection=_reflection,
+                    user_id=user_id,
+                )
+                print(
+                    f"[DEBUG认知] ✅ 已存储 | 内心: {_inner_thought[:30]}... | 情绪: {_emotions} | 归因: {_attribution[:20]}..."
+                )
+
+                # 【新增】同时添加到内存缓存区
+                cache = get_cognition_cache()
+                cache_record = CognitionRecord(
+                    id=memory_id or str(uuid.uuid4())[:8],
+                    timestamp=datetime.now().timestamp(),
+                    user_id=user_id,
+                    thinking=thinking_content,
+                    emotions=_emotions,
+                    inner_thought=_inner_thought,
+                    attribution=_attribution,
+                    reflection=_reflection,
+                    message_preview=content[:50] if content else "",
+                )
+                await cache.add(cache_record)
+                logger.info("[认知缓存] 已添加到内存缓存区")
+            except Exception as cog_err:
+                logger.error(f"[认知记忆] 存储失败: {cog_err}", exc_info=True)
 
             # 【灵魂发生器】将情感注入到回复中 (已移除，使用Prompt引导)
 
