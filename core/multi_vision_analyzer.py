@@ -159,10 +159,10 @@ class MultiVisionAnalyzer:
             defaults = _get_vision_model_defaults()
 
             # 获取模型池
-            from core.model_pool import get_model_pool, ModelType
+            from core.model_pool_manager import get_model_pool
 
             model_pool = get_model_pool()
-            pool_vision_models = model_pool.get_models_by_type(ModelType.VISION)
+            pool_vision_models = model_pool.get_models_by_type("vision")
 
             self.models = {}
             available_models = []
@@ -236,7 +236,18 @@ class MultiVisionAnalyzer:
                     continue
                 if model_id in self.models:
                     continue  # 已经从配置添加
-                if not model_config.api_key or not model_config.base_url:
+                if not model_config.base_url:
+                    logger.warning(f"[MultiVisionAnalyzer] {model_id} 无base_url，跳过")
+                    continue
+                # Model 类没有 api_key 字段，需要从 env_key 获取
+                model_api_key = ""
+                if hasattr(model_config, "api_key"):
+                    model_api_key = model_config.api_key or ""
+                elif hasattr(model_config, "env_key") and model_config.env_key:
+                    import os
+
+                    model_api_key = os.getenv(model_config.env_key, "")
+                if not model_api_key:
                     logger.warning(f"[MultiVisionAnalyzer] {model_id} 无API密钥，跳过")
                     continue
 
@@ -246,7 +257,7 @@ class MultiVisionAnalyzer:
                     "openai": "openai",
                 }
                 provider = provider_map.get(
-                    model_config.provider.value, model_config.provider.value
+                    model_config.provider, str(model_config.provider)
                 )
 
                 model_name = model_config.name.lower()
@@ -262,7 +273,7 @@ class MultiVisionAnalyzer:
                     model_type=v_model_type,
                     provider=provider,
                     api_base=model_config.base_url,
-                    api_key=model_config.api_key if model_config.api_key else "",
+                    api_key=model_api_key,
                     api_key_env="",
                     enabled=defaults.get("enabled", True),
                     cost_per_call=defaults.get("cost_per_call", 0.0),

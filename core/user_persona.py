@@ -255,6 +255,15 @@ class UserPersonaManager:
         # 【新增】学习行为模式
         self._learn_behavior_pattern(persona, message)
 
+        # 更新群聊侧写
+        if group_id:
+            group_persona = self.get_or_create_group_persona(group_id, group_name or "")
+            group_persona.message_count += 1
+            group_persona.last_interaction = now
+            if user_id not in group_persona.active_members:
+                group_persona.active_members.append(user_id)
+            self._save_group_persona(group_id)
+
         # 保存
         self._save_user_persona(user_key)
 
@@ -290,15 +299,6 @@ class UserPersonaManager:
             or any(w in message for w in ["怎么", "为什么", "如何", "是不是", "能不能"])
         ):
             persona.question_frequency += 1
-
-        # 更新群聊侧写
-        if group_id:
-            group_persona = self.get_or_create_group_persona(group_id, group_name or "")
-            group_persona.message_count += 1
-            group_persona.last_interaction = now
-            if user_id not in group_persona.active_members:
-                group_persona.active_members.append(user_id)
-            self._save_group_persona(group_id)
 
     def _extract_info_from_message(self, persona: UserPersona, message: str):
         """从消息中提取信息"""

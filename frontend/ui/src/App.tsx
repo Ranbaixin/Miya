@@ -10,6 +10,21 @@ import MemoryPage from './pages/MemoryPage';
 import ToolsPage from './pages/ToolsPage';
 import SettingsPage from './pages/SettingsPage';
 import CognitivePage from './pages/CognitivePage';
+import PlatformPage from './pages/PlatformPage';
+import PluginMarketPage from './pages/PluginMarketPage';
+import PluginManagerPage from './pages/PluginManagerPage';
+import MCPServerPage from './pages/MCPServerPage';
+import ChatPage from './pages/ChatPage';
+import SoulPage from './pages/SoulPage';
+import PersonalityVectorPage from './pages/PersonalityVectorPage';
+import KnowledgeBasePage from './pages/KnowledgeBasePage';
+import VoicePage from './pages/VoicePage';
+import AutonomyPage from './pages/AutonomyPage';
+import LogsPage from './pages/LogsPage';
+import GroupsPage from './pages/GroupsPage';
+import FriendsPage from './pages/FriendsPage';
+import MessagesPage from './pages/MessagesPage';
+import UnifiedMessagesPage from './pages/UnifiedMessagesPage';
 
 const pageTitles: Record<string, string> = {
   dashboard: '仪表盘',
@@ -19,6 +34,21 @@ const pageTitles: Record<string, string> = {
   memory: '记忆',
   cognitive: '认知',
   tools: '工具',
+  platform: '平台',
+  plugin_market: '插件市场',
+  plugin_manager: '插件管理',
+  mcp_server: 'MCP服务',
+  chat: '对话',
+  soul: '灵魂',
+  personality: '人格',
+  knowledge: '知识库',
+  voice: '语音',
+  autonomy: '自主',
+  logs: '日志',
+  groups: '群组',
+  friends: '好友',
+  messages: '消息',
+  unified_messages: '消息流',
   settings: '设置',
 };
 
@@ -78,6 +108,36 @@ function App() {
         return <CognitivePage />;
       case 'tools':
         return <ToolsPage />;
+      case 'platform':
+        return <PlatformPage />;
+      case 'plugin_market':
+        return <PluginMarketPage />;
+      case 'plugin_manager':
+        return <PluginManagerPage />;
+      case 'mcp_server':
+        return <MCPServerPage />;
+      case 'chat':
+        return <ChatPage />;
+      case 'soul':
+        return <SoulPage />;
+      case 'personality':
+        return <PersonalityVectorPage />;
+      case 'knowledge':
+        return <KnowledgeBasePage />;
+      case 'voice':
+        return <VoicePage />;
+      case 'autonomy':
+        return <AutonomyPage />;
+      case 'logs':
+        return <LogsPage />;
+      case 'groups':
+        return <GroupsPage />;
+      case 'friends':
+        return <FriendsPage />;
+      case 'messages':
+        return <MessagesPage />;
+      case 'unified_messages':
+        return <UnifiedMessagesPage />;
       case 'settings':
         return <SettingsPage backgrounds={backgrounds} currentBg={bgId} onBgChange={setBgId} />;
       default:

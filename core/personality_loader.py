@@ -463,5 +463,11 @@ def get_personality_loader(
     """获取全局人格加载器实例"""
     global _loader
     if _loader is None:
-        _loader = PersonalityLoader(config_dir)
+        import os
+        from pathlib import Path
+
+        base_dir = Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        full_config_dir = base_dir / config_dir
+
+        _loader = PersonalityLoader(str(full_config_dir))
     return _loader

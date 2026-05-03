@@ -269,30 +269,55 @@ class ToolAdapter:
                 # 处理不同工具的execute方法签名
                 import inspect
 
+                result = None
+
                 try:
                     sig = inspect.signature(tool.execute)
                     params = list(sig.parameters.keys())
 
+                    # 新版工具签名: execute(self, args: Dict, context: ToolContext)
                     if (
                         len(params) == 3
                         and params[0] == "self"
                         and params[1] == "args"
                         and params[2] == "context"
                     ):
-                        # 新版工具签名: execute(self, args: Dict, context: ToolContext)
                         result = await tool.execute(args, tool_context)
-                    else:
-                        # 旧版或其他签名: execute(self, context, **kwargs) 或类似
+                    # 无self的新版签名: execute(args: Dict, context: ToolContext)
+                    elif (
+                        len(params) == 2
+                        and params[0] == "args"
+                        and params[1] == "context"
+                    ):
+                        result = await tool.execute(args, tool_context)
+                    # 有self的旧版签名: execute(self, context, **kwargs)
+                    elif (
+                        len(params) >= 2
+                        and params[0] == "self"
+                        and params[1] in ("context", "kwargs", "tool_context")
+                    ):
                         result = await tool.execute(tool_context, **args)
+                    # 无self的旧版签名: execute(context, **kwargs)
+                    elif len(params) >= 1 and params[0] in (
+                        "context",
+                        "kwargs",
+                        "tool_context",
+                    ):
+                        result = await tool.execute(tool_context, **args)
+                    else:
+                        # 兜底：尝试新版签名
+                        result = await tool.execute(args, tool_context)
+
                 except Exception as e:
                     # 如果检测失败，尝试两种常见签名
                     try:
                         result = await tool.execute(args, tool_context)
-                    except TypeError as e:
-                        if "got an unexpected keyword argument" in str(e):
+                    except TypeError:
+                        try:
                             result = await tool.execute(tool_context, **args)
-                        else:
-                            raise
+                        except Exception as e2:
+                            logger.warning(f"工具签名适配失败: {e2}, 尝试直接调用")
+                            result = await tool.execute(args, tool_context)
 
                 logger.info(f"工具执行完成: {tool_name}")
 

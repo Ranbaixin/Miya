@@ -254,6 +254,21 @@ body {
   background: linear-gradient(180deg, var(--primary) 30%, var(--secondary) 100%);
 }
 
+/* 窄滚动条 */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: rgba(0, 20,40,0.2);
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--primary-dim);
+  border-radius: 2px;
+}
+
 /* 数据流动画 */
 .data-flow {
   background: linear-gradient(

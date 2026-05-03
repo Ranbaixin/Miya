@@ -26,12 +26,12 @@ def test_model_pool_loading():
     logger.info("测试模型池加载...")
     
     try:
-        from core.model_pool import get_model_pool
+        from core.model_pool_manager import get_model_pool
         
         pool = get_model_pool()
         
         # 检查模型数量
-        all_models = pool.list_all_models()
+        all_models = pool.get_all()
         if not all_models:
             logger.error("模型池为空")
             return False
@@ -39,10 +39,10 @@ def test_model_pool_loading():
         logger.info(f"模型池加载成功，共 {len(all_models)} 个模型")
         
         # 列出模型类型
-        from core.model_pool import ModelType
-        text_models = pool.get_models_by_type(ModelType.TEXT)
-        ocr_models = pool.get_models_by_type(ModelType.OCR)
-        vision_models = pool.get_models_by_type(ModelType.VISION)
+        from core.model_pool_manager import ModelType
+        text_models = pool.get_models_by_type(str(ModelType.TEXT)
+        ocr_models = pool.get_models_by_type(str(ModelType.OCR)
+        vision_models = pool.get_models_by_type(str(ModelType.VISION)
         
         logger.info(f"文本模型: {len(text_models)} 个")
         logger.info(f"OCR模型: {len(ocr_models)} 个")
@@ -66,7 +66,7 @@ def test_model_selection():
     logger.info("测试模型选择...")
     
     try:
-        from core.model_pool import select_model_for_task
+        from core.model_pool_manager import select_model_for_task
         
         # 测试不同任务的模型选择
         test_tasks = [
@@ -187,7 +187,7 @@ def test_endpoint_configuration():
     logger.info("测试端配置...")
     
     try:
-        from core.model_pool import get_model_pool
+        from core.model_pool_manager import get_model_pool
         
         pool = get_model_pool()
         
@@ -233,7 +233,7 @@ def test_config_chain():
             logger.warning(f"缺失环境变量: {missing_env_vars}")
         
         # 2. 测试模型池配置链
-        from core.model_pool import get_model_pool
+        from core.model_pool_manager import get_model_pool
         pool = get_model_pool()
         
         # 3. 测试QQ集成

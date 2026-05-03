@@ -6,17 +6,17 @@ const API_KEY = 'changeme';
 
 async function findAvailableApiPort(): Promise<string> {
   if (cachedApiBase) return cachedApiBase;
-  
+
   for (const port of API_PORTS) {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 1000);
-      
+
       const res = await fetch(`http://localhost:${port}/api/health`, {
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
-      
+
       if (res.ok) {
         cachedApiBase = `http://localhost:${port}`;
         console.log(`[MiyaAPI] 找到可用 API 端口: ${port}`);
@@ -144,6 +144,106 @@ export interface CognitiveEvent {
   metadata: Record<string, any>;
 }
 
+// ============================================================
+// 平台相关类型
+// ============================================================
+
+export interface PlatformInfo {
+  platform_id: string;
+  name: string;
+  enabled: boolean;
+  status: 'connected' | 'disconnected' | 'error' | 'unknown';
+  config: Record<string, any>;
+  description?: string;
+  icon?: string;
+}
+
+export interface PlatformStats {
+  total: number;
+  enabled_count: number;
+  connected_count: number;
+  platforms: PlatformInfo[];
+}
+
+export interface PlatformMetadata {
+  platform_id: string;
+  name: string;
+  description: string;
+  config_fields: ConfigField[];
+  tutorial_url?: string;
+  icon?: string;
+}
+
+export interface ConfigField {
+  field: string;
+  label: string;
+  type: 'string' | 'number' | 'boolean' | 'password' | 'select';
+  required: boolean;
+  options?: { value: string; label: string }[];
+  placeholder?: string;
+  description?: string;
+}
+
+// ============================================================
+// 插件/MCP 相关类型
+// ============================================================
+
+export interface PluginInfo {
+  name: string;
+  description: string;
+  author: string;
+  version: string;
+  enabled: boolean;
+  category?: string;
+  icon_url?: string;
+  download_url?: string;
+  installed_at?: string;
+  config?: Record<string, any>;
+}
+
+export interface MCPServerInfo {
+  name: string;
+  enabled: boolean;
+  status: 'running' | 'stopped' | 'error';
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  tools?: string[];
+}
+
+export interface MCPListResponse {
+  mcpServers: Record<string, MCPServerConfig>;
+}
+
+export interface MCPServerConfig {
+  command: string;
+  args?: string[];
+  env?: Record<string, string>;
+  disabled?: boolean;
+}
+
+// ============================================================
+// 知识库相关类�?// ============================================================
+
+export interface KnowledgeBaseInfo {
+  id: string;
+  name: string;
+  description: string;
+  document_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface KnowledgeBaseDoc {
+  id: string;
+  title: string;
+  content_preview: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================================
+
 class MiyaAPI {
   private baseUrl: string;
   private listeners: Map<string, Set<Function>> = new Map();
@@ -188,12 +288,16 @@ class MiyaAPI {
     }
   }
 
+  // ============================================================
+  // 运行�?API
+  // ============================================================
+
   async getRuntimeMeta(): Promise<RuntimeMeta | null> {
-    return this._request<RuntimeMeta>('/api/v1/management/runtime/meta');
+    return this._request<RuntimeMeta>('/api/status');
   }
 
   async getSystemInfo(): Promise<SystemInfo | null> {
-    return this._request<SystemInfo>('/api/v1/management/system');
+    return this._request<SystemInfo>('/api/status');
   }
 
   async getRuntimeChatHistory(params?: { limit?: number; before?: string }) {
@@ -211,19 +315,23 @@ class MiyaAPI {
     });
   }
 
+  async getChatSessions(): Promise<{ success: boolean; data: any[] } | null> {
+    return this._request('/api/chat/sessions');
+  }
+
   async getTools(): Promise<{ tools: ToolDefinition[] } | null> {
-    return this._request('/api/v1/management/runtime/tools');
+    // 后端 API 不存在，返回空
+    return { tools: [] };
   }
 
   async invokeTool(toolName: string, args: Record<string, any> = {}) {
-    return this._request('/api/v1/management/runtime/tools/invoke', {
-      method: 'POST',
-      body: JSON.stringify({
-        tool_name: toolName,
-        parameters: args,
-      }),
-    });
+    // 后端 API 不存在
+    return { success: false, error: 'API not available' };
   }
+
+  // ============================================================
+  // 记忆 API
+  // ============================================================
 
   async getMemory(params?: { limit?: number; offset?: number; query?: string }) {
     const query = new URLSearchParams();
@@ -231,7 +339,7 @@ class MiyaAPI {
     if (params?.offset) query.set('offset', String(params.offset));
     if (params?.query) query.set('query', params.query);
     const queryStr = query.toString() ? `?${query.toString()}` : '';
-    return this._request(`/api/v1/memory${queryStr}`);
+    return this._request(`/api/memory/list${queryStr}`);
   }
 
   async addMemory(fact: string) {
@@ -254,16 +362,16 @@ class MiyaAPI {
     return this._request(`/api/v1/memes/${uid}`);
   }
 
+  // ============================================================
+  // 认知 API
+  // ============================================================
+
   async getCognitiveProfiles(params?: { entity_type?: string; limit?: number }) {
-    const query = new URLSearchParams();
-    if (params?.entity_type) query.set('entity_type', params.entity_type);
-    if (params?.limit) query.set('limit', String(params.limit));
-    const queryStr = query.toString() ? `?${query.toString()}` : '';
-    return this._request(`/api/v1/management/runtime/cognitive/profiles${queryStr}`);
+    return { profiles: [] };
   }
 
   async getCognitiveProfile(entityType: string, entityId: string) {
-    return this._request(`/api/v1/management/runtime/cognitive/profile/${entityType}/${entityId}`);
+    return null;
   }
 
   async getCognitiveEvents(params?: {
@@ -285,6 +393,254 @@ class MiyaAPI {
     return this._request(`/api/v1/management/runtime/cognitive/events${queryStr}`);
   }
 
+  // ============================================================
+  // 平台 API �?  // ============================================================
+
+  async getPlatformList(): Promise<PlatformStats | null> {
+    const res = await this._request<any>('/api/platform/stats');
+    if (!res) return null;
+    const mapped = (res.platforms || []).map((p: any) => ({
+      platform_id: p.id,
+      name: p.name,
+      enabled: p.enable,
+      status: p.status === 'running' ? 'connected' : p.status === 'stopped' ? 'disconnected' : 'unknown',
+      config: {},
+    }));
+    return {
+      total: res.total || 0,
+      enabled_count: mapped.filter((p: PlatformInfo) => p.enabled)?.length || 0,
+      connected_count: mapped.filter((p: PlatformInfo) => p.status === 'connected')?.length || 0,
+      platforms: mapped,
+    };
+  }
+
+  async getPlatformStats(): Promise<PlatformStats | null> {
+    return this.getPlatformList();
+  }
+
+  async getPlatformConfig(): Promise<{ config: any; metadata: any } | null> {
+    return this._request('/api/platform/config');
+  }
+
+  async updatePlatformConfig(platformId: string, config: Record<string, any>) {
+    return this._request(`/api/platform/config`, {
+      method: 'POST',
+      body: JSON.stringify({
+        platform_id: platformId,
+        config,
+      }),
+    });
+  }
+
+  async connectPlatform(platformId: string) {
+    return this._request(`/api/platform/connect`, {
+      method: 'POST',
+      body: JSON.stringify({ platform_id: platformId }),
+    });
+  }
+
+  async disconnectPlatform(platformId: string) {
+    return this._request(`/api/platform/disconnect`, {
+      method: 'POST',
+      body: JSON.stringify({ platform_id: platformId }),
+    });
+  }
+
+  // ============================================================
+  // 插件市场 API �?  // ============================================================
+
+  async getPluginMarketList(): Promise<{ total: number; data: PluginInfo[] } | null> {
+    const res = await this._request<any>('/api/plugin/market_list');
+    if (!res) return null;
+    return {
+      total: res.total || 0,
+      data: res.data || [],
+    };
+  }
+
+  async searchPluginMarket(query: string): Promise<{ total: number; data: PluginInfo[] } | null> {
+    const res = await this._request<any>(`/api/plugin/market_list?query=${encodeURIComponent(query)}`);
+    if (!res) return null;
+    return {
+      total: res.total || 0,
+      data: res.data || [],
+    };
+  }
+
+  // ============================================================
+  // 插件管理 API �?  // ============================================================
+
+  async getInstalledPlugins(): Promise<{ total: number; data: PluginInfo[] } | null> {
+    const res = await this._request<any>('/api/plugin/get');
+    if (!res) return null;
+    return {
+      total: res.total || 0,
+      data: res.data || [],
+    };
+  }
+
+  async installPlugin(name: string): Promise<{ success: boolean; message: string } | null> {
+    return this._request('/api/plugin/install', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  async uninstallPlugin(name: string): Promise<{ success: boolean; message: string } | null> {
+    return this._request('/api/plugin/uninstall', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  async enablePlugin(name: string): Promise<{ success: boolean; message: string } | null> {
+    return this._request('/api/plugin/on', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  async disablePlugin(name: string): Promise<{ success: boolean; message: string } | null> {
+    return this._request('/api/plugin/off', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  async reloadPlugins(): Promise<{ success: boolean; message: string } | null> {
+    return this._request('/api/plugin/reload', {
+      method: 'POST',
+    });
+  }
+
+  // ============================================================
+  // MCP 服务 API 
+  // ============================================================
+
+  async getMCPServers(): Promise<MCPListResponse | null> {
+    const res = await this._request<any>('/api/mcp/list');
+    if (!res) return null;
+    return res;
+  }
+
+  async getMCPServerList(): Promise<{ servers: MCPServerInfo[] } | null> {
+    const res = await this._request<any>('/api/tools/mcp/servers');
+    if (!res) return null;
+    return res;
+  }
+
+  // ============================================================
+  // 语音 API 
+  // ============================================================
+
+  async getVoiceConfig(): Promise<any | null> {
+    return this._request('/api/voice/config');
+  }
+
+  async saveVoiceConfig(config: Record<string, any>): Promise<{ success: boolean } | null> {
+    return this._request('/api/voice/config', {
+      method: 'POST',
+      body: JSON.stringify(config),
+    });
+  }
+
+  async testVoice(): Promise<{ success: boolean; audio_url?: string } | null> {
+    return this._request('/api/voice/test', {
+      method: 'POST',
+    });
+  }
+
+  // ============================================================
+  // 自主决策 API 
+  // ============================================================
+
+  async getAutonomySettings(): Promise<any | null> {
+    return this._request('/api/autonomy/settings');
+  }
+
+  async saveAutonomySettings(settings: Record<string, any>): Promise<{ success: boolean } | null> {
+    return this._request('/api/autonomy/settings', {
+      method: 'POST',
+      body: JSON.stringify(settings),
+    });
+  }
+
+  async getAutonomyLogs(): Promise<any | null> {
+    return this._request('/api/autonomy/logs');
+  }
+
+  async getAutonomyStats(): Promise<any | null> {
+    return this._request('/api/autonomy/stats');
+  }
+
+  // ============================================================
+  // 知识 API
+  // ============================================================
+
+  async getKnowledgeBases(): Promise<KnowledgeBaseInfo[] | null> {
+    const res = await this._request<any>('/api/knowledge_base/list');
+    if (!res) return null;
+    return res.data || [];
+  }
+
+  async createKnowledgeBase(name: string, description?: string): Promise<KnowledgeBaseInfo | null> {
+    return this._request('/api/knowledge_base/create', {
+      method: 'POST',
+      body: JSON.stringify({ name, description }),
+    });
+  }
+
+  async queryKnowledgeBase(kbId: string, query: string): Promise<any | null> {
+    return this._request(`/api/knowledge_base/query`, {
+      method: 'POST',
+      body: JSON.stringify({ kb_id: kbId, query }),
+    });
+  }
+
+  // ============================================================
+  // 灵魂/情绪 API
+  // ============================================================
+
+  async getSoulState(): Promise<EmotionState | null> {
+    return this._request<EmotionState>('/api/emotion');
+  }
+
+  async getEmotionPool(): Promise<any | null> {
+    return this._request('/api/emotion');
+  }
+
+  async getEmotionHistory(params?: { limit?: number; time_from?: string; time_to?: string }) {
+    const query = new URLSearchParams();
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.time_from) query.set('time_from', params.time_from);
+    if (params?.time_to) query.set('time_to', params.time_to);
+    const queryStr = query.toString() ? `?${query.toString()}` : '';
+    return this._request(`/api/emotion/history${queryStr}`);
+  }
+
+  // ============================================================
+  // 人格向量 API
+  // ============================================================
+
+  async getPersonalityVectors(): Promise<VectorData[] | null> {
+    return this._request<VectorData[]>('/api/v1/personality/vectors');
+  }
+
+  async getPersonalityForms(): Promise<string[] | null> {
+    return this._request<string[]>('/api/v1/personality/forms');
+  }
+
+  async setPersonalityForm(form: string): Promise<{ success: boolean } | null> {
+    return this._request('/api/v1/personality/forms', {
+      method: 'POST',
+      body: JSON.stringify({ form }),
+    });
+  }
+
+  // ============================================================
+  // 事件订阅
+  // ============================================================
+
   subscribe(event: string, callback: Function) {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
@@ -302,6 +658,10 @@ class MiyaAPI {
 
 export const miyaAPI = new MiyaAPI();
 
+// ============================================================
+// React Hooks
+// ============================================================
+
 export function useMiyaStatus() {
   const [meta, setMeta] = useState<RuntimeMeta | null>(null);
   const [connected, setConnected] = useState(false);
@@ -316,7 +676,7 @@ export function useMiyaStatus() {
         setMeta(m);
         setError(null);
       } else {
-        setError('无法连接到后端 API');
+        setError('无法连接到后�?API');
       }
     };
     fetch();
@@ -369,8 +729,11 @@ export function useMiyaTools() {
 export function useMiyaMemory() {
   const [memories, setMemories] = useState<MemoryItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [stats, setStats] = useState<{total: number, important: number, emotion: number, conversation: number}>({
-    total: 0, important: 0, emotion: 0, conversation: 0
+  const [stats, setStats] = useState<{ total: number; important: number; emotion: number; conversation: number }>({
+    total: 0,
+    important: 0,
+    emotion: 0,
+    conversation: 0,
   });
 
   const refresh = useCallback(async (limit: number = 50, query?: string) => {
@@ -438,28 +801,28 @@ export function useMiyaChat() {
   const send = useCallback(async (content: string) => {
     setSending(true);
     const now = new Date();
-    const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     const userMsg: ChatMessage = {
       id: `msg_${Date.now()}`,
       content,
-      sender: '佳',
+      sender: 'user',
       time: timeStr,
-      type: 'user'
+      type: 'user',
     };
-    setMessages(prev => [...prev, userMsg]);
+    setMessages((prev) => [...prev, userMsg]);
 
     try {
       const resp = await miyaAPI.sendChat(content);
       const respTime = new Date();
-      const respTimeStr = `${respTime.getHours().toString().padStart(2,'0')}:${respTime.getMinutes().toString().padStart(2,'0')}`;
+      const respTimeStr = `${respTime.getHours().toString().padStart(2, '0')}:${respTime.getMinutes().toString().padStart(2, '0')}`;
       const miyaMsg: ChatMessage = {
         id: `msg_${Date.now()}_miya`,
-        content: resp.response || resp.content || String(resp),
+        content: resp?.response || resp?.content || String(resp),
         sender: '弥娅',
         time: respTimeStr,
-        type: 'miya'
+        type: 'miya',
       };
-      setMessages(prev => [...prev, miyaMsg]);
+      setMessages((prev) => [...prev, miyaMsg]);
       return resp;
     } finally {
       setSending(false);
@@ -467,6 +830,158 @@ export function useMiyaChat() {
   }, []);
 
   return { messages, send, sending };
+}
+
+// ============================================================
+// 平台 Hook �?// ============================================================
+
+export function usePlatforms() {
+  const [platforms, setPlatforms] = useState<PlatformInfo[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState<{ total: number; enabled: number; connected: number }>({
+    total: 0,
+    enabled: 0,
+    connected: 0,
+  });
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await miyaAPI.getPlatformStats();
+      if (res) {
+        setPlatforms(res.platforms);
+        setStats({
+          total: res.total,
+          enabled: res.enabled_count,
+          connected: res.connected_count,
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const connect = useCallback(async (platformId: string) => {
+    const result = await miyaAPI.connectPlatform(platformId);
+    if (result?.success) await refresh();
+    return result;
+  }, [refresh]);
+
+  const disconnect = useCallback(async (platformId: string) => {
+    const result = await miyaAPI.disconnectPlatform(platformId);
+    if (result?.success) await refresh();
+    return result;
+  }, [refresh]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  return { platforms, loading, refresh, stats, connect, disconnect };
+}
+
+// ============================================================
+// 插件市场 Hook �?// ============================================================
+
+export function usePluginMarket() {
+  const [plugins, setPlugins] = useState<PluginInfo[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const refresh = useCallback(async (query?: string) => {
+    setLoading(true);
+    try {
+      const res = query
+        ? await miyaAPI.searchPluginMarket(query)
+        : await miyaAPI.getPluginMarketList();
+      if (res) {
+        setPlugins(res.data);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  return { plugins, loading, refresh };
+}
+
+// ============================================================
+// 插件管理 Hook �?// ============================================================
+
+export function usePlugins() {
+  const [plugins, setPlugins] = useState<PluginInfo[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await miyaAPI.getInstalledPlugins();
+      if (res) {
+        setPlugins(res.data);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const install = useCallback(async (name: string) => {
+    const result = await miyaAPI.installPlugin(name);
+    if (result?.success) await refresh();
+    return result;
+  }, [refresh]);
+
+  const uninstall = useCallback(async (name: string) => {
+    const result = await miyaAPI.uninstallPlugin(name);
+    if (result?.success) await refresh();
+    return result;
+  }, [refresh]);
+
+  const enable = useCallback(async (name: string) => {
+    const result = await miyaAPI.enablePlugin(name);
+    if (result?.success) await refresh();
+    return result;
+  }, [refresh]);
+
+  const disable = useCallback(async (name: string) => {
+    const result = await miyaAPI.disablePlugin(name);
+    if (result?.success) await refresh();
+    return result;
+  }, [refresh]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  return { plugins, loading, refresh, install, uninstall, enable, disable };
+}
+
+// ============================================================
+// MCP 服务 Hook �?// ============================================================
+
+export function useMCPServers() {
+  const [servers, setServers] = useState<MCPServerInfo[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await miyaAPI.getMCPServerList();
+      if (res?.servers) {
+        setServers(res.servers);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  return { servers, loading, refresh };
 }
 
 export default miyaAPI;

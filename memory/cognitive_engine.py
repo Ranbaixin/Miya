@@ -34,157 +34,23 @@ def _load_cognitive_config() -> Dict[str, Any]:
 
 _config = _load_cognitive_config()
 
-# 话题关键词映射（从配置加载，回退到内置默认值）
-TOPIC_KEYWORDS = _config.get(
-    "topic_keywords",
-    {
-        "学习": [
-            "上课",
-            "学习",
-            "考试",
-            "作业",
-            "学校",
-            "老师",
-            "同学",
-            "补课",
-            "自习",
-            "复习",
-            "预习",
-            "成绩",
-            "大学",
-            "专业",
-        ],
-        "吃饭": [
-            "吃饭",
-            "饿",
-            "饱",
-            "零食",
-            "外卖",
-            "餐厅",
-            "食堂",
-            "菜",
-            "口味",
-            "厨师",
-            "做饭",
-            "洗澡",
-            "澡堂",
-        ],
-        "休息": [
-            "睡觉",
-            "困",
-            "累",
-            "休息",
-            "放假",
-            "周末",
-            "假期",
-            "娱乐",
-            "游戏",
-            "动漫",
-            "电影",
-            "音乐",
-        ],
-        "情绪": [
-            "难过",
-            "开心",
-            "生气",
-            "害怕",
-            "担心",
-            "焦虑",
-            "压力",
-            "烦恼",
-            "郁闷",
-            "高兴",
-            "兴奋",
-            "失落",
-        ],
-        "健康": [
-            "身体",
-            "健康",
-            "病",
-            "医院",
-            "药",
-            "体检",
-            "心脏",
-            "手术",
-            "感冒",
-            "发烧",
-            "咳嗽",
-        ],
-        "社交": ["朋友", "同学", "家人", "聊天", "聚会", "社交", "联系人", "室友"],
-        "爱好": [
-            "喜欢",
-            "爱好",
-            "兴趣",
-            "二游",
-            "游戏",
-            "原神",
-            "鸣潮",
-            "星穹铁道",
-            "角色",
-            "手办",
-        ],
-        "行程": [
-            "出门",
-            "回家",
-            "去学校",
-            "回来",
-            "旅游",
-            "旅行",
-            "出行",
-            "坐车",
-            "高铁",
-            "飞机",
-        ],
-        "科幻": [
-            "三体",
-            "阶梯计划",
-            "云天明",
-            "程心",
-            "二向箔",
-            "曲率",
-            "黑洞",
-            "光速",
-            "饕餮",
-            "童话",
-            "群星",
-            "战锤",
-            "蜂巢",
-            "进化",
-            "科幻",
-            "小说",
-        ],
-    },
-)
+# 话题关键词映射（从配置加载）
+TOPIC_KEYWORDS = _config.get("topic_keywords", {})
 
-# 记忆提取触发词
-MEMORY_TRIGGERS = _config.get(
-    "memory_triggers",
-    {
-        "important_info": [
-            "我最喜欢",
-            "我喜欢",
-            "我讨厌",
-            "我有",
-            "我是",
-            "我今年",
-            "我身高",
-            "我体重",
-        ],
-        "commitment": ["答应你", "会记住", "下次", "承诺", "一定", "保证"],
-        "emotion_change": ["今天", "刚才", "突然", "现在", "感觉", "心情"],
-        "habit": ["习惯", "经常", "通常", "一般", "平时"],
-    },
-)
+# 记忆提取触发词（从配置加载）
+MEMORY_TRIGGERS = _config.get("memory_triggers", {})
 
-# 需要忽略的无意义内容
-IGNORE_PATTERNS = _config.get(
-    "ignore_patterns",
-    [
-        r"^[嗯哦啊哈嘿诶]{1,3}[。.]?$",
-        r"^[好是知道]{1,2}[。.]?$",
-        r"^[干嘛怎么了啥事]+[?]?$",
-        r"^[恭喜祝贺]+[。!]*$",
-    ],
+# 需要忽略的无意义内容（从配置加载）
+IGNORE_PATTERNS = _config.get("ignore_patterns", [])
+
+# 记忆锚点配置（从配置加载）
+MEMORY_ANCHOR_CONFIG = _config.get("memory_anchor", {})
+ANCHOR_KEYWORDS = MEMORY_ANCHOR_CONFIG.get("anchor_keywords", [])
+ANCHOR_TAGS = MEMORY_ANCHOR_CONFIG.get("anchor_tags", [])
+PERSONAL_PATTERNS = MEMORY_ANCHOR_CONFIG.get("personal_patterns", [])
+PERSONAL_QUERY_KEYWORDS = MEMORY_ANCHOR_CONFIG.get("personal_query_keywords", [])
+KEYWORD_EXTRACTION_PATTERNS = MEMORY_ANCHOR_CONFIG.get(
+    "keyword_extraction_patterns", {}
 )
 
 
@@ -312,6 +178,32 @@ class CognitiveEngine:
             for trigger in triggers:
                 if trigger in text:
                     keywords.append(trigger)
+
+        # 【新增】从配置文件加载的记忆锚点关键词
+        for keyword in ANCHOR_KEYWORDS:
+            if keyword in text:
+                keywords.append(keyword)
+
+        # 【新增】从配置文件加载的关键词提取模式
+        my_pattern = KEYWORD_EXTRACTION_PATTERNS.get("my_patterns", r"我的(\w{2,})")
+        what_pattern = KEYWORD_EXTRACTION_PATTERNS.get(
+            "what_patterns", r"(\w{2,})是什么"
+        )
+        when_pattern = KEYWORD_EXTRACTION_PATTERNS.get(
+            "when_patterns", r"(\w{2,})的时候"
+        )
+
+        # 提取 "我的XXX" 模式
+        my_patterns = re.findall(my_pattern, text)
+        keywords.extend(my_patterns)
+
+        # 提取 "XXX是什么" 模式
+        what_patterns = re.findall(what_pattern, text)
+        keywords.extend(what_patterns)
+
+        # 提取 "XXX的时候" 模式
+        when_patterns = re.findall(when_pattern, text)
+        keywords.extend(when_patterns)
 
         return list(set(keywords))
 
@@ -489,6 +381,61 @@ class CognitiveEngine:
         )
 
         all_memories = await self.memory_core.retrieve(query)
+
+        # 2.5 【新增】专门搜索记忆锚点（优先级最高）
+        # 如果用户输入包含个人信息相关的关键词，优先搜索记忆锚点
+        user_input_lower = user_input.lower()
+
+        # 从配置文件加载的关键词
+        anchor_keywords = PERSONAL_QUERY_KEYWORDS
+
+        # 检查是否需要搜索记忆锚点
+        need_anchor_search = any(kw in user_input_lower for kw in anchor_keywords)
+
+        # 检查是否是询问个人信息的模式（从配置文件加载）
+        is_personal_query = any(
+            pattern in user_input_lower for pattern in PERSONAL_PATTERNS
+        )
+
+        if need_anchor_search or is_personal_query:
+            logger.info(f"[认知引擎] 检测到个人信息查询，优先搜索记忆锚点")
+
+            # 搜索记忆锚点（从配置文件加载的标签）
+            for tag in ANCHOR_TAGS:
+                if tag in user_input_lower or tag in str(keywords):
+                    anchor_query = MemoryQuery(
+                        query="",
+                        tags=[tag],
+                        limit=limit * 2,
+                        user_id=user_id,
+                    )
+                    anchor_results = await self.memory_core.retrieve(anchor_query)
+                    if anchor_results:
+                        # 记忆锚点优先级最高，直接返回
+                        logger.info(
+                            f"[认知引擎] 找到 {len(anchor_results)} 条记忆锚点 (标签: {tag})"
+                        )
+                        return anchor_results[:limit]
+
+            # 如果标签搜索没有找到，尝试内容搜索
+            for keyword in keywords:
+                if len(keyword) >= 2:  # 至少2个字符
+                    content_query = MemoryQuery(
+                        query=keyword,
+                        limit=limit * 2,
+                        user_id=user_id,
+                    )
+                    content_results = await self.memory_core.retrieve(content_query)
+                    if content_results:
+                        # 过滤出包含关键词的记忆
+                        filtered_results = [
+                            m for m in content_results if keyword in m.content
+                        ]
+                        if filtered_results:
+                            logger.info(
+                                f"[认知引擎] 找到 {len(filtered_results)} 条记忆 (内容匹配: {keyword})"
+                            )
+                            return filtered_results[:limit]
 
         # 3. 如果标签搜索无结果，尝试内容搜索（关键词直接匹配记忆内容）
         if not all_memories and (current_topics or keywords):

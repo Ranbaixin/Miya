@@ -184,7 +184,34 @@ class MemoryItem:
         data["source"] = (
             self.source.value if isinstance(self.source, MemorySource) else self.source
         )
+        # 处理 metadata 中可能存在的枚举
+        if "metadata" in data and isinstance(data["metadata"], dict):
+            data["metadata"] = self._serialize_dict(data["metadata"])
         return data
+
+    def _serialize_dict(self, d: Dict) -> Dict:
+        """递归序列化字典中的枚举"""
+        result = {}
+        for k, v in d.items():
+            if isinstance(v, Enum):
+                result[k] = v.value
+            elif isinstance(v, dict):
+                result[k] = self._serialize_dict(v)
+            elif isinstance(v, list):
+                result[k] = [self._serialize_value(item) for item in v]
+            else:
+                result[k] = v
+        return result
+
+    def _serialize_value(self, v):
+        """序列化单个值"""
+        if isinstance(v, Enum):
+            return v.value
+        elif isinstance(v, dict):
+            return self._serialize_dict(v)
+        elif isinstance(v, list):
+            return [self._serialize_value(item) for item in v]
+        return v
 
     @classmethod
     def from_dict(cls, data: Dict) -> Optional["MemoryItem"]:
@@ -508,6 +535,10 @@ class JsonBackend(MemoryBackend):
 
             async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
                 content = await f.read()
+                # 检查文件是否为空
+                if not content or not content.strip():
+                    logger.warning(f"记忆文件为空: {file_path}")
+                    return None
                 data = json.loads(content)
                 return MemoryItem.from_dict(data)
         except Exception as e:
@@ -920,10 +951,17 @@ class MiyaMemoryCore:
                     provider = provider_map.get(
                         model_info.get("provider", "openai"), EmbeddingProvider.OPENAI
                     )
+                    # 从环境变量获取 API key
+                    import os
+
+                    api_key = model_info.get("api_key", "")
+                    if not api_key and model_info.get("env_key"):
+                        api_key = os.getenv(model_info["env_key"], "")
+
                     self.embedding_client = EmbeddingClient(
                         provider=provider,
                         model=model_info["name"],
-                        api_key=model_info.get("api_key", ""),
+                        api_key=api_key,
                         base_url=model_info.get("base_url", ""),
                     )
                     await self.embedding_client.initialize()
@@ -942,10 +980,17 @@ class MiyaMemoryCore:
                     provider = provider_map.get(
                         model_info.get("provider", "openai"), EmbeddingProvider.OPENAI
                     )
+                    # 从环境变量获取 API key
+                    import os
+
+                    api_key = model_info.get("api_key", "")
+                    if not api_key and model_info.get("env_key"):
+                        api_key = os.getenv(model_info["env_key"], "")
+
                     self.embedding_client = EmbeddingClient(
                         provider=provider,
                         model=model_info["name"],
-                        api_key=model_info.get("api_key", ""),
+                        api_key=api_key,
                         base_url=model_info.get("base_url", ""),
                     )
                     await self.embedding_client.initialize()
@@ -2128,6 +2173,7 @@ async def get_memory_core(
                     EmbeddingProvider,
                 )
                 from pathlib import Path
+                import os
 
                 model_config_path = (
                     Path(__file__).parent.parent / "config" / "multi_model_config.json"
@@ -2158,7 +2204,9 @@ async def get_memory_core(
                                 provider_str, EmbeddingProvider.OPENAI
                             )
                             model_name = model_info.get("name")
-                            api_key = model_info.get("api_key")
+                            api_key = model_info.get("api_key", "")
+                            if not api_key and model_info.get("env_key"):
+                                api_key = os.getenv(model_info["env_key"], "")
                             base_url = model_info.get("base_url")
 
                             embedding_client = await get_embedding_client(

@@ -357,12 +357,6 @@ class ProactiveChatSystem:
             self._sent_messages_history[target_id] = []
         self._sent_messages_history[target_id].append((message, datetime.now()))
 
-        # AI客户端
-        self.ai_client = None
-        self.personality = None
-
-        logger.info(f"[主动聊天 v2.1] 初始化完成: enabled={self._enabled}")
-
     def set_ai_client(self, ai_client):
         self.ai_client = ai_client
 
@@ -920,15 +914,13 @@ class ProactiveChatSystem:
 
             response = await self.ai_client.chat(
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=self.config.get("max_tokens", 50),
-                temperature=self.config.get("temperature", 0.7),
+                max_tokens=self._config.get("max_tokens", 50),
+                temperature=self._config.get("temperature", 0.7),
             )
 
+            # response 直接是字符串，不需要 .get() 解析
             message = (
-                response.get("choices", [{}])[0]
-                .get("message", {})
-                .get("content", "")
-                .strip()
+                response.strip() if isinstance(response, str) else str(response).strip()
             )
 
             if message.upper() == "SKIP" or not message:

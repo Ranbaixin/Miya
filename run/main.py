@@ -405,16 +405,22 @@ class Miya:
                 # 如果有运行中的loop，在后台任务中初始化
                 import concurrent.futures
 
+                # 获取 Miya 根目录
+                MIYA_ROOT = Path(__file__).parent.parent.resolve()
+                DATA_DIR = str(MIYA_ROOT / "data" / "memory")
+
                 with concurrent.futures.ThreadPoolExecutor() as pool:
                     self.unified_memory_core = pool.submit(
-                        asyncio.run, get_memory_core("data/memory")
+                        asyncio.run, get_memory_core(DATA_DIR)
                     ).result()
                     self.unified_memory_adapter = pool.submit(
                         asyncio.run, get_memory_adapter()
                     ).result()
             except RuntimeError:
                 # 没有运行中的loop，可以直接使用asyncio.run
-                self.unified_memory_core = asyncio.run(get_memory_core("data/memory"))
+                MIYA_ROOT = Path(__file__).parent.parent.resolve()
+                DATA_DIR = str(MIYA_ROOT / "data" / "memory")
+                self.unified_memory_core = asyncio.run(get_memory_core(DATA_DIR))
                 self.unified_memory_adapter = asyncio.run(get_memory_adapter())
 
             self.logger.info("[记忆] 统一记忆系统初始化成功")
@@ -461,7 +467,7 @@ class Miya:
 
         # 尝试初始化多模型管理器
         try:
-            from core.model_pool import get_model_pool, ModelConfig
+            from core.model_pool_manager import get_model_pool
 
             pool = get_model_pool()
             model_configs = pool.get_model_configs_for_manager()
@@ -472,9 +478,32 @@ class Miya:
 
                 for model_key, model_config in model_configs.items():
                     try:
+                        # 处理 provider 可能是字符串或枚举的情况
+                        provider_value = model_config.provider
+                        if hasattr(provider_value, "value"):
+                            provider_value = provider_value.value
+
+                        # 从环境变量获取 API key
+                        api_key = ""
+                        if model_config.env_key:
+                            api_key = os.getenv(model_config.env_key, "")
+
+                        # 如果没有 env_key，尝试从常见的环境变量获取
+                        if not api_key:
+                            provider_env_map = {
+                                "deepseek": "DEEPSEEK_API_KEY",
+                                "siliconflow": "SILICONFLOW_API_KEY",
+                                "openai": "OPENAI_API_KEY",
+                                "zhipu": "ZHIPU_API_KEY",
+                                "dashscope": "DASHSCOPE_API_KEY",
+                            }
+                            env_key = provider_env_map.get(provider_value.lower(), "")
+                            if env_key:
+                                api_key = os.getenv(env_key, "")
+
                         client = AIClientFactory.create_client(
-                            provider=model_config.provider.value,
-                            api_key=model_config.api_key,
+                            provider=provider_value,
+                            api_key=api_key,
                             model=model_config.name,
                             base_url=model_config.base_url,
                             temperature=float(os.getenv("AI_TEMPERATURE", "0.7")),
@@ -856,44 +885,12 @@ def main():
         print(f"启动时间: {miya.identity.awake_time}")
         print()
 
-        # 显示系统配置摘要
+        # 显示系统状态
         print("=" * 50)
-        print("【系统配置摘要】")
-        print(f"  平台: 终端模式 (Terminal)")
-        print(f"  记忆系统: {'已启用 (MemoryNet)' if miya.memory_net else '未启用'}")
-        print(
-            f"  AI客户端: {'已启用 (' + miya.ai_client.model + ')' if miya.ai_client else '未启用'}"
-        )
-
-        # 检查数据库连接状态
-        neo4j_status = (
-            "已连接"
-            if miya.neo4j and not miya.neo4j.is_mock_mode()
-            else "模拟模式/未连接"
-        )
-        milvus_status = (
-            "已连接"
-            if miya.milvus and not miya.milvus.is_mock_mode()
-            else "模拟模式/未连接"
-        )
-        redis_status = (
-            "已连接"
-            if miya.redis and hasattr(miya.redis, "is_mock") and not miya.redis.is_mock
-            else "模拟模式/未连接"
-        )
-
-        print(f"  Neo4j: {neo4j_status}")
-        print(f"  Milvus: {milvus_status}")
-        print(f"  Redis: {redis_status}")
-        print(
-            f"  终端工具: {'已启用' if miya.decision_hub and miya.decision_hub.terminal_tool else '未启用'}"
-        )
+        print("【弥娅系统】")
+        print(f"  版本: v4.3.0")
+        print(f"  已启动")
         print("=" * 50)
-        print("\n提示: 使用 '!' 或 '>>' 前缀执行终端命令")
-        print("      如: !ls, >>pwd, !查看当前目录")
-        print("\n输入 'status' 查看系统状态")
-        print("输入 'exit' 或 '退出' 退出程序")
-        print()
 
         # 启动定时任务调度器
         if miya.scheduler:
@@ -906,16 +903,15 @@ def main():
 
                 # 在后台线程中启动调度器
                 miya.scheduler.start_background()
-                print("[系统] 定时任务调度器已启动（后台运行）")
             except Exception as e:
-                print(f"[警告] 定时任务调度器启动失败: {e}")
+                pass
 
         # 交互循环 - 使用异步主循环
         async def main_loop():
             while True:
                 try:
                     # 同步获取用户输入（支持中文）
-                    user_input = chinese_input("佳: ").strip()
+                    user_input = chinese_input("> ").strip()
 
                     # 使用文本加载器
                     from core.text_loader import get_farewell, is_farewell
@@ -1099,8 +1095,14 @@ def main():
                     print("\n\n检测到中断信号...")
                     break
 
-        # 运行异步主循环
-        asyncio.run(main_loop())
+        # 保持系统运行（等待中断）
+        while True:
+            try:
+                import time
+
+                time.sleep(1)
+            except KeyboardInterrupt:
+                break
 
     except Exception as e:
         logging.error(f"系统错误: {e}", exc_info=True)

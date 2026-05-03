@@ -50,10 +50,38 @@ def _search_duckduckgo(query: str, count: int = 5) -> str:
         return f"DuckDuckGo搜索失败: {str(e)[:50]}"
 
 
-async def execute(context, **kwargs) -> str:
-    """执行网络搜索"""
-    query = kwargs.get("query", "")
-    count = kwargs.get("count", 5)
+async def execute(args, context=None, **kwargs) -> str:
+    """执行网络搜索
+
+    兼容多种签名：
+    - execute(args: Dict, context: ToolContext)
+    - execute(context, **kwargs)
+    - execute(**kwargs)
+    """
+    # 统一提取 query 和 count
+    query = ""
+    count = 5
+
+    # 方法1: args 是字典，直接取
+    if isinstance(args, dict):
+        query = args.get("query", "")
+        count = args.get("count", 5)
+
+    # 方法2: args 是 ToolContext/dataclass（旧版调用）
+    elif hasattr(args, "__dataclass_fields__"):
+        # args 本身是 context，从 kwargs 取
+        query = kwargs.get("query", "")
+        count = kwargs.get("count", 5)
+    else:
+        # args 可能是字符串或其他，尝试从 kwargs 取
+        query = kwargs.get("query", "")
+        count = kwargs.get("count", 5)
+
+    # 兜底：从 kwargs 补充
+    if not query:
+        query = kwargs.get("query", "")
+    if not count:
+        count = kwargs.get("count", 5)
 
     if not query:
         return "请提供搜索关键词"

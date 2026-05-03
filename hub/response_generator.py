@@ -207,7 +207,7 @@ class ResponseGenerator:
                 # 使用多模型管理器
                 ai_client_to_use = self.ai_client
                 if self.model_pool:
-                    from core.model_pool import TaskType
+                    from core.model_pool_compat import TaskType
 
                     task_type = await self.model_pool.classify_task(content, context)
                     (
@@ -257,7 +257,7 @@ class ResponseGenerator:
                 # 不使用工具
                 ai_client_to_use = self.ai_client
                 if self.model_pool:
-                    from core.model_pool import TaskType
+                    from core.model_pool_compat import TaskType
 
                     task_type = await self.model_pool.classify_task(content, context)
                     (

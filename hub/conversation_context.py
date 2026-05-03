@@ -191,24 +191,6 @@ class ConversationContextManager:
         ]
         return any(p in user_input for p in recall_patterns)
 
-    def _is_deep_discussion(self, user_input: str) -> bool:
-        """检测是否是深度讨论"""
-        if not user_input or not isinstance(user_input, str):
-            return False
-        if len(user_input) > 50:
-            return True
-        topic_count = sum(
-            1
-            for t, kws in self.TOPIC_KEYWORDS.items()
-            for kw in kws
-            if kw in user_input.lower()
-        )
-        if topic_count >= 2:
-            return True
-        if user_input.count("?") + user_input.count("？") >= 2:
-            return True
-        return False
-
     async def get_conversation_context(
         self, session_id: str, current_input: str = ""
     ) -> List[Dict]:

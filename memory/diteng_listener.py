@@ -419,7 +419,7 @@ class DiTingListener:
 
         try:
             # 调用AI分析 - 使用 ModelPool 获取客户端
-            from core.model_pool import get_qq_model
+            from core.model_pool_manager import get_qq_model
 
             model_config = get_qq_model("simple_chat", "balanced")
             if not model_config:
@@ -428,9 +428,29 @@ class DiTingListener:
 
             from core.ai_client import AIClientFactory
 
+            # 从环境变量获取 API key
+            import os
+
+            api_key = ""
+            if hasattr(model_config, "env_key") and model_config.env_key:
+                api_key = os.getenv(model_config.env_key, "")
+
+            # 如果没有 env_key，尝试从常见的环境变量获取
+            if not api_key:
+                provider_env_map = {
+                    "deepseek": "DEEPSEEK_API_KEY",
+                    "siliconflow": "SILICONFLOW_API_KEY",
+                    "openai": "OPENAI_API_KEY",
+                    "zhipu": "ZHIPU_API_KEY",
+                    "dashscope": "DASHSCOPE_API_KEY",
+                }
+                env_key = provider_env_map.get(model_config.provider.lower(), "")
+                if env_key:
+                    api_key = os.getenv(env_key, "")
+
             client = AIClientFactory.create_client(
                 provider=model_config.provider,
-                api_key=model_config.api_key or "",
+                api_key=api_key,
                 model=model_config.name,
                 base_url=model_config.base_url,
                 tool_context=None,

@@ -495,7 +495,7 @@ class LifeBook:
     ) -> str:
         """调用 AI 生成总结"""
         from core.ai_client import AIClientFactory
-        from core.model_pool import get_model_pool
+        from core.model_pool_manager import get_model_pool
 
         model_pool = get_model_pool()
         if not model_pool:

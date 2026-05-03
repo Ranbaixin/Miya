@@ -193,11 +193,9 @@ class AIInjectionDetector:
                 messages=messages, max_tokens=10, temperature=0
             )
 
+            # response 直接是字符串，不需要 .get() 解析
             result = (
-                response.get("choices", [{}])[0]
-                .get("message", {})
-                .get("content", "")
-                .strip()
+                response.strip() if isinstance(response, str) else str(response).strip()
             )
 
             is_injection = "INJECTION_DETECTED" in result.upper()

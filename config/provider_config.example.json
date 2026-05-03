@@ -1,0 +1,62 @@
+{
+  "说明": "MIYA Provider 配置文件示例 - 与 multi_model_config.json 保持一致",
+  "provider": [
+    {
+      "id": "deepseek_v4_flash",
+      "name": "DeepSeek V4 Flash",
+      "type": "openai_chat_completion",
+      "provider": "deepseek",
+      "model": "deepseek-v4-flash",
+      "base_url": "https://api.deepseek.com/v1",
+      "api_key": "your-deepseek-api-key",
+      "description": "DeepSeek V4 官方 - 快速响应的通用模型",
+      "capabilities": ["simple_chat", "chinese_understanding", "tool_calling", "multimodal"],
+      "enabled": true,
+      "cost_per_1k_tokens": { "input": 0.00014, "output": 0.00028 }
+    },
+    {
+      "id": "siliconflow_qwen_72b",
+      "name": "Qwen 2.5 72B",
+      "type": "openai_chat_completion",
+      "provider": "siliconflow",
+      "model": "Qwen/Qwen2.5-72B-Instruct",
+      "base_url": "https://api.siliconflow.cn/v1",
+      "api_key": "your-siliconflow-api-key",
+      "description": "Qwen 2.5 72B - 高性能通用模型",
+      "capabilities": ["complex_reasoning", "chinese_understanding", "creative_writing"],
+      "enabled": true,
+      "cost_per_1k_tokens": { "input": 0.0015, "output": 0.0020 }
+    },
+    {
+      "id": "claude_sonnet",
+      "name": "Claude Sonnet 4",
+      "type": "anthropic_chat_completion",
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-20250514",
+      "base_url": "https://api.anthropic.com/v1",
+      "api_version": "2023-06-01",
+      "api_key": "your-anthropic-api-key",
+      "description": "Claude Sonnet 4 - 官方 Claude 模型",
+      "capabilities": ["complex_reasoning", "code_analysis", "tool_calling", "agent_mode"],
+      "enabled": true,
+      "cost_per_1k_tokens": { "input": 0.015, "output": 0.075 }
+    }
+  ],
+  "provider_settings": {
+    "default_provider_id": "deepseek_v4_flash",
+    "enable_provider_switch": true,
+    "auto_fallback_on_error": true,
+    "max_fallback_count": 2
+  },
+  "路由策略": {
+    "simple_chat": { "primary": "deepseek_v4_flash", "fallback": "siliconflow_qwen_72b" },
+    "complex_reasoning": { "primary": "deepseek_v4_flash", "fallback": "claude_sonnet" },
+    "code_analysis": { "primary": "deepseek_v4_flash", "fallback": "claude_sonnet" },
+    "agent_mode": { "primary": "claude_sonnet", "fallback": "deepseek_v4_flash" }
+  },
+  "预算控制": {
+    "daily_budget_usd": 10.0,
+    "monthly_budget_usd": 300.0,
+    "alert_threshold": 0.8
+  }
+}

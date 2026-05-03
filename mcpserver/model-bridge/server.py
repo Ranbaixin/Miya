@@ -30,12 +30,11 @@ MIYA_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(MIYA_ROOT))
 
 try:
-    from core.model_pool import get_model_pool, ModelPool, ModelConfig
+    from core.model_pool_manager import get_model_pool, ModelConfig
 
     MODEL_POOL_AVAILABLE = True
 except ImportError:
     MODEL_POOL_AVAILABLE = False
-    ModelPool = None
     ModelConfig = None
 
 log_file = Path(__file__).parent / "bridge.log"

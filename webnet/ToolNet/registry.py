@@ -402,6 +402,7 @@ class ToolRegistry:
             MemorySearchByCategory,
         )
         from webnet.ToolNet.tools.memory.memory_query import MemoryQueryTool
+        from webnet.ToolNet.tools.memory.thinking_query import ThinkingQueryTool
 
         self.register(MemoryAdd())
         self.register(MemoryDelete())
@@ -411,8 +412,9 @@ class ToolRegistry:
         self.register(MemoryStats())
         self.register(MemorySearchByCategory())
         self.register(MemoryQueryTool())
+        self.register(ThinkingQueryTool())
         self.logger.info(
-            "已加载记忆工具: MemoryAdd, MemoryDelete, MemoryUpdate, MemoryList, AutoExtractMemory, MemoryStats, MemorySearchByCategory, MemoryQuery"
+            "已加载记忆工具: MemoryAdd, MemoryDelete, MemoryUpdate, MemoryList, AutoExtractMemory, MemoryStats, MemorySearchByCategory, MemoryQuery, ThinkingQuery"
         )
 
     def _load_knowledge_tools(self):

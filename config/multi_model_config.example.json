@@ -19,8 +19,8 @@
       "latency": "fast",
       "quality": "excellent"
     },
-    "deepseek_v4_pro_official": {
-      "name": "deepseek-v4-pro",
+    "deepseek_v4_flash_official": {
+      "name": "deepseek-v4-flash",
       "provider": "openai",
       "base_url": "https://api.deepseek.com/v1",
       "api_key": "sk-deepseek-api-key-here",

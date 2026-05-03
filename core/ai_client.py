@@ -53,6 +53,9 @@ class BaseAIClient:
             get_global_prompt_cache() if self.enable_prompt_cache else None
         )
 
+        # 【新增】存储最后一次AI思考过程，供外部获取
+        self.last_reasoning_content: str = ""
+
         # 尝试加载弥娅人设提示词
         self._load_miya_prompt()
 
@@ -344,6 +347,185 @@ class BaseAIClient:
 
         return False
 
+    def _convert_messages_to_openai_format(
+        self, messages: List[AIMessage]
+    ) -> List[Dict]:
+        """
+        将消息列表转换为OpenAI API格式
+
+        Args:
+            messages: 消息列表
+
+        Returns:
+            OpenAI格式的消息列表
+        """
+        openai_messages = []
+        for msg in messages:
+            msg_dict = {"role": msg.role, "content": msg.content}
+            if msg.tool_calls:
+                msg_dict["tool_calls"] = msg.tool_calls
+            if msg.tool_call_id:
+                msg_dict["tool_call_id"] = msg.tool_call_id
+            # 支持 DeepSeek V4 thinking mode
+            reasoning = getattr(msg, "reasoning_content", None)
+            if msg.tool_calls:
+                msg_dict["reasoning_content"] = reasoning if reasoning else ""
+            elif reasoning:
+                msg_dict["reasoning_content"] = reasoning
+            openai_messages.append(msg_dict)
+        return openai_messages
+
+    def _fix_json_arguments(self, arguments_str: str) -> Dict:
+        """
+        修复JSON参数格式问题
+
+        Args:
+            arguments_str: JSON字符串
+
+        Returns:
+            解析后的字典
+        """
+        if not arguments_str:
+            return {}
+
+        # 尝试直接解析
+        try:
+            return json.loads(arguments_str)
+        except json.JSONDecodeError:
+            pass
+
+        # 尝试移除末尾多余逗号
+        try:
+            fixed = arguments_str.rstrip(", ")
+            return json.loads(fixed)
+        except json.JSONDecodeError:
+            pass
+
+        # 尝试修复中文值没有引号的问题
+        try:
+            fixed = re.sub(
+                r'("[\w\u4e00-\u9fa5]+":\s*)([\w\u4e00-\u9fa5]+)',
+                lambda m: m.group(1) + '"' + m.group(2) + '"',
+                arguments_str,
+            )
+            return json.loads(fixed)
+        except json.JSONDecodeError:
+            pass
+
+        # 尝试通用修复
+        try:
+            fixed = re.sub(
+                r'(\w+):\s*([^\s,"\[\]{}\d][^\s,"\[\]{}]*)',
+                r'\1: "\2"',
+                arguments_str,
+            )
+            return json.loads(fixed)
+        except json.JSONDecodeError:
+            logger.warning(f"[AIClient] JSON修复失败: {arguments_str[:100]}")
+            return {}
+
+    def _sanitize_args_for_log(self, args: Dict) -> Dict:
+        """
+        过滤日志中的CQ码和base64数据，避免终端刷屏
+
+        Args:
+            args: 工具参数字典
+
+        Returns:
+            过滤后的字典
+        """
+        safe_args = {}
+        for k, v in args.items():
+            if isinstance(v, str) and ("[CQ:" in v or "base64," in v):
+                safe_args[k] = "[图片数据]"
+            else:
+                safe_args[k] = v
+        return safe_args
+
+    def _normalize_tool_choice(self, tool_choice: str) -> str:
+        """
+        归一化工具选择策略
+
+        Args:
+            tool_choice: 原始策略
+
+        Returns:
+            归一化后的策略
+        """
+        if tool_choice == "required":
+            return "auto"
+        if not isinstance(tool_choice, dict) and tool_choice not in ("auto", "none"):
+            return "auto"
+        return tool_choice
+
+    async def _execute_tool_call(
+        self, tool_call, tool_context: Optional[Dict] = None
+    ) -> tuple:
+        """
+        执行单个工具调用
+
+        Args:
+            tool_call: 工具调用对象
+            tool_context: 工具执行上下文
+
+        Returns:
+            (tool_call, result) 元组
+        """
+        try:
+            from .tool_adapter import get_tool_adapter
+            from core.gestalt_controller import get_gestalt_controller
+            from core.terminal_formatter import TerminalFormatter
+
+            adapter = get_tool_adapter()
+
+            # 解析工具参数
+            tool_args = self._fix_json_arguments(tool_call.function.arguments)
+
+            # 记录日志（过滤敏感信息）
+            safe_args = self._sanitize_args_for_log(tool_args)
+            logger.info(
+                f"[AIClient] 工具调用: {tool_call.function.name}, 参数: {safe_args}"
+            )
+
+            # 执行工具
+            gestalt = get_gestalt_controller()
+            result = await gestalt.execute_tool(
+                tool_call.function.name, tool_args, tool_context or {}
+            )
+
+            # 显示工具结果
+            print(TerminalFormatter.tool_result(tool_call.function.name))
+
+            return tool_call, result
+        except Exception as e:
+            logger.error(f"[AIClient] 工具执行异常: {e}", exc_info=True)
+            return tool_call, f"工具执行异常: {str(e)}"
+
+    def _handle_final_marker(self, result: str) -> Optional[str]:
+        """
+        处理FINAL标记
+
+        Args:
+            result: 工具结果
+
+        Returns:
+            如果是FINAL标记，返回提取的消息内容；否则返回None
+        """
+        if not result or not result.startswith("[FINAL]"):
+            return None
+
+        logger.info(f"[AIClient] 检测到 FINAL 标记: {result[:80]}")
+
+        # 检查是否包含嵌入的消息内容
+        if "|||" in result:
+            parts = result.split("|||", 1)
+            embedded_message = parts[0].replace("[FINAL]", "").strip()
+            if embedded_message:
+                logger.info(f"[AIClient] 提取嵌入消息内容: {embedded_message[:50]}...")
+                return embedded_message
+
+        return "[FINAL]"
+
     async def chat_with_system_prompt(
         self,
         system_prompt: str,
@@ -475,24 +657,10 @@ class OpenAIClient(BaseAIClient):
 
         while iteration < max_iterations:
             try:
-                # 转换为OpenAI格式 - 支持 DeepSeek V4 thinking mode
-                openai_messages = []
-                for msg in current_messages:
-                    msg_dict = {"role": msg.role, "content": msg.content}
-                    if msg.tool_calls:
-                        msg_dict["tool_calls"] = msg.tool_calls
-                    if msg.tool_call_id:
-                        msg_dict["tool_call_id"] = msg.tool_call_id
-                    # 支持 DeepSeek V4 thinking mode - 使用getattr确保正确获取
-                    # 注意：当 assistant 消息有 tool_calls 时，必须传回 reasoning_content（即使为空）
-                    reasoning = getattr(msg, "reasoning_content", None)
-                    if msg.tool_calls:
-                        # 有工具调用，必须传回 reasoning_content
-                        msg_dict["reasoning_content"] = reasoning if reasoning else ""
-                    elif reasoning:
-                        # 有思考过程且无工具调用，正常传递
-                        msg_dict["reasoning_content"] = reasoning
-                    openai_messages.append(msg_dict)
+                # 转换为OpenAI格式（使用公共方法）
+                openai_messages = self._convert_messages_to_openai_format(
+                    current_messages
+                )
 
                 # 构建请求参数
                 request_params = {
@@ -505,19 +673,9 @@ class OpenAIClient(BaseAIClient):
                 # 添加工具相关参数
                 if tools:
                     request_params["tools"] = tools
-                    # FIX: OpenAI ChatCompletions 的 tool_choice 不支持 'required' 这样的自定义值；
-                    # 不同厂商/SDK 对 tool_choice 的校验也更严格。这里统一归一化，避免直接请求报 400。
-                    normalized_tool_choice = tool_choice
-                    if normalized_tool_choice == "required":
-                        normalized_tool_choice = "auto"
-                    if not isinstance(
-                        normalized_tool_choice, dict
-                    ) and normalized_tool_choice not in (
-                        "auto",
-                        "none",
-                    ):
-                        normalized_tool_choice = "auto"
-                    request_params["tool_choice"] = normalized_tool_choice
+                    request_params["tool_choice"] = self._normalize_tool_choice(
+                        tool_choice
+                    )
 
                 # DeepSeek V4 内置联网搜索需要通过特定端点启用，目前API暂不支持
                 # if "deepseek" in self.model.lower() and "v4" in self.model.lower():
@@ -602,6 +760,9 @@ class OpenAIClient(BaseAIClient):
                             TerminalFormatter.thinking_block("\n".join(thinking_lines))
                         )
 
+                    # 【新增】保存思考过程供外部获取
+                    self.last_reasoning_content = thinking_content
+
                     # 返回最终回复（不含思考过程）
                     return final_content
 
@@ -633,85 +794,7 @@ class OpenAIClient(BaseAIClient):
                 # 执行工具（支持并发执行）
                 import asyncio
 
-                async def execute_single_tool(tool_call):
-                    """执行单个工具调用的异步函数"""
-                    try:
-                        from .tool_adapter import get_tool_adapter
-
-                        adapter = get_tool_adapter()
-
-                        # 解析工具参数，增加错误处理和自动修复
-                        try:
-                            tool_args = (
-                                json.loads(tool_call.function.arguments)
-                                if tool_call.function.arguments
-                                else {}
-                            )
-                        except json.JSONDecodeError as e:
-                            arguments_str = tool_call.function.arguments
-                            if arguments_str:
-                                fixed = re.sub(
-                                    r'(\w+):\s*([^\s,"\[\]{}\d][^\s,"\[\]{}]*)',
-                                    r'\1: "\2"',
-                                    arguments_str,
-                                )
-                                try:
-                                    tool_args = json.loads(fixed)
-                                    logger.info(
-                                        f"[AIClient] 自动修复JSON成功: {arguments_str[:50]}..."
-                                    )
-                                except:
-                                    logger.warning(
-                                        f"[AIClient] 工具参数解析失败: {e}, 参数: {arguments_str}"
-                                    )
-                                    tool_args = {}
-                            else:
-                                tool_args = {}
-
-                        # 过滤日志中的 CQ 码，避免终端刷屏
-                        safe_args = {}
-                        for k, v in tool_args.items():
-                            if isinstance(v, str) and ("[CQ:" in v or "base64," in v):
-                                safe_args[k] = "[图片数据]"
-                            else:
-                                safe_args[k] = v
-                        logger.info(
-                            f"[AIClient] 工具调用: {tool_call.function.name}, 参数: {safe_args}"
-                        )
-
-                        from core.gestalt_controller import get_gestalt_controller
-
-                        gestalt = get_gestalt_controller()
-                        logger.info(
-                            f"[AIClient] 传入格式塔的tool_context keys: {list((self.tool_context or {}).keys())}"
-                        )
-                        result = await gestalt.execute_tool(
-                            tool_call.function.name, tool_args, self.tool_context or {}
-                        )
-
-                        from core.terminal_formatter import TerminalFormatter
-
-                        print(TerminalFormatter.tool_result(tool_call.function.name))
-
-                        return tool_call, result
-                    except Exception as e:
-                        logger.error(
-                            f"[AIClient] execute_single_tool异常: {e}", exc_info=True
-                        )
-                        return tool_call, f"工具执行异常: {str(e)}"
-
                 # 强制串行执行以避免消息乱序问题
-                concurrent_tool_names = [
-                    "get_recent_messages",
-                    "get_user_info",
-                    "get_current_time",
-                    "search_knowledge",
-                    "search_memory",
-                    "get_profile",
-                    "bilibili_video",
-                    "web_search",
-                    "web_research",
-                ]
                 can_concurrent = False  # 禁用并发，避免工具响应乱序
 
                 if can_concurrent:
@@ -779,56 +862,27 @@ class OpenAIClient(BaseAIClient):
                             logger.warning(f"[AIClient] 最终回复生成失败: {e}")
                         return ""
                 else:
-                    # 串行执行（保持兼容性）
+                    # 串行执行（使用公共方法）
                     final_detected = False
                     final_tool_result = None
                     for tool_call in tool_calls:
-                        _, result = await execute_single_tool(tool_call)
+                        _, result = await self._execute_tool_call(
+                            tool_call, self.tool_context
+                        )
                         final_tool_result = result
 
-                        # 检查工具结果是否包含 FINAL 标记
-                        if result and result.startswith("[FINAL]"):
-                            logger.info(f"[AIClient] 检测到 FINAL 标记: {result[:80]}")
+                        # 检查FINAL标记
+                        final_marker = self._handle_final_marker(result)
+                        if final_marker == "[FINAL]":
                             final_detected = True
-
-                            # 【新增】FINAL 标记触发，检查是否包含嵌入的消息内容
-                            # 格式: [FINAL]message_content|||TARGET:xxx
-                            if "|||" in result:
-                                # 提取嵌入的消息内容，直接返回给用户
-                                parts = result.split("|||", 1)
-                                embedded_message = (
-                                    parts[0].replace("[FINAL]", "").strip()
-                                )
-                                if embedded_message:
-                                    logger.info(
-                                        f"[AIClient] 提取嵌入消息内容: {embedded_message[:50]}..."
-                                    )
-                                    return embedded_message
-
-                            # 原有逻辑：生成最终文本回复
-                            logger.info("[AIClient] FINAL 标记触发，生成最终文本回复")
+                            # 生成最终文本回复
                             try:
-                                # 只保留非tool消息和最后一条tool消息
-                                filtered_messages = []
-                                for m in current_messages:
-                                    if m.role != "tool":
-                                        filtered_messages.append(
-                                            {"role": m.role, "content": m.content}
-                                        )
-                                    else:
-                                        # 只保留最后一条tool消息
-                                        if m == current_messages[-1]:
-                                            filtered_messages.append(
-                                                {
-                                                    "role": "tool",
-                                                    "content": m.content,
-                                                    "tool_call_id": tool_call.id,
-                                                }
-                                            )
-
                                 final_resp = await self.client.chat.completions.create(
                                     model=self.model,
-                                    messages=filtered_messages,
+                                    messages=[
+                                        {"role": m.role, "content": m.content}
+                                        for m in current_messages
+                                    ],
                                     tool_choice="none",
                                 )
                                 if final_resp.choices and final_resp.choices[0].message:
@@ -836,46 +890,47 @@ class OpenAIClient(BaseAIClient):
                             except Exception as e:
                                 logger.warning(f"[AIClient] 最终回复生成失败: {e}")
                             return ""
+                        elif final_marker:
+                            return final_marker
 
-                        # 检查是否是直接返回工具（如运势、抽签、游戏存档等）
-                    # 这些工具返回的结果已经是格式化的，直接返回给用户
-                    direct_return_tools = [
-                        "horoscope",
-                        "wenchang_dijun",
-                        "list_game_saves",
-                        "create_game_save",
-                        "load_game_save",
-                        "roll_dice",
-                        "roll_secret",
-                        "skill_check",
-                        "create_pc",
-                        "show_pc",
-                        "update_pc",
-                        "delete_pc",
-                        "start_combat",
-                        "add_initiative",
-                        "next_turn",
-                        "show_initiative",
-                        "end_combat",
-                        "rest",
-                        "attack",
-                        "combat_log",
-                        "kp_command",
-                        "terminal_command",  # 终端命令工具直接返回结果
-                        # 热搜工具 - 返回完整列表，不摘要
-                        "douyinhot",
-                        "weibohot",
-                        "baiduhot",
-                        "grok_search",
-                        "web_search",
-                        "crawl_webpage",
-                        # Agent 工具 - 返回完整结果
-                        "group_file_downloader",
-                        "local_file_finder",
-                        "qq_file_reader",
-                        # 注意：qq_image_analyzer 不在这里，因为它需要经过人格润色
-                        "python_interpreter",
-                    ]
+                        # 检查是否是直接返回工具
+                        direct_return_tools = [
+                            "horoscope",
+                            "wenchang_dijun",
+                            "list_game_saves",
+                            "create_game_save",
+                            "load_game_save",
+                            "roll_dice",
+                            "roll_secret",
+                            "skill_check",
+                            "create_pc",
+                            "show_pc",
+                            "update_pc",
+                            "delete_pc",
+                            "start_combat",
+                            "add_initiative",
+                            "next_turn",
+                            "show_initiative",
+                            "end_combat",
+                            "rest",
+                            "attack",
+                            "combat_log",
+                            "kp_command",
+                            "terminal_command",  # 终端命令工具直接返回结果
+                            # 热搜工具 - 返回完整列表，不摘要
+                            "douyinhot",
+                            "weibohot",
+                            "baiduhot",
+                            "grok_search",
+                            "web_search",
+                            "crawl_webpage",
+                            # Agent 工具 - 返回完整结果
+                            "group_file_downloader",
+                            "local_file_finder",
+                            "qq_file_reader",
+                            # 注意：qq_image_analyzer 不在这里，因为它需要经过人格润色
+                            "python_interpreter",
+                        ]
                     if tool_call.function.name in direct_return_tools:
                         logger.info(
                             f"[AIClient] 检测到直接返回工具: {tool_call.function.name}，直接返回结果"
@@ -975,24 +1030,10 @@ class DeepSeekClient(BaseAIClient):
 
         while iteration < max_iterations:
             try:
-                # 转换为OpenAI格式 - 支持 DeepSeek V4 thinking mode
-                openai_messages = []
-                for msg in current_messages:
-                    msg_dict = {"role": msg.role, "content": msg.content}
-                    if msg.tool_calls:
-                        msg_dict["tool_calls"] = msg.tool_calls
-                    if msg.tool_call_id:
-                        msg_dict["tool_call_id"] = msg.tool_call_id
-                    # 支持 DeepSeek V4 thinking mode - 使用getattr确保正确获取
-                    # 注意：当 assistant 消息有 tool_calls 时，必须传回 reasoning_content（即使为空）
-                    reasoning = getattr(msg, "reasoning_content", None)
-                    if msg.tool_calls:
-                        # 有工具调用，必须传回 reasoning_content
-                        msg_dict["reasoning_content"] = reasoning if reasoning else ""
-                    elif reasoning:
-                        # 有思考过程且无工具调用，正常传递
-                        msg_dict["reasoning_content"] = reasoning
-                    openai_messages.append(msg_dict)
+                # 转换为OpenAI格式（使用公共方法）
+                openai_messages = self._convert_messages_to_openai_format(
+                    current_messages
+                )
 
                 # 构建请求参数
                 request_params = {
@@ -1005,19 +1046,9 @@ class DeepSeekClient(BaseAIClient):
                 # 添加工具相关参数
                 if tools:
                     request_params["tools"] = tools
-                    # FIX: DeepSeek(OpenAI兼容) 侧对 tool_choice 的支持与 OpenAI 并不完全一致；
-                    # 为避免 'required' 等值导致请求直接失败，这里做兼容归一化。
-                    normalized_tool_choice = tool_choice
-                    if normalized_tool_choice == "required":
-                        normalized_tool_choice = "auto"
-                    if not isinstance(
-                        normalized_tool_choice, dict
-                    ) and normalized_tool_choice not in (
-                        "auto",
-                        "none",
-                    ):
-                        normalized_tool_choice = "auto"
-                    request_params["tool_choice"] = normalized_tool_choice
+                    request_params["tool_choice"] = self._normalize_tool_choice(
+                        tool_choice
+                    )
 
                 # DeepSeek V4 内置联网搜索需要通过特定端点启用（API暂不支持）
                 # if "deepseek" in self.model.lower() and "v4" in self.model.lower():
@@ -1104,6 +1135,9 @@ class DeepSeekClient(BaseAIClient):
                             TerminalFormatter.thinking_block("\n".join(thinking_lines))
                         )
 
+                    # 【新增】保存思考过程供外部获取
+                    self.last_reasoning_content = thinking_content
+
                     # 返回最终回复（不含思考过程）
                     return final_content
 
@@ -1136,114 +1170,36 @@ class DeepSeekClient(BaseAIClient):
                     )
                 )
 
-                # 执行工具（支持并发执行）
-                import asyncio
-
-                async def execute_single_tool_deepseek(tool_call):
-                    """执行单个工具调用的异步函数（DeepSeek版本）"""
-                    from .tool_adapter import get_tool_adapter
-
-                    adapter = get_tool_adapter()
-
-                    # 解析工具参数
-                    arguments_str = tool_call.function.arguments
-
-                    try:
-                        tool_args = json.loads(arguments_str)
-                    except json.JSONDecodeError as e:
-                        logger.error(f"[AIClient] JSON解析失败: {arguments_str}")
-                        fixed_str = arguments_str
-
-                        try:
-                            fixed_str = fixed_str.rstrip(", ")
-                            tool_args = json.loads(fixed_str)
-                        except:
-                            import re
-
-                            def add_quotes(match):
-                                key_part = match.group(1)
-                                value_part = match.group(2)
-                                if '"' not in value_part:
-                                    value_part = '"' + value_part + '"'
-                                return key_part + value_part
-
-                            fixed_str2 = re.sub(
-                                r'("[\w\u4e00-\u9fa5]+":\s*)([\w\u4e00-\u9fa5]+)',
-                                add_quotes,
-                                fixed_str,
-                            )
-                            tool_args = json.loads(fixed_str2)
-
-                        # 过滤日志中的 CQ 码，避免终端刷屏
-                        safe_args = {}
-                        for k, v in tool_args.items():
-                            if isinstance(v, str) and ("[CQ:" in v or "base64," in v):
-                                safe_args[k] = "[图片数据]"
-                            else:
-                                safe_args[k] = v
-                        logger.info(
-                            f"[AIClient] 工具调用: {tool_call.function.name}, 参数: {safe_args}"
-                        )
-
-                        from core.gestalt_controller import get_gestalt_controller
-                        from core.terminal_formatter import TerminalFormatter
-
-                        TerminalFormatter.tool_call(tool_call.function.name, safe_args)
-
-                        gestalt = get_gestalt_controller()
-                        result = await gestalt.execute_tool(
-                            tool_call.function.name, tool_args, self.tool_context or {}
-                        )
-
-                        return tool_call, result
-
-                # 判断是否可以并发执行（目前强制串行以避免乱序问题）
+                # 执行工具（使用公共方法，强制串行以避免乱序问题）
                 can_concurrent = False
-                # concurrent_tool_names = [
-                #     "get_recent_messages",
-                #     "get_user_info",
-                #     "get_current_time",
-                #     "search_knowledge",
-                #     "search_memory",
-                #     "get_profile",
-                #     "bilibili_video",
-                #     "web_search",
-                #     "web_research",
-                # ]
-                # can_concurrent = (
-                #     any(tc.function.name in concurrent_tool_names for tc in tool_calls)
-                #     and len(tool_calls) > 1
-                # )
 
-                if can_concurrent:
-                    # 并发执行多个工具调用
-                    logger.info(f"[AIClient] 并发执行 {len(tool_calls)} 个工具调用")
-                    tool_results_list = await asyncio.gather(
-                        *[execute_single_tool_deepseek(tc) for tc in tool_calls],
-                        return_exceptions=True,
-                    )
+                # 串行执行逻辑（使用公共方法）
+                if not can_concurrent:
+                    for tool_call in tool_calls:
+                        _, result = await self._execute_tool_call(
+                            tool_call, self.tool_context
+                        )
 
-                    # 建立 tool_call_id 到结果的映射，确保按原始顺序添加
-                    tool_call_id_to_result = {}
-                    for tool_result in tool_results_list:
-                        if isinstance(tool_result, Exception):
-                            logger.error(f"[AIClient] 并发工具执行异常: {tool_result}")
-                            continue
-                        tool_call, result = tool_result
-                        tool_call_id_to_result[tool_call.id] = result
-
-                    # 按原始 tool_calls 顺序添加响应消息
-                    for tc in tool_calls:
-                        if tc.id not in tool_call_id_to_result:
-                            continue
-                        result = tool_call_id_to_result[tc.id]
-
-                        # 检查工具结果是否包含 FINAL 标记
-                        if result and result.startswith("[FINAL]"):
-                            logger.info(
-                                f"[AIClient] 检测到 FINAL 标记，停止工具调用: {result[:80]}"
-                            )
-                            return None
+                        # 检查FINAL标记
+                        final_marker = self._handle_final_marker(result)
+                        if final_marker == "[FINAL]":
+                            # 生成最终文本回复
+                            try:
+                                final_resp = await self.client.chat.completions.create(
+                                    model=self.model,
+                                    messages=[
+                                        {"role": m.role, "content": m.content}
+                                        for m in current_messages
+                                    ],
+                                    tool_choice="none",
+                                )
+                                if final_resp.choices and final_resp.choices[0].message:
+                                    return final_resp.choices[0].message.content or ""
+                            except Exception as e:
+                                logger.warning(f"[AIClient] 最终回复生成失败: {e}")
+                            return ""
+                        elif final_marker:
+                            return final_marker
 
                         # 检查是否是直接返回工具
                         direct_return_tools = [
@@ -1252,152 +1208,17 @@ class DeepSeekClient(BaseAIClient):
                             "terminal_command",
                             "multi_terminal",
                         ]
-                        if tc.function.name in direct_return_tools:
-                            return result
-
-                        current_messages.append(
-                            AIMessage(role="tool", content=result, tool_call_id=tc.id)
-                        )
-                else:
-                    # 串行执行
-                    pass
-
-                # 串行执行逻辑（仅在非并发模式下执行）
-                if not can_concurrent:
-                    for tool_call in tool_calls:
-                        from .tool_adapter import get_tool_adapter
-
-                        adapter = get_tool_adapter()
-
-                        # 解析工具参数（使用 JSON 而不是 eval）
-                        arguments_str = tool_call.function.arguments
-
-                        # 尝试解析 JSON，如果失败则尝试修复
-                        try:
-                            tool_args = json.loads(arguments_str)
-                        except json.JSONDecodeError as e:
-                            logger.error(f"[AIClient] JSON解析失败: {arguments_str}")
-                            logger.error(f"[AIClient] 错误详情: {e}")
-
-                            fixed_str = arguments_str
-
-                            # 修复常见的 JSON 格式问题
-                            try:
-                                # 1. 移除末尾多余的逗号
-                                fixed_str = fixed_str.rstrip(", ")
-                            except Exception:
-                                pass
-
-                            try:
-                                tool_args = json.loads(fixed_str)
-                                logger.info(f"[AIClient] JSON修复成功（移除逗号）")
-                            except Exception as e2:
-                                # 2. 尝试修复中文值没有引号的问题（如 "target_id": 用户 -> "target_id": "用户"）
-                                import re
-
-                                try:
-                                    # 匹配 "key": 值（值是中文或英文但没有引号）
-                                    def add_quotes(match):
-                                        key_part = match.group(1)
-                                        value_part = match.group(2)
-                                        # 如果值不包含引号，则添加引号
-                                        if '"' not in value_part:
-                                            value_part = '"' + value_part + '"'
-                                        return key_part + value_part
-
-                                    fixed_str2 = re.sub(
-                                        r'("[\w\u4e00-\u9fa5]+":\s*)([\w\u4e00-\u9fa5]+)',
-                                        add_quotes,
-                                        fixed_str,
-                                    )
-                                    tool_args = json.loads(fixed_str2)
-                                    logger.info(
-                                        f"[AIClient] JSON修复成功（修复中文值）: {fixed_str2}"
-                                    )
-                                except Exception as e3:
-                                    logger.error(
-                                        f"[AIClient] JSON修复也失败: {e2}, {e3}"
-                                    )
-                                    # 即使JSON解析失败，也要添加工具响应消息，避免API报错
-                                    error_result = json.dumps(
-                                        {
-                                            "success": False,
-                                            "error": f"JSON解析失败: {e}",
-                                            "raw_arguments": arguments_str,
-                                        },
-                                        ensure_ascii=False,
-                                    )
-                                    current_messages.append(
-                                        AIMessage(
-                                            role="tool",
-                                            content=error_result,
-                                            tool_call_id=tool_call.id,
-                                        )
-                                    )
-                                    continue
-
-                        # 过滤日志中的 CQ 码，避免终端刷屏
-                        safe_args = {}
-                        for k, v in tool_args.items():
-                            if isinstance(v, str) and ("[CQ:" in v or "base64," in v):
-                                safe_args[k] = "[图片数据]"
-                            else:
-                                safe_args[k] = v
-                        logger.info(
-                            f"[AIClient] 工具调用: {tool_call.function.name}, 参数: {safe_args}"
-                        )
-
-                        result = await adapter.execute_tool(
-                            tool_call.function.name, tool_args, self.tool_context or {}
-                        )
-
-                        # 检查工具结果是否包含 FINAL 标记
-                        if result and result.startswith("[FINAL]"):
-                            logger.info(
-                                f"[AIClient] 检测到 FINAL 标记，停止工具调用: {result[:80]}"
-                            )
-                            return None  # 返回 None 表示直接退出
-
-                        logger.info(
-                            f"[AIClient] 工具执行结果: {result[:200] if result else '(无结果)'}"
-                        )
-
-                        # 检查是否是直接返回工具（如运势、抽签等）
-                        # 这些工具返回的结果已经是格式化的，直接返回给用户
-                        direct_return_tools = [
-                            "horoscope",
-                            "wenchang_dijun",
-                            "terminal_command",
-                            "multi_terminal",
-                            # 热搜工具 - 返回完整列表，不摘要
-                            "douyinhot",
-                            "weibohot",
-                            "baiduhot",
-                            "grok_search",
-                            "web_search",
-                            "crawl_webpage",
-                            "qq_level_query",
-                            "tavily_search",
-                            # Agent 工具 - 返回完整结果
-                            "group_file_downloader",
-                            "local_file_finder",
-                            "qq_file_reader",
-                            # qq_image_analyzer 需要经过人格润色
-                            "python_interpreter",
-                        ]
                         if tool_call.function.name in direct_return_tools:
-                            logger.info(
-                                f"[AIClient] 检测到直接返回工具: {tool_call.function.name}，直接返回结果"
-                            )
                             return result
 
-                        # 添加工具结果消息
+                        # 添加工具响应消息
                         current_messages.append(
                             AIMessage(
                                 role="tool", content=result, tool_call_id=tool_call.id
                             )
                         )
 
+                # 更新迭代计数
                 iteration += 1
 
             except Exception as e:

@@ -193,7 +193,7 @@ class GRAGMemoryManager:
         # 实际应用中可以使用 LLM 或正则表达式
         try:
             # 从模型池获取客户端（优先使用成本低的模型）
-            from core.model_pool import get_model_pool
+            from core.model_pool_compat import get_model_pool
 
             pool = get_model_pool()
             client = pool.create_ai_client(task_type="simple_chat", endpoint="qq")

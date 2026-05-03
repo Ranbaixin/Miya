@@ -7,7 +7,6 @@
 """
 
 from typing import Dict, List, Optional
-import numpy as np
 import json
 from pathlib import Path
 from core.constants import Encoding
@@ -328,6 +327,18 @@ class Personality:
         adjusted_vectors = {}
         for key in self.vectors:
             adjusted_vectors[key] = self.get_vector(key)
+
+        # 如果 adjusted_vectors 为空，使用默认值
+        if not adjusted_vectors:
+            adjusted_vectors = {
+                "logic": 0.75,
+                "memory": 0.95,
+                "warmth": 0.85,
+                "empathy": 0.9,
+                "resilience": 0.8,
+                "creativity": 0.8,
+            }
+
         return {
             "vectors": adjusted_vectors,
             "base_vectors": self.vectors.copy(),
@@ -345,8 +356,15 @@ class Personality:
     def _calculate_stability(self, vectors: Optional[Dict] = None) -> float:
         if vectors is None:
             vectors = {key: self.get_vector(key) for key in self.vectors}
+
+        # 如果 vectors 为空，返回默认稳定性
+        if not vectors:
+            return 0.8
+
         values = list(vectors.values())
-        variance = float(np.var(values))
+        # 使用纯Python计算方差，避免numpy依赖
+        mean = sum(values) / len(values) if values else 0
+        variance = sum((x - mean) ** 2 for x in values) / len(values) if values else 0
         variance_stability = 1.0 - variance
         correlation_stability = self._calculate_correlation_stability(vectors)
         temporal_stability = self._calculate_temporal_stability()

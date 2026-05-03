@@ -194,6 +194,16 @@ class SQLiteBackend(MemoryBackend):
 
     def _build_values(self, memory: MemoryItem) -> tuple:
         """根据列顺序构建 INSERT 值元组"""
+        # 处理 metadata 中可能存在的枚举
+        metadata_str = "{}"
+        if memory.metadata:
+            try:
+                # 使用 MemoryItem 的序列化方法处理枚举
+                serialized_metadata = memory._serialize_dict(memory.metadata)
+                metadata_str = json.dumps(serialized_metadata, ensure_ascii=False)
+            except Exception:
+                metadata_str = json.dumps(str(memory.metadata), ensure_ascii=False)
+
         field_map = {
             "id": memory.id,
             "content": memory.content,
@@ -215,7 +225,7 @@ class SQLiteBackend(MemoryBackend):
             "conversation_partner": memory.conversation_partner or "",
             "emotional_tone": memory.emotional_tone or "",
             "significance": memory.significance,
-            "metadata": json.dumps(memory.metadata, ensure_ascii=False),
+            "metadata": metadata_str,
             "subject": memory.subject or "",
             "predicate": memory.predicate or "",
             "obj": memory.obj or "",

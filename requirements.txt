@@ -79,6 +79,29 @@ apscheduler>=3.10.0
 # ========== 类型提示 ==========
 typing-extensions>=4.8.0
 
+# ========== 多平台适配器依赖 ==========
+# QQ 官方机器人
+qq-botpy>=1.0.0                   # QQ 官方 API SDK
+
+# Telegram
+python-telegram-bot>=20.0         # Telegram Bot API
+
+# Discord
+discord.py>=2.0.0                 # Discord Bot API
+
+# 飞书
+lark-oapi>=1.0.0                  # 飞书开放平台 SDK
+
+# Slack
+slack-bolt>=1.18.0                # Slack Bot Framework
+slack-sdk>=3.20.0                 # Slack SDK
+
+# LINE
+line-bot-sdk>=3.0.0               # LINE Messaging API
+
+# Mattermost
+MattermostDriver>=7.0.0           # Mattermost API Driver
+
 # ========== QQ端扩展功能 ==========
 # OCR文字识别
 paddleocr>=2.7.0.3              # 百度PaddleOCR
@@ -109,3 +132,7 @@ click>=8.1.0                    # 命令行工具
 # 数据持久化
 sqlalchemy>=2.0.0               # SQL数据库ORM
 aiosqlite>=0.19.0               # 异步SQLite支持
+opentelemetry-api>=1.20.0
+opentelemetry-sdk>=1.20.0
+opentelemetry-instrumentation>=0.42b0
+opentelemetry-exporter-otlp>=1.20.0

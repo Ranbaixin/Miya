@@ -170,11 +170,10 @@ function useMiyaQQData() {
     try {
       const base = await getApiBase();
       const results = await Promise.allSettled([
-        fetch(`${base}/api/miya/status`).then(r => r.json()).catch(() => null),
-        fetch(`${base}/api/miya/memory`).then(r => r.json()).catch(() => null),
-        fetch(`${base}/api/miya/tools`).then(r => r.json()).catch(() => null),
-        fetch(`${base}/api/miya/personality`).then(r => r.json()).catch(() => null),
-        fetch(`${base}/api/miya/models`).then(r => r.json()).catch(() => null),
+        fetch(`${base}/api/status`).then(r => r.json()).catch(() => null),
+        fetch(`${base}/api/memory/stats`).then(r => r.json()).catch(() => null),
+        fetch(`${base}/api/tools`).then(r => r.json()).catch(() => null),
+        fetch(`${base}/api/emotion`).then(r => r.json()).catch(() => null),
       ]);
 
       const [statusRes, memoryRes, toolsRes, personalityRes] = results.map(r => r.status === 'fulfilled' ? r.value : null);
@@ -241,7 +240,7 @@ function useMiyaQQData() {
   const fetchLogs = useCallback(async (level?: string) => {
     try {
       const base = await getApiBase();
-      const url = level ? `${base}/api/miya/logs?level=${level}` : `${base}/api/miya/logs`;
+      const url = level ? `${base}/api/logs?level=${level}` : `${base}/api/logs`;
       const res = await fetch(url).catch(() => null);
       if (res?.ok) {
         const data = await res.json();
@@ -319,7 +318,7 @@ function useMiyaQQData() {
   const addMemory = useCallback(async (content: string, type: string = 'important'): Promise<string> => {
     try {
       const base = await getApiBase();
-      const res = await fetch(`${base}/api/miya/memory/add`, {
+      const res = await fetch(`${base}/api/memory/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content, memory_type: type }),
@@ -339,7 +338,7 @@ function useMiyaQQData() {
   const searchMemory = useCallback(async (query: string): Promise<ChatMessage[]> => {
     try {
       const base = await getApiBase();
-      const res = await fetch(`${base}/api/miya/memory/search?query=${encodeURIComponent(query)}`).catch(() => null);
+      const res = await fetch(`${base}/api/memory/search?query=${encodeURIComponent(query)}`).catch(() => null);
       if (res?.ok) {
         const data = await res.json();
         return data.results || [];

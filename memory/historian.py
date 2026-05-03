@@ -13,6 +13,7 @@ import json
 import logging
 import re
 import asyncio
+from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple, Set
 
@@ -578,7 +579,17 @@ class Historian:
                 if priority >= 0.7 or source_val == "manual":
                     # 升级为长期记忆
                     mem.level = MemoryLevel.LONG_TERM
-                    await self.memory_core.update_memory(str(mem.id), mem)
+                    # 使用正确的 update 方法调用
+                    await self.memory_core.update(
+                        str(mem.id),
+                        content=mem.content,
+                        tags=mem.tags,
+                        priority=mem.priority,
+                        is_pinned=mem.is_pinned,
+                        is_archived=mem.is_archived,
+                    )
+                    # 更新缓存中的记忆
+                    mem.updated_at = datetime.now().isoformat()
                     upgraded_count += 1
 
             if upgraded_count > 0:

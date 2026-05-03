@@ -101,11 +101,6 @@ class Scheduler:
 
     async def _run_loop(self):
         """调度循环"""
-        import sys
-
-        print(
-            f"[SCHEDULER] _run_loop started, running={self._running}", file=sys.stderr
-        )
         while self._running:
             try:
                 # 检查是否有待执行的任务

@@ -667,6 +667,7 @@ class MiyaQQ:
                 self.image_analysis = image_analysis
                 self.image_response = image_response
                 self.at_list = []
+                self.user_id = sender_id
 
         temp_qq_message = TempQQMessage(
             msg_type=msg_type,

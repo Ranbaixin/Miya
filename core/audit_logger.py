@@ -1,27 +1,30 @@
 """
 Miya 审计日志模块 - 安全加强
-================================
+===============================
 
 该模块提供全面的审计日志功能,记录所有配置变更、命令执行和访问行为。
 支持日志查询、分析和报告生成。
+包含数据脱敏功能以保护敏感信息。
 
 设计目标:
 - 记录所有关键操作
 - 不可篡改的日志存储
 - 便于查询和分析
 - 支持日志归档和清理
+- 自动脱敏敏感数据（密码、令牌、个人信息等）
 """
 
 import asyncio
 import json
 import logging
 import os
+import re
 import threading
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Union
 from collections import defaultdict
 import uuid
 
@@ -30,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 class AuditEventType(Enum):
     """审计事件类型"""
+
     # 配置管理
     CONFIG_READ = "config:read"
     CONFIG_WRITE = "config:write"
@@ -61,6 +65,7 @@ class AuditEventType(Enum):
 
 class AuditEventLevel(Enum):
     """审计事件级别"""
+
     INFO = "info"
     WARNING = "warning"
     ERROR = "error"
@@ -70,6 +75,7 @@ class AuditEventLevel(Enum):
 @dataclass
 class AuditEvent:
     """审计事件"""
+
     event_id: str
     event_type: AuditEventType
     level: AuditEventLevel
@@ -103,6 +109,37 @@ class AuditEvent:
 
 
 class AuditLogger:
+    # Patterns for sensitive data that should be redacted
+    SENSITIVE_PATTERNS = [
+        # Passwords
+        (
+            r'(?i)(password|passwd|pwd)["\']?\s*[:=]\s*["\']?[^"\'\s,}]+',
+            r'\1="[REDACTED]"',
+        ),
+        (r'(?i)"?(password|passwd|pwd)"?\s*:\s*"[^"]*"', r'"\1":"[REDACTED]"'),
+        # API keys/tokens
+        (
+            r'(?i)(api[_\s]?key|token|auth[_\s]?key|access[_\s]?token|secret[_\s]?key)["\']?\s*[:=]\s*["\']?[^"\'\s,}]+',
+            r'\1="[REDACTED]"',
+        ),
+        (
+            r'(?i)"?(api[_\s]?key|token|auth[_\s]?key|access[_\s]?token|secret[_\s]?key)"?\s*:\s*"[^"]*"',
+            r'"\1":"[REDACTED]"',
+        ),
+        # Personal data
+        (
+            r'(?i)(ssn|social[_\s]?security)["\']?\s*[:=]\s*["\']?[^"\'\s,}]+',
+            r'\1="[REDACTED]"',
+        ),
+        (r'(?i)"?(ssn|social[_\s]?security)"?\s*:\s*"[^"]*"', r'"\1":"[REDACTED]"'),
+        (
+            r'(?i)(credit[_\s]?card|ccv|cvc)["\']?\s*[:=]\s*["\']?[^"\'\s,}]+',
+            r'\1="[REDACTED]"',
+        ),
+        (r'(?i)"?(credit[_\s]?card|ccv|cvc)"?\s*:\s*"[^"]*"', r'"\1":"[REDACTED]"'),
+        (r'(?i)(email|e-mail)["\']?\s*[:=]\s*["\']?[^"\'\s,}]+', r'\1="[REDACTED]"'),
+        (r'(?i)"?(email|e-mail)"?\s*:\s*"[^"]*"', r'"\1":"[REDACTED]"'),
+    ]
     """审计日志管理器"""
 
     def __init__(
@@ -110,7 +147,7 @@ class AuditLogger:
         log_dir: str = "logs/audit",
         max_file_size: int = 10 * 1024 * 1024,  # 10MB
         max_files: int = 100,
-        enable_console: bool = True
+        enable_console: bool = True,
     ):
         self.log_dir = Path(log_dir)
         self.max_file_size = max_file_size
@@ -177,7 +214,7 @@ class AuditLogger:
         log_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
 
         # 删除超过数量的文件
-        for log_file in log_files[self.max_files:]:
+        for log_file in log_files[self.max_files :]:
             try:
                 log_file.unlink()
                 logger.debug(f"[审计日志] 删除旧日志: {log_file}")
@@ -197,7 +234,7 @@ class AuditLogger:
         action: Optional[str] = None,
         status: str = "success",
         message: str = "",
-        details: Optional[Dict[str, Any]] = None
+        details: Optional[Dict[str, Any]] = None,
     ):
         """记录审计事件"""
         event = AuditEvent(
@@ -214,7 +251,7 @@ class AuditLogger:
             action=action,
             status=status,
             message=message,
-            details=details or {}
+            details=details or {},
         )
 
         # 添加到缓存
@@ -238,19 +275,46 @@ class AuditLogger:
             else:
                 logger.info(console_msg)
 
+    def _redact_sensitive_data(self, text: str) -> str:
+        """
+        Redact sensitive data from text using predefined patterns.
+        """
+        if not isinstance(text, str):
+            return text
+
+        redacted = text
+        for pattern, replacement in self.SENSITIVE_PATTERNS:
+            redacted = re.sub(pattern, replacement, redacted)
+        return redacted
+
     def _write_event(self, event: AuditEvent):
         """写入事件到文件"""
         try:
             # 检查是否需要轮转
             self._rotate_log_file()
 
-            # 写入事件
-            event_json = json.dumps(event.to_dict(), ensure_ascii=False) + "\n"
+            # Convert event to dict and redact sensitive data
+            event_dict = event.to_dict()
 
-            with open(self._current_log_file, 'a', encoding='utf-8') as f:
+            # Redact sensitive fields in the details
+            if "details" in event_dict and isinstance(event_dict["details"], dict):
+                for key, value in event_dict["details"].items():
+                    if isinstance(value, str):
+                        event_dict["details"][key] = self._redact_sensitive_data(value)
+
+            # Also redact in message if it's a string
+            if "message" in event_dict and isinstance(event_dict["message"], str):
+                event_dict["message"] = self._redact_sensitive_data(
+                    event_dict["message"]
+                )
+
+            # 写入事件
+            event_json = json.dumps(event_dict, ensure_ascii=False) + "\n"
+
+            with open(self._current_log_file, "a", encoding="utf-8") as f:
                 f.write(event_json)
 
-            self._current_file_size += len(event_json.encode('utf-8'))
+            self._current_file_size += len(event_json.encode("utf-8"))
 
         except Exception as e:
             logger.error(f"[审计日志] 写入事件失败: {e}")
@@ -263,7 +327,7 @@ class AuditLogger:
         api_key_id: Optional[str] = None,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
-        limit: int = 100
+        limit: int = 100,
     ) -> List[AuditEvent]:
         """查询审计事件"""
         results = []
@@ -271,14 +335,24 @@ class AuditLogger:
         # 从缓存查询
         with self._cache_lock:
             for event in self._event_cache:
-                if self._matches_filter(event, event_type, level, user_id, api_key_id, start_time, end_time):
+                if self._matches_filter(
+                    event, event_type, level, user_id, api_key_id, start_time, end_time
+                ):
                     results.append(event)
 
         # 如果缓存不够,从文件查询
         if len(results) < limit:
-            results.extend(self._query_from_files(
-                event_type, level, user_id, api_key_id, start_time, end_time, limit - len(results)
-            ))
+            results.extend(
+                self._query_from_files(
+                    event_type,
+                    level,
+                    user_id,
+                    api_key_id,
+                    start_time,
+                    end_time,
+                    limit - len(results),
+                )
+            )
 
         # 排序并限制数量
         results.sort(key=lambda x: x.timestamp, reverse=True)
@@ -292,7 +366,7 @@ class AuditLogger:
         user_id: Optional[str],
         api_key_id: Optional[str],
         start_time: Optional[datetime],
-        end_time: Optional[datetime]
+        end_time: Optional[datetime],
     ) -> bool:
         """检查事件是否匹配过滤条件"""
         if event_type and event.event_type != event_type:
@@ -323,7 +397,7 @@ class AuditLogger:
         api_key_id: Optional[str],
         start_time: Optional[datetime],
         end_time: Optional[datetime],
-        limit: int
+        limit: int,
     ) -> List[AuditEvent]:
         """从文件查询事件"""
         results = []
@@ -334,7 +408,7 @@ class AuditLogger:
                 break
 
             try:
-                with open(log_file, 'r', encoding='utf-8') as f:
+                with open(log_file, "r", encoding="utf-8") as f:
                     for line in f:
                         if len(results) >= limit:
                             break
@@ -343,7 +417,15 @@ class AuditLogger:
                             data = json.loads(line.strip())
                             event = AuditEvent.from_dict(data)
 
-                            if self._matches_filter(event, event_type, level, user_id, api_key_id, start_time, end_time):
+                            if self._matches_filter(
+                                event,
+                                event_type,
+                                level,
+                                user_id,
+                                api_key_id,
+                                start_time,
+                                end_time,
+                            ):
                                 results.append(event)
 
                         except Exception:
@@ -375,17 +457,19 @@ class AuditLogger:
             "event_levels": dict(level_counts),
             "log_files_count": len(log_files),
             "total_log_size_bytes": total_size,
-            "current_log_file": str(self._current_log_file)
+            "current_log_file": str(self._current_log_file),
         }
 
     def generate_report(
         self,
         start_time: datetime,
         end_time: datetime,
-        output_file: Optional[Path] = None
+        output_file: Optional[Path] = None,
     ) -> str:
         """生成审计报告"""
-        events = self.query_events(start_time=start_time, end_time=end_time, limit=10000)
+        events = self.query_events(
+            start_time=start_time, end_time=end_time, limit=10000
+        )
 
         # 统计分析
         event_type_stats = defaultdict(int)
@@ -407,34 +491,33 @@ class AuditLogger:
             f"时间范围: {start_time.isoformat()} - {end_time.isoformat()}",
             f"总事件数: {len(events)}",
             "",
-            "## 事件类型统计"
+            "## 事件类型统计",
         ]
 
-        for event_type, count in sorted(event_type_stats.items(), key=lambda x: x[1], reverse=True):
+        for event_type, count in sorted(
+            event_type_stats.items(), key=lambda x: x[1], reverse=True
+        ):
             report_lines.append(f"- {event_type}: {count}")
 
-        report_lines.extend([
-            "",
-            "## 事件级别统计"
-        ])
+        report_lines.extend(["", "## 事件级别统计"])
 
-        for level, count in sorted(level_stats.items(), key=lambda x: x[1], reverse=True):
+        for level, count in sorted(
+            level_stats.items(), key=lambda x: x[1], reverse=True
+        ):
             report_lines.append(f"- {level}: {count}")
 
-        report_lines.extend([
-            "",
-            "## 用户活动统计"
-        ])
+        report_lines.extend(["", "## 用户活动统计"])
 
-        for user_id, count in sorted(user_stats.items(), key=lambda x: x[1], reverse=True)[:10]:
+        for user_id, count in sorted(
+            user_stats.items(), key=lambda x: x[1], reverse=True
+        )[:10]:
             report_lines.append(f"- {user_id}: {count}")
 
-        report_lines.extend([
-            "",
-            "## 状态统计"
-        ])
+        report_lines.extend(["", "## 状态统计"])
 
-        for status, count in sorted(status_stats.items(), key=lambda x: x[1], reverse=True):
+        for status, count in sorted(
+            status_stats.items(), key=lambda x: x[1], reverse=True
+        ):
             report_lines.append(f"- {status}: {count}")
 
         # 添加重要事件
@@ -442,18 +525,12 @@ class AuditLogger:
         error_events = [e for e in events if e.level == AuditEventLevel.ERROR]
 
         if critical_events:
-            report_lines.extend([
-                "",
-                "## 严重事件"
-            ])
+            report_lines.extend(["", "## 严重事件"])
             for event in critical_events[:20]:
                 report_lines.append(f"- [{event.timestamp}] {event.message}")
 
         if error_events:
-            report_lines.extend([
-                "",
-                "## 错误事件"
-            ])
+            report_lines.extend(["", "## 错误事件"])
             for event in error_events[:20]:
                 report_lines.append(f"- [{event.timestamp}] {event.message}")
 
@@ -462,7 +539,7 @@ class AuditLogger:
         # 保存到文件
         if output_file:
             output_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(output_file, 'w', encoding='utf-8') as f:
+            with open(output_file, "w", encoding="utf-8") as f:
                 f.write(report_str)
             logger.info(f"[审计日志] 报告已保存: {output_file}")
 
@@ -488,18 +565,10 @@ def set_global_audit_logger(logger: AuditLogger):
 
 
 # 便捷函数
-def audit_log(
-    event_type: AuditEventType,
-    message: str = "",
-    **kwargs
-):
+def audit_log(event_type: AuditEventType, message: str = "", **kwargs):
     """便捷的审计日志记录函数"""
     audit_logger = get_global_audit_logger()
-    audit_logger.log_event(
-        event_type=event_type,
-        message=message,
-        **kwargs
-    )
+    audit_logger.log_event(event_type=event_type, message=message, **kwargs)
 
 
 # 示例使用
@@ -511,14 +580,14 @@ if __name__ == "__main__":
     audit_logger.log_event(
         event_type=AuditEventType.SYSTEM_STARTUP,
         level=AuditEventLevel.INFO,
-        message="系统启动"
+        message="系统启动",
     )
 
     audit_logger.log_event(
         event_type=AuditEventType.API_KEY_CREATE,
         level=AuditEventLevel.INFO,
         user_id="user123",
-        message="创建API密钥"
+        message="创建API密钥",
     )
 
     audit_logger.log_event(
@@ -529,13 +598,12 @@ if __name__ == "__main__":
         resource_id="device001",
         message="发送IoT命令失败",
         status="failed",
-        details={"error": "设备离线"}
+        details={"error": "设备离线"},
     )
 
     # 查询事件
     events = audit_logger.query_events(
-        event_type=AuditEventType.API_KEY_CREATE,
-        limit=10
+        event_type=AuditEventType.API_KEY_CREATE, limit=10
     )
 
     print(f"查询到 {len(events)} 个事件")
@@ -548,6 +616,7 @@ if __name__ == "__main__":
 
     # 生成报告
     from datetime import timedelta
+
     end_time = datetime.now()
     start_time = end_time - timedelta(days=1)
     report = audit_logger.generate_report(start_time, end_time)

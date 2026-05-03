@@ -28,7 +28,7 @@ sys.path.insert(0, str(MIYA_ROOT))
 
 # 尝试导入 model_pool
 try:
-    from core.model_pool import get_model_pool, TaskType
+    from core.model_pool_compat import get_model_pool, TaskType
 
     MODEL_POOL_AVAILABLE = True
 except ImportError:
@@ -349,7 +349,7 @@ model_selector = MiyaModelSelector()
 # 初始化协作引擎
 collaboration_engine = None
 try:
-    from core.model_pool import get_model_pool
+    from core.model_pool_compat import get_model_pool
     from core.model_collaboration_engine import ModelCollaborationEngine
 
     _mp = get_model_pool()
