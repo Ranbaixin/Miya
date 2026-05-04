@@ -29,16 +29,19 @@ const PersonalityVectorPage: React.FC = () => {
   useEffect(() => {
     const loadPersonality = async () => {
       try {
-        const data = await miyaAPI.getMiyaStatus();
-        if (data?.personality?.vectors) {
-          const v = data.personality.vectors;
+        const data = await miyaAPI.getPersonalityVectors();
+        if (data?.vectors) {
+          const vObj: Record<string, number> = {};
+          data.vectors.forEach((v: { name: string; value: number }) => {
+            vObj[v.name as VectorKey] = v.value;
+          });
           setVectors({
-            logic: v.logic ?? 0.75,
-            memory: v.memory ?? v.warmth ?? 0.95,  // 兼容两种格式
-            warmth: v.warmth ?? 0.85,
-            empathy: v.empathy ?? 0.9,
-            resilience: v.resilience ?? 0.8,
-            creativity: v.creativity ?? 0.8,
+            logic: vObj.logic ?? 0.75,
+            memory: vObj.memory ?? 0.95,
+            warmth: vObj.warmth ?? 0.85,
+            empathy: vObj.empathy ?? 0.9,
+            resilience: vObj.resilience ?? 0.8,
+            creativity: vObj.creativity ?? 0.8,
           });
         }
       } catch (e) {

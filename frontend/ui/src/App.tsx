@@ -4,7 +4,6 @@ import Header from './components/Header';
 import StatusBar from './components/StatusBar';
 import DashboardPage from './pages/DashboardPage';
 import SystemsPage from './pages/SystemsPage';
-import AccountPage from './pages/AccountPage';
 import EmotionPage from './pages/EmotionPage';
 import MemoryPage from './pages/MemoryPage';
 import ToolsPage from './pages/ToolsPage';
@@ -21,15 +20,10 @@ import KnowledgeBasePage from './pages/KnowledgeBasePage';
 import VoicePage from './pages/VoicePage';
 import AutonomyPage from './pages/AutonomyPage';
 import LogsPage from './pages/LogsPage';
-import GroupsPage from './pages/GroupsPage';
-import FriendsPage from './pages/FriendsPage';
-import MessagesPage from './pages/MessagesPage';
-import UnifiedMessagesPage from './pages/UnifiedMessagesPage';
 
 const pageTitles: Record<string, string> = {
   dashboard: '仪表盘',
   systems: '系统',
-  account: '账号',
   emotion: '情感',
   memory: '记忆',
   cognitive: '认知',
@@ -45,10 +39,6 @@ const pageTitles: Record<string, string> = {
   voice: '语音',
   autonomy: '自主',
   logs: '日志',
-  groups: '群组',
-  friends: '好友',
-  messages: '消息',
-  unified_messages: '消息流',
   settings: '设置',
 };
 
@@ -98,8 +88,6 @@ function App() {
         return <DashboardPage stats={{ messages: 156, groups: 5, friends: 4, tools: 69 }} />;
       case 'systems':
         return <SystemsPage />;
-      case 'account':
-        return <AccountPage />;
       case 'emotion':
         return <EmotionPage />;
       case 'memory':
@@ -130,14 +118,6 @@ function App() {
         return <AutonomyPage />;
       case 'logs':
         return <LogsPage />;
-      case 'groups':
-        return <GroupsPage />;
-      case 'friends':
-        return <FriendsPage />;
-      case 'messages':
-        return <MessagesPage />;
-      case 'unified_messages':
-        return <UnifiedMessagesPage />;
       case 'settings':
         return <SettingsPage backgrounds={backgrounds} currentBg={bgId} onBgChange={setBgId} />;
       default:

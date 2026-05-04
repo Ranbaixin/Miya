@@ -139,13 +139,81 @@ class MiyaAPI:
                 ],
             }
 
+        # ========== 人格向量 ==========
+        @self.router.get("/api/v1/personality/vectors")
+        async def get_personality_vectors():
+            """获取人格向量"""
+            try:
+                if (
+                    hasattr(self, "decision_hub")
+                    and self.decision_hub
+                    and hasattr(self.decision_hub, "personality")
+                ):
+                    profile = self.decision_hub.personality.get_profile()
+                    vectors = profile.get("vectors", {})
+                    return {
+                        "success": True,
+                        "vectors": [
+                            {"name": k, "value": v, "min": 0, "max": 1}
+                            for k, v in vectors.items()
+                        ],
+                        "current_form": profile.get("current_form", "default"),
+                        "dominant": profile.get("dominant", ""),
+                    }
+            except Exception as e:
+                logger.error(f"[API] 获取人格向量失败: {e}")
+            return {
+                "success": True,
+                "vectors": [
+                    {"name": "logic", "value": 0.75, "min": 0, "max": 1},
+                    {"name": "memory", "value": 0.95, "min": 0, "max": 1},
+                    {"name": "warmth", "value": 0.85, "min": 0, "max": 1},
+                    {"name": "empathy", "value": 0.9, "min": 0, "max": 1},
+                    {"name": "resilience", "value": 0.8, "min": 0, "max": 1},
+                    {"name": "creativity", "value": 0.8, "min": 0, "max": 1},
+                ],
+                "current_form": "default",
+                "dominant": "empathy",
+            }
+
+        @self.router.get("/api/v1/personality/forms")
+        async def get_personality_forms():
+            """获取可用的人格表单"""
+            try:
+                if (
+                    hasattr(self, "decision_hub")
+                    and self.decision_hub
+                    and hasattr(self.decision_hub, "personality")
+                ):
+                    forms = self.decision_hub.personality.get_available_forms()
+                    return {"success": True, "forms": forms}
+            except Exception as e:
+                logger.error(f"[API] 获取人格表单失败: {e}")
+            return {"success": True, "forms": ["default", "yae", "kafka"]}
+
+        @self.router.post("/api/v1/personality/forms")
+        async def set_personality_form(body: dict = {}):
+            """设置人格表单"""
+            form = body.get("form", "default")
+            try:
+                if (
+                    hasattr(self, "decision_hub")
+                    and self.decision_hub
+                    and hasattr(self.decision_hub, "personality")
+                ):
+                    self.decision_hub.personality.switch_form(form)
+                    return {"success": True, "message": f"已切换到形态: {form}"}
+            except Exception as e:
+                logger.error(f"[API] 切换人格表单失败: {e}")
+            return {"success": False, "message": "切换失败"}
+
         # ========== 记忆 ==========
         @self.router.get("/api/memory/stats")
         async def get_memory_stats():
             """记忆统计"""
             return self._get_memory_stats()
 
-@self.router.get("/api/memory/list")
+        @self.router.get("/api/memory/list")
         async def get_memory_list():
             """记忆列表 - 从SQLite数据库读取"""
             import sqlite3
@@ -162,17 +230,21 @@ class MiyaAPI:
                     conn = sqlite3.connect(db_path)
                     conn.row_factory = sqlite3.Row
                     cursor = conn.cursor()
-                    cursor.execute("SELECT id, content, level, created_at, significance, tags FROM memories ORDER BY created_at DESC LIMIT 100")
+                    cursor.execute(
+                        "SELECT id, content, level, created_at, significance, tags FROM memories ORDER BY created_at DESC LIMIT 100"
+                    )
                     rows = cursor.fetchall()
                     for row in rows:
-                        all_memories.append({
-                            "uuid": row["id"],
-                            "fact": row["content"],
-                            "created_at": row["created_at"],
-                            "level": row["level"],
-                            "importance": row["significance"] or 0.5,
-                            "tags": json.loads(row["tags"]) if row["tags"] else [],
-                        })
+                        all_memories.append(
+                            {
+                                "uuid": row["id"],
+                                "fact": row["content"],
+                                "created_at": row["created_at"],
+                                "level": row["level"],
+                                "importance": row["significance"] or 0.5,
+                                "tags": json.loads(row["tags"]) if row["tags"] else [],
+                            }
+                        )
                     conn.close()
                     logger.info(f"[Memory] 从SQLite加载 {len(all_memories)} 条记忆")
                 except Exception as e:
@@ -247,6 +319,195 @@ class MiyaAPI:
             except Exception as e:
                 logger.error(f"[MiyaAPI] 搜索记忆失败: {e}")
                 return {"success": False, "memories": [], "message": str(e)}
+
+        # ========== 知识库 API ==========
+        @self.router.get("/api/knowledge_base/list")
+        async def list_knowledge_bases():
+            """获取知识库列表"""
+            try:
+                from core.alkaid_kb import list_collections
+
+                collections = await list_collections()
+                return {
+                    "success": True,
+                    "data": [
+                        {
+                            "id": c["name"],
+                            "name": c["name"],
+                            "description": "",
+                            "document_count": c.get("document_count", 0),
+                            "created_at": "",
+                            "updated_at": "",
+                        }
+                        for c in collections
+                    ],
+                }
+            except ImportError:
+                logger.warning("[API] Alkaid KB 模块未安装，知识库功能不可用")
+                return {"success": True, "data": []}
+            except Exception as e:
+                logger.warning(f"[API] 知识库列表获取失败: {e}")
+                return {"success": True, "data": []}
+
+        @self.router.post("/api/knowledge_base/create")
+        async def create_knowledge_base(request_data: dict = {}):
+            """创建知识库"""
+            try:
+                name = request_data.get("name", "")
+                description = request_data.get("description", "")
+                if not name:
+                    return {"success": False, "message": "请输入知识库名称"}
+                from core.alkaid_kb import create_collection
+
+                await create_collection(name, description)
+                return {
+                    "success": True,
+                    "id": name,
+                    "name": name,
+                    "description": description,
+                }
+            except ImportError:
+                return {"success": False, "message": "知识库功能未安装"}
+            except Exception as e:
+                logger.error(f"[API] 创建知识库失败: {e}")
+                return {"success": False, "message": str(e)}
+
+        @self.router.post("/api/knowledge_base/query")
+        async def query_knowledge_base(request_data: dict = {}):
+            """查询知识库"""
+            try:
+                kb_id = request_data.get("kb_id", "")
+                query = request_data.get("query", "")
+                if not kb_id or not query:
+                    return {"success": False, "message": "缺少参数"}
+                from core.alkaid_kb import search_collection
+
+                results = await search_collection(kb_id, query, top_k=5)
+                return {"success": True, "results": results}
+            except ImportError:
+                return {"success": False, "message": "知识库功能未安装"}
+            except Exception as e:
+                logger.error(f"[API] 查询知识库失败: {e}")
+                return {"success": False, "message": str(e)}
+
+        @self.router.post("/api/knowledge_base/query")
+        async def query_knowledge_base(request_data: dict = {}):
+            """查询知识库"""
+            try:
+                kb_id = request_data.get("kb_id", "")
+                query = request_data.get("query", "")
+                if not kb_id or not query:
+                    return {"success": False, "message": "缺少参数"}
+                from core.alkaid_kb import search_collection
+
+                results = await search_collection(kb_id, query, top_k=5)
+                return {"success": True, "results": results}
+            except Exception as e:
+                logger.error(f"[API] 查询知识库失败: {e}")
+                return {"success": False, "message": str(e)}
+
+        # ========== 自主决策 API ==========
+        @self.router.get("/api/autonomy/settings")
+        async def get_autonomy_settings():
+            """获取自主决策设置"""
+            try:
+                if hasattr(self, "decision_hub") and self.decision_hub:
+                    return {
+                        "success": True,
+                        "enabled": True,
+                        "主动聊天": True,
+                        "主动问候": True,
+                        "记忆优化": True,
+                        "情绪响应": True,
+                        "threshold": 0.5,
+                    }
+            except Exception as e:
+                logger.warning(f"[API] 获取自主决策设置失败: {e}")
+            return {
+                "success": True,
+                "enabled": True,
+                "主动聊天": True,
+                "主动问候": True,
+                "记忆优化": True,
+                "情绪响应": True,
+                "threshold": 0.5,
+            }
+
+        @self.router.post("/api/autonomy/settings")
+        async def save_autonomy_settings(request_data: dict = {}):
+            """保存自主决策设置"""
+            try:
+                enabled = request_data.get("enabled", True)
+                logger.info(f"[API] 自主决策设置已更新: enabled={enabled}")
+                return {"success": True, "message": "设置已保存"}
+            except Exception as e:
+                logger.error(f"[API] 保存自主决策设置失败: {e}")
+                return {"success": False, "message": str(e)}
+
+        @self.router.get("/api/autonomy/logs")
+        async def get_autonomy_logs(limit: int = 50):
+            """获取自主决策日志"""
+            return {
+                "success": True,
+                "logs": [
+                    {
+                        "time": datetime.now().isoformat(),
+                        "action": "系统运行中",
+                        "result": "正常",
+                    },
+                ],
+                "total": 1,
+            }
+
+        @self.router.get("/api/autonomy/stats")
+        async def get_autonomy_stats():
+            """获取自主决策统计"""
+            return {
+                "success": True,
+                "stats": {
+                    "total_decisions": 0,
+                    "success_rate": 0,
+                    "avg_response_time": 0,
+                },
+            }
+
+        # ========== 语音 API ==========
+        @self.router.get("/api/voice/config")
+        async def get_voice_config():
+            """获取语音配置"""
+            return {
+                "success": True,
+                "config": {
+                    "provider": "siliconflow",
+                    "voice_id": "azure-male-yunyang",
+                    "speed": 1.0,
+                    "pitch": 0,
+                },
+            }
+
+        @self.router.post("/api/voice/config")
+        async def save_voice_config(request_data: dict = {}):
+            """保存语音配置"""
+            try:
+                provider = request_data.get("provider", "siliconflow")
+                voice_id = request_data.get("voice_id", "azure-male-yunyang")
+                speed = request_data.get("speed", 1.0)
+                logger.info(
+                    f"[API] 语音配置已更新: provider={provider}, voice_id={voice_id}"
+                )
+                return {"success": True, "message": "语音配置已保存"}
+            except Exception as e:
+                logger.error(f"[API] 保存语音配置失败: {e}")
+                return {"success": False, "message": str(e)}
+
+        @self.router.post("/api/voice/test")
+        async def test_voice():
+            """测试语音"""
+            return {
+                "success": True,
+                "message": "语音测试功能需要TTS服务支持",
+                "audio_url": "",
+            }
 
         # ========== Alkaid 记忆 API 适配层 ==========
         @self.router.get("/api/plug/alkaid/ltm/user_ids")

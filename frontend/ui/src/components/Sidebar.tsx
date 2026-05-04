@@ -9,12 +9,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { id: 'dashboard', icon: '📊', label: '仪表盘' },
   { id: 'systems', icon: '💻', label: '系统' },
-  { id: 'account', icon: '👤', label: '账号' },
   { id: 'logs', icon: '📝', label: '日志' },
-  { id: 'groups', icon: '👥', label: '群组' },
-  { id: 'friends', icon: '🤝', label: '好友' },
-  { id: 'messages', icon: '💭', label: '消息' },
-  { id: 'unified_messages', icon: '🌊', label: '消息流' },
   { id: 'emotion', icon: '💕', label: '情感' },
   { id: 'memory', icon: '🧠', label: '记忆' },
   { id: 'cognitive', icon: '🧩', label: '认知' },
