@@ -195,7 +195,8 @@
         "output": 0.00024
       },
       "latency": "fast",
-      "quality": "excellent"
+      "quality": "excellent",
+      "disabled": true
     },
     "llama_3_1_8b": {
       "name": "meta-llama/Llama-3.1-8B-Instruct",
@@ -310,14 +311,14 @@
     },
     "complex_reasoning": {
       "primary": "deepseek_v4_flash_official",
-      "secondary": "deepseek_r1_distill_7b",
+      "secondary": "qwen_72b",
       "third": "deepseek_v4_flash_official",
       "fallback": "qwen_72b"
     },
     "code_analysis": {
       "primary": "deepseek_v4_flash_official",
       "secondary": "qwen_72b",
-      "fallback": "deepseek_r1_distill_7b"
+      "fallback": "qwen_72b"
     },
     "code_generation": {
       "primary": "deepseek_v4_flash_official",

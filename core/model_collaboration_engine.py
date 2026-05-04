@@ -989,6 +989,7 @@ class ModelCollaborationEngine:
                 message, thinking_result + final_response
             ),
             reasoning=f"思考-输出分离: {parallel_model_ids[0]}思考 → {parallel_model_ids[1]}输出",
+            thinking=thinking_result,
         )
 
         # 只有一个模型响应时的处理
@@ -1006,6 +1007,7 @@ class ModelCollaborationEngine:
             reasoning=self.msg_reasoning_parallel.format(
                 models=", ".join(models_used),
             ),
+            thinking="",
         )
 
     async def _execute_role(

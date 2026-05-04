@@ -2447,6 +2447,8 @@ class DecisionHub:
                     thinking_content = soul_reasoning[:500]
                 elif ai_reasoning:
                     thinking_content = ai_reasoning[:500]
+                elif collab_result and collab_result.thinking:
+                    thinking_content = collab_result.thinking[:500]
 
                 # 如果没有数据，至少记录回复内容
                 if not thinking_content and response:
