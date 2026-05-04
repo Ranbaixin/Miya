@@ -1374,13 +1374,23 @@ class DecisionHub:
                 cognitive_memory_context = await cognitive_engine.build_context(
                     user_input=content,
                     conversation_history=conversation_context,
-                    limit=3,
+                    limit=5,
                     user_id=query_user_id,
                     group_id=query_group_id,
                 )
+                print(
+                    f"[DEBUG] cognitive_memory_context length: {len(cognitive_memory_context) if cognitive_memory_context else 0}, user={query_user_id}"
+                )
+                logger.warning(
+                    f"[DEBUG认知] build_context 返回长度={len(cognitive_memory_context) if cognitive_memory_context else 0}"
+                )
                 if cognitive_memory_context:
-                    logger.info(
+                    logger.warning(
                         f"[决策层] 智能记忆检索到相关记忆 (user_id={query_user_id}, group_id={query_group_id})"
+                    )
+                else:
+                    logger.warning(
+                        f"[决策层] 智能记忆检索无结果 (user_id={query_user_id})"
                     )
             except Exception as e:
                 logger.warning(f"[决策层] 智能记忆检索失败: {e}")
@@ -1954,12 +1964,25 @@ class DecisionHub:
                                 emotion_context_for_collab
                             )
 
+                        # 将认知记忆直接注入 system prompt，确保 AI 能看见
+                        final_system_prompt = prompt_info["system"]
+                        if cognitive_memory_context:
+                            final_system_prompt = (
+                                "\n\n【以下是弥娅记忆系统检索到的与你当前对话相关的过往记录，请在回复中自然引用这些记忆，让对话更连贯】\n"
+                                + cognitive_memory_context
+                                + "\n【记忆记录结束】\n\n"
+                                + final_system_prompt
+                            )
+                            logger.warning(
+                                f"[决策层] 认知记忆已注入 system prompt ({len(cognitive_memory_context)} 字符)"
+                            )
+
                         collab_result = await self.collaboration_engine.process(
                             message=content,
                             task_type=task_type.value,
                             platform=platform,
                             context=tool_ctx_for_collab,
-                            system_prompt=prompt_info["system"],
+                            system_prompt=final_system_prompt,
                             user_prompt=prompt_info["user"],
                             tools=tools_schema,
                             ai_client_factory=AIClientFactory,
