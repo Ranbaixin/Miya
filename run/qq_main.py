@@ -49,6 +49,9 @@ class MiyaQQ:
     """弥娅 QQ 模式主类 - 使用新版 ToolNet 架构"""
 
     def __init__(self):
+        import sys
+
+        sys.setrecursionlimit(max(sys.getrecursionlimit(), 2000))
         self.logger: logging.Logger = self._setup_logger()
         self.settings: Any = Settings()
 

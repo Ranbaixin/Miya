@@ -74,6 +74,7 @@ class Model:
     provider: str
     base_url: str
     env_key: str = ""
+    api_key: str = ""
     type: str = "chat"
     capabilities: List[str] = field(default_factory=list)
     cost_input: float = 0.0
@@ -210,6 +211,7 @@ class ModelPoolManager:
                 provider=model_conf.get("provider", "openai"),
                 base_url=model_conf.get("base_url", ""),
                 env_key=env_key,
+                api_key=api_key,
                 type=model_conf.get("type", "chat"),
                 capabilities=model_conf.get("capabilities", []),
                 cost_input=model_conf.get("cost_per_1k_tokens", {}).get("input", 0.0),

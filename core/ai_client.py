@@ -950,7 +950,11 @@ class OpenAIClient(BaseAIClient):
 
             except Exception as e:
                 logger.error(f"OpenAI API调用失败: {e}")
-                raise
+                from openai import AuthenticationError as OpenAIAuthError
+
+                if isinstance(e, OpenAIAuthError):
+                    return "抱歉亲爱的，当前模型认证出现问题，可能是密钥已过期。请检查API密钥是否有效~"
+                return f"抱歉，AI服务暂时不可用：{str(e)[:200]}"
 
         # 达到最大迭代次数
         return get_error_message("tool_call_limit_exceeded")
@@ -1223,7 +1227,11 @@ class DeepSeekClient(BaseAIClient):
 
             except Exception as e:
                 logger.error(f"DeepSeek API调用失败: {e}")
-                raise
+                from openai import AuthenticationError as OpenAIAuthError
+
+                if isinstance(e, OpenAIAuthError):
+                    return "抱歉亲爱的，当前DeepSeek模型认证失败，可能是密钥已过期。请检查~"
+                return f"抱歉，AI服务暂时不可用：{str(e)[:200]}"
 
         # 达到最大迭代次数
         return get_error_message("tool_call_limit_exceeded")

@@ -40,9 +40,10 @@ def _get_api_key(model_config) -> str:
     """从模型配置获取 API key，兼容 Model 和 ModelConfig 类型"""
     import os
 
-    # 如果是 ModelConfig 类型，直接返回 api_key
-    if hasattr(model_config, "api_key") and _get_api_key(model_config):
-        return _get_api_key(model_config)
+    # 如果是 Model/ModelConfig 类型有直接的 api_key，直接返回
+    api_key_attr = getattr(model_config, "api_key", None)
+    if api_key_attr:
+        return api_key_attr
 
     # 如果是 Model 类型，从环境变量获取
     if hasattr(model_config, "env_key") and model_config.env_key:
@@ -1044,7 +1045,7 @@ class ModelCollaborationEngine:
 
         # 阶段 1: 分析师
         analyst_config = roles.get("analyst")
-        if analyst_config and analyst__get_api_key(config):
+        if analyst_config and _get_api_key(analyst_config):
             print(TerminalFormatter.role_step("analyst", analyst_config.id))
             analyst_client = self._create_client(analyst_config, factory, None, context)
             analysis = await self._call_client(
@@ -1061,7 +1062,7 @@ class ModelCollaborationEngine:
 
         # 阶段 2: 创作者
         creator_config = roles.get("creator")
-        if creator_config and creator__get_api_key(config):
+        if creator_config and _get_api_key(creator_config):
             print(TerminalFormatter.role_step("creator", creator_config.id))
             creator_client = self._create_client(
                 creator_config, factory, tools, context
@@ -1083,7 +1084,7 @@ class ModelCollaborationEngine:
         ai_emotion_context = await self._generate_emotion_context(message, context)
 
         reviewer_config = roles.get("reviewer")
-        if reviewer_config and reviewer__get_api_key(config):
+        if reviewer_config and _get_api_key(reviewer_config):
             print(TerminalFormatter.role_step("reviewer", reviewer_config.id))
             reviewer_client = self._create_client(
                 reviewer_config, factory, None, context
@@ -1154,7 +1155,7 @@ class ModelCollaborationEngine:
             self.arbiter_priority,
         )
 
-        if not arbiter_config or not arbiter__get_api_key(config):
+        if not arbiter_config or not _get_api_key(arbiter_config):
             return model_responses[0][1]
 
         arbiter_client = self._create_client(arbiter_config, factory, None, context)
@@ -1187,16 +1188,43 @@ class ModelCollaborationEngine:
         tools,
         factory,
     ) -> CollaborationResult:
-        return await self._execute_single(
-            message,
-            task_type,
-            platform,
-            context,
-            system_prompt,
-            user_prompt,
-            tools,
-            factory,
-        )
+        if not hasattr(self, "_fallback_depth"):
+            self._fallback_depth = 0
+        self._fallback_depth += 1
+        if self._fallback_depth > 3:
+            max_depth = self._fallback_depth
+            self._fallback_depth = 0
+            return CollaborationResult(
+                response="抱歉，我暂时无法处理这个消息。请稍后再试~",
+                mode=CollaborationMode.SINGLE,
+                complexity=ComplexityLevel.SIMPLE,
+                models_used=["fallback_error"],
+                token_estimate=0,
+                reasoning=f"递归保护：回退深度超限 ({max_depth})",
+            )
+        try:
+            result = await self._execute_single(
+                message,
+                task_type,
+                platform,
+                context,
+                system_prompt,
+                user_prompt,
+                tools,
+                factory,
+            )
+            self._fallback_depth = 0
+            return result
+        except Exception as e:
+            self._fallback_depth = 0
+            return CollaborationResult(
+                response="抱歉，我暂时无法处理这个消息。请稍后再试~",
+                mode=CollaborationMode.SINGLE,
+                complexity=ComplexityLevel.SIMPLE,
+                models_used=["fallback_error"],
+                token_estimate=0,
+                reasoning=f"回退单模型失败: {str(e)[:100]}",
+            )
 
     def _get_role_models(
         self, task_type: str, platform: str

@@ -488,7 +488,11 @@ class Miya:
                         if model_config.env_key:
                             api_key = os.getenv(model_config.env_key, "")
 
-                        # 如果没有 env_key，尝试从常见的环境变量获取
+                        # 尝试从 model_config 的 api_key 属性获取（嵌入在 JSON 中的密钥）
+                        if not api_key and hasattr(model_config, "api_key"):
+                            api_key = model_config.api_key or ""
+
+                        # 如果没有 api_key，尝试从常见的环境变量获取
                         if not api_key:
                             provider_env_map = {
                                 "deepseek": "DEEPSEEK_API_KEY",
