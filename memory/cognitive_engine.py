@@ -15,8 +15,9 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 
 from memory import get_memory_core, MemoryItem, MemoryQuery, MemoryLevel
+from memory.temporal_parser import parse_temporal, extract_temporal_keywords
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("Miya.CognitiveEngine")
 
 
 def _load_cognitive_config() -> Dict[str, Any]:
@@ -369,16 +370,47 @@ class CognitiveEngine:
         current_topics = self._extract_topics(user_input)
         keywords = self._extract_keywords(user_input)
 
+        # 1.5 【新增】检测时间表达式，设置时间范围过滤
+        temporal_range = parse_temporal(user_input)
+        temporal_keywords = extract_temporal_keywords(user_input)
+        if temporal_range:
+            logger.info(
+                f"[认知引擎] 检测到时间表达式: {temporal_range.label} "
+                f"({temporal_range.start.strftime('%Y-%m-%d')} ~ {temporal_range.end.strftime('%Y-%m-%d')})"
+            )
+            # 将时间关键词加入搜索词
+            for tk in temporal_keywords:
+                if tk not in keywords:
+                    keywords.append(tk)
+
         logger.info(f"[认知引擎] 当前话题: {current_topics}, 关键词: {keywords[:5]}")
 
-        # 2. 查询记忆（支持用户/群聊过滤）
-        query = MemoryQuery(
-            query="",
-            tags=current_topics + keywords,
-            limit=limit * 3,  # 获取更多记忆以便后续过滤
-            user_id=user_id,  # 传入user_id过滤
-            group_id=group_id,  # 传入group_id过滤
-        )
+        # 2. 查询记忆（支持用户/群聊过滤 + 时间范围过滤）
+        # 当有时间范围时，搜索所有级别（包括对话记录），不然只搜索长期/语义记忆
+        if temporal_range:
+            query = MemoryQuery(
+                query="",
+                tags=current_topics + keywords,
+                levels=[
+                    MemoryLevel.DIALOGUE,
+                    MemoryLevel.SHORT_TERM,
+                    MemoryLevel.LONG_TERM,
+                    MemoryLevel.SEMANTIC,
+                ],
+                limit=limit * 3,
+                user_id=user_id,
+                group_id=group_id,
+                start_time=temporal_range.start,
+                end_time=temporal_range.end,
+            )
+        else:
+            query = MemoryQuery(
+                query="",
+                tags=current_topics + keywords,
+                limit=limit * 3,
+                user_id=user_id,
+                group_id=group_id,
+            )
 
         all_memories = await self.memory_core.retrieve(query)
 
@@ -446,6 +478,16 @@ class CognitiveEngine:
                     user_id=user_id,
                     group_id=group_id,
                     limit=limit * 2,
+                    levels=[
+                        MemoryLevel.DIALOGUE,
+                        MemoryLevel.SHORT_TERM,
+                        MemoryLevel.LONG_TERM,
+                        MemoryLevel.SEMANTIC,
+                    ]
+                    if temporal_range
+                    else None,
+                    start_time=temporal_range.start if temporal_range else None,
+                    end_time=temporal_range.end if temporal_range else None,
                 )
                 fallback_results = await self.memory_core.retrieve(fallback_query)
                 if fallback_results:
@@ -480,6 +522,10 @@ class CognitiveEngine:
             self._last_retrieved_ids = retrieved_ids
 
         logger.info(f"[认知引擎] 检索到 {len(results)} 条相关记忆（MMR去重后）")
+        if not results:
+            logger.info(
+                f"[认知引擎] 未找到相关记忆 (话题={current_topics}, 关键词={keywords[:5]}, 时间范围={'有' if temporal_range else '无'})"
+            )
 
         return results
 
@@ -600,10 +646,40 @@ class CognitiveEngine:
         lines = ["【弥娅记住的事情】"]
         lines.append("")
 
-        for memory in memories:
-            # 显示时间和重要性
-            time_str = memory.created_at.split()[0]  # 只取日期
-            lines.append(f"- {memory.content}")
+        # 检测是否为时间范围查询，格式化不同
+        from memory.temporal_parser import parse_temporal
+
+        has_temporal = parse_temporal(user_input) is not None
+
+        if has_temporal:
+            # 时间范围查询 → 按天分组，显示时间线
+            by_date = {}
+            for memory in memories:
+                date_str = memory.created_at[:10]  # YYYY-MM-DD
+                time_str = (
+                    memory.created_at[11:16] if len(memory.created_at) > 10 else ""
+                )
+                if date_str not in by_date:
+                    by_date[date_str] = []
+                entry = f"[{time_str}]" if time_str else ""
+                role_tag = ""
+                if memory.role == "user":
+                    role_tag = f"{getattr(memory, 'sender_name', '') or '用户'}说: "
+                elif memory.role == "assistant":
+                    role_tag = "弥娅说: "
+                by_date[date_str].append(
+                    f"    {entry} {role_tag}{memory.content[:120]}"
+                )
+
+            for date_str, entries in sorted(by_date.items()):
+                lines.append(f"【{date_str}】")
+                for entry in entries[:8]:  # 每天最多8条
+                    lines.append(entry)
+                lines.append("")
+        else:
+            for memory in memories:
+                time_str = memory.created_at[:10]
+                lines.append(f"- {memory.content}")
 
         lines.append("")
         lines.append("（这些都是之前对话中记住的重要事情，与当前对话可能相关）")

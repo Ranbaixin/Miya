@@ -1383,7 +1383,7 @@ class DecisionHub:
                         f"[决策层] 智能记忆检索到相关记忆 (user_id={query_user_id}, group_id={query_group_id})"
                     )
             except Exception as e:
-                logger.debug(f"[决策层] 智能记忆检索失败: {e}")
+                logger.warning(f"[决策层] 智能记忆检索失败: {e}")
 
             # 【新增】用户/群聊侧写检索 - 提供个性化上下文
             user_persona_context = ""
@@ -1907,6 +1907,49 @@ class DecisionHub:
 
                         # 传递情绪上下文给协作引擎
                         if emotion_context_for_collab and tool_ctx_for_collab:
+                            # 【认知记忆注入】检索近期的思考记录，注入情感指引
+                            try:
+                                from memory.cognition_cache import get_cognition_cache
+
+                                cache = get_cognition_cache()
+                                cache_context = await cache.get_context_for_ai(
+                                    user_id, limit=2
+                                )
+                                if cache_context:
+                                    emotion_context_for_collab += "\n\n" + cache_context
+                                    logger.info("[认知缓存] 已注入认知记忆到协作引擎")
+                                else:
+                                    from memory import retrieve_cognition
+
+                                    recent_cognitions = await retrieve_cognition(
+                                        user_id, limit=3
+                                    )
+                                    if recent_cognitions:
+                                        parts = []
+                                        for cog in recent_cognitions:
+                                            if cog.get("thinking"):
+                                                parts.append(
+                                                    f"- 思考: {cog['thinking'][:150]}"
+                                                )
+                                            if cog.get("inner_thought"):
+                                                parts.append(
+                                                    f"- 想法: {cog['inner_thought'][:80]}"
+                                                )
+                                        if parts:
+                                            cognition_text = (
+                                                "\n【近期思维参考】\n"
+                                                + "\n".join(parts)
+                                            )
+                                            cognition_text += "\n（以上是弥娅近期的思考记录，用于了解自己的连贯状态，不要直接引用输出）"
+                                            emotion_context_for_collab += (
+                                                "\n\n" + cognition_text
+                                            )
+                                            logger.info(
+                                                "[认知记忆] 已注入认知记忆到协作引擎 (db fallback)"
+                                            )
+                            except Exception as e:
+                                logger.debug(f"[认知记忆] 注入协作引擎失败: {e}")
+
                             tool_ctx_for_collab["emotion_context"] = (
                                 emotion_context_for_collab
                             )
@@ -2277,6 +2320,41 @@ class DecisionHub:
                     logger.info(f"[灵魂记忆] 已存储情绪: {significant_emotions}")
                 except Exception as store_err2:
                     logger.warning(f"[灵魂记忆] 情绪峰值存储失败: {store_err2}")
+
+            # 【LifeBook 集成】用真实情绪数据记录交互到多视角日记
+            try:
+                from memory.lifebook import get_lifebook
+
+                lifebook = get_lifebook()
+                user_msg_content = perception.get("content", "")
+                if lifebook and user_msg_content and response:
+                    emotion_label = "平静"
+                    if _soul_result:
+                        dominant = _soul_result.get("dominant_emotion", "")
+                        if dominant and dominant != "未知":
+                            emotion_label = dominant
+                        else:
+                            emotions = _soul_result.get("emotions", {})
+                            if isinstance(emotions, list) and emotions:
+                                emotion_label = (
+                                    emotions[0].get("name", "平静")
+                                    if isinstance(emotions[0], dict)
+                                    else "平静"
+                                )
+                            elif isinstance(emotions, dict) and emotions:
+                                emotion_label = (
+                                    max(emotions, key=emotions.get)
+                                    if emotions
+                                    else "平静"
+                                )
+                    await lifebook.record_interaction(
+                        user_message=user_msg_content,
+                        lover_response=response,
+                        topics=[message_type] if message_type else ["对话"],
+                        emotion=str(emotion_label),
+                    )
+            except Exception as e:
+                logger.debug(f"[决策层] LifeBook 记录失败: {e}")
 
             # 【增强】存储认知记忆 - 思考过程、情绪分析、内心独白 + 缓存
             print("[DEBUG认知] 开始存储流程...")

@@ -1180,5 +1180,52 @@
             "include_dialogue": true,
             "content_preview_length": 120
         }
+    },
+
+    "temporal_parser": {
+        "description": "时间表达式解析配置 - 中文自然语言时间范围映射",
+        "fuzzy_days": {
+            "最近": 3,
+            "近期": 5,
+            "前段时间": 7,
+            "这几天": 3,
+            "前阵子": 14,
+            "最近几天": 3,
+            "过去几天": 3
+        },
+        "fuzzy_minutes": {
+            "刚才": 10,
+            "刚刚": 15,
+            "刚": 5
+        },
+        "date_expressions": {
+            "昨天": -1,
+            "今天": 0,
+            "明天": 1,
+            "前天": -2,
+            "大前天": -3,
+            "后天": 2,
+            "昨晚": -1,
+            "最晚": -1,
+            "前晚": -2
+        },
+        "week_expressions": {
+            "上周": -1,
+            "本周": 0,
+            "下周": 1,
+            "这周": 0
+        },
+        "month_expressions": {
+            "上个月": -1,
+            "这个月": 0,
+            "下个月": 1
+        },
+        "dynamic_patterns": {
+            "recent_days": "(最近|过去|这几天)\\s*(\\d+)?\\s*天",
+            "days_ago": "(\\d+)\\s*天前",
+            "hours_ago": "(\\d+)\\s*小时前",
+            "minutes_ago": "(\\d+)\\s*分钟前"
+        },
+        "default_fallback_days": 3
     }
 }

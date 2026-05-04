@@ -822,6 +822,14 @@ class MiyaMemoryCore:
         self._config = None
         self._load_config()
 
+        # 批量索引写入优化
+        self._index_dirty = False
+        self._store_count_since_save = 0
+        self._batch_save_threshold = 50  # 每50次store批量写一次index
+
+        # MemoryEnhancer（延迟加载）
+        self._enhancer = None
+
         logger.info(f"[MiyaMemoryCore] 初始化完成, 数据目录: {self.data_dir}")
 
     def _load_config(self):
@@ -897,6 +905,19 @@ class MiyaMemoryCore:
     def reload_config(self):
         """重新加载配置"""
         self._load_config()
+
+    def _get_enhancer(self):
+        """延迟加载 MemoryEnhancer"""
+        if self._enhancer is None:
+            try:
+                from memory.memory_enhancer import MemoryEnhancer
+
+                self._enhancer = MemoryEnhancer()
+                logger.info("[MiyaMemoryCore] MemoryEnhancer 已启用")
+            except Exception as e:
+                logger.debug(f"[MiyaMemoryCore] MemoryEnhancer 不可用: {e}")
+                self._enhancer = None
+        return self._enhancer
 
     async def initialize(self, lazy_load: bool = True):
         """初始化 - 支持延迟加载
@@ -1215,6 +1236,10 @@ class MiyaMemoryCore:
         for tag in memory.tags:
             self._tag_index[tag].add(memory.id)
 
+        # 标记索引脏、增量计数
+        self._index_dirty = True
+        self._store_count_since_save += 1
+
         # 生成向量并同步到 SQLite（优先使用真实 embedding API）
         if level in [
             MemoryLevel.SEMANTIC,
@@ -1227,12 +1252,102 @@ class MiyaMemoryCore:
         if self.enable_backup:
             await self._backup_memory(memory)
 
+        # MemoryEnhancer 自动链接挖掘
+        enhancer = self._get_enhancer()
+        if enhancer and level in [MemoryLevel.LONG_TERM, MemoryLevel.SEMANTIC]:
+            try:
+                recent = list(self._cache.values())[-20:]  # 最近20条
+                await enhancer.analyze_and_link(memory, recent)
+            except Exception as e:
+                logger.debug(f"[MiyaMemoryCore] MemoryEnhancer 链接失败: {e}")
+
+        # 批量写入索引（每50次store或超时批量flush）
+        if self._store_count_since_save >= self._batch_save_threshold:
+            self._flush_index()
+
         self._stats["total_stored"] += 1
 
         logger.debug(
             f"[MiyaMemoryCore] 存储: {memory.id}, level={level.value}, user={user_id}"
         )
         return memory.id
+
+    def _flush_index(self):
+        """批量刷新索引进磁盘"""
+        if self._index_dirty:
+            self.backend._save_index()
+            self._index_dirty = False
+            self._store_count_since_save = 0
+            logger.debug("[MiyaMemoryCore] 批量索引已刷新")
+
+    async def get_daily_dialogues(
+        self, date_key: str, user_id: Optional[str] = None
+    ) -> List[MemoryItem]:
+        """获取某天的所有对话记忆（情节记忆检索）
+
+        Args:
+            date_key: 日期字符串 YYYY-MM-DD
+            user_id: 可选，限制为特定用户
+
+        Returns:
+            按时间排序的对话记忆列表
+        """
+        from datetime import datetime as dt
+
+        try:
+            day_start = dt.strptime(date_key, "%Y-%m-%d")
+            day_end = day_start.replace(hour=23, minute=59, second=59)
+        except ValueError:
+            return []
+
+        query = MemoryQuery(
+            levels=[MemoryLevel.DIALOGUE],
+            start_time=day_start,
+            end_time=day_end,
+            limit=200,
+            sort_by="created_at",
+            sort_order="asc",
+        )
+        if user_id:
+            query.user_id = user_id
+
+        results = await self.retrieve(query)
+        return results
+
+    async def store_daily_summary(
+        self,
+        date_key: str,
+        summary: str,
+        user_id: str = "global",
+        dialogue_count: int = 0,
+    ) -> str:
+        """存储每日情节摘要
+
+        Args:
+            date_key: 日期 YYYY-MM-DD
+            summary: 摘要内容
+            user_id: 用户ID
+            dialogue_count: 对话条数
+
+        Returns:
+            记忆ID
+        """
+        tags = ["daily_summary", f"date:{date_key}"]
+        content = f"[{date_key} 对话摘要] (共{dialogue_count}条对话)\n{summary}"
+
+        return await self.store(
+            content=content,
+            level=MemoryLevel.LONG_TERM,
+            priority=0.85,
+            tags=tags,
+            user_id=user_id,
+            source=MemorySource.SYSTEM,
+            metadata={
+                "type": "daily_summary",
+                "date": date_key,
+                "dialogue_count": dialogue_count,
+            },
+        )
 
     def _auto_classify(
         self,

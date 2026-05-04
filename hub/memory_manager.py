@@ -22,6 +22,7 @@ from memory import (
     get_dialogue_history,
     MemoryLevel,
     MemorySource,
+    get_memory_core,
 )
 from memory.historian import get_historian
 
@@ -223,6 +224,55 @@ class MemoryManager:
                 )
             except Exception as e:
                 logger.debug(f"[记忆管理器] Historian 提取失败: {e}")
+
+            # 【LifeBook 集成】自动记录到多视角日记系统
+            try:
+                from memory.lifebook import get_lifebook
+
+                lifebook = get_lifebook()
+                if lifebook and user_content:
+                    emotion_val = perception.get("emotion", "平静")
+                    if isinstance(emotion_val, dict):
+                        emotion_val = emotion_val.get("primary", "平静")
+                    await lifebook.record_interaction(
+                        user_message=user_content,
+                        lover_response=response,
+                        topics=[message_type],
+                        emotion=str(emotion_val) if emotion_val else "平静",
+                    )
+            except Exception as e:
+                logger.debug(f"[记忆管理器] LifeBook 记录失败: {e}")
+
+            # 【每日摘要】跨天时自动生昨日摘要
+            try:
+                from datetime import datetime as dt, timedelta
+
+                today = dt.now().strftime("%Y-%m-%d")
+                self._last_summary_date = getattr(self, "_last_summary_date", "")
+                if self._last_summary_date and self._last_summary_date != today:
+                    core = await get_memory_core()
+                    yesterday = (dt.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+                    daily = await core.get_daily_dialogues(yesterday)
+                    if daily and len(daily) >= 3:
+                        lines = [
+                            f"- {m.content[:80]}..."
+                            if len(m.content) > 80
+                            else f"- {m.content}"
+                            for m in daily[:20]
+                        ]
+                        summary_text = "\n".join(lines)
+                        await core.store_daily_summary(
+                            date_key=yesterday,
+                            summary=summary_text,
+                            user_id="global",
+                            dialogue_count=len(daily),
+                        )
+                        logger.info(
+                            f"[记忆管理器] 已生成 {yesterday} 每日摘要 ({len(daily)} 条对话)"
+                        )
+                self._last_summary_date = today
+            except Exception as e:
+                logger.debug(f"[记忆管理器] 每日摘要生成跳过: {e}")
 
             # 对话历史压缩
             try:
