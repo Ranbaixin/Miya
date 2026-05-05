@@ -112,8 +112,17 @@ class MemoryCommandHandler:
         core = await self._get_core()
         stats = await core.get_statistics()
 
-        total = stats.get("total_cached", 0)
+        # 优先使用数据库实际数量，避免缓存未加载时显示 0
+        total = max(
+            stats.get("total_cached", 0),
+            stats.get("total_sqlite", 0),
+            stats.get("total_indexed", 0),
+        )
         by_level = stats.get("by_level", {})
+        # 如果 by_level 全为 0，尝试从 SQLite 统计
+        level_total = sum(by_level.values())
+        if level_total == 0 and stats.get("total_sqlite", 0) > 0:
+            by_level = stats.get("by_level_db", by_level)
         users = stats.get("by_user", 0)
 
         lines = ["[MEMORY STATS]", "=" * 25]

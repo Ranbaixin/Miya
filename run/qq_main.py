@@ -511,6 +511,39 @@ class MiyaQQ:
             else:
                 msg_type = "private"
 
+        # 【优化】入队前轻量预过滤：纯图片/表情且无@无关键词的群消息，直接跳过
+        if msg_type == "group" and not qq_message.is_at_bot:
+            # 检查发送者是否为超级管理员
+            is_superadmin = (
+                self.qq_net and qq_message.sender_id == self.qq_net.superadmin_qq
+            )
+            if not is_superadmin:
+                content_str = str(qq_message.message) if qq_message.message else ""
+                has_image = getattr(qq_message, "has_image", False)
+                # 纯图片/表情（无实质文本）→ 跳过
+                if has_image and (
+                    not content_str
+                    or content_str.strip() == ""
+                    or content_str in ("", "[图片]", "[动画表情]")
+                ):
+                    self.logger.info(
+                        f"[预过滤] 跳过纯图片/表情群消息: group={qq_message.group_id}, sender={qq_message.sender_id}"
+                    )
+                    return
+                # 纯QQ表情消息（face类型无文本）→ 跳过
+                if not has_image and (not content_str or content_str.strip() == ""):
+                    raw_msg = getattr(qq_message, "raw_message", [])
+                    if isinstance(raw_msg, list):
+                        is_face_only = all(
+                            isinstance(item, dict) and item.get("type") == "face"
+                            for item in raw_msg
+                        )
+                        if is_face_only:
+                            self.logger.info(
+                                f"[预过滤] 跳过纯QQ表情群消息: group={qq_message.group_id}, sender={qq_message.sender_id}"
+                            )
+                            return
+
         perception = {
             "source": "qq",
             "message_type": msg_type,

@@ -357,6 +357,20 @@ class SQLiteBackend(MemoryBackend):
             logger.error(f"[SQLiteBackend] 计数失败: {e}")
             return 0
 
+    async def count_by_level(self) -> Dict[str, int]:
+        """按层级统计记忆数量"""
+        if not self.enabled:
+            return {}
+        try:
+            conn = self._get_conn()
+            rows = conn.execute(
+                f"SELECT level, COUNT(*) FROM {self._table_name} GROUP BY level"
+            ).fetchall()
+            return {row[0]: row[1] for row in rows}
+        except Exception as e:
+            logger.error(f"[SQLiteBackend] 按层级统计失败: {e}")
+            return {}
+
     async def bulk_save(self, memories: List[MemoryItem]) -> int:
         if not self.enabled:
             return 0

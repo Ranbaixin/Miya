@@ -928,68 +928,8 @@ class DecisionHub:
                 logger.info(
                     f"[决策层] 谛听检测到用户仍在活跃对话中，触发回复 (user={user_id_str})"
                 )
-
-                # 【新增】调用谛听进行消息策略分析
-                try:
-                    from memory.diteng_listener import get_diting
-
-                    diteng = get_diting()
-
-                    # 获取最近上下文
-                    recent_context = (
-                        diteng.get_layered_context(str(group_id)) if group_id else ""
-                    )
-
-                    # 异步调用策略分析
-                    strategy = await diteng.analyze_message_strategy(
-                        content=content,
-                        user_id=user_id_str,
-                        group_id=str(group_id) if group_id else None,
-                        is_at_bot=is_at_bot,
-                        message_type="group",
-                        recent_context=recent_context,
-                    )
-
-                    logger.warning(
-                        f"[谛听-策略] should_respond={strategy.should_respond}, "
-                        f"strategy={strategy.response_strategy}, "
-                        f"intent={strategy.message_intent}, "
-                        f"confidence={strategy.confidence}"
-                    )
-
-                    # 根据策略决定是否回复
-                    if not strategy.should_respond:
-                        logger.info(f"[决策层] 策略决定不回复: {strategy.reason}")
-
-                        # 如果是仅点赞策略
-                        if strategy.response_strategy == "like_only":
-                            # 执行点赞
-                            try:
-                                from webnet.qq.client import QQOneBotClient
-
-                                if (
-                                    hasattr(self, "onebot_client")
-                                    and self.onebot_client
-                                ):
-                                    await self.onebot_client.send_like(user_id_str)
-                                    logger.info(
-                                        f"[决策层] 策略点赞: user={user_id_str}"
-                                    )
-                            except Exception as e:
-                                logger.warning(f"[决策层] 策略点赞失败: {e}")
-
-                        return None
-
-                    # 将策略信息注入感知，供后续使用
-                    perception["_message_strategy"] = {
-                        "strategy": strategy.response_strategy,
-                        "intent": strategy.message_intent,
-                        "style": strategy.suggested_reply_style,
-                        "confidence": strategy.confidence,
-                    }
-
-                except Exception as e:
-                    logger.warning(f"[决策层] 策略分析失败: {e}，继续正常回复")
+                # 【优化】移除串行谛听策略分析，统一由 _generate_response_cross_platform 的并行 Phase 1 处理
+                # 避免重复 AI 调用，节省 3-5 秒延迟
             else:
                 logger.info(
                     f"[决策层] 群聊消息无关键词且非活跃对话，跳过: {content[:30]}"

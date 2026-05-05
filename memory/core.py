@@ -1510,9 +1510,11 @@ class MiyaMemoryCore:
     async def get_statistics(self) -> Dict:
         """获取统计"""
         sqlite_count = 0
+        by_level_db = {}
         if self.sqlite_backend:
             try:
                 sqlite_count = await self.sqlite_backend.count()
+                by_level_db = await self.sqlite_backend.count_by_level()
             except Exception:
                 pass
 
@@ -1549,6 +1551,7 @@ class MiyaMemoryCore:
                     ]
                 ),
             },
+            "by_level_db": by_level_db,
             "by_user": len(self._user_index),
             "by_tag": len(self._tag_index),
             "stats": self._stats,

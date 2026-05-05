@@ -1266,6 +1266,11 @@ class SoulGenerator:
             prompt = prompt.replace("{user_info}", user_info_str)
             prompt = prompt.replace("{previous_emotion}", previous_emotion)
             prompt = prompt.replace("{form_style}", form_style)
+            # 【强化】追加格式约束，防止AI返回非JSON文字
+            prompt += (
+                "\n\n⚠️ 重要：必须只输出原始JSON对象，禁止在JSON之前或之后添加任何文字、解释或感叹词。"
+                "\n第一个字符必须是 {，最后一个字符必须是 }。"
+            )
 
             logger.warning(f"[灵魂] 发送的prompt: {prompt[:300]}")
 
@@ -1296,17 +1301,64 @@ class SoulGenerator:
             import re
             import json
 
-            json_match = re.search(r"\{.*\}", response, re.DOTALL)
-            if not json_match:
-                logger.warning(f"[灵魂] 无JSON: {response[:100]}")
+            def _try_parse_json(text: str) -> Optional[Dict]:
+                """多策略解析JSON，处理AI返回的各种非标准格式"""
+                # 策略1: 括号计数法提取最外层 JSON 对象（支持嵌套）
+                depth = 0
+                start = -1
+                for i, ch in enumerate(text):
+                    if ch == "{":
+                        if depth == 0:
+                            start = i
+                        depth += 1
+                    elif ch == "}":
+                        depth -= 1
+                        if depth == 0 and start >= 0:
+                            json_str = text[start : i + 1]
+                            try:
+                                return json.loads(json_str)
+                            except json.JSONDecodeError:
+                                start = -1  # 继续找下一段
+                # 策略2: 尝试修复常见错误（尾部多余文字、缺逗号等）
+                if start >= 0:
+                    json_str = text[start:]
+                    try:
+                        return json.loads(json_str)
+                    except json.JSONDecodeError:
+                        pass
+
+                # 策略3: 宽松正则提取字段（JSON完全畸形时的fallback）
+                result = {}
+                for field in ["inner_thought", "attribution", "reflection"]:
+                    m = re.search(rf'"{field}"\s*:\s*"([^"]*)"', text)
+                    if m:
+                        result[field] = m.group(1)
+                # 提取 emotions 列表
+                emo_match = re.search(r'"emotions"\s*:\s*\[(.*?)\]', text, re.DOTALL)
+                if emo_match:
+                    emos = []
+                    for item in re.finditer(
+                        r'\{"name"\s*:\s*"([^"]+)"\s*,\s*"intensity"\s*:\s*(\d+)\}',
+                        emo_match.group(1),
+                    ):
+                        emos.append(
+                            {"name": item.group(1), "intensity": int(item.group(2))}
+                        )
+                    if emos:
+                        result["emotions"] = emos
+                if result:
+                    return result
+
                 return None
 
-            result = json.loads(json_match.group())
+            result = _try_parse_json(response)
+            if not result:
+                logger.warning(f"[灵魂] 所有JSON解析策略失败: {response[:100]}")
+                return None
 
             # 多情绪格式
             emotions = result.get("emotions", [])
             if emotions:
-                # 展示所有情绪
                 emotion_parts = []
                 for emo in emotions:
                     name = emo.get("name", "未知")
