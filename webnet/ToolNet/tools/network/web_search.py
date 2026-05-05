@@ -6,8 +6,9 @@
 import requests
 from typing import Dict, List, Optional, Any
 import re
-from urllib.parse import urlencode
+from urllib.parse import urlencode, quote
 import logging
+from bs4 import BeautifulSoup
 from core.system_config import get_api_url
 
 logger = logging.getLogger(__name__)
@@ -17,21 +18,45 @@ class EnhancedWebSearch:
     """增强版网络搜索工具"""
 
     def __init__(self):
-        # 搜索引擎配置
+        # 搜索引擎配置（优先免费无密钥引擎）
         self.search_engines = {
-            "bing": {
-                "name": "必应",
-                "url": get_api_url("bing_search")
-                or "https://api.bing.microsoft.com/v7.0/search",
-                "params": {"q": "", "count": 10},
-                "key_required": True,
-                "api_key_env": "BING_API_KEY",
+            "baidu": {
+                "name": "百度",
+                "url": "https://www.baidu.com/s",
+                "params": {"wd": "", "rn": 10},
+                "key_required": False,
+                "parser": "_parse_baidu_response",
+                "method": "GET",
+                "headers": {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                },
             },
-            "duckduckgo": {
-                "name": "DuckDuckGo",
+            "bing_cn": {
+                "name": "必应中国",
+                "url": "https://cn.bing.com/search",
+                "params": {"q": "", "count": 10},
+                "key_required": False,
+                "parser": "_parse_bing_cn_response",
+                "method": "GET",
+                "headers": {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                },
+            },
+            "duckduckgo_html": {
+                "name": "DuckDuckGo HTML",
+                "url": "https://html.duckduckgo.com/html/",
+                "params": {"q": ""},
+                "key_required": False,
+                "parser": "_parse_duckduckgo_html_response",
+                "method": "POST",
+            },
+            "duckduckgo_api": {
+                "name": "DuckDuckGo API",
                 "url": get_api_url("duckduckgo") or "https://api.duckduckgo.com/",
                 "params": {"q": "", "format": "json"},
                 "key_required": False,
+                "parser": "_parse_duckduckgo_response",
+                "method": "GET",
             },
             "serpapi": {
                 "name": "SerpAPI",
@@ -39,28 +64,37 @@ class EnhancedWebSearch:
                 "params": {"q": "", "engine": "google", "num": 10},
                 "key_required": True,
                 "api_key_env": "SERPAPI_API_KEY",
+                "parser": "_parse_serpapi_response",
+                "method": "GET",
+            },
+            "tavily": {
+                "name": "Tavily AI",
+                "url": "https://api.tavily.com/search",
+                "params": {
+                    "query": "",
+                    "search_depth": "basic",
+                    "include_answer": True,
+                    "max_results": 5,
+                },
+                "key_required": True,
+                "api_key_env": "TAVILY_API_KEY",
+                "parser": "_parse_tavily_response",
+                "method": "POST",
+                "json_body": True,
             },
         }
+        self._free_engines = ["baidu", "bing_cn", "duckduckgo_html", "duckduckgo_api"]
+
+        # 如果配置了 TAVILY_API_KEY，优先使用 Tavily
+        if self._has_tavily_key():
+            self._free_engines.insert(0, "tavily")
 
     def search(
         self, query: str, engines: List[str] = None, num_results: int = 10
     ) -> List[Dict[str, Any]]:
-        """
-        执行搜索
-
-        Args:
-            query: 搜索查询
-            engines: 使用的搜索引擎列表（None=全部）
-            num_results: 每个引擎返回的结果数
-
-        Returns:
-            去重后的搜索结果
-        """
         if engines is None:
-            engines = list(self.search_engines.keys())
-
+            engines = self._free_engines
         all_results = []
-
         for engine in engines:
             try:
                 engine_results = self._search_engine(query, engine, num_results)
@@ -68,58 +102,114 @@ class EnhancedWebSearch:
                 logger.info(f"{engine}引擎返回 {len(engine_results)} 个结果")
             except Exception as e:
                 logger.error(f"{engine}引擎搜索失败: {e}")
-
-        # 去重
         deduplicated = self._deduplicate_results(all_results)
-
-        # 排序（相关性评分）
         ranked = self._rank_results(deduplicated, query)
-
         logger.info(f"搜索完成，去重后 {len(ranked)} 个结果")
         return ranked
+
+    def _has_tavily_key(self) -> bool:
+        try:
+            import os
+
+            if os.getenv("TAVILY_API_KEY"):
+                return True
+            from dotenv import load_dotenv
+
+            for rel_path in [
+                os.path.join(
+                    os.path.dirname(__file__), "..", "..", "..", "..", "config", ".env"
+                ),
+                os.path.join(os.getcwd(), "config", ".env"),
+                os.path.join(os.getcwd(), ".env"),
+            ]:
+                if os.path.exists(rel_path):
+                    load_dotenv(rel_path, override=True)
+            return bool(os.getenv("TAVILY_API_KEY", ""))
+        except Exception:
+            return False
 
     def _search_engine(
         self, query: str, engine: str, num_results: int
     ) -> List[Dict[str, Any]]:
-        """调用单个搜索引擎"""
         if engine not in self.search_engines:
             logger.error(f"不支持的搜索引擎: {engine}")
             return []
 
         config = self.search_engines[engine]
 
-        # 检查是否需要API密钥
+        # 构建请求
+        params = config["params"].copy()
+        headers = config.get("headers", {}).copy()
+        json_body = config.get("json_body", False)
+
+        # 设置查询参数（兼容不同引擎的 query key）
+        query_key = "query" if json_body else ("wd" if "wd" in params else "q")
+        params[query_key] = query
+        if "count" in params:
+            params["count"] = num_results
+        if "num" in params:
+            params["num"] = num_results
+        if "max_results" in params:
+            params["max_results"] = min(num_results, 10)
+
+        # 检查是否需要 API 密钥
         if config["key_required"]:
             import os
 
             api_key = os.environ.get(config["api_key_env"], "")
             if not api_key:
+                from dotenv import load_dotenv
+
+                config_env = os.path.join(
+                    os.path.dirname(__file__), "..", "..", "..", "..", "config", ".env"
+                )
+                if os.path.exists(config_env):
+                    load_dotenv(config_env)
+                    api_key = os.environ.get(config["api_key_env"], "")
+            if not api_key:
                 logger.warning(f"{engine}引擎需要API密钥: {config['api_key_env']}")
                 return []
-            config["params"]["api_key"] = api_key
-
-        # 构建请求
-        params = config["params"].copy()
-        params["q"] = query
-        if "count" in params:
-            params["count"] = num_results
-        if "num" in params:
-            params["num"] = num_results
+            headers["Authorization"] = f"Bearer {api_key}"
 
         try:
-            response = requests.get(config["url"], params=params, timeout=10)
+            method = config.get("method", "GET")
+            if method == "POST":
+                if json_body:
+                    response = requests.post(
+                        config["url"], json=params, timeout=15, headers=headers
+                    )
+                else:
+                    response = requests.post(
+                        config["url"], data=params, timeout=10, headers=headers
+                    )
+            else:
+                response = requests.get(
+                    config["url"], params=params, timeout=10, headers=headers
+                )
             response.raise_for_status()
 
-            data = response.json()
-
-            # 解析不同引擎的响应格式
-            results = []
-            if engine == "bing":
-                results = self._parse_bing_response(data)
-            elif engine == "duckduckgo":
-                results = self._parse_duckduckgo_response(data)
-            elif engine == "serpapi":
-                results = self._parse_serpapi_response(data)
+            # 使用配置指定的解析器
+            parser_name = config.get("parser")
+            if parser_name and hasattr(self, parser_name):
+                parser_fn = getattr(self, parser_name)
+                results = parser_fn(
+                    response.text
+                    if method == "POST"
+                    else response.json()
+                    if response.headers.get("content-type", "").startswith(
+                        "application/json"
+                    )
+                    else response.text
+                )
+            else:
+                # 旧的硬编码解析逻辑（向后兼容）
+                data = response.json()
+                if engine == "duckduckgo_api":
+                    results = self._parse_duckduckgo_response(data)
+                elif engine == "serpapi":
+                    results = self._parse_serpapi_response(data)
+                else:
+                    results = []
 
             return results
 
@@ -130,27 +220,138 @@ class EnhancedWebSearch:
             logger.error(f"{engine}引擎请求失败: {e}")
             return []
 
-    def _parse_bing_response(self, data: Dict) -> List[Dict[str, Any]]:
-        """解析Bing API响应"""
+    def _parse_duckduckgo_html_response(self, html: str) -> List[Dict[str, Any]]:
+        """解析 DuckDuckGo HTML 搜索结果（免费，无需 API）"""
         results = []
-
-        if "webPages" not in data:
-            return results
-
-        for item in data["webPages"]["value"]:
-            results.append(
-                {
-                    "title": item.get("name", ""),
-                    "url": item.get("url", ""),
-                    "snippet": item.get("snippet", ""),
-                    "displayUrl": item.get("displayUrl", ""),
-                    "source": "bing",
-                }
-            )
-
+        try:
+            soup = BeautifulSoup(html, "html.parser")
+            for item in soup.select(".result"):
+                title_el = item.select_one(".result__title a")
+                snippet_el = item.select_one(".result__snippet")
+                url_el = item.select_one(".result__url")
+                if title_el:
+                    results.append(
+                        {
+                            "title": title_el.get_text(strip=True),
+                            "url": title_el.get("href", ""),
+                            "snippet": snippet_el.get_text(strip=True)
+                            if snippet_el
+                            else "",
+                            "source": "duckduckgo_html",
+                        }
+                    )
+        except Exception as e:
+            logger.error(f"DuckDuckGo HTML 解析失败: {e}")
         return results
 
-    def _parse_duckduckgo_response(self, data: Dict) -> List[Dict[str, Any]]:
+    def _parse_duckduckgo_response(self, data) -> List[Dict[str, Any]]:
+        """解析 DuckDuckGo API JSON 响应"""
+        results = []
+        try:
+            if isinstance(data, str):
+                import json
+
+                data = json.loads(data)
+            if isinstance(data, dict):
+                if "RelatedTopics" in data:
+                    for item in data["RelatedTopics"][:10]:
+                        if isinstance(item, dict):
+                            results.append(
+                                {
+                                    "title": item.get("Text", item.get("Result", "")),
+                                    "url": item.get("FirstURL", ""),
+                                    "snippet": item.get("Text", item.get("Result", ""))[
+                                        :200
+                                    ],
+                                    "source": "duckduckgo_api",
+                                }
+                            )
+        except Exception:
+            pass
+        return results
+
+    def _parse_tavily_response(self, data: Dict) -> List[Dict[str, Any]]:
+        """解析 Tavily AI 搜索响应"""
+        results = []
+        try:
+            if isinstance(data, str):
+                import json
+
+                data = json.loads(data)
+            for item in data.get("results", []):
+                results.append(
+                    {
+                        "title": item.get("title", ""),
+                        "url": item.get("url", ""),
+                        "snippet": item.get("content", item.get("snippet", ""))[:300],
+                        "source": "tavily",
+                    }
+                )
+            # 添加 AI 生成的答案
+            if data.get("answer"):
+                results.insert(
+                    0,
+                    {
+                        "title": "AI 摘要",
+                        "url": "",
+                        "snippet": data["answer"][:500],
+                        "source": "tavily_ai",
+                    },
+                )
+        except Exception as e:
+            logger.error(f"Tavily 解析失败: {e}")
+        return results
+
+    def _parse_baidu_response(self, html: str) -> List[Dict[str, Any]]:
+        """解析百度 HTML 搜索结果（免费，无需 API，国内可用）"""
+        results = []
+        try:
+            soup = BeautifulSoup(html, "html.parser")
+            for item in soup.select(".result, .c-container"):
+                title_el = item.select_one("h3 a") or item.select_one(".t a")
+                snippet_el = item.select_one(".c-abstract") or item.select_one(
+                    ".c-span-last p"
+                )
+                if title_el:
+                    url = str(title_el.get("href", ""))
+                    if url and not url.startswith("http"):
+                        url = "https://www.baidu.com" + url
+                    results.append(
+                        {
+                            "title": title_el.get_text(strip=True),
+                            "url": url,
+                            "snippet": snippet_el.get_text(strip=True)[:200]
+                            if snippet_el
+                            else "",
+                            "source": "baidu",
+                        }
+                    )
+        except Exception as e:
+            logger.error(f"百度解析失败: {e}")
+        return results
+
+    def _parse_bing_cn_response(self, html: str) -> List[Dict[str, Any]]:
+        """解析必应中国 HTML 搜索结果（免费，国内可用）"""
+        results = []
+        try:
+            soup = BeautifulSoup(html, "html.parser")
+            for item in soup.select("li.b_algo"):
+                title_el = item.select_one("h2 a")
+                snippet_el = item.select_one(".b_caption p") or item.select_one("p")
+                if title_el:
+                    results.append(
+                        {
+                            "title": title_el.get_text(strip=True),
+                            "url": title_el.get("href", ""),
+                            "snippet": snippet_el.get_text(strip=True)[:200]
+                            if snippet_el
+                            else "",
+                            "source": "bing_cn",
+                        }
+                    )
+        except Exception as e:
+            logger.error(f"必应中国解析失败: {e}")
+        return results
         """解析DuckDuckGo API响应"""
         results = []
 
@@ -166,7 +367,7 @@ class EnhancedWebSearch:
                     "title": item.get("Text", ""),
                     "url": item.get("FirstURL", ""),
                     "snippet": item.get("Text", ""),
-                    "source": "duckduckgo",
+                    "source": "duckduckgo_api",
                 }
             )
 

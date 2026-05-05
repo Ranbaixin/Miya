@@ -566,7 +566,7 @@ class ToolRegistry:
     def _load_network_tools(self):
         """加载网络工具"""
         try:
-            from webnet.ToolNet.tools.network.grok_search import GrokSearchTool
+            # from webnet.ToolNet.tools.network.grok_search import GrokSearchTool  # 无免费额度，已禁用
             from webnet.ToolNet.tools.network.crawl_webpage import CrawlWebpageTool
             from webnet.ToolNet.tools.network.whois_query import WhoisQueryTool
             from webnet.ToolNet.tools.network.tcping import TCPingTool
@@ -574,7 +574,7 @@ class ToolRegistry:
             from webnet.ToolNet.tools.network.tavily_search_tool import TavilySearchTool
             from webnet.ToolNet.tools.network.weather_query import WeatherQueryTool
 
-            self.register(GrokSearchTool())
+            # self.register(GrokSearchTool())  # 无免费额度，已禁用
             self.register(CrawlWebpageTool())
             self.register(WhoisQueryTool())
             self.register(TCPingTool())
@@ -583,7 +583,7 @@ class ToolRegistry:
             self.register(WeatherQueryTool())
 
             self.logger.info(
-                "已加载网络工具: GrokSearch, CrawlWebpage, WhoisQuery, TCPing, SpeedTest, TavilySearch, WeatherQuery"
+                "已加载网络工具: CrawlWebpage, WhoisQuery, TCPing, SpeedTest, TavilySearch, WeatherQuery"
             )
         except Exception as e:
             self.logger.warning(f"加载网络工具失败: {e}")
