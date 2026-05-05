@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>Version 4.3.4 Dynamic Edition</strong><br>
+  <strong>Version 6.0.0</strong><br>
   多模态 AI 虚拟化身 · 跨平台 · 自我进化 · 隐私感知记忆 · MCP支持 · 队列管理 · 模型协作引擎 · 三阶段链式协作 · 人格动态加载
 </p>
 

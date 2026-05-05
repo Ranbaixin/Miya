@@ -1935,8 +1935,8 @@ class MiyaAPI:
             return {
                 "success": True,
                 "data": {
-                    "version": "4.3.0",
-                    "dashboard_version": "4.3.0",
+                    "version": "6.0.0",
+                    "dashboard_version": "6.0.0",
                     "name": "MIYA",
                     "build": "20260501",
                     "change_pwd_hint": False,
@@ -1955,9 +1955,9 @@ class MiyaAPI:
                 "success": True,
                 "data": {
                     "available": False,
-                    "version": "4.3.0",
+                    "version": "6.0.0",
                     "has_new_version": False,
-                    "latest_version": "4.3.0",
+                    "latest_version": "6.0.0",
                     "release_notes": "",
                 },
             }

@@ -30,7 +30,7 @@ class SystemInfo:
     """系统信息"""
 
     name: str = "MIYA"
-    version: str = "6.0"
+    version: str = "6.0.0"
     mode: str = "unified"
     python_version: str = ""
     platform: str = ""

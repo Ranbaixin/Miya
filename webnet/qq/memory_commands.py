@@ -25,13 +25,17 @@ async def _get_memory_core():
 
 
 def _get_memory_aliases():
-    """从配置获取记忆命令别名"""
-    config = get_qq_command_config()
-    memory_config = config._config.get("memory_commands", {}).get("commands", {})
-    aliases = {}
-    for cmd_type, cmd_info in memory_config.items():
-        aliases[cmd_type] = cmd_info.get("aliases", [])
-    return aliases
+    """从 text_config.json 获取记忆命令别名"""
+    from core.text_loader import get_command_keywords
+
+    cmd = get_command_keywords()
+    return {
+        "stats": cmd.get("memory_stats", []),
+        "search": cmd.get("memory_search", []),
+        "recent": cmd.get("memory_recent", []),
+        "tags": cmd.get("memory_tags", []),
+        "my": cmd.get("memory_my", []),
+    }
 
 
 class MemoryCommandHandler:

@@ -10,7 +10,7 @@ class Updator:
     """自动更新器"""
 
     def __init__(self):
-        self.current_version = "4.3.4"
+        self.current_version = "6.0.0"
         self.check_url = ""
 
     async def check_update(self) -> Dict[str, Any]:

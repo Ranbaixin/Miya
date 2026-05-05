@@ -29,7 +29,7 @@ class MIYASystemConfig:
     """MIYA 系统配置"""
 
     name: str = "MIYA"
-    version: str = "6.0"
+    version: str = "6.0.0"
     mode: str = "unified"  # unified, standalone
     log_level: str = "INFO"
     data_dir: str = "data"

@@ -13,7 +13,7 @@ show_menu() {
     clear
     echo -e "${BLUE}================================================================================"
     echo "                         MIYA AI VIRTUAL AVATAR SYSTEM"
-    echo "                              Version 4.0 - Ultimate Edition"
+    echo "                              Version 6.0.0"
     echo -e "================================================================================${NC}"
     echo
     echo "MAIN MENU:"
@@ -53,10 +53,10 @@ check_file() {
 
 start_terminal() {
     echo -e "${YELLOW}Starting Terminal System...${NC}"
-    if check_file "run/multi_terminal_main_v2.py"; then
-        python run/multi_terminal_main_v2.py
+    if check_file "run/miya_main.py"; then
+        python run/miya_main.py
     else
-        echo -e "${RED}Error: run/multi_terminal_main_v2.py not found!${NC}"
+        echo -e "${RED}Error: run/miya_main.py not found!${NC}"
     fi
 }
 
@@ -87,8 +87,8 @@ start_terminal_with_api() {
         echo -e "${GREEN}API Server started (PID: $API_PID)${NC}"
     fi
     
-    if check_file "run/multi_terminal_main_v2.py"; then
-        python run/multi_terminal_main_v2.py
+    if check_file "run/miya_main.py"; then
+        python run/miya_main.py
     fi
     
     if [ ! -z "$API_PID" ]; then
@@ -142,8 +142,8 @@ start_full_system() {
     echo
     echo "Press Ctrl+C to stop all services."
     
-    if check_file "run/multi_terminal_main_v2.py"; then
-        python run/multi_terminal_main_v2.py
+    if check_file "run/miya_main.py"; then
+        python run/miya_main.py
     fi
     
     for pid in "${PIDS[@]}"; do
@@ -155,10 +155,10 @@ start_full_system() {
 build_web() {
     echo -e "${YELLOW}Building Web Frontend...${NC}"
     if command -v node &> /dev/null; then
-        if [ -f "frontend/package.json" ]; then
-            cd frontend
+        if [ -f "frontend/ui/package.json" ]; then
+            cd frontend/ui
             npm run build
-            cd ..
+            cd ../..
         else
             echo -e "${RED}Frontend not found!${NC}"
         fi
@@ -196,13 +196,8 @@ while true; do
             start_web_with_api
             ;;
         3)
-            if [ -d "frontend/packages/desktop" ]; then
-                cd frontend/packages/desktop
-                npm run dev
-                cd "$SCRIPT_DIR"
-            else
-                echo -e "${RED}Desktop client not found!${NC}"
-            fi
+    # Desktop client
+            echo -e "${YELLOW}Desktop client is not available in current version${NC}"
             ;;
         4)
             start_terminal_with_api
@@ -221,12 +216,7 @@ while true; do
                 python webnet/web_main.py &
                 PIDS+=($!)
             fi
-            if [ -d "frontend/packages/desktop" ]; then
-                cd frontend/packages/desktop
-                npm run dev &
-                PIDS+=($!)
-                cd "$SCRIPT_DIR"
-            fi
+            echo "Desktop client is not available in current version"
             echo "Press Ctrl+C to stop all services."
             wait
             for pid in "${PIDS[@]}"; do
@@ -257,15 +247,12 @@ while true; do
                 echo "[OK] QQ Client started"
             fi
             
-            if [[ $services == *"4"* ]] && [ -d "frontend/packages/desktop" ]; then
-                cd frontend/packages/desktop && npm run dev &
-                PIDS+=($!)
-                echo "[OK] Desktop Client started"
-                cd "$SCRIPT_DIR"
+            if [[ $services == *"4"* ]]; then
+                echo "[WARN] Desktop client is not available in current version"
             fi
             
-            if [[ $services == *"5"* ]] && check_file "run/multi_terminal_main_v2.py"; then
-                python run/multi_terminal_main_v2.py
+            if [[ $services == *"5"* ]] && check_file "run/miya_main.py"; then
+                python run/miya_main.py
             fi
             
             echo "Press Ctrl+C to stop all services."
@@ -280,7 +267,7 @@ while true; do
             echo "[2] Code Analysis"
             read dev_choice
             case $dev_choice in
-                1) python run/multi_terminal_main_v2.py --debug ;;
+                1) python run/miya_main.py --debug ;;
                 2) python -m pylint core/ ;;
             esac
             ;;

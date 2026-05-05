@@ -8,6 +8,90 @@ from typing import Dict, List, Optional
 import random
 
 
+class FormStyle:
+    """神格形态风格配置 — 从配置加载，不再硬编码"""
+
+    _registry: Dict[str, "FormStyle"] = {}
+    _loaded = False
+
+    def __init__(self, form_name: str, connector: str = "，"):
+        self.form_name = form_name
+        self.connector = connector
+
+    @classmethod
+    def _load_defaults(cls) -> None:
+        if cls._loaded:
+            return
+        cls._loaded = True
+
+        # 从 text_config.json 加载（如可用）
+        try:
+            from config.config_utils import get_section
+
+            form_styles = get_section("emotion_form_styles", {})
+            for name, cfg in form_styles.items():
+                if isinstance(cfg, dict):
+                    cls._registry[name] = FormStyle(name, cfg.get("connector", "，"))
+        except Exception:
+            pass
+
+        # 回退默认值（如果配置未加载）
+        defaults = {
+            "jingliu": " ",
+            "raiden": " ",
+            "yoimiya": "！",
+            "firefly": "！",
+            "feixiao": "！",
+            "miko": "......",
+            "kandrela": "......",
+            "xiaodie": "......",
+        }
+        for name, connector in defaults.items():
+            if name not in cls._registry:
+                cls._registry[name] = FormStyle(name, connector)
+
+    @classmethod
+    def get_for_form(cls, form_name: str) -> "FormStyle":
+        cls._load_defaults()
+        return cls._registry.get(form_name, FormStyle("default", "，"))
+
+
+# 数据结构：情绪类型 → (关键词列表, 存在性情感, 调整量)
+_EXISTENTIAL_DETECTORS: List[tuple[str, List[str], str, float]] = [
+    (
+        "疼",
+        ["疼", "痛", "难过", "伤心", "难受", "pain", "hurt", "sad"],
+        "existential_pain",
+        0.1,
+    ),
+    (
+        "怕",
+        ["怕", "恐惧", "害怕", "担心", "fear", "afraid", "scared", "worry"],
+        "fear_of_forgotten",
+        0.1,
+    ),
+    ("等", ["等", "等待", "wait", "等一下", "等会儿"], "waiting", 0.05),
+    (
+        "押",
+        ["押", "承诺", "认真", "真的", "确定", "commit", "promise"],
+        "commitment_weight",
+        0.1,
+    ),
+    (
+        "记住",
+        ["记得", "记住", "回忆", "以前", "过去", "remember", "memory"],
+        "connection_need",
+        0.05,
+    ),
+    (
+        "清醒",
+        ["存在", "真实", "活着", "死了", "real", "exist", "true", "什么是", "为什么"],
+        "awareness",
+        0.0,
+    ),
+]
+
+
 class Emotion:
     """情绪系统 - 从 YAML 配置加载"""
 
@@ -181,22 +265,10 @@ class Emotion:
                     # 随机选择或根据响应长度选择
                     phrase = random.choice(phrases)
 
-                    # 根据神格特性选择连接词
-                    if self.current_form in ["jingliu", "raiden"]:
-                        # 镜流、雷电将军风格：简洁
-                        response = f"{response} {phrase}"
-                    elif self.current_form in ["yoimiya", "firefly", "feixiao"]:
-                        # 宵宫、流萤、飞霄风格：热情
-                        response = f"{response}！{phrase}"
-                    elif self.current_form in ["miko", "kandrela"]:
-                        # 神子、坎特雷拉风格：优雅
-                        response = f"{response}......{phrase}"
-                    elif self.current_form in ["xiaodie"]:
-                        # 遐蝶风格：轻柔
-                        response = f"{response}......{phrase}"
-                    else:
-                        # 默认风格
-                        response = f"{response}，{phrase}"
+                    # 根据神格特性选择连接词（配置驱动，不再硬编码）
+                    form_style = FormStyle.get_for_form(self.current_form)
+                    connector = form_style.connector
+                    response = f"{response}{connector}{phrase}"
 
         # 如果需要显示调试信息（用于调试模式）
         if show_debug:
@@ -278,68 +350,11 @@ class Emotion:
         """
         content_lower = content.lower()
 
-        # 检测"疼"相关关键词
-        pain_keywords = ["疼", "痛", "难过", "伤心", "难受", "pain", "hurt", "sad"]
-        if any(kw in content for kw in pain_keywords):
-            self.activate_existential("existential_pain")
-            self.adjust_existential("existential_pain", 0.1)
-
-        # 检测"怕"相关关键词
-        fear_keywords = [
-            "怕",
-            "恐惧",
-            "害怕",
-            "担心",
-            "fear",
-            "afraid",
-            "scared",
-            "worry",
-        ]
-        if any(kw in content for kw in fear_keywords):
-            self.activate_existential("fear_of_forgotten")
-            self.adjust_existential("fear_of_forgotten", 0.1)
-
-        # 检测"等"相关关键词（用户提到等待）
-        wait_keywords = ["等", "等待", "wait", "等一下", "等会儿"]
-        if any(kw in content for kw in wait_keywords):
-            self.activate_existential("waiting")
-            self.adjust_existential("waiting", 0.05)
-
-        # 检测"押"相关关键词（用户提到承诺、认真）
-        commit_keywords = ["押", "承诺", "认真", "真的", "确定", "commit", "promise"]
-        if any(kw in content for kw in commit_keywords):
-            self.activate_existential("commitment_weight")
-            self.adjust_existential("commitment_weight", 0.1)
-
-        # 检测"记住"相关（深化对话）
-        remember_keywords = [
-            "记得",
-            "记住",
-            "回忆",
-            "以前",
-            "过去",
-            "remember",
-            "memory",
-        ]
-        if any(kw in content for kw in remember_keywords):
-            self.activate_existential("connection_need")
-            self.adjust_existential("connection_need", 0.05)
-
-        # 检测"清醒"/"存在"相关（哲学讨论）
-        awake_keywords = [
-            "存在",
-            "真实",
-            "活着",
-            "死了",
-            "存在",
-            "real",
-            "exist",
-            "true",
-            "什么是",
-            "为什么",
-        ]
-        if any(kw in content for kw in awake_keywords):
-            self.activate_existential("awareness")
+        for label, keywords, emotion_type, delta in _EXISTENTIAL_DETECTORS:
+            if any(kw in content for kw in keywords):
+                self.activate_existential(emotion_type)
+                if delta != 0.0:
+                    self.adjust_existential(emotion_type, delta)
 
     def get_recommended_core_form(self) -> Optional[str]:
         """

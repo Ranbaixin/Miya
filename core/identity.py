@@ -16,7 +16,7 @@ class Identity:
         self.uuid = str(uuid.uuid4())
         self.name = "弥娅·阿尔缪斯"
         self.full_name = "Miya Almus"
-        self.version = "4.3.0"
+        self.version = "6.0.0"
         self.birth_time = datetime.now()
         self.awake_time = None
 

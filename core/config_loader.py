@@ -158,88 +158,34 @@ def get_base_url(provider: str) -> str:
     return get_config().get_base_url(provider)
 
 
-# ==================== text_config.json 加载 ====================
+# ==================== text_config.json 加载 (委托到 config.config_utils) ====================
 
-# text_config.json 缓存
-_text_config_cache: Optional[Dict[str, Any]] = None
+from config.config_utils import reload_config as shared_reload_config
+from config.config_utils import get_section as shared_get_section
+
+# 委托 text_config 加载到统一的 config/config_utils
+_text_config_loaded = False
 
 
 def load_text_config(force_reload: bool = False) -> Dict[str, Any]:
-    """
-    加载 text_config.json 配置（带缓存）
-
-    Args:
-        force_reload: 是否强制重新加载
-
-    Returns:
-        text_config 配置字典
-    """
-    global _text_config_cache
-
-    if not force_reload and _text_config_cache is not None:
-        return _text_config_cache
-
-    config_path = CONFIG_DIR / "text_config.json"
-
-    try:
-        if config_path.exists():
-            with open(config_path, "r", encoding="utf-8") as f:
-                _text_config_cache = json.load(f)
-            logger.debug(f"加载 text_config.json: {config_path}")
-            return _text_config_cache
-        else:
-            logger.warning(f"text_config.json 不存在: {config_path}")
-            return {}
-    except Exception as e:
-        logger.error(f"加载 text_config.json 失败: {e}")
-        return {}
+    global _text_config_loaded
+    if force_reload and _text_config_loaded:
+        shared_reload_config()
+    _text_config_loaded = True
+    return shared_get_section() or {}
 
 
 def get_text_config_value(key: str, default: Any = None) -> Any:
-    """
-    获取 text_config.json 中的配置值
+    """获取 text_config.json 中的配置值（支持点号分隔的嵌套键）"""
+    from config.config_utils import get_value
 
-    Args:
-        key: 配置键（支持点号分隔的嵌套键）
-        default: 默认值
-
-    Returns:
-        配置值
-    """
-    config = load_text_config()
-
-    # 支持嵌套键
-    keys = key.split(".")
-    value = config
-
-    for k in keys:
-        if isinstance(value, dict):
-            value = value.get(k)
-        else:
-            return default
-
-    return value if value is not None else default
-
-
-def get_safety_config() -> Dict[str, Any]:
-    """获取安全配置"""
-    return load_text_config().get("safety", {})
-
-
-def get_command_config() -> Dict[str, Any]:
-    """获取命令配置"""
-    return load_text_config().get("commands", {})
-
-
-def get_prompt_config() -> Dict[str, Any]:
-    """获取提示词配置"""
-    return load_text_config().get("prompts", {})
+    return get_value(key, default)
 
 
 def reload_text_config():
-    """重新加载 text_config.json"""
-    global _text_config_cache
-    _text_config_cache = None
+    shared_reload_config()
+    global _text_config_loaded
+    _text_config_loaded = False
     logger.info("已清除 text_config.json 缓存")
 
 
@@ -250,8 +196,5 @@ __all__ = [
     "get_base_url",
     "load_text_config",
     "get_text_config_value",
-    "get_safety_config",
-    "get_command_config",
-    "get_prompt_config",
     "reload_text_config",
 ]

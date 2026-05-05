@@ -2,7 +2,7 @@
 统一权限管理器 - 从单一配置文件读取所有权限
 
 特性：
-- 从 config/permissions.json 或 config/permissions.yaml 读取配置
+- 从 config/permissions.json 读取配置
 - 不支持通过命令修改权限，只能通过配置文件
 - 支持多平台统一管理
 - 支持权限缓存和审计
@@ -30,11 +30,6 @@ class UnifiedPermissionManager:
         # 配置文件路径
         if config_path is None:
             self.config_file = Path("config/permissions.json")
-            # 如果JSON不存在，尝试YAML
-            if not self.config_file.exists():
-                yaml_file = Path("config/permissions.yaml")
-                if yaml_file.exists():
-                    self.config_file = yaml_file
         else:
             self.config_file = Path(config_path)
 
@@ -51,7 +46,9 @@ class UnifiedPermissionManager:
     def _load_config(self) -> Dict[str, Any]:
         """加载配置文件"""
         # 检查文件是否被修改
-        current_mtime = self.config_file.stat().st_mtime if self.config_file.exists() else None
+        current_mtime = (
+            self.config_file.stat().st_mtime if self.config_file.exists() else None
+        )
 
         # 如果缓存有效且文件未被修改，使用缓存
         if self._config_cache and self._config_mtime == current_mtime:
@@ -63,12 +60,13 @@ class UnifiedPermissionManager:
             return self._get_default_config()
 
         try:
-            content = self.config_file.read_text(encoding='utf-8')
+            content = self.config_file.read_text(encoding="utf-8")
 
-            if self.config_file.suffix == '.yaml' or self.config_file.suffix == '.yml':
+            if self.config_file.suffix == ".yaml" or self.config_file.suffix == ".yml":
                 # 尝试导入 PyYAML
                 try:
                     import yaml
+
                     config = yaml.safe_load(content)
                 except ImportError:
                     logger.warning("PyYAML未安装，无法解析YAML配置文件")
@@ -96,35 +94,22 @@ class UnifiedPermissionManager:
             "permission_groups": {
                 "Default": {
                     "name": "默认权限组",
-                    "permissions": ["tool.get_current_time", "memory.read"]
+                    "permissions": ["tool.get_current_time", "memory.read"],
                 },
-                "Admin": {
-                    "name": "管理员",
-                    "permissions": ["*.*"]
-                }
+                "Admin": {"name": "管理员", "permissions": ["*.*"]},
             },
-            "platform_defaults": {
-                "terminal": ["Default"],
-                "web": ["Default"]
-            },
+            "platform_defaults": {"terminal": ["Default"], "web": ["Default"]},
             "users": [
                 {
                     "user_id": "terminal_default",
                     "platform": "terminal",
-                    "permission_groups": ["Admin"]
+                    "permission_groups": ["Admin"],
                 }
             ],
-            "special_rules": {
-                "admin_whitelist": [],
-                "super_admin_whitelist": []
-            },
+            "special_rules": {"admin_whitelist": [], "super_admin_whitelist": []},
             "disabled_permissions": [],
             "platform_restrictions": {},
-            "security": {
-                "enable_audit": True,
-                "enable_cache": True,
-                "cache_ttl": 300
-            }
+            "security": {"enable_audit": True, "enable_cache": True, "cache_ttl": 300},
         }
 
     def check_permission(
@@ -134,7 +119,7 @@ class UnifiedPermissionManager:
         context: Optional[Dict[str, Any]] = None,
         list_mode: bool = False,
         log_audit: bool = True,
-        use_cache: bool = True
+        use_cache: bool = True,
     ) -> Union[str, bool]:
         """
         检查用户是否有指定权限
@@ -192,7 +177,7 @@ class UnifiedPermissionManager:
         self,
         user_id: str,
         config: Dict[str, Any],
-        context: Optional[Dict[str, Any]] = None
+        context: Optional[Dict[str, Any]] = None,
     ) -> List[str]:
         """
         获取用户的所有权限
@@ -206,7 +191,7 @@ class UnifiedPermissionManager:
             权限列表
         """
         perm_list = []
-        platform = context.get('platform') if context else None
+        platform = context.get("platform") if context else None
 
         # 特殊规则：检查白名单
         special_rules = config.get("special_rules", {})
@@ -239,7 +224,7 @@ class UnifiedPermissionManager:
             user = {
                 "user_id": user_id,
                 "platform": platform or "unknown",
-                "permission_groups": default_groups
+                "permission_groups": default_groups,
             }
 
         # 检查平台限制
@@ -277,10 +262,7 @@ class UnifiedPermissionManager:
         return perm_list
 
     def _has_permission(
-        self,
-        perm_list: List[str],
-        permission: str,
-        config: Dict[str, Any]
+        self, perm_list: List[str], permission: str, config: Dict[str, Any]
     ) -> bool:
         """
         检查权限列表中是否有指定权限
@@ -353,7 +335,7 @@ class UnifiedPermissionManager:
         user_id: str,
         permission: str,
         result: bool,
-        context: Optional[Dict[str, Any]] = None
+        context: Optional[Dict[str, Any]] = None,
     ):
         """记录权限检查日志"""
         security = self._load_config().get("security", {})
@@ -364,7 +346,7 @@ class UnifiedPermissionManager:
             return
 
         level = logger.warning if not result else logger.info
-        platform = context.get('platform', 'unknown') if context else 'unknown'
+        platform = context.get("platform", "unknown") if context else "unknown"
 
         level(
             f"权限检查 - 用户: {user_id}, 平台: {platform}, "
@@ -410,7 +392,9 @@ class UnifiedPermissionManager:
         config = self._load_config()
         return config.get("permission_groups", {}).copy()
 
-    def get_user_permissions_list(self, user_id: str, context: Optional[Dict[str, Any]] = None) -> List[str]:
+    def get_user_permissions_list(
+        self, user_id: str, context: Optional[Dict[str, Any]] = None
+    ) -> List[str]:
         """
         获取用户的所有权限列表
 
@@ -453,7 +437,7 @@ class UnifiedPermissionManager:
             "groups_count": len(config.get("permission_groups", {})),
             "config_file": str(self.config_file),
             "config_exists": self.config_file.exists(),
-            "read_only": self._read_only
+            "read_only": self._read_only,
         }
 
     # 明确禁止的修改方法
@@ -461,33 +445,33 @@ class UnifiedPermissionManager:
         """添加用户（已禁用 - 只能通过配置文件）"""
         raise NotImplementedError(
             "权限只能通过配置文件修改，不支持通过命令添加用户。"
-            "请编辑 config/permissions.json 或 config/permissions.yaml 文件。"
+            "请编辑 config/permissions.json 文件。"
         )
 
     def remove_user(self, **kwargs):
         """删除用户（已禁用 - 只能通过配置文件）"""
         raise NotImplementedError(
             "权限只能通过配置文件修改，不支持通过命令删除用户。"
-            "请编辑 config/permissions.json 或 config/permissions.yaml 文件。"
+            "请编辑 config/permissions.json 文件。"
         )
 
     def update_user(self, **kwargs):
         """更新用户（已禁用 - 只能通过配置文件）"""
         raise NotImplementedError(
             "权限只能通过配置文件修改，不支持通过命令更新用户。"
-            "请编辑 config/permissions.json 或 config/permissions.yaml 文件。"
+            "请编辑 config/permissions.json 文件。"
         )
 
     def add_permission_group(self, **kwargs):
         """添加权限组（已禁用 - 只能通过配置文件）"""
         raise NotImplementedError(
             "权限只能通过配置文件修改，不支持通过命令添加权限组。"
-            "请编辑 config/permissions.json 或 config/permissions.yaml 文件。"
+            "请编辑 config/permissions.json 文件。"
         )
 
     def update_permission_group(self, **kwargs):
         """更新权限组（已禁用 - 只能通过配置文件）"""
         raise NotImplementedError(
             "权限只能通过配置文件修改，不支持通过命令更新权限组。"
-            "请编辑 config/permissions.json 或 config/permissions.yaml 文件。"
+            "请编辑 config/permissions.json 文件。"
         )

@@ -945,82 +945,69 @@ class MiyaMemoryCore:
             logger.debug(f"[MiyaMemoryCore] SQLite 后端初始化失败（不影响运行）: {e}")
 
         # 初始化真实 Embedding 客户端（绕过配置，直接使用模型池）
+        await self._init_embedding_client_from_model_config()
+
+    async def _init_embedding_client_from_model_config(self) -> None:
+        """从 multi_model_config.json 初始化 Embedding 客户端
+
+        提取为独立方法，消除 primary/fallback 路径的重复代码。
+        """
         try:
+            from core.embedding_client import EmbeddingClient, EmbeddingProvider
+            import json
+
             model_config_path = (
                 Path(__file__).parent.parent / "config" / "multi_model_config.json"
             )
-            if model_config_path.exists():
-                import json
+            if not model_config_path.exists():
+                return
 
-                with open(model_config_path, "r", encoding="utf-8") as f:
-                    model_config = json.load(f)
-                emb_config = model_config.get("embedding_config", {})
-                models = model_config.get("models", {})
+            with open(model_config_path, "r", encoding="utf-8") as f:
+                model_config = json.load(f)
+            emb_config = model_config.get("embedding_config", {})
+            models = model_config.get("models", {})
 
-                primary_name = emb_config.get("primary", "siliconflow_bge_large")
-                fallback_name = emb_config.get("fallback", "")
+            provider_map = {
+                "openai": EmbeddingProvider.OPENAI,
+                "siliconflow": EmbeddingProvider.SILICONFLOW,
+                "deepseek": EmbeddingProvider.DEEPSEEK,
+            }
 
-                if primary_name in models:
-                    model_info = models[primary_name]
-                    from core.embedding_client import EmbeddingClient, EmbeddingProvider
+            async def _try_init(name: str, log_prefix: str) -> bool:
+                if name not in models:
+                    return False
+                info = models[name]
+                provider = provider_map.get(
+                    info.get("provider", "openai"), EmbeddingProvider.OPENAI
+                )
+                api_key = info.get("api_key", "")
+                if not api_key and info.get("env_key"):
+                    api_key = os.getenv(info["env_key"], "")
 
-                    provider_map = {
-                        "openai": EmbeddingProvider.OPENAI,
-                        "siliconflow": EmbeddingProvider.SILICONFLOW,
-                        "deepseek": EmbeddingProvider.DEEPSEEK,
-                    }
-                    provider = provider_map.get(
-                        model_info.get("provider", "openai"), EmbeddingProvider.OPENAI
-                    )
-                    # 从环境变量获取 API key
-                    import os
+                self.embedding_client = EmbeddingClient(
+                    provider=provider,
+                    model=info["name"],
+                    api_key=api_key,
+                    base_url=info.get("base_url", ""),
+                )
+                await self.embedding_client.initialize()
+                logger.info("%s%s", log_prefix, name)
+                return True
 
-                    api_key = model_info.get("api_key", "")
-                    if not api_key and model_info.get("env_key"):
-                        api_key = os.getenv(model_info["env_key"], "")
+            primary_name = emb_config.get("primary", "siliconflow_bge_large")
+            fallback_name = emb_config.get("fallback", "")
 
-                    self.embedding_client = EmbeddingClient(
-                        provider=provider,
-                        model=model_info["name"],
-                        api_key=api_key,
-                        base_url=model_info.get("base_url", ""),
-                    )
-                    await self.embedding_client.initialize()
-                    logger.info(
-                        f"[MiyaMemoryCore] 真实 Embedding 客户端已启用: {primary_name}"
-                    )
-                elif fallback_name and fallback_name in models:
-                    model_info = models[fallback_name]
-                    from core.embedding_client import EmbeddingClient, EmbeddingProvider
-
-                    provider_map = {
-                        "openai": EmbeddingProvider.OPENAI,
-                        "siliconflow": EmbeddingProvider.SILICONFLOW,
-                        "deepseek": EmbeddingProvider.DEEPSEEK,
-                    }
-                    provider = provider_map.get(
-                        model_info.get("provider", "openai"), EmbeddingProvider.OPENAI
-                    )
-                    # 从环境变量获取 API key
-                    import os
-
-                    api_key = model_info.get("api_key", "")
-                    if not api_key and model_info.get("env_key"):
-                        api_key = os.getenv(model_info["env_key"], "")
-
-                    self.embedding_client = EmbeddingClient(
-                        provider=provider,
-                        model=model_info["name"],
-                        api_key=api_key,
-                        base_url=model_info.get("base_url", ""),
-                    )
-                    await self.embedding_client.initialize()
-                    logger.info(
-                        f"[MiyaMemoryCore] Embedding 使用 fallback: {fallback_name}"
-                    )
+            if await _try_init(
+                primary_name, "[MiyaMemoryCore] 真实 Embedding 客户端已启用: "
+            ):
+                return
+            if fallback_name and await _try_init(
+                fallback_name, "[MiyaMemoryCore] Embedding 使用 fallback: "
+            ):
+                return
         except Exception as e:
             logger.warning(
-                f"[MiyaMemoryCore] Embedding 客户端初始化失败，使用伪向量回退: {e}"
+                "[MiyaMemoryCore] Embedding 客户端初始化失败，使用伪向量回退: %s", e
             )
 
         if lazy_load:

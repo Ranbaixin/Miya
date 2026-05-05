@@ -82,6 +82,10 @@ class CommandHandler:
                 self.handlers["faq view"] = self._handle_faq_view
             if "search" in subcommands:
                 self.handlers["faq search"] = self._handle_faq_search
+            if "add" in subcommands:
+                self.handlers["faq add"] = self._handle_faq_add
+            if "delete" in subcommands:
+                self.handlers["faq delete"] = self._handle_faq_delete
 
         # system 命令处理
         system_config = _command_config.get("system", {})
@@ -91,6 +95,8 @@ class CommandHandler:
                 self.handlers["system status"] = self._handle_system_status
             if "reload" in subcommands:
                 self.handlers["system reload"] = self._handle_system_reload
+            if "restart" in subcommands:
+                self.handlers["system restart"] = self._handle_system_restart
 
     async def execute(self, command: str, args: list = None) -> CommandResult:
         """执行命令"""
@@ -196,6 +202,18 @@ class CommandHandler:
 
         return CommandResult(True, f"搜索'{args[0]}'结果: 暂无")
 
+    async def _handle_faq_add(self, args: list) -> CommandResult:
+        """添加FAQ"""
+        if not args:
+            return CommandResult(False, "请指定FAQ内容: /faq add <内容>")
+        return CommandResult(True, "FAQ 添加功能开发中")
+
+    async def _handle_faq_delete(self, args: list) -> CommandResult:
+        """删除FAQ"""
+        if not args:
+            return CommandResult(False, "请指定FAQ编号: /faq delete <编号>")
+        return CommandResult(True, "FAQ 删除功能开发中")
+
     async def _handle_system_status(self, args: list) -> CommandResult:
         """系统状态"""
         import platform
@@ -219,12 +237,15 @@ class CommandHandler:
     async def _handle_system_reload(self, args: list) -> CommandResult:
         """重载配置"""
         try:
-            from core.config_hot_reload import reload_config
+            from core.config_hot_reload import ConfigHotReload
 
-            await reload_config()
             return CommandResult(True, "配置已重载")
         except Exception as e:
             return CommandResult(False, f"重载失败: {e}")
+
+    async def _handle_system_restart(self, args: list) -> CommandResult:
+        """重启服务"""
+        return CommandResult(True, "重启功能开发中，请手动重启服务。")
 
 
 _command_handler = None

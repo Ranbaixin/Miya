@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 logger = logging.getLogger(__name__)
 
 
-VERSION = "1.0.0"
+VERSION = "6.0.0"
 NAME = "MIYA"
 DESCRIPTION = "MIYA AI Virtual Entity"
 

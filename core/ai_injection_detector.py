@@ -18,7 +18,8 @@ def _get_security_config() -> dict:
         from core.text_loader import _load_config
 
         config = _load_config()
-        return config.get("ai_injection_detection", {})
+        security = config.get("security", {})
+        return security.get("ai_injection_detection", {})
     except Exception as e:
         logger.warning(f"加载安全配置失败: {e}")
         return {}

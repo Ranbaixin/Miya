@@ -222,44 +222,6 @@ def mock_orchestrator(mock_terminal_manager):
     return mock
 
 
-# ==================== 测试配置 ====================
-@pytest.fixture
-def test_config():
-    """测试配置"""
-    from core.config.validator import AppConfig, AIConfig
-
-    return AppConfig(
-        app_name="Miya Test",
-        debug=True,
-        log_level="DEBUG",
-        ai=AIConfig(
-            provider="mock",
-            api_key="test-api-key-1234567890",
-            model="test-model",
-            timeout=10,
-        ),
-    )
-
-
-# ==================== 测试应用实例 ====================
-# 终端测试已由 Open-ClaudeCode 接管，原有终端AI/Shell测试夹具已废弃
-
-
-@pytest.fixture
-async def miya_shell_instance(mock_orchestrator, miya_terminal_ai_instance):
-    """MiyaMultiTerminalShell测试实例"""
-    from run.multi_terminal_main_v2 import MiyaMultiTerminalShell
-
-    # 创建实例
-    shell = MiyaMultiTerminalShell()
-
-    # 替换依赖为mock
-    shell.orchestrator = mock_orchestrator
-    shell.ai = miya_terminal_ai_instance
-
-    return shell
-
-
 # ==================== 测试工具 ====================
 @pytest.fixture
 def capture_stdout():
@@ -455,3 +417,119 @@ def integration_test(test_func):
 def e2e_test(test_func):
     """标记为端到端测试"""
     return pytest.mark.e2e(test_func)
+
+
+# ============================================================================
+# v6.0 新模块 Fixtures (阶段1-4 新增)
+# ============================================================================
+
+
+@pytest.fixture
+def mock_embedding_func():
+    """模拟嵌入函数"""
+
+    def _embed(text: str) -> list[float]:
+        import hashlib
+
+        h = hashlib.sha256(text.encode()).digest()
+        return [float(b) / 255.0 for b in h[:32]]
+
+    return _embed
+
+
+@pytest.fixture
+def mock_llm_func():
+    """模拟 LLM 调用函数"""
+
+    def _call(prompt: str) -> str:
+        return f"Mock response to: {prompt[:50]}..."
+
+    return _call
+
+
+@pytest.fixture
+async def job_queue(temp_dir):
+    """认知记忆任务队列"""
+    from cognitive.job_queue import JobQueue
+
+    q = JobQueue(
+        base_dir=temp_dir / "cognitive/queues",
+        stale_timeout_seconds=10.0,
+        max_retries=2,
+    )
+    return q
+
+
+@pytest.fixture
+async def profile_storage(temp_dir):
+    """档案存储"""
+    from cognitive.profile_storage import ProfileStorage
+
+    return ProfileStorage(
+        profiles_dir=temp_dir / "cognitive/profiles",
+        revision_keep=3,
+    )
+
+
+@pytest.fixture
+async def vector_store(temp_dir):
+    """向量存储 (需要 chromadb)"""
+    try:
+        from cognitive.vector_store import CognitiveVectorStore
+    except ImportError:
+        pytest.skip("chromadb 未安装")
+
+    store = CognitiveVectorStore(
+        persist_directory=str(temp_dir / "cognitive/chromadb"),
+        collection_prefix="miya_test",
+    )
+    await store.initialize()
+    return store
+
+
+@pytest.fixture
+async def cognitive_service(
+    vector_store,
+    job_queue,
+    profile_storage,
+    mock_embedding_func,
+):
+    """认知记忆服务"""
+    from cognitive.service import CognitiveService
+
+    svc = CognitiveService(
+        vector_store=vector_store,
+        job_queue=job_queue,
+        profile_storage=profile_storage,
+        get_embedding=mock_embedding_func,
+        top_k=5,
+    )
+    await svc.initialize()
+    return svc
+
+
+@pytest.fixture
+def queue_manager():
+    """队列管理器"""
+    from services.queue_manager import QueueManager
+
+    return QueueManager(
+        models={"default": 0.1, "gpt-4o": 0.1},
+        default_interval=0.1,
+    )
+
+
+@pytest.fixture
+def auto_pipeline_registry():
+    """自动处理管线注册表"""
+    from skills.auto_pipeline import AutoPipelineRegistry
+
+    return AutoPipelineRegistry()
+
+
+@pytest.fixture
+def miya_config():
+    """v6.0 统一配置 (从 text_config.json 加载)"""
+    from config.config_utils import _load_config
+
+    return _load_config()

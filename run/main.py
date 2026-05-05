@@ -892,7 +892,7 @@ def main():
         # 显示系统状态
         print("=" * 50)
         print("【弥娅系统】")
-        print(f"  版本: v4.3.0")
+        print(f"  版本: v6.0.0")
         print(f"  已启动")
         print("=" * 50)
 

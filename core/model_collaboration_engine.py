@@ -687,15 +687,7 @@ class ModelCollaborationEngine:
                 factory,
             )
 
-        # 收集链式协作的模型（包括第三个模型）
-        chain_model_ids = [route.primary, route.secondary, route.third]
-        chain_models = []
-        for model_id in chain_model_ids:
-            if model_id and model_id in self.model_pool._models:
-                config = self.model_pool._models[model_id]
-                if _get_api_key(config) and config.base_url:
-                    chain_models.append(config)
-
+        chain_models = self._collect_chain_models(route)
         if len(chain_models) < 2:
             return await self._execute_single(
                 message,
@@ -709,44 +701,19 @@ class ModelCollaborationEngine:
             )
 
         # 三阶段链式协作：思考 → 推理 → 输出
-        model_1 = chain_models[0]
-        client_1 = self._create_client(model_1, factory, None, context)
-
-        # 阶段1：思考 - 使用当前人格的视角
-        persona_info = self._get_persona_info()
-        thinking_system_prompt = (
-            f"你是{persona_info['persona_name']}。{persona_info['persona_description']}"
+        thinking_result = await self._chain_phase_thinking(
+            chain_models[0],
+            message,
+            task_type,
+            platform,
+            context,
+            factory,
         )
-
-        # 构建思考提示词，动态融入人格设定
-        thinking_prompt = self.thinking_prompt_template.format(
-            task_type=task_type,
-            message=message,
-            persona_name=persona_info["persona_name"],
-            persona_prompt=persona_info["persona_prompt"][:500]
-            if persona_info["persona_prompt"]
-            else "",
-        )
-        # 仅在终端模式下显示步骤
-        if platform == "terminal":
-            print(
-                TerminalFormatter.chain_step(
-                    1, model_1.id, f"思考分析({persona_info['persona_name']})"
-                )
-            )
-        thinking_result = await self._call_client(
-            client_1,
-            system_prompt=thinking_system_prompt,
-            user_prompt=thinking_prompt,
-            tools=None,
-        )
-
-        # 检查思考结果是否有效
         if not thinking_result or thinking_result in [
             self.msg_error_client_unavailable,
             self.msg_empty_response,
         ]:
-            logger.warning(f"[协作引擎] 第一阶段思考结果为空，回退到单模型")
+            logger.warning("[协作引擎] 第一阶段思考结果为空，回退到单模型")
             return await self._execute_single(
                 message,
                 task_type,
@@ -758,90 +725,29 @@ class ModelCollaborationEngine:
                 factory,
             )
 
-        # 阶段2：推理（使用第二个模型，如果没有第三个模型）
-        if len(chain_models) >= 3:
-            model_2 = chain_models[1]
-            client_2 = self._create_client(model_2, factory, None, context)
-            reasoning_prompt = self.reasoning_prompt_template.format(
-                thinking_result=thinking_result, message=message
-            )
-            if platform == "terminal":
-                print(TerminalFormatter.chain_step(2, model_2.id, "推理揣摩"))
-            reasoning_result = await self._call_client(
-                client_2,
-                system_prompt=self.reasoning_system_prompt,
-                user_prompt=reasoning_prompt,
-                tools=None,
-            )
+        reasoning_result, output_model = await self._chain_phase_reasoning(
+            chain_models,
+            thinking_result,
+            message,
+            task_type,
+            platform,
+            context,
+            factory,
+        )
 
-            # 检查推理结果是否有效
-            if not reasoning_result or reasoning_result in [
-                self.msg_error_client_unavailable,
-                self.msg_empty_response,
-            ]:
-                logger.warning(f"[协作引擎] 第二阶段推理结果为空，使用思考结果")
-                reasoning_result = thinking_result
-
-            output_model = chain_models[2]
-        else:
-            # 只有两个模型时，第二阶段直接作为输出
-            reasoning_result = thinking_result
-            output_model = chain_models[1]
-
-        # 阶段3：输出
-        # 【灵魂发生器】获取情绪上下文（统一方法）
         ai_emotion_context = await self._generate_emotion_context(message, context)
+        response = await self._chain_phase_output(
+            output_model,
+            reasoning_result,
+            system_prompt,
+            user_prompt or message,
+            ai_emotion_context,
+            tools,
+            platform,
+            context,
+            factory,
+        )
 
-        try:
-            client_output = self._create_client(output_model, factory, tools, context)
-
-            # 安全格式化，处理可能的特殊字符
-            try:
-                base_output_prompt = self.output_prompt_template.format(
-                    reasoning_result=reasoning_result, message=user_prompt or message
-                )
-            except (KeyError, ValueError) as fmt_err:
-                logger.warning(
-                    f"[协作引擎] Prompt格式化失败: {self.output_prompt_template[:100]}..., 错误: {fmt_err}"
-                )
-                base_output_prompt = f"推理结果：{reasoning_result}\n\n用户问题：{user_prompt or message}"
-
-            # 注入情绪上下文
-            output_prompt = (
-                base_output_prompt + ai_emotion_context
-                if ai_emotion_context
-                else base_output_prompt
-            )
-
-            if platform == "terminal":
-                print(TerminalFormatter.chain_step(3, output_model.id, "生成回复"))
-            response = await self._call_client(
-                client_output,
-                system_prompt=system_prompt,
-                user_prompt=output_prompt,
-                tools=tools,
-            )
-
-            # 检查响应是否为空或错误
-            if not response or response in [
-                self.msg_error_client_unavailable,
-                self.msg_empty_response,
-            ]:
-                logger.warning(f"[协作引擎] 第三阶段模型响应为空，使用推理结果")
-                response = (
-                    reasoning_result if reasoning_result else self.msg_empty_response
-                )
-
-        except Exception as e:
-            logger.error(f"[协作引擎] 第三阶段执行失败: {e}")
-            # 降级使用推理结果作为最终回复
-            response = (
-                reasoning_result
-                if reasoning_result
-                else self.msg_error_call_failed.format(error=e)
-            )
-
-        # 清理回复中的思考过程
         response = self._clean_thinking_content(response)
 
         models_used = (
@@ -859,6 +765,154 @@ class ModelCollaborationEngine:
                 models=" → ".join(models_used),
             ),
         )
+
+    def _collect_chain_models(self, route) -> list:
+        """收集链式协作的可用模型"""
+        chain_model_ids = [route.primary, route.secondary, route.third]
+        chain_models = []
+        for model_id in chain_model_ids:
+            if model_id and model_id in self.model_pool._models:
+                config = self.model_pool._models[model_id]
+                if _get_api_key(config) and config.base_url:
+                    chain_models.append(config)
+        return chain_models
+
+    async def _chain_phase_thinking(
+        self,
+        model_1,
+        message,
+        task_type,
+        platform,
+        context,
+        factory,
+    ) -> str:
+        """阶段1：思考——使用当前人格的视角进行分析"""
+        client_1 = self._create_client(model_1, factory, None, context)
+        persona_info = self._get_persona_info()
+        thinking_system_prompt = (
+            f"你是{persona_info['persona_name']}。{persona_info['persona_description']}"
+        )
+        thinking_prompt = self.thinking_prompt_template.format(
+            task_type=task_type,
+            message=message,
+            persona_name=persona_info["persona_name"],
+            persona_prompt=persona_info["persona_prompt"][:500]
+            if persona_info["persona_prompt"]
+            else "",
+        )
+
+        if platform == "terminal":
+            print(
+                TerminalFormatter.chain_step(
+                    1, model_1.id, f"思考分析({persona_info['persona_name']})"
+                )
+            )
+
+        return await self._call_client(
+            client_1,
+            system_prompt=thinking_system_prompt,
+            user_prompt=thinking_prompt,
+            tools=None,
+        )
+
+    async def _chain_phase_reasoning(
+        self,
+        chain_models,
+        thinking_result,
+        message,
+        task_type,
+        platform,
+        context,
+        factory,
+    ) -> tuple[str, object]:
+        """阶段2：推理——对思考结果进行深度推理"""
+        if len(chain_models) >= 3:
+            model_2 = chain_models[1]
+            client_2 = self._create_client(model_2, factory, None, context)
+            reasoning_prompt = self.reasoning_prompt_template.format(
+                thinking_result=thinking_result, message=message
+            )
+            if platform == "terminal":
+                print(TerminalFormatter.chain_step(2, model_2.id, "推理揣摩"))
+            reasoning_result = await self._call_client(
+                client_2,
+                system_prompt=self.reasoning_system_prompt,
+                user_prompt=reasoning_prompt,
+                tools=None,
+            )
+            if not reasoning_result or reasoning_result in [
+                self.msg_error_client_unavailable,
+                self.msg_empty_response,
+            ]:
+                logger.warning("[协作引擎] 第二阶段推理结果为空，使用思考结果")
+                reasoning_result = thinking_result
+            return reasoning_result, chain_models[2]
+        else:
+            return thinking_result, chain_models[1]
+
+    async def _chain_phase_output(
+        self,
+        output_model,
+        reasoning_result,
+        system_prompt,
+        user_prompt,
+        ai_emotion_context,
+        tools,
+        platform,
+        context,
+        factory,
+    ) -> str:
+        """阶段3：输出——生成最终回复"""
+        try:
+            client_output = self._create_client(output_model, factory, tools, context)
+
+            try:
+                base_output_prompt = self.output_prompt_template.format(
+                    reasoning_result=reasoning_result, message=user_prompt
+                )
+            except (KeyError, ValueError) as fmt_err:
+                logger.warning(
+                    "[协作引擎] Prompt格式化失败: %s..., 错误: %s",
+                    self.output_prompt_template[:100],
+                    fmt_err,
+                )
+                base_output_prompt = (
+                    f"推理结果：{reasoning_result}\n\n用户问题：{user_prompt}"
+                )
+
+            output_prompt = (
+                base_output_prompt + ai_emotion_context
+                if ai_emotion_context
+                else base_output_prompt
+            )
+
+            if platform == "terminal":
+                print(TerminalFormatter.chain_step(3, output_model.id, "生成回复"))
+
+            response = await self._call_client(
+                client_output,
+                system_prompt=system_prompt,
+                user_prompt=output_prompt,
+                tools=tools,
+            )
+
+            if not response or response in [
+                self.msg_error_client_unavailable,
+                self.msg_empty_response,
+            ]:
+                logger.warning("[协作引擎] 第三阶段模型响应为空，使用推理结果")
+                response = (
+                    reasoning_result if reasoning_result else self.msg_empty_response
+                )
+
+            return response
+        except Exception as e:
+            logger.error("[协作引擎] 第三阶段执行失败: %s", e)
+            return (
+                reasoning_result
+                if reasoning_result
+                else self.msg_error_call_failed.format(error=e)
+            )
 
     async def _execute_parallel(
         self,

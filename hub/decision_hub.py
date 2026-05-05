@@ -819,7 +819,9 @@ class DecisionHub:
         except Exception as e:
             logger.debug(f"[决策层] 检查图片学习失败: {e}")
 
-        quick_response = self._handle_quick_commands(content, platform, perception)
+        quick_response = await self._handle_quick_commands(
+            content, platform, perception
+        )
         if quick_response:
             logger.warning(
                 f"[决策层] ========== 快捷命令拦截成功 ========== {content[:20]} -> {quick_response[:50]}"
@@ -3326,7 +3328,7 @@ class DecisionHub:
             )
             return get_error_message("emoji_unavailable")
 
-    def _handle_quick_commands(
+    async def _handle_quick_commands(
         self, content: str, platform: str, perception: Optional[Dict] = None
     ) -> Optional[str]:
         """
@@ -3594,6 +3596,95 @@ class DecisionHub:
             if not cmd:
                 return get_existential_response("help")
             return get_existential_response("unknown_emotion", emotion=cmd)
+
+        # 5. 帮助命令
+        help_cmds = command_keywords.get("help", ["帮助", "help", "?", "？"])
+        if any(
+            content_lower == kw or content_lower.startswith(kw + " ")
+            for kw in help_cmds
+        ):
+            from core.text_loader import get_command_keywords as _gck
+
+            cmds = _gck()
+            lines = ["【弥娅帮助】", ""]
+            lines.append("快捷命令：状态  形态  帮助  版本  trpg")
+            lines.append(
+                "记忆命令：记忆统计  记忆搜索 <词>  记忆最近  记忆标签  我的记忆"
+            )
+            lines.append("子命令：  /stats <queue|memory|session>")
+            lines.append("         /admin <list|add|remove>")
+            lines.append("         /faq <list>")
+            lines.append("         /system <status|reload>")
+            lines.append("")
+            lines.append("形态切换：/形态 <形态名>  (不填则查看可用)")
+            lines.append("说话模式：/说话 <casual|catching|confiding>")
+            return "\n".join(lines)
+
+        # 6. 版本命令
+        version_cmds = command_keywords.get("version", ["版本", "version", "ver"])
+        if any(content_lower == kw for kw in version_cmds):
+            return "弥娅 AI 虚拟化身系统 v6.0.0"
+
+        # 7. TRPG 命令
+        trpg_cmds = command_keywords.get("trpg", ["trpg", "跑团"])
+        if any(
+            content_lower == kw or content_lower.startswith(kw + " ")
+            for kw in trpg_cmds
+        ):
+            from core.text_loader import get_text
+
+            return get_text("default_responses.unknown_command")
+
+        # 8. 记忆命令 — 委托到 MemoryCommandHandler
+        try:
+            from webnet.qq.memory_commands import process_memory_command
+
+            uid = str(user_id) if user_id else ""
+            mem_result = await process_memory_command(content, uid)
+            if mem_result:
+                return mem_result
+        except Exception as e:
+            logger.debug(f"[决策层] 记忆命令处理跳过: {e}")
+
+        # 9. 子命令系统 — 委托到 CommandHandler
+        stats_cmds = command_keywords.get("stats", {}).get(
+            "keywords", ["/统计", "统计", "stats"]
+        )
+        admin_cmds = command_keywords.get("admin", {}).get(
+            "keywords", ["/管理员", "admin"]
+        )
+        faq_cmds = command_keywords.get("faq", {}).get("keywords", ["/faq", "常见问题"])
+        sys_cmds = command_keywords.get("system", {}).get(
+            "keywords", ["/系统", "system"]
+        )
+
+        sub_cmd_prefixes = [
+            (stats_cmds, "stats"),
+            (admin_cmds, "admin"),
+            (faq_cmds, "faq"),
+            (sys_cmds, "system"),
+        ]
+        sub_cmd_type = None
+        sub_cmd_rest = ""
+        for prefixes, cmd_type in sub_cmd_prefixes:
+            for p in prefixes:
+                if content_lower.startswith(p + " ") or content_lower == p:
+                    sub_cmd_type = cmd_type
+                    sub_cmd_rest = content_lower.replace(p, "").strip()
+                    break
+            if sub_cmd_type:
+                break
+
+        if sub_cmd_type:
+            from core.skills.command_handler import handle_command
+
+            if not check_command_permission():
+                return get_permission_denied_message()
+            parts = sub_cmd_rest.split() if sub_cmd_rest else []
+            result = await handle_command(
+                f"{sub_cmd_type} {' '.join(parts)}".strip(), parts
+            )
+            return result
 
         # 不是快速命令
         return None

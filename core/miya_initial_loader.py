@@ -29,11 +29,11 @@ class MiyaInitialLoader:
 
     async def start(self):
         """启动系统"""
-        from core.miya_core_lifecycle import MiyaCoreLifecycle
+        from core.miya_lifecycle import MiyaCoreLifecycle
         from core.dashboard.miya_dashboard import MiyaDashboard
 
         # 创建核心生命周期
-        self.core_lifecycle = MiyaCoreLifecycle(self.log_broker)
+        self.core_lifecycle = MiyaCoreLifecycle()
 
         try:
             await self.core_lifecycle.initialize()

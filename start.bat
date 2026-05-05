@@ -10,7 +10,7 @@ set TERMINAL_TYPE=wt
 cls
 echo ================================================================================
 echo                          MIYA AI VIRTUAL AVATAR SYSTEM
-echo                            Version 4.3.1 Dynamic Edition
+echo                            Version 6.0.0
 echo                          Powered by Open-ClaudeCode
 echo ================================================================================
 echo.
@@ -66,7 +66,7 @@ goto :main_menu
 :exit
 cls
 echo ================================================================================
-echo Thank you for using MIYA AI System v4.3.1 Dynamic Edition!
+echo Thank you for using MIYA AI System v6.0.0!
 echo ================================================================================
 timeout /t 2 >nul
 exit /b 0

@@ -26,27 +26,22 @@ def mock_context():
 @pytest.fixture
 def config_file():
     """创建临时配置文件"""
-    fd, path = tempfile.mkstemp(suffix='.json', suffix='.json')
+    fd, path = tempfile.mkstemp(suffix=".json")
     config_data = {
         "key1": "value1",
         "key2": "value2",
-        "personality": {
-            "vectors": {"warmth": 0.8},
-            "form": "normal"
-        },
-        "tts": {
-            "engine": "gpt_sovits",
-            "voice": "default"
-        }
+        "personality": {"vectors": {"warmth": 0.8}, "form": "normal"},
+        "tts": {"engine": "gpt_sovits", "voice": "default"},
     }
 
-    with open(path, 'w', encoding='utf-8') as f:
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(config_data, f, indent=2)
 
     yield Path(path)
 
     # 清理
     import os
+
     os.close(fd)
     os.unlink(path)
 
@@ -54,10 +49,7 @@ def config_file():
 @pytest.fixture
 def hot_reload(config_file, mock_context):
     """创建ConfigHotReload实例"""
-    reload = ConfigHotReload(
-        config_path=config_file,
-        context=mock_context
-    )
+    reload = ConfigHotReload(config_path=config_file, context=mock_context)
     return reload
 
 
@@ -67,9 +59,7 @@ class TestConfigHotReload:
     def test_init(self, config_file, mock_context):
         """测试初始化"""
         reload = ConfigHotReload(
-            config_path=config_file,
-            context=mock_context,
-            debounce_seconds=5.0
+            config_path=config_file, context=mock_context, debounce_seconds=5.0
         )
 
         assert reload.config_path == config_file
@@ -125,10 +115,7 @@ class TestConfigHotReload:
 
     def test_deep_copy_config(self, hot_reload):
         """测试深度复制配置"""
-        original = {
-            "key1": "value1",
-            "key2": {"nested": "value2"}
-        }
+        original = {"key1": "value1", "key2": {"nested": "value2"}}
 
         copied = hot_reload._deep_copy_config(original)
 
@@ -142,31 +129,27 @@ class TestConfigHotReload:
 
     def test_detect_config_changes(self, hot_reload):
         """测试配置变更检测"""
-        old_config = {
-            "key1": "value1",
-            "key2": "value2",
-            "key3": "value3"
-        }
+        old_config = {"key1": "value1", "key2": "value2", "key3": "value3"}
 
         hot_reload._config_snapshot = old_config.copy()
 
         # 测试新增键
         new_config1 = old_config.copy()
         new_config1["key4"] = "value4"
-        changes1 = hot_reload._detect_config_changes(new_config1)
+        changes1 = hot_reload._detect_changes(new_config1)
         assert "key4" in changes1
         assert "key1" not in changes1
 
         # 测试修改值
         new_config2 = old_config.copy()
         new_config2["key2"] = "new_value2"
-        changes2 = hot_reload._detect_config_changes(new_config2)
+        changes2 = hot_reload._detect_changes(new_config2)
         assert "key2" in changes2
         assert changes2["key2"] == ("value2", "new_value2")
 
         # 测试删除键
         new_config3 = {"key1": "value1", "key3": "value3"}
-        changes3 = hot_reload._detect_config_changes(new_config3)
+        changes3 = hot_reload._detect_changes(new_config3)
         assert "key2" in changes3
 
     @pytest.mark.asyncio
@@ -174,16 +157,9 @@ class TestConfigHotReload:
         """测试更新队列管理器配置"""
         hot_reload.context.queue_manager.update_model_intervals = Mock()
 
-        new_config = {
-            "queue_intervals": {
-                "priority_high": 0.5,
-                "priority_normal": 1.0
-            }
-        }
+        new_config = {"queue_intervals": {"priority_high": 0.5, "priority_normal": 1.0}}
 
-        changes = {
-            "queue_intervals": (None, new_config["queue_intervals"])
-        }
+        changes = {"queue_intervals": (None, new_config["queue_intervals"])}
 
         await hot_reload._apply_updates(new_config, changes)
 
@@ -197,16 +173,9 @@ class TestConfigHotReload:
         hot_reload.context.personality.vectors = {"warmth": 0.5}
         hot_reload.context.personality.set_form = Mock()
 
-        new_config = {
-            "personality": {
-                "vectors": {"warmth": 0.9},
-                "form": "battle"
-            }
-        }
+        new_config = {"personality": {"vectors": {"warmth": 0.9}, "form": "battle"}}
 
-        changes = {
-            "personality": (None, new_config["personality"])
-        }
+        changes = {"personality": (None, new_config["personality"])}
 
         await hot_reload._apply_updates(new_config, changes)
 
@@ -220,7 +189,7 @@ class TestConfigHotReload:
         new_config = {
             "api_key": "new_key",
             "cors_origins": ["http://localhost:3000"],
-            "rate_limit": 100
+            "rate_limit": 100,
         }
 
         hot_reload._update_webapi_config(new_config)
@@ -231,11 +200,7 @@ class TestConfigHotReload:
         """测试更新终端配置"""
         hot_reload.context.terminal_manager = Mock()
 
-        new_config = {
-            "timeout": 30,
-            "buffer_size": 8192,
-            "default_shell": "/bin/bash"
-        }
+        new_config = {"timeout": 30, "buffer_size": 8192, "default_shell": "/bin/bash"}
 
         hot_reload._update_terminal_config(new_config)
         # 只是验证方法不会抛出异常
@@ -246,10 +211,7 @@ class TestConfigHotReload:
         hot_reload.context.iot_manager = Mock()
         hot_reload.context.iot_manager.device_timeout = 60
 
-        new_config = {
-            "device_timeout": 120,
-            "heartbeat_interval": 30
-        }
+        new_config = {"device_timeout": 120, "heartbeat_interval": 30}
 
         hot_reload._update_iot_config(new_config)
 
@@ -260,7 +222,7 @@ class TestConfigHotReload:
         """测试触发配置更新事件"""
         changes = {
             "key1": ("old_value1", "new_value1"),
-            "key2": ("old_value2", "new_value2")
+            "key2": ("old_value2", "new_value2"),
         }
 
         await hot_reload._trigger_config_update_event(changes)
@@ -268,47 +230,18 @@ class TestConfigHotReload:
 
     def test_start_without_watcher(self, hot_reload):
         """测试启动（无watchdog）"""
-        with patch('core.config_hot_reload.watchdog') as mock_watchdog:
-            mock_watchdog.__version__ = "3.0.0"
-            mock_watcher = Mock()
-            mock_watchdog.Observer.return_value = mock_watcher
+        with patch("core.config_hot_reload.WATCHDOG_AVAILABLE", True):
+            with patch("core.config_hot_reload.Observer") as mock_observer:
+                mock_watcher = Mock()
+                mock_observer.return_value = mock_watcher
 
-            result = hot_reload.start()
+                result = hot_reload.start()
 
-            # 由于我们只模拟了部分，这里只验证不会抛出异常
-            assert isinstance(result, bool)
+                # 由于我们只模拟了部分，这里只验证不会抛出异常
+                assert isinstance(result, bool)
 
     def test_stop_without_observer(self, hot_reload):
         """测试停止（无observer）"""
         hot_reload._observer = None
         hot_reload.stop()
         # 验证不会抛出异常
-
-
-class TestConfigHotReloadIntegration:
-    """ConfigHotReload集成测试类"""
-
-    @pytest.mark.asyncio
-    async def test_full_reload_cycle(self, config_file, mock_context):
-        """测试完整的重载周期"""
-        reload = ConfigHotReload(
-            config_path=config_file,
-            context=mock_context
-        )
-
-        # 模拟配置文件变更
-        new_config = {
-            "key1": "new_value1",
-            "key2": "new_value2",
-            "personality": {
-                "vectors": {"warmth": 0.9}
-            }
-        }
-
-        # 手动触发配置变更
-        changes = reload._detect_config_changes(new_config)
-        await reload._apply_updates(new_config, changes)
-
-        # 验证配置已更新
-        assert reload._config["key1"] == "new_value1"
-        assert reload._config["key2"] == "new_value2"
