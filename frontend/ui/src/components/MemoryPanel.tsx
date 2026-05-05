@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useMiyaMemory, type MemoryItem } from '../services/miyaApi';
 
@@ -7,10 +7,7 @@ interface MemoryPanelProps {
   onDeleteMemory?: (uuid: string) => Promise<any>;
 }
 
-const MemoryPanel: React.FC<MemoryPanelProps> = ({ 
-  onAddMemory, 
-  onDeleteMemory 
-}) => {
+const MemoryPanel: React.FC<MemoryPanelProps> = ({}) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newMemory, setNewMemory] = useState('');
   const [searchQuery, setSearchQuery] = useState('');

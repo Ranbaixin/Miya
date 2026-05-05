@@ -47,6 +47,43 @@ from memory.historian import get_historian
 logger = logging.getLogger(__name__)
 
 
+_emotion_guidance_cache = None
+
+
+def _get_emotion_guidance() -> dict:
+    """加载情感引导配置（带缓存）"""
+    global _emotion_guidance_cache
+    if _emotion_guidance_cache is not None:
+        return _emotion_guidance_cache
+    try:
+        import json
+
+        config_path = Path(__file__).parent.parent / "config" / "text_config.json"
+        with open(config_path, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+        _emotion_guidance_cache = cfg.get(
+            "emotion_guidance",
+            {
+                "header": "\n\n【情感指引】\n",
+                "user_emotion": "- 用户情绪: {dominant}\n",
+                "miya_emotion": "- 你的情绪: {miya_dominant} ({miya_intensity}%)\n",
+                "inner_thought": "- 你的内心独白: {inner_thought}\n",
+                "footer": "请根据上述情感自然回应，展现你真实的情感。\n注意：内心独白仅供你参考理解自己的感受，请不要在回复中直接引用或输出内心独白内容。",
+                "single_model_footer": "请根据上述情感自然回应，展现你真实的情感。\n注意：内心独白仅供你参考理解自己的感受，请不要在回复中直接引用或输出内心独白内容。\n禁止在回复中使用小括号()描述动作，如（微笑）、（点头）等。",
+            },
+        )
+    except Exception:
+        _emotion_guidance_cache = {
+            "header": "\n\n【情感指引】\n",
+            "user_emotion": "- 用户情绪: {dominant}\n",
+            "miya_emotion": "- 你的情绪: {miya_dominant} ({miya_intensity}%)\n",
+            "inner_thought": "- 你的内心独白: {inner_thought}\n",
+            "footer": "请根据上述情感自然回应，展现你真实的情感。\n注意：内心独白仅供你参考理解自己的感受，请不要在回复中直接引用或输出内心独白内容。",
+            "single_model_footer": "请根据上述情感自然回应，展现你真实的情感。\n注意：内心独白仅供你参考理解自己的感受，请不要在回复中直接引用或输出内心独白内容。\n禁止在回复中使用小括号()描述动作，如（微笑）、（点头）等。",
+        }
+    return _emotion_guidance_cache
+
+
 class DecisionHub:
     """
     决策层 Hub (门面/协调器)
@@ -1029,67 +1066,7 @@ class DecisionHub:
         else:
             content = raw_content
 
-        # 【新增】私聊消息策略分析
-        if not group_id or group_id == 0:
-            user_id_str = str(user_id) if user_id else "0"
-            try:
-                from memory.diteng_listener import get_diting
-
-                diteng = get_diting()
-
-                # 获取最近上下文
-                private_key = f"private_{user_id_str}"
-                try:
-                    from memory.working_memory import get_working_memory
-
-                    wm = get_working_memory()
-                    recent_context = wm.build_prompt_context(private_key)[:500]
-                except:
-                    recent_context = ""
-
-                # 异步调用策略分析
-                strategy = await diteng.analyze_message_strategy(
-                    content=content,
-                    user_id=user_id_str,
-                    group_id=None,
-                    is_at_bot=is_at_bot,
-                    message_type="private",
-                    recent_context=recent_context,
-                )
-
-                logger.warning(
-                    f"[谛听-策略-私聊] should_respond={strategy.should_respond}, "
-                    f"strategy={strategy.response_strategy}, "
-                    f"intent={strategy.message_intent}"
-                )
-
-                # 根据策略决定是否回复
-                if not strategy.should_respond:
-                    logger.info(f"[决策层] 私聊策略决定不回复: {strategy.reason}")
-
-                    # 如果是仅点赞策略
-                    if strategy.response_strategy == "like_only":
-                        try:
-                            if hasattr(self, "onebot_client") and self.onebot_client:
-                                await self.onebot_client.send_like(user_id_str)
-                                logger.info(
-                                    f"[决策层] 私聊策略点赞: user={user_id_str}"
-                                )
-                        except Exception as e:
-                            logger.warning(f"[决策层] 私聊策略点赞失败: {e}")
-
-                    return None
-
-                # 将策略信息注入感知
-                perception["_message_strategy"] = {
-                    "strategy": strategy.response_strategy,
-                    "intent": strategy.message_intent,
-                    "style": strategy.suggested_reply_style,
-                    "confidence": strategy.confidence,
-                }
-
-            except Exception as e:
-                logger.warning(f"[决策层] 私聊策略分析失败: {e}，继续正常回复")
+        # 【优化】私聊谛听策略分析移至并行阶段（_generate_response_cross_platform Phase 1）
 
         # 【新增】手动检测定时任务关键词，直接调用工具
         timer_result = await self._detect_and_process_timer_task(
@@ -1114,7 +1091,7 @@ class DecisionHub:
                 pass
             else:
                 # 尝试根据回复内容发送智能表情包
-                await self._handle_smart_emoji(response, perception)
+                asyncio.create_task(self._handle_smart_emoji(response, perception))
 
         # 【新增】QQ端状态标签（仅日志，不添加到响应中）
         if platform == "qq" and response and self.personality:
@@ -1339,184 +1316,392 @@ class DecisionHub:
             # 获取平台可用工具
             available_tools = self._get_platform_tools(platform)
 
-            # 【新增】获取对话历史上下文（传入当前输入以智能判断是否需要回忆）
+            # ============================================================
+            # 【优化】Phase 1: 并行检索所有独立上下文源
+            # conversation / knowledge / persona / awareness / search / group_chat
+            # ============================================================
             session_id = f"{platform}_{user_id}"
+            user_id_str = str(user_id)
 
-            conversation_context = (
-                await self.conversation_context_manager.get_conversation_context(
+            async def fetch_conversation_context():
+                return await self.conversation_context_manager.get_conversation_context(
                     session_id, current_input=content
                 )
-            )
 
-            # 【新增】知识图谱检索
-            knowledge_context = ""
-            if self.knowledge_graph:
-                keywords = self._extract_keywords_from_input(content)
-                if keywords:
-                    knowledge = await self.knowledge_graph.query_by_keywords(keywords)
-                    if knowledge:
-                        from core.knowledge_graph import format_knowledge_for_prompt
+            async def fetch_knowledge_context():
+                if self.knowledge_graph:
+                    keywords = self._extract_keywords_from_input(content)
+                    if keywords:
+                        knowledge = await self.knowledge_graph.query_by_keywords(
+                            keywords
+                        )
+                        if knowledge:
+                            from core.knowledge_graph import format_knowledge_for_prompt
 
-                        knowledge_context = format_knowledge_for_prompt(knowledge)
-                        logger.info(f"[决策层] 检索到 {len(knowledge)} 条知识图谱记忆")
+                            return format_knowledge_for_prompt(knowledge)
+                return ""
 
-            # 【新增】智能记忆检索 - 根据当前对话检索相关记忆（支持用户/群聊过滤）
-            cognitive_memory_context = ""
-            try:
-                cognitive_engine = get_cognitive_engine()
-                # 从context中获取user_id和group_id
-                query_user_id = (
-                    str(context.get("user_id", "")) if context.get("user_id") else None
-                )
-                query_group_id = (
-                    str(context.get("group_id", ""))
-                    if context.get("group_id")
-                    else None
-                )
-                cognitive_memory_context = await cognitive_engine.build_context(
-                    user_input=content,
-                    conversation_history=conversation_context,
-                    limit=5,
-                    user_id=query_user_id,
-                    group_id=query_group_id,
-                )
-                print(
-                    f"[DEBUG] cognitive_memory_context length: {len(cognitive_memory_context) if cognitive_memory_context else 0}, user={query_user_id}"
-                )
-                logger.warning(
-                    f"[DEBUG认知] build_context 返回长度={len(cognitive_memory_context) if cognitive_memory_context else 0}"
-                )
-                if cognitive_memory_context:
+            async def fetch_user_persona():
+                upc = ""
+                gpc = ""
+                try:
+                    from core.user_persona import get_user_persona_manager
+
+                    q_uid = context.get("user_id")
+                    pm = get_user_persona_manager()
+                    if q_uid:
+                        upc = pm.build_user_context(
+                            user_id=str(q_uid),
+                            group_id=str(context.get("group_id"))
+                            if context.get("group_id")
+                            else None,
+                        )
+                    if context.get("group_id"):
+                        gpc = pm.build_group_context(str(context.get("group_id")))
+                except Exception as e:
+                    logger.debug(f"[决策层] 用户侧写检索失败: {e}")
+                return upc, gpc
+
+            async def fetch_awareness_text():
+                try:
+                    from core.awareness import get_awareness
+
+                    awareness = get_awareness()
+                    if awareness:
+                        perception_ctx = awareness.gather_context(
+                            message_type=context.get("message_type", ""),
+                            group_id=context.get("group_id", 0),
+                            group_name=context.get("group_name", ""),
+                            user_id=context.get("user_id", 0),
+                            sender_name=context.get("sender_name", ""),
+                            sender_role=context.get("sender_role", ""),
+                        )
+                        result = perception_ctx.get("perception_text", "")
+                        logger.warning(f"[意识感知] 成功: {result[:150]}")
+                        return result
+                except Exception:
+                    pass
+                return ""
+
+            async def fetch_search_context():
+                sc = ""
+                try:
+                    import json
+
+                    search_config_path = (
+                        Path(__file__).parent.parent / "config" / "text_config.json"
+                    )
+                    search_strategy = {}
+                    if search_config_path.exists():
+                        with open(search_config_path, "r", encoding="utf-8") as f:
+                            full_config = json.load(f)
+                        search_strategy = full_config.get("search_strategy", {})
+                    enabled = search_strategy.get("enabled")
+                    auto = search_strategy.get("auto_search_enabled")
+                    if enabled and auto:
+                        content_lower = content.lower()
+                        skip_keywords = search_strategy.get("skip_search_keywords", [])
+                        should_skip = any(
+                            kw.lower() in content_lower for kw in skip_keywords
+                        )
+                        if not should_skip:
+                            trigger_kw = search_strategy.get("auto_search_triggers", [])
+                            needs_search = (
+                                any(kw in content_lower for kw in trigger_kw)
+                                or len(content) > 50
+                            )
+                            if needs_search:
+                                try:
+                                    import importlib
+
+                                    web_search_mod = importlib.import_module(
+                                        "webnet.ToolNet.tools.network.web_search"
+                                    )
+                                    if hasattr(web_search_mod, "EnhancedWebSearch"):
+                                        searcher = web_search_mod.EnhancedWebSearch()
+                                        search_results = await searcher.search(content)
+                                        if search_results:
+                                            sc = f"\n\n【联网搜索结果】\n{str(search_results)[:800]}"
+                                except Exception:
+                                    pass
+                except Exception:
+                    pass
+                return sc
+
+            async def fetch_group_chat_context():
+                gcc = ""
+                from memory.working_memory import get_working_memory
+
+                wm = get_working_memory()
+                msg_type = context.get("message_type", "")
+                ctx_uid = context.get("user_id")
+                ctx_uid_str = str(ctx_uid) if ctx_uid else ""
+                if msg_type == "group" and context.get("group_id"):
+                    group_id_str = str(context.get("group_id"))
+                    wm.add_message(
+                        group_id=group_id_str,
+                        sender=context.get("sender_name", "未知"),
+                        content=content,
+                        is_at_bot=context.get("is_at_bot", False),
+                        sender_id=ctx_uid or 0,
+                    )
+                    gcc = wm.build_prompt_context(group_id_str)
+                    if gcc:
+                        logger.warning(f"[工作记忆] 注入群聊上下文: {len(gcc)} 字符")
+                elif msg_type == "private" and ctx_uid:
+                    private_key = f"private_{ctx_uid_str}"
+                    wm.add_message(
+                        group_id=private_key,
+                        sender=context.get("sender_name", "用户"),
+                        content=content,
+                        is_at_bot=context.get("is_at_bot", False),
+                        sender_id=ctx_uid or 0,
+                    )
+                    gcc = wm.build_prompt_context(private_key)
+                    if gcc:
+                        logger.warning(f"[工作记忆] 注入私聊上下文: {len(gcc)} 字符")
+                return gcc
+
+            async def fetch_diting_strategy():
+                """谛听消息策略分析 — 与上下文检索并行"""
+                try:
+                    from memory.diteng_listener import get_diting
+
+                    diteng = get_diting()
+                    msg_type = context.get("message_type", "")
+                    ctx_uid = context.get("user_id")
+                    ctx_uid_str = str(ctx_uid) if ctx_uid else ""
+                    group_id = context.get("group_id")
+                    is_at_bot = context.get("is_at_bot", False)
+
+                    # 获取最近上下文
+                    recent_context = ""
+                    try:
+                        from memory.working_memory import get_working_memory
+
+                        wm = get_working_memory()
+                        if msg_type == "group" and group_id:
+                            recent_context = wm.build_prompt_context(str(group_id))[
+                                :500
+                            ]
+                        elif msg_type == "private" and ctx_uid:
+                            recent_context = wm.build_prompt_context(
+                                f"private_{ctx_uid_str}"
+                            )[:500]
+                    except Exception:
+                        pass
+
+                    strategy = await diteng.analyze_message_strategy(
+                        content=content,
+                        user_id=ctx_uid_str,
+                        group_id=str(group_id) if group_id else None,
+                        is_at_bot=is_at_bot,
+                        message_type=msg_type,
+                        recent_context=recent_context,
+                    )
                     logger.warning(
-                        f"[决策层] 智能记忆检索到相关记忆 (user_id={query_user_id}, group_id={query_group_id})"
+                        f"[谛听-并行] should_respond={strategy.should_respond}, "
+                        f"strategy={strategy.response_strategy}, "
+                        f"intent={getattr(strategy, 'message_intent', 'N/A')}, "
+                        f"confidence={getattr(strategy, 'confidence', 0):.2f}"
+                    )
+                    return strategy
+                except Exception as e:
+                    logger.warning(f"[谛听-并行] 分析失败: {e}")
+                return None
+
+            # 启动 Phase 1 所有并行任务
+            conv_task = asyncio.create_task(fetch_conversation_context(), name="conv")
+            kctx_task = asyncio.create_task(fetch_knowledge_context(), name="kctx")
+            persona_task = asyncio.create_task(fetch_user_persona(), name="persona")
+            awareness_task = asyncio.create_task(
+                fetch_awareness_text(), name="awareness"
+            )
+            search_task = asyncio.create_task(fetch_search_context(), name="search")
+            wm_task = asyncio.create_task(fetch_group_chat_context(), name="wm")
+            diting_task = asyncio.create_task(fetch_diting_strategy(), name="diting")
+
+            # 等待 conversation_context (cognitive 和 soul 都需要它)
+            conversation_context = await conv_task
+
+            # ============================================================
+            # 【优化】Phase 2: Soul Generator + Cognitive Memory 并行
+            # 两者都需要 conversation_context，可以同时跑
+            # ============================================================
+            async def fetch_cognitive_memory():
+                cmc = ""
+                try:
+                    cognitive_engine = get_cognitive_engine()
+                    query_user_id = user_id_str if context.get("user_id") else None
+                    query_group_id = (
+                        str(context.get("group_id"))
+                        if context.get("group_id")
+                        else None
+                    )
+                    cmc = await cognitive_engine.build_context(
+                        user_input=content,
+                        conversation_history=conversation_context,
+                        limit=5,
+                        user_id=query_user_id,
+                        group_id=query_group_id,
+                    )
+                    if cmc:
+                        logger.warning(
+                            f"[决策层] 智能记忆检索到相关记忆 (user_id={query_user_id})"
+                        )
+                except Exception as e:
+                    logger.warning(f"[决策层] 智能记忆检索失败: {e}")
+                return cmc
+
+            async def run_soul_generator():
+                sr = None
+                try:
+                    if self._soul_generator:
+                        history = conversation_context if conversation_context else []
+                        ai_client_for_soul = None
+                        if self.model_pool:
+                            try:
+                                multi_config = self.model_pool._config
+                                soul_model_id = multi_config.get(
+                                    "system_defaults", {}
+                                ).get("soul_model", "deepseek_v4_flash_official")
+                                ai_client_for_soul = self.model_pool.create_ai_client(
+                                    soul_model_id
+                                )
+                            except Exception:
+                                pass
+                        personality_info = {}
+                        if self.personality:
+                            try:
+                                form = self.personality.get_current_form()
+                                personality_info = {
+                                    "form_name": form.get("name", "默认"),
+                                    "form_description": form.get("description", ""),
+                                }
+                            except Exception:
+                                pass
+                        sr = await self._soul_generator.process(
+                            content,
+                            history,
+                            ai_client_for_soul,
+                            user_info={
+                                "user_id": user_id,
+                                "group_id": perception.get("group_id"),
+                                "is_group": (perception.get("message_type") == "group"),
+                            },
+                            personality_info=personality_info,
+                        )
+                except Exception as e:
+                    logger.warning(f"[灵魂-并行] 提前分析失败: {e}")
+                return sr
+
+            cog_task = asyncio.create_task(fetch_cognitive_memory(), name="cog")
+            soul_task = asyncio.create_task(run_soul_generator(), name="soul")
+
+            # 等待其余 Phase 1 任务
+            knowledge_context = await kctx_task
+            user_persona_context, group_persona_context = await persona_task
+            awareness_text = await awareness_task
+            search_context = await search_task
+            group_chat_context = await wm_task
+
+            # 等待谛听策略结果并注入 perception
+            try:
+                diting_strategy = await diting_task
+                if diting_strategy:
+                    if not diting_strategy.should_respond:
+                        logger.info(
+                            f"[谛听-并行] 策略决定不回复: {diting_strategy.reason}"
+                        )
+                        if (
+                            getattr(diting_strategy, "response_strategy", "")
+                            == "like_only"
+                        ):
+                            try:
+                                if (
+                                    hasattr(self, "onebot_client")
+                                    and self.onebot_client
+                                ):
+                                    user_id_str = str(context.get("user_id", ""))
+                                    await self.onebot_client.send_like(user_id_str)
+                            except Exception:
+                                pass
+                        return None
+                    context["_message_strategy"] = {
+                        "strategy": diting_strategy.response_strategy,
+                        "intent": getattr(diting_strategy, "message_intent", "chat"),
+                        "style": getattr(
+                            diting_strategy, "suggested_reply_style", "casual"
+                        ),
+                        "confidence": getattr(diting_strategy, "confidence", 0.8),
+                    }
+            except Exception as e:
+                logger.warning(f"[谛听-并行] 结果处理失败: {e}")
+
+            # 等待 Phase 2 任务
+            cognitive_memory_context = await cog_task
+            soul_result = await soul_task
+
+            # 处理 Soul Generator 结果 (共用于两条路径)
+            miya_emotion_data = None
+            emotion_context_for_collab = ""
+            if soul_result:
+                dominant = soul_result.get("dominant_emotion", "平静")
+                miya_emotions = soul_result.get("emotions", {})
+                if miya_emotions:
+                    top_emotions = sorted(
+                        miya_emotions.items(), key=lambda x: x[1], reverse=True
+                    )[:3]
+                    miya_dominant = top_emotions[0][0]
+                    miya_intensity = top_emotions[0][1]
+                    emotion_str = " + ".join(
+                        [f"{name}({int(val)}%)" for name, val in top_emotions]
                     )
                 else:
-                    logger.warning(
-                        f"[决策层] 智能记忆检索无结果 (user_id={query_user_id})"
+                    miya_dominant = "平静"
+                    miya_intensity = 40
+                    emotion_str = "平静"
+                logger.info(f"[灵魂] 主导情绪: {dominant} | 弥娅: {emotion_str}")
+                miya_emotion_data = {
+                    "dominant": miya_dominant,
+                    "intensity": miya_intensity,
+                    "emotions": miya_emotions,
+                    "emotion_str": emotion_str,
+                    "reflection": soul_result.get("analysis", {}).get("reflection", ""),
+                    "raw_result": soul_result,
+                }
+                from core.soul_generator import SoulDisplay
+
+                SoulDisplay.emotion_analysis(
+                    miya_dominant, miya_intensity, f"多情绪: {emotion_str}"
+                )
+                inner_thought = soul_result.get("analysis", {}).get("reflection", "")
+
+                # 从配置文件加载情感引导文案
+                eg = _get_emotion_guidance()
+                emotion_context_for_collab = eg["header"]
+                emotion_context_for_collab += eg["user_emotion"].format(
+                    dominant=dominant
+                )
+                emotion_context_for_collab += eg["miya_emotion"].format(
+                    miya_dominant=miya_dominant, miya_intensity=miya_intensity
+                )
+                if inner_thought:
+                    emotion_context_for_collab += eg["inner_thought"].format(
+                        inner_thought=inner_thought
                     )
-            except Exception as e:
-                logger.warning(f"[决策层] 智能记忆检索失败: {e}")
+                emotion_context_for_collab += eg["footer"]
 
-            # 【新增】用户/群聊侧写检索 - 提供个性化上下文
-            user_persona_context = ""
-            group_persona_context = ""
-            query_user_id_for_persona = context.get("user_id")
-            query_group_id_for_persona = context.get("group_id")
-            try:
-                from core.user_persona import get_user_persona_manager
+            logger.warning(
+                f"[DEBUG认知] build_context 返回长度={len(cognitive_memory_context) if cognitive_memory_context else 0}, user={user_id_str}"
+            )
 
-                persona_manager = get_user_persona_manager()
-
-                # 获取用户侧写
-                if query_user_id_for_persona:
-                    user_persona_context = persona_manager.build_user_context(
-                        user_id=str(query_user_id_for_persona),
-                        group_id=str(query_group_id_for_persona)
-                        if query_group_id_for_persona
-                        else None,
-                    )
-                    if user_persona_context:
-                        logger.info(
-                            f"[决策层] 检索到用户侧写: {user_persona_context[:50]}..."
-                        )
-
-                # 获取群聊侧写
-                if query_group_id_for_persona:
-                    group_persona_context = persona_manager.build_group_context(
-                        group_id=str(query_group_id_for_persona)
-                    )
-                    if group_persona_context:
-                        logger.info(
-                            f"[决策层] 检索到群聊侧写: {group_persona_context[:50]}..."
-                        )
-            except Exception as e:
-                logger.debug(f"[决策层] 用户侧写检索失败: {e}")
-
-            # 构建提示词（统一使用默认提示词，通过上下文传递平台信息）
-            # 获取当前形态状态，注入到提示词中
+            # ============================================================
+            # 构建提示词所需变量（status_prompt, protection_prompt, message_type）
+            # ============================================================
             status_prompt = self.personality.get_status_for_prompt()
-
-            # 获取防护提示（如果有注入风险）
             protection_prompt = context.get("_protection_prompt", "")
-
-            # 获取消息类型（群聊/私聊）
             message_type = context.get("message_type", "unknown")
-
-            # 【主动搜索策略】检测是否需要联网搜索
-            search_context = ""
-            try:
-                import json
-
-                search_config_path = (
-                    Path(__file__).parent.parent / "config" / "text_config.json"
-                )
-
-                search_strategy = {}
-                if search_config_path.exists():
-                    with open(search_config_path, "r", encoding="utf-8") as f:
-                        full_config = json.load(f)
-                    search_strategy = full_config.get("search_strategy", {})
-
-                enabled = search_strategy.get("enabled")
-                auto = search_strategy.get("auto_search_enabled")
-
-                logger.info(
-                    f"[主动搜索] enabled={enabled}, auto={auto}, content='{content[:20]}...'"
-                )
-
-                if enabled and auto:
-                    content_lower = content.lower()
-                    skip_keywords = search_strategy.get("skip_search_keywords", [])
-                    should_skip = any(kw in content_lower for kw in skip_keywords)
-
-                    trigger_keywords = search_strategy.get("auto_search_triggers", [])
-                    should_search = any(kw in content_lower for kw in trigger_keywords)
-
-                    logger.info(
-                        f"[主动搜索] should_search={should_search}, should_skip={should_skip}"
-                    )
-
-                    if should_search and not should_skip:
-                        logger.info(f"[主动搜索] 触发搜索: {content[:50]}...")
-                        from webnet.ToolNet.tools.network.tavily_search import (
-                            TavilyAISearch,
-                        )
-                        import os
-
-                        tavily_key = os.getenv("TAVILY_API_KEY", "")
-                        logger.info(
-                            f"[主动搜索] TAVILY_API_KEY: {'已配置' if tavily_key else '未配置'}"
-                        )
-                        if tavily_key:
-                            searcher = TavilyAISearch(api_key=tavily_key)
-                            result = searcher.search(
-                                query=content,
-                                max_results=search_strategy.get("max_results", 5),
-                                search_depth=search_strategy.get(
-                                    "search_depth", "basic"
-                                ),
-                                include_answer=search_strategy.get(
-                                    "include_answer", True
-                                ),
-                            )
-                            if result.get("success"):
-                                search_context = searcher.format_for_ai(result)
-                                logger.info(
-                                    f"[主动搜索] 成功: {result.get('result_count', 0)} 条结果"
-                                )
-                            else:
-                                logger.warning(
-                                    f"[主动搜索] 失败: {result.get('error')}"
-                                )
-                        else:
-                            logger.warning(
-                                "[主动搜索] TAVILY_API_KEY 未配置，请在 .env 中添加"
-                            )
-            except Exception as e:
-                import traceback
-
-                logger.warning(f"[主动搜索] 检测失败: {e}")
-                logger.warning(traceback.format_exc())
 
             # 获取引用消息信息
             reply_info = context.get("reply")
@@ -1602,66 +1787,6 @@ class DecisionHub:
                         "\n[图片消息] 用户引用了一条包含图片的消息，但无法获取图片URL"
                     )
                     logger.info("[决策层] 检测到引用消息包含图片但无URL")
-
-            # 【意识感知层】注入时间、地点、活动感知
-            awareness_text = ""
-            try:
-                from core.awareness import get_awareness
-
-                awareness = get_awareness()
-                perception_ctx = awareness.gather_context(
-                    message_type=message_type,
-                    group_id=context.get("group_id", 0),
-                    group_name=context.get("group_name", ""),
-                    user_id=context.get("user_id", 0),
-                    sender_name=context.get("sender_name", ""),
-                    sender_role=context.get("sender_role", ""),
-                )
-                awareness_text = perception_ctx.get("perception_text", "")
-                logger.warning(f"[意识感知] 成功: {awareness_text[:150]}")
-            except Exception as e:
-                import traceback
-
-                logger.warning(f"[意识感知] 注入失败: {e}")
-                logger.warning(traceback.format_exc())
-
-            # 【工作记忆】注入折叠后的上下文（群聊 + 私聊）
-            group_chat_context = ""
-            from memory.working_memory import get_working_memory
-
-            wm = get_working_memory()
-            user_id_str = str(user_id)
-
-            if message_type == "group" and context.get("group_id"):
-                # 群聊：使用 group_id 作为 key
-                group_id_str = str(context.get("group_id"))
-                wm.add_message(
-                    group_id=group_id_str,
-                    sender=context.get("sender_name", "未知"),
-                    content=content,
-                    is_at_bot=context.get("is_at_bot", False),
-                    sender_id=context.get("user_id", 0),  # 【修复】传入发送者ID
-                )
-                group_chat_context = wm.build_prompt_context(group_id_str)
-                if group_chat_context:
-                    logger.warning(
-                        f"[工作记忆] 注入群聊上下文: {len(group_chat_context)} 字符"
-                    )
-            elif message_type == "private" and user_id:
-                # 私聊：使用 private_{user_id} 作为 key
-                private_key = f"private_{user_id_str}"
-                wm.add_message(
-                    group_id=private_key,
-                    sender=context.get("sender_name", "用户"),
-                    content=content,
-                    is_at_bot=context.get("is_at_bot", False),
-                    sender_id=user_id,  # 【修复】传入发送者ID
-                )
-                group_chat_context = wm.build_prompt_context(private_key)
-                if group_chat_context:
-                    logger.warning(
-                        f"[工作记忆] 注入私聊上下文: {len(group_chat_context)} 字符"
-                    )
 
             prompt_info = self.prompt_manager.build_full_prompt(
                 user_input=content,
@@ -1794,128 +1919,8 @@ class DecisionHub:
                             f"[决策层] 传递给协作引擎的tool_context keys: {list(tool_ctx_for_collab.keys()) if tool_ctx_for_collab else 'None'}"
                         )
 
-                        # 【新增】灵魂发生器处理 - 在AI调用前执行
-                        soul_result = None
-                        ai_client_for_soul = None
-                        emotion_context_for_collab = ""
-                        if self._soul_generator:
-                            try:
-                                # 获取对话历史
-                                history = (
-                                    conversation_context if conversation_context else []
-                                )
-                                # 尝试获取一个AI客户端用于情绪分析
-                                ai_client_for_soul = None
-                                if self.model_pool:
-                                    try:
-                                        # 从multi_model_config.json读取系统默认模型配置
-                                        multi_config = self.model_pool._config
-                                        soul_model_id = multi_config.get(
-                                            "system_defaults", {}
-                                        ).get(
-                                            "soul_model", "deepseek_v4_flash_official"
-                                        )
-                                        ai_client_for_soul = (
-                                            self.model_pool.create_ai_client(
-                                                soul_model_id
-                                            )
-                                        )
-                                    except Exception:
-                                        pass
-                                # 灵魂发生器处理 - 在AI调用前执行
-                                # 获取当前人格信息
-                                personality_info = {}
-                                if self.personality:
-                                    try:
-                                        form = self.personality.get_current_form()
-                                        personality_info = {
-                                            "form_name": form.get("name", "默认"),
-                                            "form_description": form.get(
-                                                "description", ""
-                                            ),
-                                        }
-                                    except Exception:
-                                        pass
-
-                                soul_result = await self._soul_generator.process(
-                                    content,
-                                    history,
-                                    ai_client_for_soul,
-                                    user_info={
-                                        "user_id": user_id,
-                                        "group_id": perception.get("group_id"),
-                                        "is_group": (
-                                            perception.get("message_type") == "group"
-                                        ),
-                                    },
-                                    personality_info=personality_info,
-                                )
-                                if soul_result:
-                                    # 用户情绪
-                                    dominant = soul_result.get(
-                                        "dominant_emotion", "平静"
-                                    )
-                                    emotions = soul_result.get("emotions", {})
-
-                                    # 弥娅自己的情绪
-                                    miya_emotions = soul_result.get("emotions", {})
-                                    if miya_emotions:
-                                        # 支持多情绪显示
-                                        top_emotions = sorted(
-                                            miya_emotions.items(),
-                                            key=lambda x: x[1],
-                                            reverse=True,
-                                        )[:3]
-                                        miya_dominant = top_emotions[0][0]
-                                        miya_intensity = top_emotions[0][1]
-
-                                        # 构建多情绪显示字符串
-                                        emotion_str = " + ".join(
-                                            [
-                                                f"{name}({int(val)}%)"
-                                                for name, val in top_emotions
-                                            ]
-                                        )
-                                    else:
-                                        miya_dominant = "平静"
-                                        miya_intensity = 40
-                                        emotion_str = "平静"
-
-                                    logger.info(
-                                        f"[灵魂] 主导情绪: {dominant} | 弥娅: {emotion_str}"
-                                    )
-
-                                    # 使用美化输出
-                                    from core.soul_generator import SoulDisplay
-
-                                    SoulDisplay.emotion_analysis(
-                                        miya_dominant,
-                                        miya_intensity,
-                                        f"多情绪: {emotion_str}",
-                                    )
-
-                                    # 构建情绪上下文，传递给协作引擎
-                                    inner_thought = ""
-                                    if soul_result.get("analysis"):
-                                        inner_thought = soul_result["analysis"].get(
-                                            "reflection", ""
-                                        )
-
-                                    emotion_context_for_collab = (
-                                        f"\n\n【情感指引】\n"
-                                        f"- 用户情绪: {dominant}\n"
-                                        f"- 你的情绪: {miya_dominant} ({miya_intensity}%)\n"
-                                    )
-                                    if inner_thought:
-                                        emotion_context_for_collab += (
-                                            f"- 你的内心独白: {inner_thought}\n"
-                                        )
-                                    emotion_context_for_collab += (
-                                        f"请根据上述情感自然回应，展现你真实的情感。\n"
-                                        f"注意：内心独白仅供你参考理解自己的感受，请不要在回复中直接引用或输出内心独白内容。"
-                                    )
-                            except Exception as e:
-                                logger.warning(f"[灵魂] 处理失败: {e}")
+                        # 【优化】使用并行阶段预计算的 Soul Generator 结果
+                        # soul_result 和 emotion_context_for_collab 已在 Phase 2 并行计算
 
                         # 传递情绪上下文给协作引擎
                         if emotion_context_for_collab and tool_ctx_for_collab:
@@ -2119,86 +2124,40 @@ class DecisionHub:
                         logger.warning(f"[决策层-协作引擎] 协作失败，降级为单模型: {e}")
                         # 继续走原有单模型路径
 
-            # 【灵魂发生器】在单模型路径先进行分析
-            _soul_result = None
+            # 【优化】使用并行阶段预计算的 Soul Generator 结果
+            _soul_result = soul_result  # 来自 Phase 2 并行计算
             ai_emotion_context = ""
-            user_info = {
-                "user_id": user_id,
-                "group_id": perception.get("group_id"),
-                "is_group": (perception.get("message_type") == "group"),
-            }
-            logger.info(f"[灵魂记忆] _soul_generator存在: {bool(self._soul_generator)}")
-            if self._soul_generator:
-                try:
-                    history = conversation_context if conversation_context else []
-                    # 获取人格信息
-                    personality_info = {}
-                    if self.personality:
-                        try:
-                            form = self.personality.get_current_form()
-                            personality_info = {
-                                "form_name": form.get("name", "默认"),
-                                "form_description": form.get("description", ""),
-                            }
-                        except Exception:
-                            pass
-                    _soul_result = await self._soul_generator.process(
-                        content, history, ai_client_to_use, user_info, personality_info
+            if _soul_result:
+                dominant = _soul_result.get("dominant_emotion", "平静")
+                miya_emotions = _soul_result.get("emotions", {})
+                if miya_emotions:
+                    top_emotions = sorted(
+                        miya_emotions.items(), key=lambda x: x[1], reverse=True
+                    )[:3]
+                    miya_dominant = top_emotions[0][0]
+                    miya_intensity = top_emotions[0][1]
+                else:
+                    miya_dominant = "平静"
+                    miya_intensity = 40
+                intensity = _soul_result.get("intensity", miya_intensity)
+                inner_thought = _soul_result.get("inner_thought", "")
+                if not inner_thought and _soul_result.get("analysis"):
+                    inner_thought = _soul_result["analysis"].get("reflection", "")
+
+                eg = _get_emotion_guidance()
+                ai_emotion_context = eg["header"]
+                ai_emotion_context += eg["user_emotion"].format(dominant=dominant)
+                ai_emotion_context += eg["miya_emotion"].format(
+                    miya_dominant=miya_dominant, miya_intensity=miya_intensity
+                )
+                if inner_thought:
+                    ai_emotion_context += eg["inner_thought"].format(
+                        inner_thought=inner_thought
                     )
-                    if _soul_result:
-                        # 用户情绪（来自AI分析）
-                        dominant = _soul_result.get("dominant_emotion", "未知")
-                        intensity = _soul_result.get("intensity", 50)
-                        reasoning = _soul_result.get("reasoning", "")
-                        logger.info(f"[灵魂] 用户情绪: {dominant} | 强度: {intensity}")
-
-                        # 弥娅自己的情绪：从emotions字典中取最显著的那个
-                        miya_emotions = _soul_result.get("emotions", {})
-                        if miya_emotions:
-                            miya_dominant = max(miya_emotions, key=miya_emotions.get)
-                            miya_intensity = miya_emotions[miya_dominant]
-                        else:
-                            miya_dominant = "平静"
-                            miya_intensity = 40
-
-                        logger.info(
-                            f"[灵魂] 弥娅情绪: {miya_dominant} | 强度: {miya_intensity} | 情绪池: {miya_emotions}"
-                        )
-
-                        # 获取AI生成的内心独白和反思（优先从顶层读取）
-                        inner_thought = _soul_result.get("inner_thought", "")
-                        _attr = _soul_result.get("attribution", "")
-                        _refl = _soul_result.get("reflection", "")
-
-                        # 如果顶层没有，从 analysis 读取（兼容旧格式）
-                        if not inner_thought:
-                            if _soul_result.get("analysis"):
-                                inner_thought = _soul_result["analysis"].get(
-                                    "inner_thought", ""
-                                ) or _soul_result["analysis"].get("reflection", "")
-                        if not _attr and _soul_result.get("analysis"):
-                            _attr = _soul_result["analysis"].get("attribution", "")
-                        if not _refl and _soul_result.get("analysis"):
-                            _refl = _soul_result["analysis"].get("reflection", "")
-
-                        # 同时注入用户和弥娅的情绪，让AI根据双方情感自然回应
-                        ai_emotion_context = (
-                            f"\n\n【情感指引】\n"
-                            f"- 用户情绪: {dominant} ({intensity}%)\n"
-                            f"- 你的情绪: {miya_dominant} ({miya_intensity}%)\n"
-                        )
-
-                        # 注入内心独白作为背景（标记为内部思考，不要直接输出）
-                        if inner_thought:
-                            ai_emotion_context += f"- 你的内心独白: {inner_thought}\n"
-
-                        ai_emotion_context += (
-                            f"请根据上述情感自然回应，展现你真实的情感。\n"
-                            f"注意：内心独白仅供你参考理解自己的感受，请不要在回复中直接引用或输出内心独白内容。\n"
-                            f"禁止在回复中使用小括号()描述动作，如（微笑）、（点头）等。"
-                        )
-                except Exception as e:
-                    logger.warning(f"[灵魂] 处理失败: {e}")
+                ai_emotion_context += eg["single_model_footer"]
+                logger.info(
+                    f"[灵魂-单模型] 使用预计算结果: user_emotion={dominant}, miya={miya_dominant}"
+                )
 
             # 【增强】检索认知记忆 - 优先从缓存读取，更可靠
             cognition_context = ""

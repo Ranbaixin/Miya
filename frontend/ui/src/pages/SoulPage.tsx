@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { miyaAPI, useMiyaMemory } from '../services/miyaApi';
+import { miyaAPI } from '../services/miyaApi';
 
 interface EmotionData {
   current: {
@@ -32,34 +32,35 @@ const SoulPage: React.FC = () => {
     intensity: 0.5,
   });
 
-  const [emotionHistory, setEmotionHistory] = useState<Array<{emotion: string; intensity: number; time: string}>>([
-    { emotion: 'joy', intensity: 0.5, time: '14:30' },
-    { emotion: 'joy', intensity: 0.6, time: '14:25' },
-    { emotion: 'surprise', intensity: 0.3, time: '14:20' },
-    { emotion: 'joy', intensity: 0.4, time: '14:15' },
-  ]);
+  const [emotionHistory, setEmotionHistory] = useState<Array<{emotion: string; intensity: number; time: string}>>([]);
+
+  const loadEmotion = useCallback(async () => {
+    try {
+      const data = await miyaAPI.getEmotionPool();
+      if (data) {
+        setEmotionData({
+          current: data.current || data,
+          dominant: data.dominant || 'joy',
+          intensity: data.intensity || 0.5,
+        });
+      }
+
+      const historyData = await miyaAPI.getEmotionHistory({ limit: 20 });
+      if (historyData?.history) {
+        setEmotionHistory(historyData.history);
+      }
+    } catch (e) {
+      console.log('加载情绪数据失败，使用默认');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const loadEmotion = async () => {
-      try {
-        const data = await miyaAPI.getEmotionPool();
-        if (data) {
-          setEmotionData({
-            current: data.current || data,
-            dominant: data.dominant || 'joy',
-            intensity: data.intensity || 0.5,
-          });
-        }
-      } catch (e) {
-        console.log('加载情绪数据失败，使用默认');
-      } finally {
-        setLoading(false);
-      }
-    };
     loadEmotion();
-    const interval = setInterval(loadEmotion, 5000);
+    const interval = setInterval(loadEmotion, 8000);
     return () => clearInterval(interval);
-  }, []);
+  }, [loadEmotion]);
 
   const currentEmotionData = emotions.find(e => e.name === emotionData.dominant) || emotions[0];
 
@@ -140,25 +141,29 @@ const SoulPage: React.FC = () => {
       </div>
 
       <div className="glass-panel p-4">
-        <div className="text-white font-medium mb-3">情绪轨迹</div>
-        <div className="space-y-2">
-          {emotionHistory.map((h, i) => {
-            const e = emotions.find(em => em.name === h.emotion) || emotions[0];
-            return (
-              <div key={i} className="flex items-center gap-2">
-                <span className="text-sm text-gray-500 w-12">{h.time}</span>
-                <div
-                  className="h-3 rounded-full"
-                  style={{
-                    width: `${h.intensity * 100}%`,
-                    backgroundColor: e.color,
-                    opacity: 0.3 + h.intensity * 0.7,
-                  }}
-                />
-                <span className="text-xs text-gray-400">{e.label}</span>
-              </div>
-            );
-          })}
+        <div className="text-white font-medium mb-3">情绪轨迹 ({emotionHistory.length})</div>
+        <div className="space-y-2 max-h-48 overflow-y-auto">
+          {emotionHistory.length > 0 ? (
+            emotionHistory.map((h, i) => {
+              const e = emotions.find(em => em.name === h.emotion) || emotions[0];
+              return (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500 w-16">{h.time?.slice(-5) || h.time}</span>
+                  <div
+                    className="h-3 rounded-full"
+                    style={{
+                      width: `${h.intensity * 100}%`,
+                      backgroundColor: e.color,
+                      opacity: 0.3 + h.intensity * 0.7,
+                    }}
+                  />
+                  <span className="text-xs text-gray-400">{e.label}</span>
+                </div>
+              );
+            })
+          ) : (
+            <div className="text-center py-4 text-gray-500 text-sm">暂无情绪历史记录</div>
+          )}
         </div>
       </div>
     </div>

@@ -46,10 +46,16 @@ const PLATFORM_NAMES: Record<string, string> = {
 };
 
 const PlatformPage: React.FC = () => {
-  const { platforms, loading, refresh, stats } = usePlatforms();
+  const { platforms, loading, refresh, stats, connect, disconnect } = usePlatforms();
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformInfo | null>(null);
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
-  const handleRefresh = async () => {
+  const handleConnect = async (platform: PlatformInfo) => {
+    if (platform.status === 'connected') {
+      await disconnect(platform.platform_id);
+    } else {
+      await connect(platform.platform_id);
+    }
     await refresh();
   };
 
@@ -264,6 +270,40 @@ const PlatformPage: React.FC = () => {
                   {selectedPlatform.status === 'connected' ? '断开连接' : '连接'}
                 </motion.button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {showAddDialog && (
+          <motion.div
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowAddDialog(false)}
+          >
+            <motion.div
+              className="glass-panel p-6 w-full max-w-sm mx-4"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-white font-medium mb-4">添加平台</div>
+              <div className="text-gray-400 text-sm mb-4">
+                请在配置文件中添加平台配置后重启服务，或通过后端 API 添加
+              </div>
+              <div className="text-gray-500 text-xs mb-4">
+                支持：QQ官方机器人、Telegram、Discord、企业微信等
+              </div>
+              <motion.button
+                className="w-full px-4 py-2 text-sm rounded bg-cyan-500/20 text-cyan-400"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowAddDialog(false)}
+              >
+                知道了
+              </motion.button>
             </motion.div>
           </motion.div>
         )}

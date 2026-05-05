@@ -11,7 +11,6 @@ interface CognitiveEvent {
 
 const CognitivePage: React.FC = () => {
   const { profiles, loading, refresh } = useCognitiveProfiles();
-  const [selectedEntity, setSelectedEntity] = useState<string | null>(null);
   const [entityType, setEntityType] = useState<'user' | 'group'>('user');
   const [entityId, setEntityId] = useState('');
   const [profileContent, setProfileContent] = useState('');
@@ -46,21 +45,6 @@ const CognitivePage: React.FC = () => {
       if (eventsResult) setEvents(eventsResult);
     } catch (e: any) {
       setProfileContent(`加载失败: ${e.message}`);
-    }
-    setLoadingProfile(false);
-  };
-
-  const handleSearchEvents = async () => {
-    if (!eventQuery.trim()) return;
-    setLoadingProfile(true);
-    try {
-      const result = await miyaAPI.getCognitiveEvents({
-        query: eventQuery,
-        limit: 30,
-      });
-      if (result) setEvents(result);
-    } catch (e: any) {
-      console.error('搜索失败:', e);
     }
     setLoadingProfile(false);
   };

@@ -149,6 +149,9 @@ class ModelCollaborationEngine:
         raw_config = config or {}
         self.config = raw_config.get("collaboration") or _load_collaboration_config()
 
+        # 【优化】AI Client 缓存 - 避免每次调用创建新的 HTTP 连接
+        self._client_cache: Dict[str, Any] = {}
+
         # 开关
         self.enabled = self.config.get("enabled", True)
 
@@ -1301,8 +1304,18 @@ class ModelCollaborationEngine:
         return self.endpoint_map.get(platform, self.default_endpoint)
 
     def _create_client(
-        self, model_config: ModelConfig, factory, tools=None, context=None
+        self, model_config: ModelConfig, factory=None, tools=None, context=None
     ):
+        # 【优化】使用缓存避免重复创建 HTTP 连接
+        cache_key = (
+            f"{model_config.provider}:{model_config.name}:{model_config.base_url}"
+        )
+        if cache_key in self._client_cache:
+            client = self._client_cache[cache_key]
+            if tools:
+                client.set_tool_registry(tools)
+            return client
+
         if factory:
             client = factory.create_client(
                 provider=model_config.provider,
@@ -1322,8 +1335,10 @@ class ModelCollaborationEngine:
                 tool_context=context,
             )
 
-        if client and tools:
-            client.set_tool_registry(tools)
+        if client:
+            self._client_cache[cache_key] = client
+            if tools:
+                client.set_tool_registry(tools)
 
         return client
 

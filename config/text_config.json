@@ -145,6 +145,14 @@
             "惊喜"
         ]
     },
+    "emotion_guidance": {
+        "header": "\n\n【情感指引】\n",
+        "user_emotion": "- 用户情绪: {dominant}\n",
+        "miya_emotion": "- 你的情绪: {miya_dominant} ({miya_intensity}%)\n",
+        "inner_thought": "- 你的内心独白: {inner_thought}\n",
+        "footer": "请根据上述情感自然回应，展现你真实的情感。\n注意：内心独白仅供你参考理解自己的感受，请不要在回复中直接引用或输出内心独白内容。",
+        "single_model_footer": "请根据上述情感自然回应，展现你真实的情感。\n注意：内心独白仅供你参考理解自己的感受，请不要在回复中直接引用或输出内心独白内容。\n禁止在回复中使用小括号()描述动作，如（微笑）、（点头）等。"
+    },
     "quick_responses": {
         "greeting": {
             "keywords": [

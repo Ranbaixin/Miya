@@ -26,7 +26,7 @@ const EmotionPage: React.FC = () => {
 
        <div className="space-y-4">
          <div className="grid grid-cols-2 gap-4">
-           <EmotionTimelinePanel className="h-full" />
+            <EmotionTimelinePanel />
            
            <div className="glass-panel p-4 h-full">
              <div className="flex flex-col h-full gap-4">

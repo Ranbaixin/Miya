@@ -1,38 +1,42 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-
-const defaultKBs = [
-  { id: '1', name: '个人偏好', description: '记录用户的偏好和习惯', doc_count: 12, updated_at: '2026-05-02' },
-  { id: '2', name: '技术文档', description: '编程和技术知识', doc_count: 45, updated_at: '2026-05-01' },
-  { id: '3', name: '对话历史', description: '重要对话记录', doc_count: 28, updated_at: '2026-04-30' },
-];
+import { miyaAPI } from '../services/miyaApi';
+import type { KnowledgeBaseInfo } from '../services/miyaApi';
 
 const KnowledgeBasePage: React.FC = () => {
-  const [knowledgeBases, setKnowledgeBases] = useState(defaultKBs);
+  const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBaseInfo[]>([]);
   const [selectedKB, setSelectedKB] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [newKBName, setNewKBName] = useState('');
   const [newKBDesc, setNewKBDesc] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
 
-  const handleCreate = () => {
+  const loadKBs = useCallback(async () => {
+    setLoading(true);
+    const data = await miyaAPI.getKnowledgeBases();
+    if (data) setKnowledgeBases(data);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { loadKBs(); }, [loadKBs]);
+
+  const handleCreate = async () => {
     if (!newKBName.trim()) return;
-    const newKB = {
-      id: `kb_${Date.now()}`,
-      name: newKBName,
-      description: newKBDesc,
-      doc_count: 0,
-      updated_at: new Date().toISOString().split('T')[0],
-    };
-    setKnowledgeBases([...knowledgeBases, newKB]);
-    setNewKBName('');
-    setNewKBDesc('');
-    setShowCreate(false);
+    setActionLoading(true);
+    const result = await miyaAPI.createKnowledgeBase(newKBName, newKBDesc);
+    if (result) {
+      setKnowledgeBases(prev => [...prev, result]);
+      setNewKBName('');
+      setNewKBDesc('');
+      setShowCreate(false);
+    }
+    setActionLoading(false);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('确定要删除这个知识库吗？')) {
-      setKnowledgeBases(knowledgeBases.filter(kb => kb.id !== id));
-    }
+  const handleDelete = async (id: string) => {
+    if (!confirm('确定要删除这个知识库吗？')) return;
+    setKnowledgeBases(prev => prev.filter(kb => kb.id !== id));
   };
 
   return (
@@ -40,14 +44,22 @@ const KnowledgeBasePage: React.FC = () => {
       <div className="glass-panel p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="text-white font-medium">知识库列表</div>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowCreate(!showCreate)}
-            className="px-3 py-1 bg-cyan-500/30 border border-cyan-500/50 rounded-lg text-cyan-400 text-sm"
-          >
-            + 新建知识库
-          </motion.button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={loadKBs}
+              className="px-3 py-1 text-xs rounded bg-cyan-500/20 text-cyan-400"
+            >
+              刷新
+            </button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowCreate(!showCreate)}
+              className="px-3 py-1 bg-cyan-500/30 border border-cyan-500/50 rounded-lg text-cyan-400 text-sm"
+            >
+              + 新建知识库
+            </motion.button>
+          </div>
         </div>
 
         {showCreate && (
@@ -70,9 +82,10 @@ const KnowledgeBasePage: React.FC = () => {
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={handleCreate}
-                className="flex-1 py-2 bg-cyan-500/30 border border-cyan-500/50 rounded-lg text-cyan-400 text-sm"
+                disabled={actionLoading}
+                className="flex-1 py-2 bg-cyan-500/30 border border-cyan-500/50 rounded-lg text-cyan-400 text-sm disabled:opacity-50"
               >
-                创建
+                {actionLoading ? '创建中...' : '创建'}
               </motion.button>
               <motion.button
                 whileTap={{ scale: 0.95 }}
@@ -85,37 +98,41 @@ const KnowledgeBasePage: React.FC = () => {
           </div>
         )}
 
-        <div className="space-y-2">
-          {knowledgeBases.map(kb => (
-            <motion.div
-              key={kb.id}
-              layout
-              className={`p-3 bg-gray-800/30 rounded-lg cursor-pointer ${
-                selectedKB === kb.id ? 'border border-cyan-500/50' : ''
-              }`}
-              onClick={() => setSelectedKB(selectedKB === kb.id ? null : kb.id)}
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="text-white font-medium">{kb.name}</div>
-                  <div className="text-gray-400 text-sm">{kb.description}</div>
-                  <div className="text-gray-500 text-xs mt-1">
-                    {kb.doc_count} 个文档 · {kb.updated_at}
+        {loading ? (
+          <div className="text-center py-8 text-gray-500">加载中...</div>
+        ) : (
+          <div className="space-y-2">
+            {knowledgeBases.map(kb => (
+              <motion.div
+                key={kb.id}
+                layout
+                className={`p-3 bg-gray-800/30 rounded-lg cursor-pointer ${
+                  selectedKB === kb.id ? 'border border-cyan-500/50' : ''
+                }`}
+                onClick={() => setSelectedKB(selectedKB === kb.id ? null : kb.id)}
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="text-white font-medium">{kb.name}</div>
+                    <div className="text-gray-400 text-sm">{kb.description}</div>
+                    <div className="text-gray-500 text-xs mt-1">
+                      {kb.document_count} 个文档 · {kb.updated_at?.slice(0, 10)}
+                    </div>
                   </div>
+                  <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={(e) => { e.stopPropagation(); handleDelete(kb.id); }}
+                    className="w-8 h-8 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/40 flex items-center justify-center"
+                  >
+                    ×
+                  </motion.button>
                 </div>
-                <motion.button
-                  whileTap={{ scale: 0.9 }}
-                  onClick={(e) => { e.stopPropagation(); handleDelete(kb.id); }}
-                  className="w-8 h-8 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/40 flex items-center justify-center"
-                >
-                  ×
-                </motion.button>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
 
-        {knowledgeBases.length === 0 && (
+        {!loading && knowledgeBases.length === 0 && (
           <div className="text-center py-8 text-gray-500">
             还没有知识库，点击"新建知识库"创建第一个
           </div>

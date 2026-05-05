@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useMiyaStatus, type RuntimeMeta } from '../services/miyaApi';
+import { useMiyaStatus } from '../services/miyaApi';
 
 interface ConnectionItemProps {
   label: string;
@@ -34,7 +34,7 @@ const ConnectionStatusPanel: React.FC<ConnectionStatusPanelProps> = ({ items }) 
     },
     { 
       label: 'WebSocket', 
-      status: connected ? 'connected' : 'disconnected', 
+      status: connected ? 'connected' : 'offline', 
       color: connected ? 'bg-green-500' : 'bg-red-500', 
       text: connected ? '已连接' : '未连接', 
       pulse: connected 

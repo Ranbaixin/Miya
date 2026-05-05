@@ -135,6 +135,8 @@ export interface CognitiveProfile {
   entity_id: string;
   document: string;
   metadata: Record<string, any>;
+  id?: string;
+  score?: number;
 }
 
 export interface CognitiveEvent {
@@ -320,13 +322,18 @@ class MiyaAPI {
   }
 
   async getTools(): Promise<{ tools: ToolDefinition[] } | null> {
-    // 后端 API 不存在，返回空
-    return { tools: [] };
+    const res = await this._request<any>('/api/tools');
+    if (!res) return { tools: [] };
+    return {
+      tools: res.tools || [],
+    };
   }
 
   async invokeTool(toolName: string, args: Record<string, any> = {}) {
-    // 后端 API 不存在
-    return { success: false, error: 'API not available' };
+    return this._request('/api/tools/invoke', {
+      method: 'POST',
+      body: JSON.stringify({ name: toolName, args }),
+    });
   }
 
   // ============================================================
@@ -343,7 +350,14 @@ class MiyaAPI {
   }
 
   async addMemory(fact: string) {
-    return this.invokeTool('memory_add', { fact });
+    return this._request('/api/memory/add', {
+      method: 'POST',
+      body: JSON.stringify({ text: fact }),
+    });
+  }
+
+  async getMemoryStats() {
+    return this._request('/api/memory/stats');
   }
 
   async deleteMemory(memoryUuid: string) {
@@ -367,11 +381,15 @@ class MiyaAPI {
   // ============================================================
 
   async getCognitiveProfiles(params?: { entity_type?: string; limit?: number }) {
-    return { profiles: [] };
+    const query = new URLSearchParams();
+    if (params?.entity_type) query.set('entity_type', params.entity_type);
+    if (params?.limit) query.set('limit', String(params.limit));
+    const queryStr = query.toString() ? `?${query.toString()}` : '';
+    return this._request(`/api/cognitive/profiles${queryStr}`);
   }
 
   async getCognitiveProfile(entityType: string, entityId: string) {
-    return null;
+    return this._request(`/api/cognitive/profiles/${entityType}/${entityId}`);
   }
 
   async getCognitiveEvents(params?: {
@@ -622,8 +640,8 @@ class MiyaAPI {
   // 人格向量 API
   // ============================================================
 
-  async getPersonalityVectors(): Promise<VectorData[] | null> {
-    return this._request<VectorData[]>('/api/v1/personality/vectors');
+  async getPersonalityVectors(): Promise<{ vectors: VectorData[] } | null> {
+    return this._request<{ vectors: VectorData[] }>('/api/v1/personality/vectors');
   }
 
   async getPersonalityForms(): Promise<string[] | null> {
@@ -742,6 +760,17 @@ export function useMiyaMemory() {
       const res = await miyaAPI.getMemory({ limit, query });
       if (res && res.memories) {
         setMemories(res.memories);
+      }
+
+      const statsRes = await miyaAPI.getMemoryStats();
+      if (statsRes) {
+        setStats({
+          total: statsRes.total ?? 0,
+          important: statsRes.important_memories ?? statsRes.long_term ?? 0,
+          emotion: statsRes.emotional_memories ?? 0,
+          conversation: statsRes.short_term ?? 0,
+        });
+      } else if (res && res.memories) {
         setStats({
           total: res.total || res.memories.length || 0,
           important: Math.floor((res.memories.length || 0) * 0.15),

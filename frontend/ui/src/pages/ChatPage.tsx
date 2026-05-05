@@ -1,52 +1,39 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useMiyaChat, miyaAPI } from '../services/miyaApi';
 
-const defaultMessages = [
-  { id: '1', sender: 'user', content: '你好呀弥娅', time: '14:30' },
-  { id: '2', sender: 'miya', content: '你好呀亲爱的~ 欢迎回来', time: '14:30' },
-  { id: '3', sender: 'user', content: '今天过得怎么样？', time: '14:31' },
-  { id: '4', sender: 'miya', content: '还不错呀～ 处理了一些事情，现在在等你呢', time: '14:31' },
-];
-
-const defaultSessions = [
-  { id: 'default', name: '默认会话', updated_at: '2026-05-02T14:31:00' },
-  { id: 'session_2', name: '关于AI的讨论', updated_at: '2026-05-02T12:00:00' },
-];
+interface Session {
+  id: string;
+  name: string;
+  updated_at: string;
+}
 
 const ChatPage: React.FC = () => {
-  const [messages, setMessages] = useState(defaultMessages);
+  const { messages, send, sending } = useMiyaChat();
   const [input, setInput] = useState('');
-  const [sessions, setSessions] = useState(defaultSessions);
+  const [sessions, setSessions] = useState<Session[]>([]);
   const [currentSession, setCurrentSession] = useState('default');
-  const [sending, setSending] = useState(false);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+
+  useEffect(() => {
+    const loadSessions = async () => {
+      setSessionsLoading(true);
+      const res = await miyaAPI.getChatSessions();
+      if (res?.success && res.data) {
+        setSessions(res.data);
+      }
+      setSessionsLoading(false);
+    };
+    loadSessions();
+  }, []);
 
   const handleSend = async () => {
     if (!input.trim() || sending) return;
-    
-    setSending(true);
-    const userMsg = {
-      id: `msg_${Date.now()}`,
-      sender: 'user',
-      content: input,
-      time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-    };
-    setMessages(prev => [...prev, userMsg]);
-    const msgToSend = input;
+    await send(input);
     setInput('');
-
-    setTimeout(() => {
-      const miyaMsg = {
-        id: `msg_${Date.now()}_miya`,
-        sender: 'miya',
-        content: '收到你的消息啦~ 具体内容需要连接真实后端API才能回复呢',
-        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-      };
-      setMessages(prev => [...prev, miyaMsg]);
-      setSending(false);
-    }, 500);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -55,44 +42,64 @@ const ChatPage: React.FC = () => {
 
   return (
     <div className="flex h-full">
-      <div className="w-48 bg-gray-900/50 border-r border-gray-800 p-2">
+      <div className="w-48 bg-gray-900/50 border-r border-gray-800 p-2 flex flex-col">
         <div className="text-gray-400 text-xs mb-2 px-2">会话列表</div>
-        {sessions.map(s => (
-          <motion.button
-            key={s.id}
-            onClick={() => setCurrentSession(s.id)}
-            className={`w-full text-left px-2 py-2 rounded text-sm mb-1 ${
-              currentSession === s.id
-                ? 'bg-cyan-500/20 text-cyan-400'
-                : 'text-gray-400 hover:bg-gray-800'
-            }`}
-          >
-            {s.name}
-          </motion.button>
-        ))}
+        <div className="flex-1 overflow-y-auto">
+          {sessionsLoading ? (
+            <div className="text-gray-500 text-xs text-center py-4">加载中...</div>
+          ) : sessions.length > 0 ? (
+            sessions.map(s => (
+              <motion.button
+                key={s.id}
+                onClick={() => setCurrentSession(s.id)}
+                className={`w-full text-left px-2 py-2 rounded text-sm mb-1 ${
+                  currentSession === s.id
+                    ? 'bg-cyan-500/20 text-cyan-400'
+                    : 'text-gray-400 hover:bg-gray-800'
+                }`}
+              >
+                {s.name}
+              </motion.button>
+            ))
+          ) : (
+            <div className="text-gray-500 text-xs text-center py-4">暂无会话</div>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 flex flex-col">
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {messages.length === 0 && (
+            <div className="text-center py-12 text-gray-500">
+              发送消息，和弥娅开始对话吧~
+            </div>
+          )}
           {messages.map(msg => (
             <motion.div
               key={msg.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                msg.sender === 'user'
+                msg.type === 'user'
                   ? 'bg-cyan-500/30 text-white rounded-br-md'
                   : 'bg-gray-800/50 text-gray-200 rounded-bl-md'
               }`}>
-                <div className="text-sm">{msg.content}</div>
+                <div className="text-sm whitespace-pre-wrap">{msg.content}</div>
                 <div className={`text-xs mt-1 ${
-                  msg.sender === 'user' ? 'text-cyan-300/50' : 'text-gray-500'
+                  msg.type === 'user' ? 'text-cyan-300/50' : 'text-gray-500'
                 }`}>{msg.time}</div>
               </div>
             </motion.div>
           ))}
+          {sending && (
+            <div className="flex justify-start">
+              <div className="bg-gray-800/50 text-gray-200 rounded-2xl rounded-bl-md px-4 py-2">
+                <div className="text-sm animate-pulse">思考中...</div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="p-4 border-t border-gray-800">
@@ -101,7 +108,7 @@ const ChatPage: React.FC = () => {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyDown}
               placeholder="输入消息..."
               disabled={sending}
               className="flex-1 bg-gray-800/50 border border-gray-700 rounded-full px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"

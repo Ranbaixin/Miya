@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useSystemInfo, useMiyaStatus, type SystemInfo } from '../services/miyaApi';
+import { useSystemInfo, useMiyaStatus } from '../services/miyaApi';
 
 interface RuntimeStats {
   startTime: string;
@@ -25,7 +25,7 @@ const RuntimeInfoPanel: React.FC<RuntimeInfoPanelProps> = ({ stats: propStats })
     toolCalls: 0,
   });
 
-  const { meta, connected, error } = useMiyaStatus();
+  const { connected, error } = useMiyaStatus();
   const systemInfo = useSystemInfo();
 
   useEffect(() => {

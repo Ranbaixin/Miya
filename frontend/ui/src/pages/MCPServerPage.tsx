@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useMCPServers } from '../services/miyaApi';
 import type { MCPServerInfo } from '../services/miyaApi';
 

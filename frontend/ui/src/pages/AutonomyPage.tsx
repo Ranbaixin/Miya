@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import DataRing from '../components/DataRing';
+import { useState, useEffect, useCallback } from 'react';
+import { miyaAPI } from '../services/miyaApi';
 
 interface AutonomySettings {
   enabled: boolean;
@@ -21,34 +20,55 @@ interface AutonomyLog {
   confidence: number;
 }
 
+const defaultSettings: AutonomySettings = {
+  enabled: true,
+  auto_response: true,
+  auto_memory: true,
+  auto_reflection: true,
+  proactive_initiative: 50,
+  decision_threshold: 0.7,
+  response_delay: 2,
+  max_autonomy_loops: 3,
+};
+
 const AutonomyPage: React.FC = () => {
-  const [settings, setSettings] = useState<AutonomySettings>({
-    enabled: true,
-    auto_response: true,
-    auto_memory: true,
-    auto_reflection: true,
-    proactive_initiative: 50,
-    decision_threshold: 0.7,
-    response_delay: 2,
-    max_autonomy_loops: 3,
-  });
-
-  const [logs, setLogs] = useState<AutonomyLog[]>([
-    { id: '1', type: 'decision', content: '检测到用户情绪低落，主动提供安慰', time: '14:30:25', confidence: 0.92 },
-    { id: '2', type: 'action', content: '自动保存重要对话到记忆系统', time: '14:28:15', confidence: 0.88 },
-    { id: '3', type: 'reflection', content: '分析对话模式: 用户最近偏好安静的环境', time: '14:25:00', confidence: 0.85 },
-    { id: '4', type: 'decision', content: '选择更温柔的语气回应', time: '14:20:45', confidence: 0.90 },
-    { id: '5', type: 'action', content: '触发情感共鸣模块', time: '14:15:30', confidence: 0.87 },
-  ]);
-
-  const [stats, setStats] = useState({
-    decisions: 156,
-    actions: 89,
-    reflections: 42,
-    autonomousRate: 68,
-  });
-
+  const [settings, setSettings] = useState<AutonomySettings>(defaultSettings);
+  const [logs, setLogs] = useState<AutonomyLog[]>([]);
+  const [stats, setStats] = useState({ decisions: 0, actions: 0, reflections: 0, autonomousRate: 0 });
   const [expanded, setExpanded] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  const loadData = useCallback(async () => {
+    const settingsData = await miyaAPI.getAutonomySettings();
+    if (settingsData) {
+      setSettings({ ...defaultSettings, ...settingsData });
+    }
+
+    const statsData = await miyaAPI.getAutonomyStats();
+    if (statsData) {
+      setStats({
+        decisions: statsData.decisions ?? 0,
+        actions: statsData.actions ?? 0,
+        reflections: statsData.reflections ?? 0,
+        autonomousRate: statsData.autonomousRate ?? 0,
+      });
+    }
+
+    const logsData = await miyaAPI.getAutonomyLogs();
+    if (logsData?.logs) {
+      setLogs(logsData.logs);
+    }
+    setLoaded(true);
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const handleSaveSettings = async () => {
+    setSaving(true);
+    await miyaAPI.saveAutonomySettings(settings);
+    setSaving(false);
+  };
 
   const getLogIcon = (type: string) => {
     switch (type) {
@@ -79,15 +99,23 @@ const AutonomyPage: React.FC = () => {
               <div className="text-gray-400 text-sm">Adaptive Autonomy System</div>
             </div>
           </div>
-          <label className="flex items-center gap-2">
-            <span className="text-gray-300 text-sm">启用</span>
-            <input
-              type="checkbox"
-              checked={settings.enabled}
-              onChange={(e) => setSettings({ ...settings, enabled: e.target.checked })}
-              className="w-5 h-5 accent-cyan-500"
-            />
-          </label>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={loadData}
+              className="px-2 py-1 text-xs rounded bg-cyan-500/20 text-cyan-400"
+            >
+              刷新
+            </button>
+            <label className="flex items-center gap-2">
+              <span className="text-gray-300 text-sm">启用</span>
+              <input
+                type="checkbox"
+                checked={settings.enabled}
+                onChange={(e) => setSettings({ ...settings, enabled: e.target.checked })}
+                className="w-5 h-5 accent-cyan-500"
+              />
+            </label>
+          </div>
         </div>
 
         <div className="grid grid-cols-4 gap-4 mb-4">
@@ -113,9 +141,18 @@ const AutonomyPage: React.FC = () => {
       {settings.enabled && (
         <>
           <div className="glass-panel p-4">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-xl">⚙️</span>
-              <div className="text-white font-medium">决策配置</div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">⚙️</span>
+                <div className="text-white font-medium">决策配置</div>
+              </div>
+              <button
+                onClick={handleSaveSettings}
+                disabled={saving}
+                className="px-3 py-1 text-xs rounded bg-cyan-500/20 text-cyan-400 disabled:opacity-50"
+              >
+                {saving ? '保存中...' : '保存'}
+              </button>
             </div>
 
             <div className="space-y-4">
@@ -243,7 +280,7 @@ const AutonomyPage: React.FC = () => {
 
             {expanded && (
               <div className="mt-4 space-y-2 max-h-64 overflow-y-auto">
-                {logs.map(log => (
+                {logs.length > 0 ? logs.map(log => (
                   <div 
                     key={log.id}
                     className={`p-3 bg-gray-800/30 rounded-lg border-l-2 ${getLogColor(log.type)}`}
@@ -261,7 +298,11 @@ const AutonomyPage: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <div className="text-center py-4 text-gray-500 text-sm">
+                    {loaded ? '暂无决策日志' : '加载中...'}
+                  </div>
+                )}
               </div>
             )}
           </div>

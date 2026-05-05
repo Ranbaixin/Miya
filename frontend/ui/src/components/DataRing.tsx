@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import React from 'react';
 
 interface DataRingProps {
@@ -15,7 +14,6 @@ const DataRing: React.FC<DataRingProps> = ({
   label,
   color = 'rgba(0, 255, 255, 0.3)',
   size = 80,
-  showValue = true,
   unit = ''
 }) => {
   console.log('DataRing rendering with:', { value, label, color, size });

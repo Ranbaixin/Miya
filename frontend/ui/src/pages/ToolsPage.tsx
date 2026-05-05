@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import DataRing from '../components/DataRing';
 import { useMiyaTools, miyaAPI, type ToolDefinition } from '../services/miyaApi';
@@ -20,7 +20,6 @@ const ToolsPage: React.FC = () => {
   const [result, setResult] = useState<string | null>(null);
   const [history, setHistory] = useState<ToolCall[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   const defaultTools: ToolDefinition[] = [
     { function: { name: 'weather', description: '查询天气', parameters: { type: 'object', properties: { city: { type: 'string', description: '城市名称' } }, required: ['city'] } } },
@@ -31,7 +30,7 @@ const ToolsPage: React.FC = () => {
     { function: { name: 'memory_delete', description: '删除记忆', parameters: { type: 'object', properties: { memory_uuid: { type: 'string', description: '记忆UUID' } }, required: ['memory_uuid'] } } },
     { function: { name: 'arXiv_search', description: 'arXiv搜索', parameters: { type: 'object', properties: { query: { type: 'string', description: '搜索词' }, max_results: { type: 'number', description: '最大结果数' } } } } },
     { function: { name: 'weather_query', description: '天气查询', parameters: { type: 'object', properties: { city: { type: 'string', description: '城市' }, days: { type: 'number', description: '天数' } } } } },
-    { function: { name: 'web_fetch', description: '网页抓取', parameters: { type: 'object', properties: { url: { type: 'string', description: 'URL地址' } }, select: { type: 'string', description: '选择器' } } } },
+    { function: { name: 'web_fetch', description: '网页抓取', parameters: { type: 'object', properties: { url: { type: 'string', description: 'URL地址' }, select: { type: 'string', description: '选择器' } } } } },
     { function: { name: 'code_exec', description: '代码执行', parameters: { type: 'object', properties: { code: { type: 'string', description: 'Python代码' }, timeout: { type: 'number', description: '超时时间' } } } } },
   ];
 

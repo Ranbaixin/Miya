@@ -1,17 +1,12 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-
-const defaultPlugins = [
-  { name: 'bing_search', description: '必应搜索', author: 'AstrBot', version: '1.2.0', enabled: true },
-  { name: 'weather', description: '天气查询', author: 'AstrBot', version: '1.0.0', enabled: true },
-  { name: 'translate', description: '翻译插件', author: 'AstrBot', version: '1.1.0', enabled: false },
-  { name: 'riddle', description: '谜语问答', author: 'Community', version: '0.9.0', enabled: false },
-];
+import { usePlugins } from '../services/miyaApi';
 
 const PluginManagerPage: React.FC = () => {
-  const [plugins, setPlugins] = useState(defaultPlugins);
+  const { plugins, loading, refresh, enable, disable, uninstall } = usePlugins();
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'enabled' | 'disabled'>('all');
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const filteredPlugins = plugins.filter(p => {
     const matchSearch = p.name.includes(searchQuery) || p.description.includes(searchQuery);
@@ -20,15 +15,28 @@ const PluginManagerPage: React.FC = () => {
     return matchSearch;
   });
 
-  const handleToggle = (name: string) => {
-    setPlugins(plugins.map(p => 
-      p.name === name ? { ...p, enabled: !p.enabled } : p
-    ));
+  const handleToggle = async (name: string, enabled: boolean) => {
+    setActionLoading(name);
+    try {
+      if (enabled) {
+        await disable(name);
+      } else {
+        await enable(name);
+      }
+      await refresh();
+    } finally {
+      setActionLoading(null);
+    }
   };
 
-  const handleDelete = (name: string) => {
-    if (confirm(`确定要卸载 ${name} 吗？`)) {
-      setPlugins(plugins.filter(p => p.name !== name));
+  const handleUninstall = async (name: string) => {
+    if (!confirm(`确定要卸载 ${name} 吗？`)) return;
+    setActionLoading(name);
+    try {
+      await uninstall(name);
+      await refresh();
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -37,7 +45,15 @@ const PluginManagerPage: React.FC = () => {
       <div className="glass-panel p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="text-white font-medium">已安装插件</div>
-          <div className="text-gray-400 text-sm">{plugins.length} 个插件</div>
+          <div className="flex items-center gap-3">
+            <div className="text-gray-400 text-sm">{plugins.length} 个插件</div>
+            <button
+              onClick={() => refresh()}
+              className="px-2 py-1 text-xs rounded bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30"
+            >
+              刷新
+            </button>
+          </div>
         </div>
 
         <div className="flex gap-2 mb-4">
@@ -66,48 +82,56 @@ const PluginManagerPage: React.FC = () => {
           ))}
         </div>
 
-        <div className="space-y-2">
-          {filteredPlugins.map(plugin => (
-            <motion.div
-              key={plugin.name}
-              layout
-              className="p-3 bg-gray-800/30 rounded-lg"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="text-white font-medium">{plugin.name}</div>
-                  <div className="text-gray-400 text-sm">{plugin.description}</div>
-                  <div className="text-gray-500 text-xs mt-1">
-                    {plugin.author} · v{plugin.version}
+        {loading ? (
+          <div className="text-center py-8 text-gray-500">加载中...</div>
+        ) : (
+          <div className="space-y-2">
+            {filteredPlugins.map(plugin => (
+              <motion.div
+                key={plugin.name}
+                layout
+                className="p-3 bg-gray-800/30 rounded-lg"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="text-white font-medium">{plugin.name}</div>
+                    <div className="text-gray-400 text-sm">{plugin.description}</div>
+                    <div className="text-gray-500 text-xs mt-1">
+                      {plugin.author} · v{plugin.version}
+                      {plugin.installed_at && ` · ${plugin.installed_at.slice(0, 10)}`}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleToggle(plugin.name, plugin.enabled)}
+                      disabled={actionLoading === plugin.name}
+                      className={`w-10 h-5 rounded-full transition-colors ${
+                        actionLoading === plugin.name ? 'opacity-50' : ''
+                      } ${plugin.enabled ? 'bg-cyan-500' : 'bg-gray-700'}`}
+                    >
+                      <div className={`w-4 h-4 bg-white rounded-full transition-transform ${
+                        plugin.enabled ? 'translate-x-5' : 'translate-x-0.5'
+                      }`} />
+                    </button>
+                    <button
+                      onClick={() => handleUninstall(plugin.name)}
+                      disabled={actionLoading === plugin.name}
+                      className="w-8 h-8 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/40 flex items-center justify-center disabled:opacity-50"
+                    >
+                      ×
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleToggle(plugin.name)}
-                    className={`w-10 h-5 rounded-full transition-colors ${
-                      plugin.enabled ? 'bg-cyan-500' : 'bg-gray-700'
-                    }`}
-                  >
-                    <div className={`w-4 h-4 bg-white rounded-full transition-transform ${
-                      plugin.enabled ? 'translate-x-5' : 'translate-x-0.5'
-                    }`} 
-                  />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(plugin.name)}
-                    className="w-8 h-8 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/40 flex items-center justify-center"
-                  >
-                    ×
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
 
-        {filteredPlugins.length === 0 && (
+        {!loading && filteredPlugins.length === 0 && (
           <div className="text-center py-8 text-gray-500">
-            没有找到匹配的插件
+            {plugins.length === 0 
+              ? '还没有安装任何插件，去插件市场看看吧~' 
+              : '没有找到匹配的插件'}
           </div>
         )}
       </div>

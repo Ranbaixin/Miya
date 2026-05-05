@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { miyaAPI } from '../services/miyaApi';
 
 interface VoiceConfig {
   tts_enabled: boolean;
@@ -11,6 +12,17 @@ interface VoiceConfig {
   stts_provider: string;
   stts_language: string;
 }
+
+const defaultConfig: VoiceConfig = {
+  tts_enabled: true,
+  tts_provider: 'edge',
+  tts_voice: 'zh-CN-XiaoxiaoNeural',
+  tts_speed: 1.0,
+  tts_pitch: 0,
+  stts_enabled: false,
+  stts_provider: 'edge',
+  stts_language: 'zh-CN',
+};
 
 const voiceProviders = [
   { id: 'edge', name: 'Edge TTS', voices: ['zh-CN-XiaoxiaoNeural', 'zh-CN-YunxiNeural', 'zh-CN-YunyangNeural'] },
@@ -27,28 +39,38 @@ const languages = [
 ];
 
 const VoicePage: React.FC = () => {
-  const [config, setConfig] = useState<VoiceConfig>({
-    tts_enabled: true,
-    tts_provider: 'edge',
-    tts_voice: 'zh-CN-XiaoxiaoNeural',
-    tts_speed: 1.0,
-    tts_pitch: 0,
-    stts_enabled: false,
-    stts_provider: 'edge',
-    stts_language: 'zh-CN',
-  });
-
+  const [config, setConfig] = useState<VoiceConfig>(defaultConfig);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadConfig = async () => {
+      const data = await miyaAPI.getVoiceConfig();
+      if (data) setConfig({ ...defaultConfig, ...data });
+    };
+    loadConfig();
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveMessage(null);
+    const result = await miyaAPI.saveVoiceConfig(config);
+    setSaveMessage(result?.success ? '配置已保存' : '保存失败，请检查后端服务');
+    setSaving(false);
+  };
 
   const handleTest = async () => {
     setTesting(true);
     setTestResult(null);
-    
-    setTimeout(() => {
-      setTesting(false);
+    const result = await miyaAPI.testVoice();
+    if (result?.success) {
+      setTestResult(result.audio_url ? '语音测试成功，可播放音频' : '语音测试成功');
+    } else {
       setTestResult('语音测试功能需要后端服务运行');
-    }, 1000);
+    }
+    setTesting(false);
   };
 
   const currentProvider = voiceProviders.find(p => p.id === config.tts_provider);
@@ -57,13 +79,28 @@ const VoicePage: React.FC = () => {
   return (
     <div className="p-4 space-y-4">
       <div className="glass-panel p-4">
-        <div className="flex items-center gap-3 mb-4">
-          <span className="text-2xl">🎤</span>
-          <div>
-            <div className="text-white font-medium">语音合成 (TTS)</div>
-            <div className="text-gray-400 text-sm">将文本转换为语音</div>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🎤</span>
+            <div>
+              <div className="text-white font-medium">语音合成 (TTS)</div>
+              <div className="text-gray-400 text-sm">将文本转换为语音</div>
+            </div>
           </div>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-3 py-1 text-xs rounded bg-cyan-500/20 text-cyan-400 disabled:opacity-50"
+          >
+            {saving ? '保存中...' : '保存配置'}
+          </button>
         </div>
+
+        {saveMessage && (
+          <div className="mb-3 p-2 rounded text-sm text-center bg-green-500/20 text-green-400">
+            {saveMessage}
+          </div>
+        )}
 
         <div className="space-y-4">
           <label className="flex items-center gap-3">
