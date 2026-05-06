@@ -185,6 +185,44 @@ class DingTalkPlatform(WebhookPlatform):
         if not self._client_id:
             return True
         try:
+            import sys
+
+            sys.path.insert(0, r"D:\AI_MIYA_Facyory\dingtalk-stream-sdk-python")
+            from dingtalk_stream import DingTalkStreamClient, Credential, ChatbotHandler
+
+            platform = self
+
+            class MiyaChatbotHandler(ChatbotHandler):
+                async def process(self, callback):
+                    text = callback.text.strip() if callback.text else ""
+                    sender = callback.sender_id
+                    if text:
+                        await platform.route_to_decision_hub(
+                            content=text,
+                            user_id=str(sender) if sender else "unknown",
+                            message_type="private",
+                        )
+
+            credential = Credential(self._client_id, self._client_secret)
+            client = DingTalkStreamClient(credential)
+            client.register_callback_handler(
+                "/v1.0/im/bot/messages/get", MiyaChatbotHandler()
+            )
+
+            async def dingtalk_loop():
+                await client.start()
+
+            self._client = client
+            self._tasks.append(asyncio.create_task(dingtalk_loop()))
+            logger.info(f"[dingtalk] Stream 模式已启动")
+            return True
+        except ImportError as e:
+            logger.warning(f"[dingtalk] SDK 缺失: {e}")
+            return True
+        except Exception as e:
+            logger.error(f"[dingtalk] 连接失败: {e}")
+            return True
+        try:
             import dingtalk_stream
             from dingtalk_stream import ChatbotClient
 

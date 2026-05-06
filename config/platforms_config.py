@@ -30,32 +30,41 @@
   4. 运行 python start_platforms.py 启动所有平台
 
 作者: 编程大师
-================================================================
+===============================================================
 """
 
+import os
+
+from pathlib import Path
+
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(Path(__file__).parent / ".env")
+except ImportError:
+    pass
+
+# v7.0: 所有凭据从环境变量读取，.env 文件中配置
+# 获取环境变量值的辅助函数
+
+
+def _env(key: str, default: str = "") -> str:
+    return os.environ.get(key, default)
+
+
 # ==================== QQ 官方机器人 ====================
+# 环境变量: QQ_APPID, QQ_SECRET, QQ_BOT_QQ
 # 申请地址: https://q.qq.com/
 # 文档: https://bot.q.qq.com/wiki/develop/api/
-#
-# 支持两种配置方式:
-#   方式1: 使用 appid + secret (推荐，功能更全)
-#   方式2: 使用 token (格式: bot:v1_xxx)
-#
-# 功能: 群聊、C2C私聊、频道消息、频道私信
 
 QQ_OFFICIAL_CONFIG = {
     "enabled": True,
-    # 方式1: appid + secret (推荐)
-    "appid": "1903922226",
-    "secret": "ulU0JPIQSHsHSP9f",
-    # 方式2: token (如果方式1不行，取消注释下面这行)
-    # "token": "bot:v1_xxx",
-    # 机器人QQ号
-    "bot_qq": "4015699176",
-    # 功能开关
-    "enable_group_c2c": True,  # 启用群聊和C2C消息
-    "enable_guild_direct_message": True,  # 启用频道私信
-    "sandbox": False,  # 沙箱环境（测试用）
+    "appid": _env("QQ_APPID"),
+    "secret": _env("QQ_SECRET"),
+    "bot_qq": _env("QQ_BOT_QQ"),
+    "enable_group_c2c": True,
+    "enable_guild_direct_message": True,
+    "sandbox": False,
 }
 
 # ==================== QQ 官方 Webhook 模式 ====================
@@ -85,7 +94,7 @@ QQ_OFFICIAL_WEBHOOK_CONFIG = {
 # 功能: 私聊、群组、频道、内联查询
 
 TELEGRAM_CONFIG = {
-    "enabled": True,
+    "enabled": False,
     "bot_token": "",  # 格式: 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
     # 可选: 使用代理 (中国大陆可能需要)
     # "proxy": {
@@ -103,8 +112,8 @@ TELEGRAM_CONFIG = {
 # 功能: 服务器消息、私信、斜杠命令
 
 DISCORD_CONFIG = {
-    "enabled": True,
-    "bot_token": "",  # 你的 Bot Token
+    "enabled": False,  # 国内需代理
+    "bot_token": _env("DISCORD_BOT_TOKEN"),
     # 可选: 设置 intents
     # "intents": ["guilds", "guild_messages", "direct_messages"],
 }
@@ -132,7 +141,8 @@ FEISHU_CONFIG = {
 
 DINGDING_CONFIG = {
     "enabled": False,
-    "app_key": "",  # 应用 App Key
+    "app_key": _env("DINGTALK_APP_KEY"),
+    "app_secret": _env("DINGTALK_APP_SECRET"),
     "app_secret": "",  # 应用 App Secret
     # 可选: 机器人 Webhook
     # "webhook": "",

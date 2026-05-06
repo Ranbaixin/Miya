@@ -108,8 +108,7 @@ class MiyaDaemon:
             DingTalkPlatform,
             SatoriPlatform,
             WeComPlatform,
-            WeixinOfficialAccountPlatform,
-            WeixinOCPlatform,
+            WeChatOfficialPlatform,
         )
 
         platform_map: Dict[str, type] = {
@@ -125,8 +124,7 @@ class MiyaDaemon:
             "dingtalk": DingTalkPlatform,
             "satori": SatoriPlatform,
             "wecom": WeComPlatform,
-            "weixin_official_account": WeixinOfficialAccountPlatform,
-            "weixin_oc": WeixinOCPlatform,
+            "weixin_official_account": WeChatOfficialPlatform,
         }
 
         cls = platform_map.get(platform_id)
