@@ -31,6 +31,7 @@ from typing import Dict, List, Any, Optional, Set
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import APIRouter
 import uvicorn
 
 logger = logging.getLogger("Miya.ManagementAPI")
@@ -50,6 +51,32 @@ class ManagementAPI:
 
         self._setup_middleware()
         self._setup_routes()
+
+    def register_webhook_platforms(self):
+        """v7.0: 注册 webhook 平台的 FastAPI 路由"""
+        for _pid, inst in self.daemon.registry._instances.items():
+            if hasattr(inst, "get_webhook_routes"):
+                try:
+                    webhook_info = inst.get_webhook_routes()
+                    if not webhook_info:
+                        continue
+                    prefix = webhook_info.get("prefix", "")
+                    routes = webhook_info.get("routes", [])
+                    if not routes:
+                        continue
+
+                    router = APIRouter(prefix=prefix)
+                    for method, path, handler in routes:
+                        handler.__name__ = f"{_pid}_webhook"
+                        router.add_api_route(
+                            path if path else "/",
+                            endpoint=handler,
+                            methods=[method],
+                        )
+                    self.app.include_router(router)
+                    logger.info(f"[Webhook] 注册 {_pid} ({prefix})")
+                except Exception as e:
+                    logger.warning(f"[Webhook] {_pid} 注册失败: {e}")
 
     def _setup_middleware(self):
         self.app.add_middleware(

@@ -104,6 +104,8 @@ async def run_daemon(
 
         # 将 API 广播链接到 daemon 的平台事件
         daemon.registry.on_broadcast(api.broadcast_event)
+        # v7.0: 注册 webhook 平台路由
+        api.register_webhook_platforms()
 
         print(f"""
 ╔══════════════════════════════════════════════════════════════╗

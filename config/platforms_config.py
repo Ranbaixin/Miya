@@ -117,12 +117,10 @@ DISCORD_CONFIG = {
 # 功能: 单聊、群聊、消息卡片
 
 FEISHU_CONFIG = {
-    "enabled": False,
-    "app_id": "",  # 应用 App ID
-    "app_secret": "",  # 应用 App Secret
-    # 可选: 事件回调验证
-    # "verification_token": "",
-    # "encrypt_key": "",
+    "enabled": True,
+    "app_id": "cli_a971b74179b81bd3",
+    "app_secret": "wCNSXVw6YLLa4Ov10PIACbeswUfpHXI6",
+    "verify_token": "",
 }
 
 # ==================== 钉钉 ====================
@@ -151,9 +149,12 @@ DINGDING_CONFIG = {
 WECOM_CONFIG = {
     "enabled": False,
     "corpid": "",  # 企业 ID
-    "corpsecret": "",  # 应用 Secret
-    # 可选: 应用 AgentId
-    # "agent_id": "",
+    "corpsecret": "",  # 应用 Secret (注意: 新版配置将 secret 重命名为 corpsecret)
+    # 可选: 应用 AgentId (发送消息时需要)
+    "agent_id": "",
+    # 安全模式 (推荐): 填入后启用消息加解密
+    "token": "",
+    "encoding_aes_key": "",
 }
 
 # ==================== 企业微信 AI Bot ====================
@@ -180,9 +181,14 @@ WEIXIN_OC_CONFIG = {
     "enabled": False,
     "appid": "",  # 应用 AppID
     "secret": "",  # 应用 AppSecret
+    # 微信开放平台 — 个人微信 (需通过扫码获取 token)
+    "weixin_oc_token": "",  # 登录后获取的 bot_token
+    "weixin_oc_account_id": "",  # 登录后获取的账号 ID
+    "weixin_oc_base_url": "https://ilinkai.weixin.qq.com",  # API 基础地址
+    "weixin_oc_poll_interval": 5,  # 轮询间隔 (秒)
     # 可选: 消息加解密
-    # "token": "",
-    # "encoding_aes_key": "",
+    "token": "",
+    "encoding_aes_key": "",
 }
 
 # ==================== 微信公众号 ====================
@@ -197,7 +203,9 @@ WEIXIN_OFFICIAL_CONFIG = {
     "appid": "",  # 公众号 AppID
     "secret": "",  # 公众号 AppSecret
     "token": "",  # 服务器配置 Token
-    "encoding_aes_key": "",  # 消息加解密密钥
+    "encoding_aes_key": "",  # 消息加解密密钥 (43位)
+    # 主动发送模式 (推荐): 启用后绕过5秒被动回复限制，使用客服消息API主动回复
+    "active_send_mode": False,
 }
 
 # ==================== Slack ====================

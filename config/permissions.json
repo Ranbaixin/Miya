@@ -14,7 +14,8 @@
         "desktop": ["1523878699"],
         "webchat": ["1523878699"],
         "telegram": [],
-        "discord": []
+        "discord": [],
+        "lark": ["452c3ccc"]
       }
     }
   },

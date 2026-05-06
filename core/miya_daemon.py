@@ -101,6 +101,15 @@ class MiyaDaemon:
             OneBotPlatform,
             GenericPlatform,
             WebChatPlatform,
+            LarkPlatform,
+            KOOKPlatform,
+            SlackPlatform,
+            LINEPlatform,
+            DingTalkPlatform,
+            SatoriPlatform,
+            WeComPlatform,
+            WeixinOfficialAccountPlatform,
+            WeixinOCPlatform,
         )
 
         platform_map: Dict[str, type] = {
@@ -109,6 +118,15 @@ class MiyaDaemon:
             "discord": DiscordPlatform,
             "aiocqhttp": OneBotPlatform,
             "webchat": WebChatPlatform,
+            "lark": LarkPlatform,
+            "kook": KOOKPlatform,
+            "slack": SlackPlatform,
+            "line": LINEPlatform,
+            "dingtalk": DingTalkPlatform,
+            "satori": SatoriPlatform,
+            "wecom": WeComPlatform,
+            "weixin_official_account": WeixinOfficialAccountPlatform,
+            "weixin_oc": WeixinOCPlatform,
         }
 
         cls = platform_map.get(platform_id)
