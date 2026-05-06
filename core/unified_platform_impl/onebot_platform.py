@@ -97,11 +97,120 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             if post_type == "message":
                 await self._handle_chat_message(data)
             elif post_type == "notice":
-                logger.debug(f"[{self.platform_id}] 通知: {data.get('notice_type')}")
+                await self._handle_notice(data)
             elif post_type == "request":
                 logger.debug(f"[{self.platform_id}] 请求: {data.get('request_type')}")
         except Exception as e:
             logger.error(f"[{self.platform_id}] 消息处理异常: {e}")
+
+    async def _handle_notice(self, data: Dict):
+        """处理通知事件（拍一拍等）"""
+        notice_type = data.get("notice_type", "")
+        if notice_type == "notify":
+            sub_type = data.get("sub_type", "")
+            if sub_type == "poke":
+                target_id = str(data.get("target_id", ""))
+                user_id = str(data.get("user_id", ""))
+                self_id = str(data.get("self_id", ""))
+                group_id = str(data.get("group_id", "")) if data.get("group_id") else ""
+
+                bot_qq = self.config.get("bot_qq", "") or self_id
+                is_bot_poked = str(target_id) == str(bot_qq) or str(target_id) == str(
+                    self_id
+                )
+
+                logger.info(
+                    f"[{self.platform_id}] 拍一拍: target={target_id}, bot_qq={bot_qq}, is_bot={is_bot_poked}"
+                )
+
+                if is_bot_poked:
+                    # 第一层：瞬间回复固定文字 + 随机表情包
+                    from core.config_loader import load_text_config
+
+                    poke_text = (
+                        load_text_config()
+                        .get("poke_responses", {})
+                        .get("local_emoji", "")
+                    )
+                    await self._send_onebot_poke_reply(user_id, poke_text)
+
+                    # 第二层：异步走 AI 生成情感回复
+                    content = f"[拍一拍] 用户 {user_id} 拍了拍你"
+                    ai_response = await self.route_to_decision_hub(
+                        content=content,
+                        user_id=user_id,
+                        user_name=user_id,
+                        message_type="private" if not group_id else "group",
+                        group_id=group_id,
+                    )
+                    if ai_response and self._ws and self._connected:
+                        await self._ws.send_str(
+                            json.dumps(
+                                {
+                                    "action": "send_private_msg",
+                                    "params": {
+                                        "user_id": int(user_id),
+                                        "message": [
+                                            {
+                                                "type": "text",
+                                                "data": {"text": ai_response},
+                                            }
+                                        ],
+                                    },
+                                }
+                            )
+                        )
+            else:
+                logger.info(f"[{self.platform_id}] notify: {sub_type}")
+        elif notice_type in ("group_increase", "group_decrease"):
+            logger.info(f"[{self.platform_id}] 群变动: {notice_type}")
+        else:
+            logger.info(f"[{self.platform_id}] 通知: {notice_type}")
+
+    async def _send_onebot_poke_reply(self, user_id: str, text: str):
+        """拍一拍回复：文字 + data/emoji 随机图"""
+        import random, os
+        from pathlib import Path
+
+        logger.info(f"[{self.platform_id}] 发送拍一拍回复: {text[:30]}...")
+        await self._ws.send_str(
+            json.dumps(
+                {
+                    "action": "send_private_msg",
+                    "params": {
+                        "user_id": int(user_id),
+                        "message": [{"type": "text", "data": {"text": text}}],
+                    },
+                }
+            )
+        )
+        try:
+            emoji_dir = Path(__file__).parent.parent.parent / "data" / "emoji"
+            images = (
+                [
+                    p
+                    for ext in ("*.png", "*.jpg", "*.jpeg", "*.gif")
+                    for p in emoji_dir.rglob(ext)
+                ]
+                if emoji_dir.exists()
+                else []
+            )
+            if images:
+                img = str(random.choice(images).absolute())
+                logger.info(f"[{self.platform_id}] 发送随机表情: {img[-30:]}")
+                await self._ws.send_str(
+                    json.dumps(
+                        {
+                            "action": "send_private_msg",
+                            "params": {
+                                "user_id": int(user_id),
+                                "message": [{"type": "image", "data": {"file": img}}],
+                            },
+                        }
+                    )
+                )
+        except Exception as e:
+            logger.warning(f"[{self.platform_id}] emoji发送失败: {e}")
 
     async def _handle_chat_message(self, data: Dict):
         """处理聊天消息"""
