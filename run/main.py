@@ -264,8 +264,15 @@ class Miya:
 
     def _setup_logger(self) -> logging.Logger:
         """设置日志"""
+        import os
+
         logger = logging.getLogger("Miya")
         logger.setLevel(logging.INFO)
+
+        # v7.0: daemon 模式下不添加独立 handler，由 root logger 统一管理
+        if os.environ.get("MIYA_DAEMON_MODE"):
+            logger.propagate = True
+            return logger
 
         # 控制台处理器
         console_handler = logging.StreamHandler()

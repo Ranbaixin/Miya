@@ -30,6 +30,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
+os.environ["MIYA_DAEMON_MODE"] = "1"  # v7.0: 标记 daemon 模式，避免重复日志 handler
 
 
 def setup_logging():
@@ -50,6 +51,18 @@ def setup_logging():
         "Miya.AgentHub",
         "botpy",
         "httpx",
+        "memory.core",
+        "memory.sqlite_backend",
+        "core.embedding_client",
+        "memory.working_memory",
+        "memory.historian",
+        "memory.diteng_listener",
+        "core.user_persona",
+        "core.awareness",
+        "core.autonomy_manager",
+        "core.autonomous_engine",
+        "core.web_api",
+        "core.problem_scanner",
     ]:
         logging.getLogger(noisy).setLevel(logging.WARNING)
 

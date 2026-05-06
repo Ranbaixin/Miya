@@ -155,10 +155,6 @@ class MiyaDaemon:
             from run.main import Miya
 
             self._miya = Miya()
-            # v7.0: 清除 Miya logger 自带的 handler，避免与根 handler 重复输出
-            miya_logger = logging.getLogger("Miya")
-            miya_logger.handlers.clear()
-            miya_logger.propagate = True
             logger.info("✅ Miya 核心初始化完成")
         except Exception as e:
             logger.error(f"❌ Miya 核心初始化失败: {e}", exc_info=True)

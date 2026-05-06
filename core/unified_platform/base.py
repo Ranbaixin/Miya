@@ -214,22 +214,31 @@ class BasePlatform(ABC):
     async def _health_check_loop(self):
         """后台健康检查循环"""
         await asyncio.sleep(self.health_check_interval)
+        consecutive_failures = 0
         while self._health.status in (PlatformStatus.ONLINE, PlatformStatus.DEGRADED):
             try:
                 ok = await self._do_health_check()
                 if not ok:
-                    logger.warning(f"[{self.platform_id}] 健康检查失败")
                     self._health.status = PlatformStatus.DEGRADED
-                    await self._emit(PlatformEvent.HEALTH_CHECK_FAILED, {})
+                    consecutive_failures += 1
+                    # 仅首次失败或每 10 次记录一次，避免日志刷屏
+                    if consecutive_failures == 1 or consecutive_failures % 10 == 0:
+                        logger.warning(
+                            f"[{self.platform_id}] 健康检查失败 (第{consecutive_failures}次)"
+                        )
                     if self.auto_reconnect:
                         await self._reconnect()
+                        consecutive_failures = 0
                         return
+                    else:
+                        await self._emit(PlatformEvent.HEALTH_CHECK_FAILED, {})
                 else:
                     if self._health.status == PlatformStatus.DEGRADED:
                         self._health.status = PlatformStatus.ONLINE
                         await self._emit(PlatformEvent.HEALTH_CHECK_RECOVERED, {})
+                    consecutive_failures = 0
             except Exception as e:
-                logger.warning(f"[{self.platform_id}] 健康检查异常: {e}")
+                logger.debug(f"[{self.platform_id}] 健康检查异常: {e}")
 
             await asyncio.sleep(self.health_check_interval)
 

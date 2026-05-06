@@ -1807,7 +1807,7 @@ class DecisionHub:
                 logger.warning(
                     f"[决策层] 构建的tool_context keys: {list(tool_context.keys())}"
                 )
-                logger.warning(
+                logger.debug(
                     f"[决策层] tool_context中 onebot_client={tool_context.get('onebot_client')}, send_like_callback={tool_context.get('send_like_callback')}"
                 )
                 self.ai_client.set_tool_context(tool_context)
