@@ -10,18 +10,14 @@ from .discord_platform import DiscordPlatform
 from .onebot_platform import OneBotPlatform
 from .generic_platform import GenericPlatform, WebChatPlatform
 from .webhook_base import WebhookPlatform
-from .webhook_platforms import (
-    LarkPlatform,
+from .webhook_platforms import LarkPlatform, LINEPlatform
+from .real_platforms import (
     KOOKPlatform,
     SlackPlatform,
-    LINEPlatform,
     DingTalkPlatform,
     SatoriPlatform,
-)
-from .wechat_platforms import (
     WeComPlatform,
-    WeixinOfficialAccountPlatform,
-    WeixinOCPlatform,
+    WeChatOfficialPlatform,
 )
 
 __all__ = [
@@ -39,6 +35,5 @@ __all__ = [
     "DingTalkPlatform",
     "SatoriPlatform",
     "WeComPlatform",
-    "WeixinOfficialAccountPlatform",
-    "WeixinOCPlatform",
+    "WeChatOfficialPlatform",
 ]

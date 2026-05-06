@@ -29,8 +29,14 @@ class LarkPlatform(WebhookPlatform):
 
     def __init__(self, config=None):
         super().__init__(config)
-        self._app_id = config.get("app_id", "") if config else ""
-        self._app_secret = config.get("app_secret", "") if config else ""
+        import os
+
+        self._app_id = (config.get("app_id", "") if config else "") or os.environ.get(
+            "LARK_APP_ID", ""
+        )
+        self._app_secret = (
+            config.get("app_secret", "") if config else ""
+        ) or os.environ.get("LARK_APP_SECRET", "")
         self._ws_client = None
 
     async def _do_connect(self) -> bool:

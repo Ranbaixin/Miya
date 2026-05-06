@@ -85,7 +85,7 @@ QQ_OFFICIAL_WEBHOOK_CONFIG = {
 # 功能: 私聊、群组、频道、内联查询
 
 TELEGRAM_CONFIG = {
-    "enabled": False,
+    "enabled": True,
     "bot_token": "",  # 格式: 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
     # 可选: 使用代理 (中国大陆可能需要)
     # "proxy": {
@@ -103,7 +103,7 @@ TELEGRAM_CONFIG = {
 # 功能: 服务器消息、私信、斜杠命令
 
 DISCORD_CONFIG = {
-    "enabled": False,
+    "enabled": True,
     "bot_token": "",  # 你的 Bot Token
     # 可选: 设置 intents
     # "intents": ["guilds", "guild_messages", "direct_messages"],
@@ -118,8 +118,8 @@ DISCORD_CONFIG = {
 
 FEISHU_CONFIG = {
     "enabled": True,
-    "app_id": "cli_a971b74179b81bd3",
-    "app_secret": "wCNSXVw6YLLa4Ov10PIACbeswUfpHXI6",
+    "app_id": "",  # 从环境变量或 .env 读取, 勿硬编码
+    "app_secret": "",  # 从环境变量或 .env 读取, 勿硬编码
     "verify_token": "",
 }
 
