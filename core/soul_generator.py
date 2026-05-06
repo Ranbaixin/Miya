@@ -920,8 +920,18 @@ class SoulGenerator:
             user_label = user_labels.get("owner", "")
             pronoun = user_pronouns.get("owner", "")
             if user_info:
-                user_id = user_info.get("user_id")
-                if user_id and str(user_id) != owner_id:
+                uid = user_info.get("user_id")
+                # v7.0: 权限引擎检查 + 回退到 OWNER_USER_ID
+                is_owner = user_info.get("is_owner", False)
+                if not is_owner and uid:
+                    try:
+                        from core.unified_permission import get_permission_engine
+
+                        if get_permission_engine().is_superadmin(str(uid)):
+                            is_owner = True
+                    except Exception:
+                        pass
+                if not is_owner and uid and str(uid) != owner_id:
                     user_label = user_labels.get("other", "")
                     pronoun = user_pronouns.get("other", "")
 
@@ -1249,9 +1259,23 @@ class SoulGenerator:
 
             user_label = user_labels.get("owner", "主人")
             pronoun = user_pronouns.get("owner", "你")
+            is_owner = False
             if user_info:
                 uid = user_info.get("user_id")
-                if uid and str(uid) != owner_id:
+                # v7.0: 通过权限引擎检查是否是所有者（跨平台支持）
+                is_owner = user_info.get("is_owner", False)
+                if not is_owner and uid:
+                    try:
+                        from core.unified_permission import get_permission_engine
+
+                        engine = get_permission_engine()
+                        if engine.is_superadmin(
+                            str(uid), platform=user_info.get("platform", "")
+                        ):
+                            is_owner = True
+                    except Exception:
+                        pass
+                if not is_owner and uid and str(uid) != owner_id:
                     user_label = user_labels.get("other", "其他用户")
                     pronoun = user_pronouns.get("other", "他/她")
 
@@ -1266,11 +1290,52 @@ class SoulGenerator:
             prompt = prompt.replace("{user_info}", user_info_str)
             prompt = prompt.replace("{previous_emotion}", previous_emotion)
             prompt = prompt.replace("{form_style}", form_style)
-            # 【强化】追加格式约束，防止AI返回非JSON文字
-            prompt += (
-                "\n\n⚠️ 重要：必须只输出原始JSON对象，禁止在JSON之前或之后添加任何文字、解释或感叹词。"
-                "\n第一个字符必须是 {，最后一个字符必须是 }。"
-            )
+
+            # v7.0: 动态生成 owner_instruction，从权限引擎读取所有者信息
+            owner_instruction = ""
+            if is_owner:
+                owner_name = user_info.get("owner_name", "") if user_info else ""
+                # 从权限引擎获取所有者名字
+                if not owner_name:
+                    try:
+                        from core.unified_permission import get_permission_engine
+
+                        engine = get_permission_engine()
+                        for person, info in engine._config.get(
+                            "superadmins", {}
+                        ).items():
+                            owner_name = info.get("name", "佳")
+                            break
+                    except Exception:
+                        owner_name = "佳"
+                # v7.0: 从 text_config 加载所有者提示模板
+                try:
+                    from core.config_loader import load_text_config
+
+                    text_cfg = load_text_config()
+                    owner_template = text_cfg.get("soul_generator", {}).get(
+                        "owner_instruction",
+                        "重要：无论什么形态，{owner_name}都是你最爱的人，也是你的创造者。",
+                    )
+                    owner_instruction = owner_template.replace(
+                        "{owner_name}", owner_name
+                    )
+                except Exception:
+                    owner_instruction = f"重要：无论什么形态，{owner_name}都是你最爱的人，也是你的创造者。对他的话可以更直接、更亲密。"
+            prompt = prompt.replace("{owner_instruction}", owner_instruction)
+            # v7.0: JSON格式约束从配置文件读取
+            json_constraint = ""
+            try:
+                from core.config_loader import load_text_config
+
+                text_cfg = load_text_config()
+                json_constraint = text_cfg.get("soul_generator", {}).get(
+                    "json_format_constraint",
+                    "⚠️ 重要：必须只输出原始JSON对象，第一个字符必须是 {，最后一个字符必须是 }。",
+                )
+            except Exception:
+                json_constraint = "⚠️ 重要：必须只输出原始JSON对象，第一个字符必须是 {，最后一个字符必须是 }。"
+            prompt += f"\n\n{json_constraint}"
 
             logger.warning(f"[灵魂] 发送的prompt: {prompt[:300]}")
 

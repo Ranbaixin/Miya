@@ -3257,34 +3257,47 @@ class DecisionHub:
             group_id = perception.get("group_id")
 
         def check_command_permission() -> bool:
-            """检查命令执行权限 - 从配置文件读取"""
+            """检查命令执行权限 - 使用统一权限引擎 (v7.0 跨平台)"""
             if not perception:
                 return True
 
-            from core.text_loader import get_permission
-
-            if not get_permission("command_permissions.enabled", True):
-                return True
-
             try:
-                # Desktop 平台用户自动获得超级管理员权限
-                if platform == "desktop":
-                    logger.info(f"[权限检查] Desktop平台用户自动获得超级管理员权限")
+                from core.unified_permission import get_permission_engine
+
+                engine = get_permission_engine()
+
+                cmd_config = engine._config.get("command_permissions", {})
+                if not cmd_config.get("enabled", False):
                     return True
 
-                if hasattr(self, "qq_net") and self.qq_net:
-                    superadmin_qq = getattr(self.qq_net, "superadmin_qq", 0)
-                    if superadmin_qq and user_id == superadmin_qq:
-                        logger.info(
-                            f"[权限检查] 用户 {user_id} 是超级管理员({superadmin_qq})，授权执行命令"
-                        )
+                plat = perception.get("platform", perception.get("source", ""))
+                raw_uid = str(user_id) if user_id else ""
+                unified_uid = perception.get("unified_user_id", "")
+
+                # 优先用 unified_user_id 匹配
+                check_id = unified_uid or raw_uid
+
+                if engine.is_superadmin(check_id, platform=plat):
+                    logger.info(f"[权限检查] {check_id} 是超级管理员，授权")
+                    return True
+
+                # fallback: raw user_id
+                if unified_uid and unified_uid != raw_uid:
+                    if engine.is_superadmin(raw_uid, platform=plat):
+                        logger.info(f"[权限检查] {raw_uid} 是超级管理员，授权")
                         return True
 
-                logger.warning(f"[权限检查] 用户 {user_id} 无权限执行命令")
+                logger.warning(f"[权限检查] 用户 {check_id} 无权限执行命令")
                 return False
             except Exception as e:
-                logger.warning(f"[权限检查异常] {e}，允许执行")
-                return True
+                logger.warning(f"[权限检查异常] {e}，拒绝执行")
+                return False
+            except Exception as e:
+                logger.warning(f"[权限检查异常] {e}，拒绝执行")
+                return False
+            except Exception as e:
+                logger.warning(f"[权限检查异常] {e}，拒绝执行")
+                return False
 
         def get_permission_denied_message() -> str:
             """获取权限不足消息"""

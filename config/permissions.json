@@ -3,6 +3,22 @@
   "last_updated": "2026-04-02",
   "description": "弥娅系统统一权限配置文件",
 
+  "superadmins": {
+    "佳": {
+      "name": "佳",
+      "ids": {
+        "qq": ["1523878699"],
+        "qqofficial": ["1523878699", "7C22343989F081B759F6DADC99148E17"],
+        "aiocqhttp": ["1523878699"],
+        "terminal": ["1523878699"],
+        "desktop": ["1523878699"],
+        "webchat": ["1523878699"],
+        "telegram": [],
+        "discord": []
+      }
+    }
+  },
+
   "permission_groups": {
     "Default": {
       "name": "默认权限组",

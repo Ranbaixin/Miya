@@ -67,6 +67,12 @@ config/api_keys.example.json
 data/memory/
 data/conversations/
 data/user_personas/
+data/lifebook/
+data/.emoji_backups/
+data/working_memory.json
+*.db-shm
+*.db-wal
+run/data/
 
 # Claude settings (may contain API keys)
 .claude/settings.json

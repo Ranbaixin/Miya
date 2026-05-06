@@ -1,139 +1,104 @@
+// ============================================================
+// 弥娅 App · 樱梦琉璃
+// ============================================================
 import { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import StatusBar from './components/StatusBar';
+import StarOceanBackground from './components/StarOceanBackground';
 import DashboardPage from './pages/DashboardPage';
-import SystemsPage from './pages/SystemsPage';
-import EmotionPage from './pages/EmotionPage';
-import MemoryPage from './pages/MemoryPage';
-import ToolsPage from './pages/ToolsPage';
-import SettingsPage from './pages/SettingsPage';
-import CognitivePage from './pages/CognitivePage';
-import PlatformPage from './pages/PlatformPage';
-import PluginMarketPage from './pages/PluginMarketPage';
-import PluginManagerPage from './pages/PluginManagerPage';
-import MCPServerPage from './pages/MCPServerPage';
-import ChatPage from './pages/ChatPage';
+import ModelPoolPage from './pages/ModelPoolPage';
+import AgentNetworkPage from './pages/AgentNetworkPage';
+import MessageQueuePage from './pages/MessageQueuePage';
+import LogViewerPage from './pages/LogViewerPage';
 import SoulPage from './pages/SoulPage';
-import PersonalityVectorPage from './pages/PersonalityVectorPage';
-import KnowledgeBasePage from './pages/KnowledgeBasePage';
-import VoicePage from './pages/VoicePage';
-import AutonomyPage from './pages/AutonomyPage';
-import LogsPage from './pages/LogsPage';
+import { useMiyaConnection, useEmotion, useMemory, usePersonality } from './services/miyaApi';
 
 const pageTitles: Record<string, string> = {
-  dashboard: '仪表盘',
-  systems: '系统',
-  emotion: '情感',
-  memory: '记忆',
-  cognitive: '认知',
-  tools: '工具',
-  platform: '平台',
-  plugin_market: '插件市场',
-  plugin_manager: '插件管理',
-  mcp_server: 'MCP服务',
-  chat: '对话',
-  soul: '灵魂',
-  personality: '人格',
-  knowledge: '知识库',
-  voice: '语音',
-  autonomy: '自主',
-  logs: '日志',
-  settings: '设置',
+  dashboard: '仪表盘', models: '模型池', agents: 'Agent网络',
+  platform: '平台', queue: '消息队列', soul: '灵魂监控',
+  personality: '人格向量', memory: '记忆', cognitive: '认知',
+  logs: '日志查看', tools: '工具', settings: '设置',
 };
 
-const backgrounds = [
-  { id: 'default', name: '默认', url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb' },
-  { id: 'miya', name: '弥娅定制', url: './background.jpg' },
-  { id: 'dark', name: '深色', url: '' },
-];
+const anim = {
+  initial: { opacity: 0, y: 6 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -4 },
+  transition: { duration: 0.22, ease: [0.4, 0, 0.2, 1] },
+};
 
 function App() {
   const [activePage, setActivePage] = useState('dashboard');
-  const [connected] = useState(true);
+  const { connected } = useMiyaConnection();
+  const { emotion } = useEmotion();
+  const { stats: memStats } = useMemory();
+  const { personality } = usePersonality();
   const [runtimeDuration, setRuntimeDuration] = useState(0);
-  const [bgId, setBgId] = useState('default');
+  const [subsystems] = useState({ mlink: true, memorynet: true, toolnet: true, webnet: true, qqnet: true, tts: true, scheduler: true, proactive: true });
+  const [queueSize] = useState(0);
+  const [modelCount] = useState(12);
 
-  const currentBg = backgrounds.find(b => b.id === bgId) || backgrounds[0];
-
-  const getBackgroundStyle = () => {
-    if (bgId === 'dark') {
-      return {
-        background: 'linear-gradient(135deg, rgba(0,20,30,0.95) 0%, rgba(10,10,20,0.9) 100%)',
-      };
-    }
-    return {
-      background: 'linear-gradient(135deg, rgba(0,20,30,0.8) 0%, rgba(10,10,20,0.7) 100%)',
-      backgroundImage: `url(${currentBg.url})`,
-      backgroundSize: 'cover',
-      backgroundBlendMode: 'overlay',
-    };
-  };
-
-  const formatDuration = useCallback((s: number) => {
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    const sec = s % 60;
+  const fmt = useCallback((s: number) => {
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
   }, []);
 
   useEffect(() => {
-    const timer = setInterval(() => setRuntimeDuration(d => d + 1), 1000);
-    return () => clearInterval(timer);
+    const t = setInterval(() => setRuntimeDuration(d => d + 1), 1000);
+    return () => clearInterval(t);
   }, []);
 
+  const domEmotion = emotion?.dominant_emotion || '—';
+
   const renderPage = () => {
+    const k = activePage;
     switch (activePage) {
-      case 'dashboard':
-        return <DashboardPage stats={{ messages: 156, groups: 5, friends: 4, tools: 69 }} />;
-      case 'systems':
-        return <SystemsPage />;
-      case 'emotion':
-        return <EmotionPage />;
-      case 'memory':
-        return <MemoryPage />;
-      case 'cognitive':
-        return <CognitivePage />;
-      case 'tools':
-        return <ToolsPage />;
-      case 'platform':
-        return <PlatformPage />;
-      case 'plugin_market':
-        return <PluginMarketPage />;
-      case 'plugin_manager':
-        return <PluginManagerPage />;
-      case 'mcp_server':
-        return <MCPServerPage />;
-      case 'chat':
-        return <ChatPage />;
-      case 'soul':
-        return <SoulPage />;
-      case 'personality':
-        return <PersonalityVectorPage />;
-      case 'knowledge':
-        return <KnowledgeBasePage />;
-      case 'voice':
-        return <VoicePage />;
-      case 'autonomy':
-        return <AutonomyPage />;
-      case 'logs':
-        return <LogsPage />;
-      case 'settings':
-        return <SettingsPage backgrounds={backgrounds} currentBg={bgId} onBgChange={setBgId} />;
-      default:
-        return <DashboardPage stats={{ messages: 156, groups: 5, friends: 4, tools: 69 }} />;
+      case 'dashboard': return <motion.div key={k} {...anim}><DashboardPage /></motion.div>;
+      case 'models': return <motion.div key={k} {...anim}><ModelPoolPage /></motion.div>;
+      case 'agents': return <motion.div key={k} {...anim}><AgentNetworkPage /></motion.div>;
+      case 'queue': return <motion.div key={k} {...anim}><MessageQueuePage /></motion.div>;
+      case 'soul': return <motion.div key={k} {...anim}><SoulPage /></motion.div>;
+      case 'logs': return <motion.div key={k} {...anim}><LogViewerPage /></motion.div>;
+      default: return (
+        <motion.div key={k} {...anim} className="flex items-center justify-center h-full">
+          <div className="frost-panel p-8 text-center">
+            <div className="text-3xl mb-3">✦</div>
+            <div className="text-[#d4789e] text-sm mb-1">{pageTitles[activePage] || activePage}</div>
+            <div className="text-[#b8aec8] text-xs">模块对接后端 API，实时拉取中...</div>
+          </div>
+        </motion.div>
+      );
     }
   };
 
   return (
-    <div className="flex h-screen text-white" style={getBackgroundStyle()}>
+    <div className="flex h-screen text-[#4a4058] relative">
+      <StarOceanBackground />
       <Sidebar activePage={activePage} onNavigate={setActivePage} />
-      <div className="flex-1 flex flex-col">
-        <Header title={`弥娅 AI 控制台 - ${pageTitles[activePage]}`} />
-        <div className="flex-1 overflow-auto">
-          {renderPage()}
+      <div className="flex-1 flex flex-col min-w-0 relative z-10">
+        <Header
+          title={`弥娅 · ${pageTitles[activePage] || activePage}`}
+          connected={connected}
+          modelCount={modelCount}
+          queueSize={queueSize}
+          currentEmotion={domEmotion}
+          emotionIntensity={emotion?.intensity || 0}
+          currentForm={personality?.current_form || '绯雪态'}
+          uptime={fmt(runtimeDuration)}
+        />
+        <div className="flex-1 overflow-auto relative">
+          <AnimatePresence mode="wait">
+            {renderPage()}
+          </AnimatePresence>
         </div>
-        <StatusBar connected={connected} runtimeDuration={runtimeDuration} formatDuration={formatDuration} />
+        <StatusBar
+          connected={connected}
+          runtimeDuration={runtimeDuration}
+          subsystems={subsystems}
+          memoryStats={memStats as any}
+        />
       </div>
     </div>
   );

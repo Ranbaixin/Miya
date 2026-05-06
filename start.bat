@@ -10,11 +10,14 @@ set TERMINAL_TYPE=wt
 cls
 echo ================================================================================
 echo                          MIYA AI VIRTUAL AVATAR SYSTEM
-echo                            Version 6.0.0
+echo                            Version 7.0.0
 echo                          Powered by Open-ClaudeCode
 echo ================================================================================
 echo.
 echo MAIN MENU:
+echo.
+echo   === Unified Core (v7.0) ===
+echo   [D] MIYA Daemon       - Unified backend for ALL platforms (hot-plug enabled!)
 echo.
 echo   === Core Modes ===
 echo   [1] MIYA Terminal     - Claude Code with Miya Soul (Personality+Memory+Emotion)
@@ -44,6 +47,7 @@ echo ===========================================================================
 set /p choice=Enter your choice [0-9, M, T, Q]:
 
 if "%choice%"=="0" goto :exit
+if /i "%choice%"=="D" goto :miya_daemon
 if "%choice%"=="1" goto :miya_terminal
 if "%choice%"=="2" goto :qq_client
 if "%choice%"=="3" goto :desktop_console
@@ -66,10 +70,81 @@ goto :main_menu
 :exit
 cls
 echo ================================================================================
-echo Thank you for using MIYA AI System v6.0.0!
+echo Thank you for using MIYA AI System v7.0.0!
 echo ================================================================================
 timeout /t 2 >nul
 exit /b 0
+
+:miya_daemon
+cls
+echo ================================================================================
+echo   MIYA DAEMON v7.0.0 - Unified Backend for ALL Platforms
+echo ================================================================================
+echo.
+echo   [1] Start Daemon (with API)      - Full daemon + Management API (port 9800)
+echo   [2] Start Daemon (no API)        - Daemon only, no web API
+echo   [3] Start with specific platforms  - Choose which platforms to enable
+echo   [4] Show platform status          - List all registered platforms
+echo   [B] Back to main menu
+echo ================================================================================
+set /p daemon_choice=Enter choice [1-4,B]:
+
+if "%daemon_choice%"=="1" goto :daemon_start_full
+if "%daemon_choice%"=="2" goto :daemon_start_no_api
+if "%daemon_choice%"=="3" goto :daemon_custom
+if "%daemon_choice%"=="4" goto :daemon_list_platforms
+if /i "%daemon_choice%"=="B" goto :main_menu
+goto :miya_daemon
+
+:daemon_start_full
+cls
+echo.
+echo ✦ 启动弥娅守护进程 (完整模式)...
+echo ────────────────────────────────────────
+echo.
+echo   守护进程 + 管理 API : http://localhost:9800
+echo   实时事件流: ws://localhost:9800/api/v1/ws
+echo   API 文档: http://localhost:9800/docs
+echo.
+echo   按 Ctrl+C 退出
+echo.
+python run/daemon.py --api-port 9800
+pause
+goto :main_menu
+
+:daemon_start_no_api
+cls
+echo.
+echo ✦ 启动弥娅守护进程 (纯后台模式)...
+echo ────────────────────────────────────────
+echo.
+echo   仅启动守护进程，不开启 API
+echo   按 Ctrl+C 退出
+echo.
+python run/daemon.py --no-api
+pause
+goto :main_menu
+
+:daemon_custom
+cls
+echo ================================================================================
+echo   Choose platforms to start (comma-separated)
+echo ================================================================================
+echo.
+python -c "from config.platforms_config import get_enabled_platforms; [print(f'  - {k}') for k in get_enabled_platforms()]"
+echo.
+echo Example: qqofficial,webchat
+echo.
+set /p platforms_list=Enter platforms:
+python run/daemon.py --platforms "%platforms_list%"
+pause
+goto :main_menu
+
+:daemon_list_platforms
+cls
+python run/daemon.py --list-platforms
+pause
+goto :miya_daemon
 
 :model_select
 cls
