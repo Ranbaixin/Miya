@@ -35,16 +35,23 @@ sys.path.insert(0, str(PROJECT_ROOT))
 def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+        format="[%(name)s] %(levelname)s: %(message)s",
+        datefmt="%H:%M:%S",
         handlers=[
             logging.StreamHandler(),
-            logging.FileHandler(
-                PROJECT_ROOT / "logs" / "miya_daemon.log",
-                encoding="utf-8",
-                mode="a",
-            ),
         ],
+        force=True,  # v7.0: 清除其他模块添加的重复 handler
     )
+    # 抑制启动时过于啰嗦的日志
+    for noisy in [
+        "webnet.ToolNet.registry",
+        "hub.platform_adapters",
+        "Miya.Gestalt",
+        "Miya.AgentHub",
+        "botpy",
+        "httpx",
+    ]:
+        logging.getLogger(noisy).setLevel(logging.WARNING)
 
 
 async def run_daemon(

@@ -20,6 +20,7 @@ from mlink.message import Message, MessageType, FlowType
 
 
 logger = logging.getLogger(__name__)
+_adapters_cache = None  # v7.0: 模块级缓存，避免每次消息初始化 18 个适配器
 
 
 class PlatformAdapter:
@@ -577,43 +578,36 @@ class WebAdapter(PlatformAdapter):
 
 def get_adapter(platform_name: str) -> PlatformAdapter:
     """
-    获取平台适配器
-
-    Args:
-        platform_name: 平台名称
-
-    Returns:
-        平台适配器实例
-
-    Raises:
-        ValueError: 不支持的平台
+    获取平台适配器 (v7.0: 模块级缓存，避免每次消息重建)
     """
-    adapters = {
-        "terminal": TerminalAdapter(),
-        "qq": QQAdapter(),
-        "pc_ui": PCUIAdapter(),
-        "web": WebAdapter(),
-        "desktop": PCUIAdapter(),
-        # 新增平台
-        "qq_official": QQAdapter(),  # QQ 官方机器人
-        "qqofficial": QQAdapter(),
-        "lark": QQAdapter(),  # 飞书
-        "dingtalk": QQAdapter(),  # 钉钉
-        "wecom": QQAdapter(),  # 企业微信
-        "wechat": QQAdapter(),  # 微信
-        "line": QQAdapter(),  # LINE
-        "webchat": QQAdapter(),  # 网页聊天
-        "satori": QQAdapter(),  # Satori 协议
-        "discord": QQAdapter(),  # Discord
-        "telegram": QQAdapter(),  # Telegram
-        "slack": QQAdapter(),  # Slack
-        "kook": QQAdapter(),  # KOOK
-    }
+    global _adapters_cache
+    if _adapters_cache is None:
+        _adapters_cache = {
+            "terminal": TerminalAdapter(),
+            "qq": QQAdapter(),
+            "pc_ui": PCUIAdapter(),
+            "web": WebAdapter(),
+            "desktop": PCUIAdapter(),
+            "qq_official": QQAdapter(),
+            "qqofficial": QQAdapter(),
+            "lark": QQAdapter(),
+            "dingtalk": QQAdapter(),
+            "wecom": QQAdapter(),
+            "wechat": QQAdapter(),
+            "line": QQAdapter(),
+            "webchat": QQAdapter(),
+            "satori": QQAdapter(),
+            "discord": QQAdapter(),
+            "telegram": QQAdapter(),
+            "slack": QQAdapter(),
+            "kook": QQAdapter(),
+            "aiocqhttp": QQAdapter(),
+        }
 
-    adapter = adapters.get(platform_name)
+    adapter = _adapters_cache.get(platform_name)
     if not adapter:
         raise ValueError(
-            f"不支持的平台: {platform_name}，支持的平台: {list(adapters.keys())}"
+            f"不支持的平台: {platform_name}，支持的平台: {list(_adapters_cache.keys())}"
         )
 
     return adapter

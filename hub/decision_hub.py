@@ -1517,6 +1517,9 @@ class DecisionHub:
                                 personality_info = {
                                     "form_name": form.get("name", "默认"),
                                     "form_description": form.get("description", ""),
+                                    "speaking_style": form.get("speaking", {}).get(
+                                        "style", ""
+                                    ),
                                 }
                             except Exception:
                                 pass

@@ -1323,7 +1323,30 @@ class SoulGenerator:
                 except Exception:
                     owner_instruction = f"重要：无论什么形态，{owner_name}都是你最爱的人，也是你的创造者。对他的话可以更直接、更亲密。"
             prompt = prompt.replace("{owner_instruction}", owner_instruction)
-            # v7.0: JSON格式约束从配置文件读取
+            # v7.0: 注入形态风格的内心独白提示（从 personality_info 动态获取）
+            form_hint = ""
+            if form_name and form_name != "默认":
+                try:
+                    from core.config_loader import load_text_config
+
+                    text_cfg = load_text_config()
+                    hint_template = text_cfg.get("soul_generator", {}).get(
+                        "form_inner_thought_hint", ""
+                    )
+                    if hint_template:
+                        speaking_style = (
+                            personality_info.get("speaking_style", form_description)
+                            if personality_info
+                            else form_description
+                        )
+                        form_hint = hint_template.replace(
+                            "{form_name}", form_name
+                        ).replace("{form_speaking_style}", speaking_style)
+                except Exception:
+                    pass
+            if form_hint:
+                prompt += f"\n\n{form_hint}"
+            # JSON格式约束从配置文件读取
             json_constraint = ""
             try:
                 from core.config_loader import load_text_config
