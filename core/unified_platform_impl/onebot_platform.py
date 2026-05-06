@@ -132,7 +132,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                         .get("poke_responses", {})
                         .get("local_emoji", "")
                     )
-                    await self._send_onebot_poke_reply(user_id, poke_text)
+                    await self._send_onebot_poke_reply(user_id, group_id, poke_text)
 
                     # 第二层：异步走 AI 生成情感回复
                     content = f"[拍一拍] 用户 {user_id} 拍了拍你"
@@ -144,12 +144,15 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                         group_id=group_id,
                     )
                     if ai_response and self._ws and self._connected:
+                        action = "send_group_msg" if group_id else "send_private_msg"
+                        target = "group_id" if group_id else "user_id"
+                        target_val = int(group_id) if group_id else int(user_id)
                         await self._ws.send_str(
                             json.dumps(
                                 {
-                                    "action": "send_private_msg",
+                                    "action": action,
                                     "params": {
-                                        "user_id": int(user_id),
+                                        target: target_val,
                                         "message": [
                                             {
                                                 "type": "text",
@@ -167,18 +170,23 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         else:
             logger.info(f"[{self.platform_id}] 通知: {notice_type}")
 
-    async def _send_onebot_poke_reply(self, user_id: str, text: str):
+    async def _send_onebot_poke_reply(self, user_id: str, group_id: str, text: str):
         """拍一拍回复：文字 + data/emoji 随机图"""
-        import random, os
+        import random
         from pathlib import Path
+
+        is_group = bool(group_id)
+        action = "send_group_msg" if is_group else "send_private_msg"
+        target = "group_id" if is_group else "user_id"
+        target_val = int(group_id) if is_group else int(user_id)
 
         logger.info(f"[{self.platform_id}] 发送拍一拍回复: {text[:30]}...")
         await self._ws.send_str(
             json.dumps(
                 {
-                    "action": "send_private_msg",
+                    "action": action,
                     "params": {
-                        "user_id": int(user_id),
+                        target: target_val,
                         "message": [{"type": "text", "data": {"text": text}}],
                     },
                 }
@@ -201,9 +209,9 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 await self._ws.send_str(
                     json.dumps(
                         {
-                            "action": "send_private_msg",
+                            "action": action,
                             "params": {
-                                "user_id": int(user_id),
+                                target: target_val,
                                 "message": [{"type": "image", "data": {"file": img}}],
                             },
                         }
