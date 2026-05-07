@@ -185,7 +185,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
     def _is_at_bot(self, message, bot_qq: str) -> bool:
         if isinstance(message, str):
-            return f"@{bot_qq}" in message
+            return f"@{bot_qq}" in message or f"[CQ:at,qq={bot_qq}]" in message
         for seg in message:
             if isinstance(seg, dict) and seg.get("type") == "at":
                 at_qq = str(seg.get("data", {}).get("qq", ""))
@@ -194,8 +194,15 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         return False
 
     def _extract_at_list(self, message) -> list:
+        import re
+
         at_list = []
         if isinstance(message, str):
+            for m in re.finditer(r"\[CQ:at,qq=(\d+)\]", message):
+                try:
+                    at_list.append(int(m.group(1)))
+                except ValueError:
+                    pass
             return at_list
         for seg in message:
             if isinstance(seg, dict) and seg.get("type") == "at":
