@@ -26,6 +26,11 @@
       "description": "所有用户默认拥有的基本权限",
       "permissions": [
         "tool.get_current_time",
+        "tool.web_search",
+        "tool.baiduhot",
+        "tool.weibohot",
+        "tool.douyinhot",
+        "tool.weather_query",
         "memory.read",
         "knowledge.search",
         "agent.chat"
@@ -82,6 +87,10 @@
       "permissions": [
         "tool.web_search",
         "tool.get_current_time",
+        "tool.baiduhot",
+        "tool.weibohot",
+        "tool.douyinhot",
+        "tool.weather_query",
         "memory.read",
         "knowledge.search",
         "agent.chat"
@@ -106,6 +115,10 @@
     "web": ["Web"],
     "desktop": ["Desktop"],
     "qq": ["QQ"],
+    "qqofficial": ["QQ"],
+    "aiocqhttp": ["QQ"],
+    "lark": ["QQ"],
+    "webchat": ["Web"],
     "discord": ["Default"],
     "telegram": ["Default"]
   },
@@ -245,13 +258,24 @@
       "terminal_default",
       "1523878699",
       "qq_1523878699",
-      "terminal_1523878699"
+      "terminal_1523878699",
+      "qqofficial_1523878699",
+      "aiocqhttp_1523878699",
+      "lark_452c3ccc",
+      "desktop_user",
+      "webchat_1523878699"
     ],
     "super_admin_whitelist": [
       "terminal_default",
       "1523878699",
       "qq_1523878699",
-      "terminal_1523878699"
+      "terminal_1523878699",
+      "qqofficial_1523878699",
+      "qqofficial_7C22343989F081B759F6DADC99148E17",
+      "aiocqhttp_1523878699",
+      "lark_452c3ccc",
+      "desktop_user",
+      "webchat_1523878699"
     ]
   },
 
