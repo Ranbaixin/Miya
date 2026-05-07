@@ -350,10 +350,11 @@ class MultiVisionAnalyzer:
         selected_model = await self._select_best_model()
 
         # 尝试分析
+        tried_models = set()
         for attempt in range(max_retries):
             try:
-                # 每次重试都重新选择最佳模型
-                selected_model = await self._select_best_model()
+                # 每次重试都重新选择最佳模型（跳过已尝试的）
+                selected_model = await self._select_best_model(exclude=tried_models)
                 logger.info(
                     f"[MultiVisionAnalyzer] 使用 {selected_model.name} 分析图片 (尝试 {attempt + 1}/{max_retries})"
                 )
@@ -401,17 +402,17 @@ class MultiVisionAnalyzer:
 
                 # 更新模型统计
                 self._update_model_stats(selected_model, success=False)
+                tried_models.add(selected_model.name)
 
-                # 强制选择下一个模型，不管 _select_fallback_model 返回什么
+                # 强制选择下一个模型，跳过已尝试过的
                 logger.info(f"[MultiVisionAnalyzer] 尝试选择备用模型...")
                 fallback = await self._select_fallback_model(selected_model)
 
-                if fallback:
+                if fallback and fallback.name not in tried_models:
                     selected_model = fallback
                     logger.info(
                         f"[MultiVisionAnalyzer] 切换到备用模型: {selected_model.name}"
                     )
-                    # 继续尝试
                     continue
 
                 # 没有备用模型，直接返回简单分析
@@ -451,12 +452,16 @@ class MultiVisionAnalyzer:
             processing_time_ms=processing_time_ms,
         )
 
-    async def _select_best_model(self) -> VisionModelConfig:
+    async def _select_best_model(
+        self, exclude: Optional[set] = None
+    ) -> VisionModelConfig:
         """选择最佳模型（基于优先级、成本和可用性）"""
         available_models = [
             model
             for model in self.models.values()
-            if model.enabled and model.model_type != VisionModelType.SIMPLE_ANALYSIS
+            if model.enabled
+            and model.model_type != VisionModelType.SIMPLE_ANALYSIS
+            and (not exclude or model.name not in exclude)
         ]
 
         if not available_models:

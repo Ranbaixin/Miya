@@ -1,7 +1,7 @@
 {
   "vision_preferences": {
-    "timeout": 30,
-    "http_client_timeout": 30,
+    "timeout": 90,
+    "http_client_timeout": 90,
     "model_defaults": {
       "enabled": true,
       "cost_per_call": 0.0,
