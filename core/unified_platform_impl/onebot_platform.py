@@ -37,6 +37,12 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         self._process_lock = asyncio.Lock()
         self._poke_cooldown: Dict[str, float] = {}  # user_id → last_poke_time
         self._hub_refs_set = False
+        self._queue_initialized = False
+        self._min_process_interval = 1.0
+        self._last_process_time = 0.0
+        # 群聊消息批处理缓冲: group_id → [messages]
+        self._batch_buffers: Dict[str, list] = {}
+        self._batch_timers: Dict[str, asyncio.Task] = {}
 
     @property
     def _config_data(self) -> dict:
@@ -93,7 +99,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
     # ============ 决策中心引用登记 ============
 
     def _ensure_decision_hub_refs(self):
-        """一次性设置决策中心引用 & 启动调度器, 使平台工具可被 DecisionHub 调用"""
+        """一次性设置决策中心引用 & 启动调度器 & 注册 M-Link 节点"""
         self._hub_refs_set = True
         try:
             miya = getattr(self, "_miya_core", None)
@@ -116,10 +122,28 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 if not getattr(miya.scheduler, "_started", False):
                     miya.scheduler.start_background()
                     logger.info(f"[{self.platform_id}] 调度器已启动")
-                else:
-                    logger.debug(f"[{self.platform_id}] 调度器已运行中")
         except Exception as e:
             logger.debug(f"[{self.platform_id}] 调度器启动失败: {e}")
+
+        # 注册 M-Link 节点
+        try:
+            miya = getattr(self, "_miya_core", None)
+            if miya and hasattr(miya, "mlink") and miya.mlink:
+                miya.mlink.register_node(
+                    "onebot_platform",
+                    [
+                        "onebot_group_chat",
+                        "onebot_private_chat",
+                        "onebot_command",
+                        "onebot_message_history",
+                        "onebot_poke",
+                        "onebot_multimedia",
+                        "onebot_image_analysis",
+                    ],
+                )
+                logger.info(f"[{self.platform_id}] M-Link 节点已注册")
+        except Exception as e:
+            logger.debug(f"[{self.platform_id}] M-Link 节点注册失败: {e}")
 
     # ============ 访问控制 ============
 
@@ -1084,6 +1108,97 @@ class OneBotPlatform(MessageMixin, BasePlatform):
     @staticmethod
     def cq_face(face_id: int) -> str:
         return f"[CQ:face,id={face_id}]"
+
+    # ============ 扩展 OneBot API ============
+
+    async def get_group_info(self, group_id: int) -> Optional[dict]:
+        return await self._call_onebot_api("get_group_info", {"group_id": group_id})
+
+    async def get_group_list(self) -> Optional[list]:
+        result = await self._call_onebot_api("get_group_list", {})
+        return result if isinstance(result, list) else None
+
+    async def get_group_member_list(self, group_id: int) -> Optional[list]:
+        result = await self._call_onebot_api(
+            "get_group_member_list", {"group_id": group_id}
+        )
+        return result if isinstance(result, list) else None
+
+    async def get_group_member_info(
+        self, group_id: int, user_id: int, no_cache: bool = False
+    ) -> Optional[dict]:
+        return await self._call_onebot_api(
+            "get_group_member_info",
+            {"group_id": group_id, "user_id": user_id, "no_cache": no_cache},
+        )
+
+    async def get_friend_list(self) -> Optional[list]:
+        result = await self._call_onebot_api("get_friend_list", {})
+        return result if isinstance(result, list) else None
+
+    async def get_stranger_info(
+        self, user_id: int, no_cache: bool = False
+    ) -> Optional[dict]:
+        return await self._call_onebot_api(
+            "get_stranger_info", {"user_id": user_id, "no_cache": no_cache}
+        )
+
+    async def get_group_msg_history(
+        self, group_id: int, message_seq: int = 0, count: int = 20
+    ) -> Optional[dict]:
+        return await self._call_onebot_api(
+            "get_group_msg_history",
+            {"group_id": group_id, "message_seq": message_seq, "count": count},
+        )
+
+    async def get_msg(self, message_id: int) -> Optional[dict]:
+        return await self._call_onebot_api("get_msg", {"message_id": message_id})
+
+    async def get_forward_msg(self, forward_id: str) -> Optional[dict]:
+        return await self._call_onebot_api("get_forward_msg", {"id": forward_id})
+
+    async def send_face_message(
+        self, face_id: int, msg_type: str = "private", target_id: int = 0
+    ):
+        """发送 QQ 内置表情"""
+        cq = self.cq_face(face_id)
+        if self._ws and self._connected:
+            params = {"message_type": msg_type, "message": cq}
+            if msg_type == "private":
+                params["user_id"] = target_id
+            else:
+                params["group_id"] = target_id
+            await self._ws.send_str(
+                json.dumps({"action": "send_msg", "params": params})
+            )
+
+    def _find_named_emoji(self, name: str) -> Optional[Path]:
+        """在本地表情包仓库中按名称查找"""
+        from pathlib import Path as _Path
+
+        emoji_dirs = ["data/emoji", "data"]
+        name_lower = name.lower()
+        for d in emoji_dirs:
+            root = _Path(d)
+            if not root.exists():
+                continue
+            for img_file in root.rglob("*"):
+                if not img_file.suffix.lower() in (
+                    ".gif",
+                    ".jpg",
+                    ".jpeg",
+                    ".png",
+                    ".webp",
+                    ".bmp",
+                ):
+                    continue
+                stem = img_file.stem.lower()
+                # 忽略 tmp 前缀的自动保存文件
+                if stem.startswith("tmp"):
+                    continue
+                if name_lower in stem or stem in name_lower:
+                    return img_file
+        return None
 
     async def _download_reference_image(self, image_data: dict) -> Optional[bytes]:
         """下载引用消息中的图片
