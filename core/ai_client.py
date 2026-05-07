@@ -305,10 +305,20 @@ class BaseAIClient:
         if not user_message:
             return False
 
-        # 跳过包含【系统提醒】或【对话历史上下文】的消息（避免重复检测）
-        if "【系统提醒】" in user_message or "【对话历史上下文】" in user_message:
-            logger.debug(f"[AIClient] 跳过系统消息检测: {user_message[:50]}")
-            return False
+        # 跳过包含【系统提醒】或上下文标记的消息（避免重复检测）
+        context_markers = [
+            "【系统提醒】",
+            "【对话历史上下文】",
+            "【当前感知】",
+            "【群聊时间线】",
+            "【群聊动态】",
+            "【与弥娅的对话】",
+            "【工作记忆】",
+        ]
+        for marker in context_markers:
+            if marker in user_message:
+                logger.debug(f"[AIClient] 跳过上下文消息检测: {user_message[:50]}")
+                return False
 
         # 需要执行操作的关键字模式
         action_patterns = [

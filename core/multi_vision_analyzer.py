@@ -432,9 +432,24 @@ class MultiVisionAnalyzer:
                     processing_time_ms=processing_time_ms,
                 )
 
-        # 不应该到达这里
+        # 所有模型重试完毕仍失败 → 回退到简单分析
+        logger.warning(
+            "[MultiVisionAnalyzer] 所有 API 模型均已失败，回退到本地简单分析"
+        )
         processing_time_ms = (time.time() - start_time) * 1000
-        return self._create_error_result("所有模型分析失败", processing_time_ms)
+        simple_result = self._simple_image_analysis(image_data)
+        return ImageAnalysisResult(
+            success=True,
+            description=simple_result["description"],
+            labels=simple_result["labels"],
+            nsfw_score=simple_result["nsfw_score"],
+            size_kb=image_size_kb,
+            format=image_format,
+            model_used="简单分析(回退)",
+            provider="local",
+            confidence=0.2,
+            processing_time_ms=processing_time_ms,
+        )
 
     async def _select_best_model(self) -> VisionModelConfig:
         """选择最佳模型（基于优先级、成本和可用性）"""
