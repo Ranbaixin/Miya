@@ -101,8 +101,10 @@ class LarkPlatform(WebhookPlatform):
         response = await self.route_to_decision_hub(
             content=content,
             user_id=str(user_id),
+            user_name=str(user_id),
             message_type=msg_type,
             group_id=chat_id,
+            is_at_bot="@_all" in content or "@全员" in content,
         )
         if response:
             try:

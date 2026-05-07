@@ -971,15 +971,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         if group_id_str and msg_type == "group":
             group_name = await self._resolve_group_name(group_id_str)
 
-        # === 13. 谛听旁观监听（decision_hub 已内置，此层不重复调用，
-        # 仅传递必要的元数据给 route_to_decision_hub）===
-
-        # === 15. 全局记忆持久化 ===
-        asyncio.ensure_future(
-            self._persist_to_global_memory(
-                msg_type, group_id_str, user_id, content, user_name, group_name
-            )
-        )
+        # === 13. 谛听 / 全局记忆 (decision_hub 已内置) ===
 
         if has_media:
             extra["has_media"] = True
@@ -1003,19 +995,8 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             )
 
         if response:
-            # === 17. 响应后处理 ===
-            response = self._filter_thinking(response)
-            response = self._filter_output(response)
-
-            # 离别检测
-            asyncio.ensure_future(self._detect_farewell(content, user_id))
-
-            # LifeBook 记录
-            asyncio.ensure_future(self._record_lifebook(content, response))
-
             await self._send_onebot_reply(data, response)
         elif has_media and not is_at_bot:
-            # 群聊非@图片：AI 不回复，只做存储
             pass
 
     async def _send_onebot_reply(self, original: Dict, text: str):

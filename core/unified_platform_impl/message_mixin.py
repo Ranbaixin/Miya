@@ -1,11 +1,13 @@
 """
 平台消息处理辅助 Mixin
 
-提供所有平台共享的消息转换和路由逻辑。
+提供所有平台共享的消息转换、路由逻辑和通用后处理。
+每个平台只需：解析消息 → route_to_decision_hub() → 拆分发送
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime
 from typing import Dict, Any, Optional
@@ -21,6 +23,127 @@ class MessageMixin:
 
     def set_miya_core(self, miya):
         self._miya_core = miya
+
+    # ============ 通用后处理 (所有平台自动享有) ============
+
+    @staticmethod
+    def _filter_thinking(text: str) -> str:
+        """过滤思考过程（DeepSeek R1 等推理模型的残留）"""
+        import re
+
+        patterns = [
+            r"^好的，用户是在.*?\n",
+            r"^首先，用户.*?\n",
+            r"^接下来，我需要.*?\n",
+            r"^在之前的对话中.*?\n",
+            r"^所以我的回答.*?\n",
+            r"^综上所述.*?\n",
+            r"^嗯，我是弥娅.*?\n",
+            r"^这个问题的回答.*?\n",
+            r"^根据设定，我.*?\n",
+            r"^作为.*?我.*?\n",
+        ]
+        for p in patterns:
+            text = re.sub(p, "", text, flags=re.IGNORECASE)
+        text = re.sub(r"\n{3,}", "\n\n", text)
+        return text.strip()
+
+    @staticmethod
+    def _filter_output(text: str) -> str:
+        """感叹号刷屏过滤"""
+        try:
+            import json
+            import random
+            from pathlib import Path
+
+            config_path = (
+                Path(__file__).parent.parent.parent / "config" / "text_config.json"
+            )
+            if not config_path.exists():
+                return text
+
+            with open(config_path, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            of = cfg.get("output_filter", {})
+            if not of.get("enabled", False):
+                return text
+
+            threshold = of.get("exclamation_threshold", 0)
+            if threshold > 0:
+                count = text.count("!")
+                if count >= threshold:
+                    fallbacks = of.get("fallback_responses", ["好的~"])
+                    logger.info(f"[MessageMixin] 刷屏过滤: {count}个感叹号 → 替换")
+                    return random.choice(fallbacks)
+        except Exception:
+            pass
+        return text
+
+    async def _after_route(self, content: str, response: str, user_id: str) -> None:
+        """路由后副作用: 离别检测 + LifeBook 记录"""
+        if not response or not content:
+            return
+        try:
+            miya = getattr(self, "_miya_core", None)
+            if not miya or not hasattr(miya, "decision_hub"):
+                return
+
+            from core.qq_command_config import is_farewell_keyword
+
+            if is_farewell_keyword(content):
+                logger.info(f"[{self.platform_id}] 检测到离别语")
+                await miya.decision_hub.handle_session_end(
+                    session_id=user_id, platform=self.platform_id
+                )
+        except Exception:
+            pass
+
+        try:
+            from memory.lifebook import get_lifebook
+
+            lifebook = get_lifebook()
+            await lifebook.record_interaction(
+                user_message=content,
+                lover_response=response,
+                topics=[],
+                emotion="平静",
+            )
+        except Exception:
+            pass
+
+    @staticmethod
+    def _split_message(text: str, max_len: int = 200) -> list:
+        """按句子边界拆分长消息"""
+        if len(text) <= max_len:
+            return [text]
+        chunks = []
+        remaining = text
+        while remaining:
+            if len(remaining) <= max_len:
+                chunks.append(remaining)
+                break
+            segment = remaining[:max_len]
+            break_points = [
+                segment.rfind("\n\n"),
+                segment.rfind("\n"),
+                segment.rfind("。"),
+                segment.rfind("！"),
+                segment.rfind("？"),
+                segment.rfind("."),
+                segment.rfind("! "),
+                segment.rfind("? "),
+                segment.rfind(" "),
+            ]
+            best = max(break_points)
+            if best > max_len // 2:
+                split_at = best + 1
+            else:
+                split_at = max_len
+            chunks.append(remaining[:split_at].strip())
+            remaining = remaining[split_at:].strip()
+        return chunks
+
+    # ============ 核心路由 ============
 
     async def route_to_decision_hub(
         self,
@@ -127,6 +250,14 @@ class MessageMixin:
             if hasattr(miya, "decision_hub"):
                 response = await miya.decision_hub.process_perception_cross_platform(
                     mlink_msg
+                )
+                # === 通用后处理 ===
+                if response:
+                    response = self._filter_thinking(response)
+                    response = self._filter_output(response)
+                # 副作用 (fire-and-forget)
+                asyncio.ensure_future(
+                    self._after_route(content, response or "", user_id)
                 )
                 return response if response else "弥娅暂无回复"
             else:

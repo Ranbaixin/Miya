@@ -67,42 +67,64 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
 
             async def _do_handle(msg, msg_type):
                 try:
+                    author = msg.author
                     user_id = str(
-                        getattr(msg.author, "id", None)
-                        or getattr(msg.author, "member_openid", None)
-                        or getattr(msg.author, "user_openid", None)
+                        getattr(author, "id", None)
+                        or getattr(author, "member_openid", None)
+                        or getattr(author, "user_openid", None)
                         or ""
                     )
-                    user_name = getattr(msg.author, "username", user_id)
+                    user_name = (
+                        getattr(author, "username", "")
+                        or getattr(author, "nick", "")
+                        or user_id
+                    )
                     content = msg.content.strip() if msg.content else ""
+                    if not content:
+                        return
                     response = await platform.route_to_decision_hub(
                         content=content,
                         user_id=user_id,
                         user_name=user_name,
-                        message_type=msg_type,
+                        message_type=("c2c" if msg_type == "c2c" else "private"),
                         is_at_bot=True,
                     )
-                    await msg.reply(content=response or "弥娅暂无回复")
+                    resp_text = response or "弥娅暂无回复"
+                    for chunk in platform._split_message(resp_text, 500):
+                        await msg.reply(content=chunk)
+                        await asyncio.sleep(0.3)
                 except Exception as e:
                     logger.error(f"[qqofficial] 消息处理异常: {e}")
 
             async def _do_handle_group(msg):
                 try:
                     user_id = str(msg.author.member_openid)
+                    user_name = (
+                        getattr(msg.author, "username", "")
+                        or getattr(msg.author, "nick", "")
+                        or user_id
+                    )
                     content = msg.content.strip() if msg.content else ""
+                    group_id = msg.group_openid
+                    if not content:
+                        return
                     response = await platform.route_to_decision_hub(
                         content=content,
                         user_id=user_id,
+                        user_name=user_name,
                         message_type="group",
-                        group_id=msg.group_openid,
+                        group_id=group_id,
                         is_at_bot=True,
                     )
-                    await msg._api.post_group_message(
-                        group_openid=msg.group_openid,
-                        msg_type=0,
-                        msg_id=msg.id,
-                        content=response or "弥娅暂无回复",
-                    )
+                    resp_text = response or "弥娅暂无回复"
+                    for chunk in platform._split_message(resp_text, 500):
+                        await msg._api.post_group_message(
+                            group_openid=group_id,
+                            msg_type=0,
+                            msg_id=msg.id,
+                            content=chunk,
+                        )
+                        await asyncio.sleep(0.3)
                 except Exception as e:
                     logger.error(f"[qqofficial] 群消息处理异常: {e}")
 
