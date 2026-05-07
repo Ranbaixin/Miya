@@ -207,41 +207,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                         pass
         return at_list
 
-    # ============ 消息拆分 ============
-
-    def _split_message(self, text: str, max_len: int = 200) -> list:
-        """按句子边界拆分长消息"""
-        if len(text) <= max_len:
-            return [text]
-        chunks = []
-        remaining = text
-        while remaining:
-            if len(remaining) <= max_len:
-                chunks.append(remaining)
-                break
-            # 在 max_len 范围内找最佳断点（优先段落 → 换行 → 句号 → 空格）
-            segment = remaining[:max_len]
-            break_points = [
-                segment.rfind("\n\n"),
-                segment.rfind("\n"),
-                segment.rfind("。"),
-                segment.rfind("！"),
-                segment.rfind("？"),
-                segment.rfind("."),
-                segment.rfind("! "),
-                segment.rfind("? "),
-                segment.rfind(" "),
-            ]
-            best = max(break_points)
-            if best > max_len // 2:
-                split_at = best + 1
-            else:
-                split_at = max_len
-            chunks.append(remaining[:split_at].strip())
-            remaining = remaining[split_at:].strip()
-        return chunks
-
-    # ============ 群名解析 ============
+    # ============ 群名解析 (OneBot 专用) ============
 
     async def _resolve_group_name(self, group_id: str) -> str:
         try:
@@ -253,131 +219,6 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         except Exception:
             pass
         return ""
-
-    # ============ 全局记忆持久化 ============
-
-    async def _persist_to_global_memory(
-        self,
-        msg_type: str,
-        chat_id: str,
-        sender_id: str,
-        text: str,
-        sender_name: str,
-        group_name: str,
-    ):
-        try:
-            miya = getattr(self, "_miya_core", None)
-            if not miya or not hasattr(miya, "memory_net"):
-                return
-            memory_net = miya.memory_net
-            session_id = f"{msg_type}_{chat_id}" if chat_id else f"private_{sender_id}"
-            await memory_net.conversation_history.add_message(
-                session_id=session_id,
-                role="user",
-                content=text,
-                agent_id="miya_default",
-                metadata={
-                    "source": self.platform_id,
-                    "msg_type": msg_type,
-                    "sender_id": sender_id,
-                    "sender_name": sender_name,
-                    "group_name": group_name,
-                },
-            )
-        except Exception:
-            pass
-
-    # ============ 输出过滤 ============
-
-    def _filter_thinking(self, text: str) -> str:
-        """过滤思考过程（DeepSeek R1 等推理模型的残留）"""
-        import re
-
-        patterns = [
-            r"^好的，用户是在.*?\n",
-            r"^首先，用户.*?\n",
-            r"^接下来，我需要.*?\n",
-            r"^在之前的对话中.*?\n",
-            r"^所以我的回答.*?\n",
-            r"^综上所述.*?\n",
-            r"^嗯，我是弥娅.*?\n",
-            r"^这个问题的回答.*?\n",
-            r"^根据设定，我.*?\n",
-            r"^作为.*?我.*?\n",
-        ]
-        for p in patterns:
-            text = re.sub(p, "", text, flags=re.IGNORECASE)
-        text = re.sub(r"\n{3,}", "\n\n", text)
-        return text.strip()
-
-    def _filter_output(self, text: str) -> str:
-        """感叹号刷屏过滤"""
-        try:
-            import json
-            from pathlib import Path
-
-            config_path = (
-                Path(__file__).parent.parent.parent / "config" / "text_config.json"
-            )
-            if not config_path.exists():
-                return text
-
-            with open(config_path, "r", encoding="utf-8") as f:
-                cfg = json.load(f)
-            of = cfg.get("output_filter", {})
-            if not of.get("enabled", False):
-                return text
-
-            threshold = of.get("exclamation_threshold", 0)
-            if threshold > 0:
-                count = text.count("!")
-                if count >= threshold:
-                    fallbacks = of.get("fallback_responses", ["好的~"])
-                    import random
-
-                    logger.info(
-                        f"[{self.platform_id}] 刷屏过滤: {count}个感叹号 → 替换"
-                    )
-                    return random.choice(fallbacks)
-        except Exception:
-            pass
-        return text
-
-    # ============ 离别检测 ============
-
-    async def _detect_farewell(self, content: str, user_id: str):
-        try:
-            miya = getattr(self, "_miya_core", None)
-            if not miya or not hasattr(miya, "decision_hub"):
-                return
-            from core.qq_command_config import is_farewell_keyword
-
-            if is_farewell_keyword(content):
-                logger.info(f"[{self.platform_id}] 检测到离别语")
-                await miya.decision_hub.handle_session_end(
-                    session_id=user_id, platform=self.platform_id
-                )
-        except Exception:
-            pass
-
-    # ============ LifeBook 记录 ============
-
-    async def _record_lifebook(self, user_msg: str, response: str):
-        try:
-            miya = getattr(self, "_miya_core", None)
-            if not miya or not hasattr(miya, "decision_hub"):
-                return
-            from memory.lifebook import get_lifebook
-
-            lifebook = get_lifebook()
-            await lifebook.record_interaction(
-                user_message=user_msg,
-                lover_response=response,
-                topics=[],
-                emotion="平静",
-            )
-        except Exception:
-            pass
 
     async def _do_connect(self) -> bool:
         try:
@@ -746,8 +587,15 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         except Exception:
             pass
 
-        # === 8. 图片 / 表情预过滤（纯图片且非@非超管的群消息跳过） ===
+        # === 8. 自动保存所有图片（在任何拦截之前） ===
         has_direct_images = bool(image_segments)
+        if has_direct_images:
+            asyncio.ensure_future(self._auto_save_images(image_segments, user_id))
+            # 字符串格式的 CQ 图片也保存（可能在过滤前漏掉）
+        if isinstance(raw_message, str) and "[CQ:image" in raw_message:
+            asyncio.ensure_future(self._auto_save_string_images(raw_message, user_id))
+
+        # === 9. 图片 / 表情预过滤（纯图片且非@非超管的群消息跳过） ===
         if (
             msg_type == "group"
             and not is_at_bot
