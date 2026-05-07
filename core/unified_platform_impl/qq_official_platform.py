@@ -89,10 +89,10 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
                         message_type=("c2c" if msg_type == "c2c" else "private"),
                         is_at_bot=True,
                     )
-                    resp_text = response or "弥娅暂无回复"
-                    for chunk in platform._split_message(resp_text, 500):
-                        await msg.reply(content=chunk)
-                        await asyncio.sleep(0.3)
+                    resp_text = response or ""
+                    if resp_text:
+                        for chunk in platform._split_message(resp_text, 500):
+                            await msg.reply(content=chunk)
                 except Exception as e:
                     logger.error(f"[qqofficial] 消息处理异常: {e}")
 
@@ -116,14 +116,15 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
                         group_id=group_id,
                         is_at_bot=True,
                     )
-                    resp_text = response or "弥娅暂无回复"
-                    for chunk in platform._split_message(resp_text, 500):
-                        await msg._api.post_group_message(
-                            group_openid=group_id,
-                            msg_type=0,
-                            msg_id=msg.id,
-                            content=chunk,
-                        )
+                    resp_text = response or ""
+                    if resp_text:
+                        for chunk in platform._split_message(resp_text, 500):
+                            await msg._api.post_group_message(
+                                group_openid=group_id,
+                                msg_type=0,
+                                msg_id=msg.id,
+                                content=chunk,
+                            )
                         await asyncio.sleep(0.3)
                 except Exception as e:
                     logger.error(f"[qqofficial] 群消息处理异常: {e}")

@@ -259,7 +259,7 @@ class MessageMixin:
                 asyncio.ensure_future(
                     self._after_route(content, response or "", user_id)
                 )
-                return response if response else "弥娅暂无回复"
+                return response  # None → 不回复, 空字符串 → 平台自行兜底
             else:
                 return "决策系统未就绪"
 
