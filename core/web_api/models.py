@@ -47,8 +47,9 @@ class ChatRequest(BaseModel):
 
     message: str
     session_id: str = "default"
-    user_id: Optional[str] = None  # 用户ID，可用于跨平台身份识别
-    platform: Optional[str] = None  # 平台类型：desktop, web, mobile 等
+    user_id: Optional[str] = None
+    usg_id: Optional[str] = None  # 用户会话组ID
+    platform: Optional[str] = None
 
 
 class TerminalChatRequest(BaseModel):

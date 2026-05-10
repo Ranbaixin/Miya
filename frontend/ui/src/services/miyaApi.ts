@@ -4,8 +4,16 @@
 
 const CORE = 'http://localhost:8000';
 const API_KEY = 'changeme';
-function hdrs(extra?: Record<string,string>) {
-  return { 'Content-Type':'application/json', 'X-Undefined-API-Key':API_KEY, ...extra };
+function hdrs(extra?: HeadersInit) {
+  const base: Record<string, string> = { 'Content-Type':'application/json', 'X-Undefined-API-Key':API_KEY };
+  if (!extra) return base;
+  if (extra instanceof Headers) {
+    const r: Record<string, string> = { ...base };
+    extra.forEach((v, k) => { r[k] = v; });
+    return r;
+  }
+  if (Array.isArray(extra)) return Object.assign(base, Object.fromEntries(extra));
+  return { ...base, ...extra };
 }
 
 async function req<T=any>(path: string, init?: RequestInit): Promise<T|null> {

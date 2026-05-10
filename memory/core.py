@@ -62,11 +62,12 @@ logger = logging.getLogger(__name__)
 class MemoryLevel(Enum):
     """记忆层级"""
 
-    DIALOGUE = "dialogue"  # 对话历史
-    SHORT_TERM = "short_term"  # 短期记忆 (TTL过期)
-    LONG_TERM = "long_term"  # 长期记忆 (持久化)
-    SEMANTIC = "semantic"  # 语义记忆 (向量搜索)
-    KNOWLEDGE = "knowledge"  # 知识图谱
+    DIALOGUE = "dialogue"
+    SHORT_TERM = "short_term"
+    LONG_TERM = "long_term"
+    SEMANTIC = "semantic"
+    KNOWLEDGE = "knowledge"
+    PINNED = "pinned"
 
 
 class MemoryPriority(Enum):
@@ -1472,9 +1473,9 @@ class MiyaMemoryCore:
                 backend_results = await self.backend.query(q)
 
             # 合并去重
-            existing_ids = {r.id for r in results}
+            existing_ids = {r.id for r in results if r}
             for r in backend_results:
-                if r.id not in existing_ids:
+                if r and r.id not in existing_ids:
                     results.append(r)
 
         # 【全局记忆加权排序】

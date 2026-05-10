@@ -1313,7 +1313,7 @@ class ModelCollaborationEngine:
         if cache_key in self._client_cache:
             client = self._client_cache[cache_key]
             if tools:
-                client.set_tool_registry(tools)
+                client.set_tool_registry(lambda tools=tools: tools)
             return client
 
         if factory:
@@ -1338,7 +1338,7 @@ class ModelCollaborationEngine:
         if client:
             self._client_cache[cache_key] = client
             if tools:
-                client.set_tool_registry(tools)
+                client.set_tool_registry(lambda tools=tools: tools)
 
         return client
 

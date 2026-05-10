@@ -1,16 +1,22 @@
 // ============================================================
-// 弥娅 底部状态栏 · 樱梦琉璃
+// 深蓝星渊 · StatusBar — 底部状态栏
 // ============================================================
+
 interface StatusBarProps {
-  connected: boolean; runtimeDuration: number;
-  subsystems?: { mlink: boolean; memorynet: boolean; toolnet: boolean; webnet: boolean; qqnet: boolean; tts: boolean; scheduler: boolean; proactive: boolean };
+  connected: boolean;
+  runtimeDuration: number;
+  subsystems?: {
+    mlink: boolean; memorynet: boolean; toolnet: boolean;
+    webnet: boolean; qqnet: boolean; tts: boolean;
+    scheduler: boolean; proactive: boolean;
+  };
   memoryStats?: { total: number; long_term: number; short_term: number; emotional: number };
 }
 
 const Dot: React.FC<{ on: boolean; label: string }> = ({ on, label }) => (
   <div className="flex items-center gap-1">
-    <div className={`w-1.5 h-1.5 rounded-full ${on ? 'bg-[#a7f3d0] shadow-[0_0_4px_rgba(167,243,208,0.4)]' : 'bg-[#e5d9e8]'}`} />
-    <span className="text-[9px] text-[#b8aec8]">{label}</span>
+    <div className={`pulse-dot ${on ? 'on' : 'off'}`} />
+    <span className="text-[9px] text-text-dim">{label}</span>
   </div>
 );
 
@@ -22,29 +28,30 @@ const StatusBar: React.FC<StatusBarProps> = ({ connected, runtimeDuration, subsy
   const ss = subsystems || { mlink: false, memorynet: false, toolnet: false, webnet: false, qqnet: false, tts: false, scheduler: false, proactive: false };
 
   return (
-    <div className="h-6 bg-[rgba(255,255,255,0.75)] backdrop-blur-xl flex items-center justify-between px-3 border-t border-[rgba(240,168,192,0.1)] text-[10px] font-mono z-10 relative">
-      <div className="flex items-center gap-3">
-        <span className={connected ? 'text-[#a7f3d0]' : 'text-[#e5d9e8]'}>
-          {connected ? '● ONLINE' : '○ OFFLINE'}
+    <div className="h-7 bg-void-panel backdrop-blur-xl flex items-center justify-between px-3 border-t border-border-glass text-[10px] font-mono z-20 relative shrink-0">
+      <div className="flex items-center gap-2.5">
+        <span className={connected ? 'text-status-active' : 'text-text-dim'}>
+          {connected ? '● 已共鸣' : '○ 未连接'}
         </span>
-        <span className="text-[rgba(240,168,192,0.2)]">|</span>
+        <span className="text-border-glass">|</span>
         <Dot on={ss.mlink} label="MLink" />
         <Dot on={ss.memorynet} label="MemNet" />
         <Dot on={ss.toolnet} label="ToolNet" />
-        <Dot on={ss.qqnet} label="QQNet" />
         <Dot on={ss.webnet} label="WebNet" />
+        <Dot on={ss.qqnet} label="QQNet" />
         <Dot on={ss.tts} label="TTS" />
         <Dot on={ss.scheduler} label="Sched" />
         <Dot on={ss.proactive} label="Active" />
       </div>
-      <div className="flex items-center gap-3 text-[#b8aec8]">
+      <div className="flex items-center gap-2.5 text-text-dim">
         {memoryStats && (
           <span>
-            记忆: <span className="text-[#d4789e]">{memoryStats.total}</span>
-            <span className="text-[#d8d0e0]"> L:</span><span className="text-[#c4b5fd]">{memoryStats.long_term}</span>
-            <span className="text-[#d8d0e0]"> S:</span><span className="text-[#93c5fd]">{memoryStats.short_term}</span>
+            记忆: <span className="text-aether">{memoryStats.total}</span>
+            <span className="text-text-dim/50"> L:</span><span className="text-resonance-bright">{memoryStats.long_term}</span>
+            <span className="text-text-dim/50"> S:</span><span className="text-aether-bright">{memoryStats.short_term}</span>
           </span>
         )}
+        <span className="text-text-dim/30">|</span>
         <span>↑ {fmt(runtimeDuration)}</span>
       </div>
     </div>

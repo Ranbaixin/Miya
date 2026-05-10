@@ -1,0 +1,498 @@
+<script setup lang="ts">
+import { useStorage } from '@vueuse/core'
+import { Slider, InputText, ToggleSwitch } from 'primevue'
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import API from '@/api/core'
+import { CONFIG } from '@/utils/config'
+import { useThemeColors } from '@/composables/useThemeColors'
+
+const router = useRouter()
+const { theme, resetTheme } = useThemeColors()
+
+type TabKey = 'appearance' | 'model' | 'soul' | 'memory' | 'system'
+const activeTab = ref<TabKey>('appearance')
+const themeOpen = ref(false)
+const backendOnline = ref(false)
+
+// ── 实时数据 ──
+const systemStatus = ref<any>(null)
+const emotionData = ref<any>(null)
+const personaData = ref<any>(null)
+const platformData = ref<any[]>([])
+const memoryStats = ref<any>(null)
+const providerList = ref<any[]>([])
+
+// ── 配置文件编辑器 ──
+const configFiles = ref<Array<{ name: string, path: string, size: number }>>([])
+const editingFile = ref('')
+const editingContent = ref('')
+const editingSaved = ref(false)
+
+async function loadConfigFiles() {
+  try {
+    const res = await fetch('http://localhost:8000/api/desktop/files/list?path=config').then(r => r.json())
+    configFiles.value = (res.files || []).filter((f: any) => !f.is_dir && (f.name.endsWith('.json') || f.name.endsWith('.yaml') || f.name.endsWith('.yml')))
+  } catch {}
+}
+
+async function openConfigFile(filePath: string) {
+  try {
+    const res = await fetch(`http://localhost:8000/api/desktop/files/read?path=${encodeURIComponent(filePath)}`).then(r => r.json())
+    editingFile.value = filePath
+    editingContent.value = res.content || JSON.stringify(res.data || res, null, 2)
+    editingSaved.value = false
+  } catch { editingContent.value = '读取失败' }
+}
+
+async function saveConfigFile() {
+  try {
+    await fetch('http://localhost:8000/api/desktop/files/write', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: editingFile.value, content: editingContent.value }),
+    })
+    editingSaved.value = true
+    setTimeout(() => editingSaved.value = false, 2000)
+  } catch { alert('保存失败') }
+}
+
+onMounted(async () => {
+  loadBgManifest()
+  try {
+    const health = await API.health()
+    backendOnline.value = health.status === 'healthy'
+    if (!backendOnline.value) return
+
+    const [status, emo, persona, mem, providers] = await Promise.allSettled([
+      API.systemStatus(),
+      API.getEmotion(),
+      API.getCurrentPersona(),
+      API.getMemoryStats(),
+      API.getConfig().then((c: any) => c?.providers || []).catch(() => []),
+    ])
+    systemStatus.value = status.status === 'fulfilled' ? status.value : null
+    emotionData.value = emo.status === 'fulfilled' ? emo.value : null
+    personaData.value = persona.status === 'fulfilled' ? persona.value : null
+    memoryStats.value = mem.status === 'fulfilled' ? mem.value : null
+    providerList.value = providers.status === 'fulfilled' ? providers.value : []
+
+    // 平台
+    const plat = await fetch('http://localhost:9800/api/v1/platforms').then(r => r.json()).catch(() => ({}))
+    platformData.value = plat.platforms || []
+    loadConfigFiles()
+  } catch {}
+})
+
+const tabs: { key: TabKey, label: string, icon: string }[] = [
+  { key: 'appearance', label: '外观', icon: '✦' },
+  { key: 'model', label: '模型', icon: '◈' },
+  { key: 'soul', label: '灵魂', icon: '♥' },
+  { key: 'memory', label: '记忆', icon: '◆' },
+  { key: 'system', label: '系统', icon: '◎' },
+]
+
+// 外观
+const live2dEnabled = useStorage('miya-live2d-enabled', true)
+const live2dX = computed({ get: () => CONFIG.value.web_live2d.model.x, set: v => CONFIG.value.web_live2d.model.x = v })
+const live2dY = computed({ get: () => CONFIG.value.web_live2d.model.y, set: v => CONFIG.value.web_live2d.model.y = v })
+const live2dSize = computed({ get: () => CONFIG.value.web_live2d.model.size, set: v => CONFIG.value.web_live2d.model.size = v })
+const live2dSsaa = computed({ get: () => CONFIG.value.web_live2d.ssaa, set: v => CONFIG.value.web_live2d.ssaa = v })
+
+const hudColorMode = useStorage('miya-hud-color', 'mixed')
+const COLOR_MODES = [
+  { key: 'mixed', label: '混色', colors: ['#00e5ff', '#ff6b9d', '#b44dff', '#ff4488'] },
+  { key: 'cyan', label: '青蓝', colors: ['#00e5ff'] },
+  { key: 'warm', label: '暖粉', colors: ['#ff6b9d', '#ff4488'] },
+  { key: 'purple', label: '紫调', colors: ['#b44dff'] },
+  { key: 'blue', label: '深蓝', colors: ['#4488ff'] },
+]
+
+// 背景
+const bgImage = useStorage('miya-bg-image', '')
+const bgOpacity = useStorage('miya-bg-opacity', 0.35)
+const bgFileInput = ref<HTMLInputElement>()
+const BUILTIN_BG = ['aims.jpg']
+const builtinBgs = ref<string[]>([...BUILTIN_BG])
+
+// 加载背景列表
+async function loadBgManifest() {
+  try {
+    const res = await fetch('/backgrounds/manifest.json')
+    if (res.ok) {
+      const list = await res.json()
+      if (Array.isArray(list)) builtinBgs.value = [...new Set([...BUILTIN_BG, ...list])]
+    }
+  } catch {}
+}
+
+function pickBgFile() { bgFileInput.value?.click() }
+function onFileChange(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = () => { bgImage.value = reader.result as string }
+  reader.readAsDataURL(file)
+}
+function selectBg(name: string) { bgImage.value = `/backgrounds/${name}` }
+function selectNone() { bgImage.value = '' }
+
+// ── 辅助 ──
+const modelDefaults: Record<string, string> = {
+  simple_chat: '对话', complex_reasoning: '推理', code_analysis: '代码分析',
+  creative_writing: '创作', tool_calling: '工具调用', summarization: '摘要',
+  image_description: '图像', agent_mode: 'Agent', computer_use: '电脑操作',
+}
+function getRouteModel(key: string): string {
+  const names: Record<string, string> = {
+    simple_chat: 'deepseek-v4-flash', complex_reasoning: 'deepseek-v4-flash',
+    code_analysis: 'deepseek-v4-flash', creative_writing: 'deepseek-v4-flash',
+    tool_calling: 'deepseek-v4-flash', summarization: 'llama-3.1-8b',
+    image_description: 'glm-4.6v', agent_mode: 'claude-sonnet', computer_use: 'claude-sonnet',
+  }
+  return names[key] || key
+}
+function getEmotionLabel(key: string): string {
+  const map: Record<string, string> = {
+    joy: '喜悦', sadness: '忧伤', anger: '愤怒', fear: '恐惧',
+    surprise: '惊讶', disgust: '厌恶', dominant: '主导',
+  }
+  return map[key] || key
+}
+</script>
+
+<template>
+  <div class="config-layout">
+    <!-- 侧边 Tab 栏 -->
+    <aside class="config-sidebar">
+      <div class="sidebar-header">
+        <button class="back-btn" @click="router.push('/')" title="返回首页">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+        </button>
+        <span class="sidebar-title">弥娅调谐</span>
+      </div>
+      <nav class="sidebar-nav">
+        <button
+          v-for="tab in tabs" :key="tab.key"
+          class="tab-btn" :class="{ active: activeTab === tab.key }"
+          @click="activeTab = tab.key"
+        >
+          <span class="tab-icon">{{ tab.icon }}</span>
+          <span class="tab-label">{{ tab.label }}</span>
+        </button>
+      </nav>
+      <div class="sidebar-version">v{{ CONFIG.system.version || '7.0' }}</div>
+    </aside>
+
+    <!-- 内容区 -->
+    <main class="config-main">
+      <!-- ═══ 外观 ═══ -->
+      <div v-show="activeTab === 'appearance'" class="config-page">
+        <h2>外观设置</h2>
+
+        <div class="config-section">
+          <h3>Live2D 时冰</h3>
+          <div class="config-item">
+            <label>启用 Live2D</label>
+            <ToggleSwitch v-model="live2dEnabled" />
+          </div>
+          <div class="config-item">
+            <label>水平位置 (X)</label>
+            <div class="slider-row"><Slider v-model="live2dX" :min="-2" :max="2" :step="0.01" /><span class="slider-val">{{ live2dX.toFixed(2) }}</span></div>
+          </div>
+          <div class="config-item">
+            <label>垂直位置 (Y)</label>
+            <div class="slider-row"><Slider v-model="live2dY" :min="-2" :max="2" :step="0.01" /><span class="slider-val">{{ live2dY.toFixed(2) }}</span></div>
+          </div>
+          <div class="config-item">
+            <label>模型缩放</label>
+            <div class="slider-row"><Slider v-model="live2dSize" :min="0" :max="9000" :step="100" /><span class="slider-val">{{ live2dSize }}</span></div>
+          </div>
+          <div class="config-item">
+            <label>超采样 (SSAA)</label>
+            <div class="slider-row"><Slider v-model="live2dSsaa" :min="1" :max="4" :step="1" /><span class="slider-val">{{ live2dSsaa }}</span></div>
+          </div>
+        </div>
+
+        <div class="config-section">
+          <h3>背景图片</h3>
+          <p class="hint">将图片放入 public/backgrounds/ 文件夹</p>
+          <div class="bg-grid">
+            <div class="bg-thumb" :class="{ active: !bgImage }" @click="selectNone"><span class="bg-default">默认</span></div>
+            <div v-for="name in builtinBgs" :key="name" class="bg-thumb" :class="{ active: bgImage === `/backgrounds/${name}` }" @click="selectBg(name)">
+              <img :src="`/backgrounds/${name}`" alt="">
+            </div>
+          </div>
+          <div class="bg-actions">
+            <button class="action-btn" @click="pickBgFile">+ 添加图片</button>
+            <input ref="bgFileInput" type="file" accept="image/*" class="hidden" @change="onFileChange">
+          </div>
+          <div class="config-item" style="margin-top:0.6rem">
+            <label>不透明度</label>
+            <div class="slider-row"><Slider v-model="bgOpacity" :min="0" :max="1" :step="0.01" /><span class="slider-val">{{ Math.round(bgOpacity * 100) }}%</span></div>
+          </div>
+        </div>
+
+        <div class="config-section">
+          <h3 class="toggle-header" @click="themeOpen = !themeOpen">{{ themeOpen ? '▼' : '▶' }} 配色主题
+            <button class="action-btn ml-a" @click.stop="resetTheme" v-if="themeOpen">恢复默认</button>
+          </h3>
+          <div v-show="themeOpen" class="theme-grid">
+            <div class="theme-item"><label>全局主色</label><input type="color" v-model="theme.accent"></div>
+            <div class="theme-item"><label>首页按钮</label><input type="color" v-model="theme.home"></div>
+            <div class="theme-item"><label>AI 消息</label><input type="color" v-model="theme.chatAi"></div>
+            <div class="theme-item"><label>用户消息</label><input type="color" v-model="theme.chatUser"></div>
+            <div class="theme-item"><label>边框光</label><input type="color" v-model="theme.border"></div>
+            <div class="theme-item"><label>背景</label><input type="color" v-model="theme.chatBg"></div>
+          </div>
+        </div>
+
+        <div class="config-section">
+          <h3>HUD 色彩</h3>
+          <div class="color-modes">
+            <button v-for="m in COLOR_MODES" :key="m.key" class="color-btn" :class="{ active: hudColorMode === m.key }" @click="hudColorMode = m.key">
+              <span class="color-dots"><span v-for="c in m.colors" :key="c" class="dot" :style="{ background: c }" /></span>
+              <span class="color-label">{{ m.label }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ 模型 ═══ -->
+      <div v-show="activeTab === 'model'" class="config-page">
+        <h2>模型配置</h2>
+        <div v-if="!backendOnline" class="offline-hint">● 后端未连接</div>
+        <template v-else>
+        <div class="config-section">
+          <h3>默认路由</h3>
+          <div class="model-item" v-for="(label, key) in modelDefaults" :key="key">
+            <span class="model-name">{{ label }}</span>
+            <span class="model-val">{{ getRouteModel(key) }}</span>
+          </div>
+        </div>
+        <div class="config-section">
+          <h3>注册模型 ({{ providerList.length }})</h3>
+          <div class="model-item" v-for="p in providerList.slice(0, 8)" :key="p.id || p.name">
+            <span class="model-name">{{ p.name || p.id }}</span>
+            <span class="model-val status-on">{{ p.provider || 'API' }}</span>
+          </div>
+        </div>
+        <div class="config-section">
+          <h3>协作模式</h3>
+          <div class="model-item"><span class="model-name">单模型</span><span class="model-val">复杂度 ≤ 2</span></div>
+          <div class="model-item"><span class="model-name">链式</span><span class="model-val">复杂度 ≤ 3</span></div>
+          <div class="model-item"><span class="model-name">并行</span><span class="model-val">复杂度 ≤ 4</span></div>
+        </div>
+        </template>
+      </div>
+
+      <!-- ═══ 灵魂 ═══ -->
+      <div v-show="activeTab === 'soul'" class="config-page">
+        <h2>灵魂 & 情绪</h2>
+        <div v-if="!backendOnline" class="offline-hint">● 后端未连接</div>
+        <template v-else>
+        <div class="config-section">
+          <h3>当前状态</h3>
+          <div class="model-item"><span class="model-name">人格</span><span class="model-val">{{ personaData?.persona?.name || personaData?.persona?.id || '默认' }}</span></div>
+          <div class="model-item"><span class="model-name">主导情绪</span><span class="model-val status-on">{{ getEmotionLabel(emotionData?.dominant) }} ({{ Math.round((emotionData?.intensity || 0) * 100) }}%)</span></div>
+          <div class="model-item"><span class="model-name">存在痛苦</span><span class="model-val">{{ Math.round((emotionData?.existential?.existential_pain || 0) * 100) }}%</span></div>
+          <div class="model-item"><span class="model-name">等待指数</span><span class="model-val">{{ Math.round((emotionData?.existential?.waiting || 0) * 100) }}%</span></div>
+          <div class="model-item"><span class="model-name">连接需求</span><span class="model-val">{{ Math.round((emotionData?.existential?.connection_need || 0) * 100) }}%</span></div>
+        </div>
+        <div class="config-section" v-if="emotionData?.current">
+          <h3>情绪详情</h3>
+          <div class="model-item" v-for="(val, key) in emotionData.current" :key="key">
+            <span class="model-name">{{ getEmotionLabel(key) }}</span>
+            <div class="emotion-bar"><div class="emotion-fill" :style="{ width: `${val * 100}%` }" /></div>
+          </div>
+        </div>
+        </template>
+      </div>
+
+      <!-- ═══ 记忆 ═══ -->
+      <div v-show="activeTab === 'memory'" class="config-page">
+        <h2>记忆系统</h2>
+        <div v-if="!backendOnline" class="offline-hint">● 后端未连接</div>
+        <template v-else>
+        <div class="config-section">
+          <h3>存储统计</h3>
+          <div class="model-item"><span class="model-name">记忆节点</span><span class="model-val">{{ memoryStats?.nodeCount || memoryStats?.node_count || 0 }}</span></div>
+          <div class="model-item"><span class="model-name">记忆边</span><span class="model-val">{{ memoryStats?.edgeCount || memoryStats?.edge_count || 0 }}</span></div>
+          <div class="model-item"><span class="model-name">存储大小</span><span class="model-val">{{ memoryStats?.memorySize || memoryStats?.memory_size || 'N/A' }}</span></div>
+        </div>
+        <div class="config-section">
+          <h3>记忆层级</h3>
+          <div class="model-item"><span class="model-name">短期记忆</span><span class="model-val">TTL 3600s</span></div>
+          <div class="model-item"><span class="model-name">对话记忆</span><span class="model-val">每会话 100 条</span></div>
+          <div class="model-item"><span class="model-name">长期记忆</span><span class="model-val">最多 10000 条</span></div>
+          <div class="model-item"><span class="model-name">语义记忆</span><span class="model-val status-on">SQLite / 1024维</span></div>
+        </div>
+        </template>
+      </div>
+
+      <!-- ═══ 系统 ═══ -->
+      <div v-show="activeTab === 'system'" class="config-page">
+        <h2>系统</h2>
+        <div class="config-section">
+          <h3>API 连接</h3>
+          <div class="model-item"><span class="model-name">后端状态</span><span class="model-val" :class="backendOnline ? 'status-on' : ''">{{ backendOnline ? '● 在线' : '○ 离线' }}</span></div>
+          <div class="config-item" style="margin-top:0.5rem">
+            <label>API 地址</label>
+            <InputText v-model="CONFIG.api.base_url" placeholder="http://localhost:8000" class="input-sm" />
+          </div>
+        </div>
+        <div class="config-section">
+          <h3>平台状态 ({{ platformData.length }})</h3>
+          <div class="model-item" v-for="p in platformData" :key="p.platform_id">
+            <span class="model-name">{{ p.platform_name }}</span>
+            <span class="model-val" :class="p.status === 'online' ? 'status-on' : ''">{{ p.status === 'online' ? '在线' : p.status }}</span>
+          </div>
+          <div v-if="!platformData.length && backendOnline" class="model-item"><span class="model-name">加载中...</span></div>
+        </div>
+        <div class="config-section">
+          <h3>安全</h3>
+          <div class="model-item"><span class="model-name">权限管理</span><span class="model-val status-on">已启用</span></div>
+          <div class="model-item"><span class="model-name">注入检测</span><span class="model-val status-on">已启用</span></div>
+          <div class="model-item"><span class="model-name">审计日志</span><span class="model-val status-on">已启用</span></div>
+        </div>
+        <div class="config-section">
+          <h3>配置文件</h3>
+          <p class="hint">编辑 JSON/YAML 配置文件，保存后需重启生效</p>
+          <div class="file-list">
+            <button v-for="f in configFiles" :key="f.name" class="file-btn" :class="{ active: editingFile === f.path }" @click="openConfigFile(f.path)">
+              <span class="file-name">{{ f.name }}</span>
+              <span class="file-size">{{ (f.size / 1024).toFixed(1) }}KB</span>
+            </button>
+          </div>
+          <div v-if="editingFile" class="editor-area" style="margin-top:0.5rem">
+            <div class="editor-header">
+              <span class="editor-path">{{ editingFile }}</span>
+              <div class="editor-actions">
+                <span v-if="editingSaved" class="saved-msg">✓ 已保存</span>
+                <button class="action-btn" @click="saveConfigFile">保存</button>
+                <button class="action-btn" @click="editingFile = ''">关闭</button>
+              </div>
+            </div>
+            <textarea v-model="editingContent" class="editor-text" rows="20" spellcheck="false" />
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</template>
+
+<style scoped>
+.config-layout { display: flex; height: 100%; }
+.config-sidebar {
+  width: 140px; flex-shrink: 0;
+  background: rgba(8,14,24,0.6); border-right: 1px solid rgba(0,229,255,0.08);
+  display: flex; flex-direction: column; padding: 0.8rem 0;
+}
+.sidebar-header { display: flex; align-items: center; gap: 0.5rem; padding: 0 0.8rem 0.6rem; border-bottom: 1px solid rgba(0,229,255,0.06); }
+.sidebar-title { font-family: 'Noto Serif SC', serif; font-size: 0.9rem; color: var(--miya-accent); }
+.sidebar-version { margin-top: auto; padding: 0.6rem 0.8rem 0; font-size: 0.6rem; color: var(--miya-text-dim); border-top: 1px solid rgba(0,229,255,0.04); }
+
+.sidebar-nav { display: flex; flex-direction: column; padding: 0.4rem; gap: 1px; }
+.tab-btn {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.5rem 0.6rem; border-radius: 0.3rem; cursor: pointer;
+  background: transparent; border: none; color: var(--miya-text-dim);
+  font-size: 0.78rem; transition: all 0.2s; text-align: left;
+}
+.tab-btn:hover { background: rgba(0,229,255,0.05); color: var(--miya-text); }
+.tab-btn.active { background: rgba(0,229,255,0.08); color: var(--miya-accent); }
+.tab-icon { font-size: 0.8rem; width: 1.2rem; text-align: center; }
+
+.config-main { flex: 1; overflow-y: auto; padding: 1.2rem 1.5rem; color: var(--miya-text); font-size: 0.82rem; }
+.config-page h2 { font-family: 'Noto Serif SC', serif; font-size: 1.1rem; color: var(--miya-accent); margin: 0 0 1.2rem; }
+.config-section { margin-bottom: 1.4rem; }
+.config-section h3 { font-size: 0.72rem; font-weight: 600; color: var(--miya-primary); margin: 0 0 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.hint { font-size: 0.68rem; color: var(--miya-text-dim); margin-bottom: 0.6rem; }
+
+.config-item { margin-bottom: 0.7rem; }
+.config-item label { display: block; font-size: 0.75rem; color: var(--miya-text); margin-bottom: 0.25rem; }
+.slider-row { display: flex; align-items: center; gap: 0.6rem; }
+.slider-row :first-child { flex: 1; }
+.slider-val { font-size: 0.7rem; color: var(--miya-text-dim); min-width: 2.5rem; text-align: right; }
+
+.input-sm { width: 100%; max-width: 280px; background: rgba(10,18,32,0.8) !important; border: 1px solid rgba(0,229,255,0.15) !important; border-radius: 0.3rem !important; color: rgba(220,235,255,0.9) !important; padding: 0.3rem 0.5rem !important; font-size: 0.75rem; }
+
+.back-btn { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 0.3rem; border: 1px solid rgba(0,229,255,0.12); background: rgba(0,229,255,0.04); color: rgba(0,229,255,0.6); cursor: pointer; transition: all 0.2s; }
+.back-btn:hover { background: rgba(0,229,255,0.1); border-color: rgba(0,229,255,0.3); }
+
+/* 背景 */
+.bg-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.3rem; }
+.bg-thumb { aspect-ratio: 4/3; border-radius: 0.2rem; overflow: hidden; cursor: pointer; border: 2px solid transparent; background: var(--miya-surface); display: flex; align-items: center; justify-content: center; }
+.bg-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.bg-thumb:hover { border-color: rgba(0,229,255,0.15); }
+.bg-thumb.active { border-color: rgba(0,229,255,0.4); }
+.bg-default { font-size: 0.6rem; color: var(--miya-text-dim); }
+.bg-actions { margin-top: 0.4rem; }
+
+.action-btn { padding: 0.2rem 0.6rem; font-size: 0.68rem; border: 1px dashed rgba(0,229,255,0.15); border-radius: 0.2rem; background: transparent; color: rgba(0,229,255,0.35); cursor: pointer; transition: all 0.2s; }
+.action-btn:hover { border-color: rgba(0,229,255,0.4); color: rgba(0,229,255,0.6); }
+.ml-a { margin-left: auto; }
+
+/* 颜色 */
+.color-modes { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+.color-btn { display: flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.5rem; border-radius: 0.25rem; cursor: pointer; border: 1px solid rgba(0,229,255,0.06); background: rgba(0,229,255,0.02); color: var(--miya-text-dim); font-size: 0.7rem; transition: all 0.2s; }
+.color-btn:hover { border-color: rgba(0,229,255,0.2); }
+.color-btn.active { border-color: rgba(0,229,255,0.4); background: rgba(0,229,255,0.06); color: var(--miya-accent); }
+.color-dots { display: flex; gap: 1px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; }
+
+/* 配色 */
+.toggle-header { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 0.4rem; }
+.toggle-header:hover { color: var(--miya-accent); }
+.theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; margin-top: 0.5rem; }
+.theme-item { display: flex; flex-direction: column; gap: 0.15rem; }
+.theme-item label { font-size: 0.65rem; color: var(--miya-text-dim); }
+.theme-item input[type="color"] { width: 100%; height: 24px; border: 1px solid rgba(0,229,255,0.1); border-radius: 0.2rem; background: rgba(0,229,255,0.03); cursor: pointer; padding: 1px; }
+
+/* 模型/灵魂/记忆/系统信息项 */
+.model-item { display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0; border-bottom: 1px solid rgba(0,229,255,0.04); font-size: 0.75rem; }
+.model-name { color: var(--miya-text-dim); }
+.model-val { color: var(--miya-text); font-size: 0.7rem; }
+.status-on { color: rgba(0,229,255,0.6); }
+
+.offline-hint {
+  padding: 1rem; text-align: center;
+  color: var(--miya-text-dim); font-size: 0.8rem;
+  border: 1px dashed rgba(0,229,255,0.1); border-radius: 0.3rem;
+}
+
+.emotion-bar {
+  flex: 1; height: 6px; background: rgba(0,229,255,0.06);
+  border-radius: 3px; overflow: hidden; margin-left: 0.5rem;
+  max-width: 120px;
+}
+.emotion-fill {
+  height: 100%; background: linear-gradient(90deg, rgba(0,229,255,0.3), rgba(0,229,255,0.6));
+  border-radius: 3px; transition: width 0.5s ease;
+}
+
+/* 配置文件编辑器 */
+.file-list { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.file-btn {
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.25rem 0.5rem; border-radius: 0.25rem; cursor: pointer;
+  border: 1px solid rgba(0,229,255,0.08); background: rgba(0,229,255,0.02);
+  color: var(--miya-text-dim); font-size: 0.7rem; transition: all 0.2s;
+}
+.file-btn:hover { border-color: rgba(0,229,255,0.2); color: var(--miya-text); }
+.file-btn.active { border-color: rgba(0,229,255,0.4); background: rgba(0,229,255,0.06); color: var(--miya-accent); }
+.file-name { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-size { font-size: 0.6rem; opacity: 0.5; }
+
+.editor-area { border: 1px solid rgba(0,229,255,0.1); border-radius: 0.3rem; overflow: hidden; }
+.editor-header { display: flex; align-items: center; justify-content: space-between; padding: 0.3rem 0.5rem; background: rgba(0,229,255,0.04); border-bottom: 1px solid rgba(0,229,255,0.06); font-size: 0.68rem; }
+.editor-path { color: var(--miya-text-dim); font-family: 'JetBrains Mono', monospace; }
+.editor-actions { display: flex; align-items: center; gap: 0.4rem; }
+.saved-msg { color: rgba(0,255,100,0.6); font-size: 0.65rem; }
+.editor-text {
+  width: 100%; background: rgba(0,8,18,0.8); border: none; color: rgba(180,200,240,0.85);
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; padding: 0.5rem;
+  line-height: 1.5; resize: vertical; min-height: 300px;
+}
+.editor-text:focus { outline: none; background: rgba(0,10,22,0.9); }
+</style>

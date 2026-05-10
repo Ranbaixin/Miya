@@ -954,6 +954,10 @@ class MiyaAPI:
                 user_id = request_data.get("user_id") or session_id
                 platform = request_data.get("platform", "web")
 
+                print(
+                    f"[DEBUG chat/send] user_id={user_id}, platform={platform}, message={message[:30]}"
+                )
+
                 if not self.decision_hub:
                     return {
                         "success": False,
@@ -972,6 +976,19 @@ class MiyaAPI:
                     else f"{platform}用户",
                     "message_type": "private",
                 }
+
+                # 注入 is_owner 标记（桌面端超管权限）
+                check_id = str(user_id) if user_id else ""
+                if check_id:
+                    try:
+                        from core.unified_permission import get_permission_engine
+
+                        engine = get_permission_engine()
+                        if engine and engine.is_superadmin(check_id, platform=platform):
+                            perception["is_owner"] = True
+                            perception["canonical_user_id"] = check_id
+                    except Exception:
+                        pass
 
                 message_obj = Message(
                     msg_type="data",
@@ -2148,19 +2165,7 @@ class MiyaAPI:
             """创建项目"""
             return {"success": True, "data": {"id": "1", "name": "新项目"}}
 
-        # ========== 聊天 API ==========
-        @self.router.post("/api/chat/send")
-        async def chat_send(request_data: dict = {}):
-            """发送聊天消息"""
-            message = request_data.get("message", "")
-            session_id = request_data.get("session_id", "default")
-            return {
-                "success": True,
-                "data": {
-                    "response": "好的，我收到了你的消息: " + message[:50],
-                    "session_id": session_id,
-                },
-            }
+        # ========== 聊天 API (旧版stub - 已由上方完整版取代) ==========
 
         # ========== MCP 服务器 API ==========
         @self.router.get("/api/tools/mcp/servers")

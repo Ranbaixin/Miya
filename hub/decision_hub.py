@@ -2187,6 +2187,14 @@ class DecisionHub:
                 _reflection = _soul_result.get("reflection", "") or _analysis.get(
                     "reflection", ""
                 )
+
+                # 存储灵魂数据供 SSE 输出 (路径 A)
+                self._last_soul_data = {
+                    "emotions": _emotions.copy(),
+                    "inner_thought": _inner_thought,
+                    "attribution": _attribution,
+                    "reflection": _reflection,
+                }
                 _dominant = (
                     _soul_result.get("dominant_emotion", "未知")
                     if _soul_result
@@ -2336,12 +2344,31 @@ class DecisionHub:
                         "reflection", ""
                     )
 
+                    # 存储最后灵魂数据供 SSE 输出
+                    self._last_soul_data = {
+                        "emotions": {
+                            item["name"]: item["intensity"] for item in _emotions_raw
+                        }
+                        if isinstance(_emotions_raw, list)
+                        else _emotions,
+                        "inner_thought": _inner_thought,
+                        "attribution": _attribution,
+                        "reflection": _reflection,
+                    }
+                    print(
+                        f"[SSE] 已存储灵魂数据: emotions={list(self._last_soul_data['emotions'].keys())}, inner={_inner_thought[:20]}"
+                    )
+
                 # 获取AI客户端的思考（回复生成过程）
                 ai_reasoning = ""
                 if ai_client_to_use and hasattr(
                     ai_client_to_use, "last_reasoning_content"
                 ):
                     ai_reasoning = ai_client_to_use.last_reasoning_content or ""
+
+                # 存储思考过程供 SSE 输出
+                if self._last_soul_data:
+                    self._last_soul_data["thinking"] = ai_reasoning[:800]
 
                 # 合并两个思考过程
                 thinking_content = ""
@@ -2392,6 +2419,18 @@ class DecisionHub:
                 logger.info("[认知缓存] 已添加到内存缓存区")
             except Exception as cog_err:
                 logger.error(f"[认知记忆] 存储失败: {cog_err}", exc_info=True)
+
+            # 存储到 decision_hub 供 SSE 读取（放在 try 外面确保一定执行）
+            self._last_soul_output = {
+                "emotions": _emotions or {},
+                "inner_thought": _inner_thought or "",
+                "attribution": _attribution or "",
+                "reflection": _reflection or "",
+                "thinking": thinking_content or "",
+            }
+            print(
+                f"[SSE] _last_soul_output: inner={bool(_inner_thought)}, emotions={list(_emotions.keys()) if _emotions else []}"
+            )
 
             # 【灵魂发生器】将情感注入到回复中 (已移除，使用Prompt引导)
 

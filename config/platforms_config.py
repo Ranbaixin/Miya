@@ -336,6 +336,16 @@ AIOCQHTTP_CONFIG = {
 }
 
 
+# ==================== 桌面端 ====================
+# 弥娅桌面应用前端 (Electron + Vue 3)
+# 通过 Web API (/api/chat) 连接
+
+DESKTOP_CONFIG = {
+    "enabled": True,
+    "description": "弥娅桌面应用 - MIYA Desktop",
+}
+
+
 # =================================================================
 #                      平台汇总配置
 # =================================================================
@@ -364,6 +374,7 @@ ALL_PLATFORMS = {
     "satori": SATORI_CONFIG,
     # 内置平台
     "webchat": WEBCHAT_CONFIG,
+    "desktop": DESKTOP_CONFIG,
 }
 
 

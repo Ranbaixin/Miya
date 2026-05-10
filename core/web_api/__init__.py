@@ -6,6 +6,8 @@
 import logging
 from typing import Any, Optional, Dict
 
+from starlette.responses import StreamingResponse
+
 
 def _is_process_running(process):
     """安全地检查进程状态"""
@@ -254,7 +256,19 @@ class WebAPI:
                     "content": request.message,
                     "usg_id": usg_id,
                     "sendg_name": sendg_name,
+                    "user_id": usg_id,
                 }
+
+                # 检查是否为超级管理员，注入 is_owner 标记
+                try:
+                    from core.unified_permission import get_permission_engine
+
+                    engine = get_permission_engine()
+                    if engine and engine.is_superadmin(str(usg_id), platform=platform):
+                        perception["is_owner"] = True
+                        perception["canonical_user_id"] = usg_id
+                except Exception:
+                    pass
 
                 message = Message(
                     msg_type="data",
@@ -376,9 +390,23 @@ class WebAPI:
                         "platform": platform,
                         "content": request.message,
                         "usg_id": lookup_id,
+                        "user_id": lookup_id,
                         "sendg_name": sendg_name,
                         "message_type": "private",
                     }
+
+                    # 注入 is_owner 标记（桌面端超管权限）
+                    try:
+                        from core.unified_permission import get_permission_engine
+
+                        engine = get_permission_engine()
+                        if engine and engine.is_superadmin(
+                            str(lookup_id), platform=platform
+                        ):
+                            perception["is_owner"] = True
+                            perception["canonical_user_id"] = str(lookup_id)
+                    except Exception:
+                        pass
                     message = Message(
                         msg_type="data",
                         content=perception,
@@ -390,7 +418,7 @@ class WebAPI:
 
                     try:
                         response = (
-                            await self.decision_hub.process_erception_ross_latform(
+                            await self.decision_hub.process_perception_cross_platform(
                                 message
                             )
                         )
@@ -407,7 +435,7 @@ class WebAPI:
                         yield f"data: {json.dumps(response_data, ensure_ascii=False)}\n\n"
 
                         emotion_ = (
-                            self.decision_hub.emotion.g_emoion_state()
+                            self.decision_hub.emotion.get_emotion_state()
                             if self.decision_hub
                             and hasattr(self.decision_hub, "emotion")
                             and self.decision_hub.emotion
@@ -416,8 +444,13 @@ class WebAPI:
                         if emotion_:
                             yield f"data: {json.dumps({'type': 'emotion', 'data': emotion_}, ensure_ascii=False)}\n\n"
 
+                        # 读取灵魂数据 (从 decision_hub._last_soul_output)
+                        soul_ = getattr(self.decision_hub, "_last_soul_output", None)
+                        if soul_:
+                            yield f"data: {json.dumps({'type': 'soul', 'data': soul_}, ensure_ascii=False)}\n\n"
+
                         personality_ = (
-                            self.decision_hub.personality.get_rofile()
+                            self.decision_hub.personality.get_profile()
                             if self.decision_hub
                             and hasattr(self.decision_hub, "personality")
                             and self.decision_hub.personality

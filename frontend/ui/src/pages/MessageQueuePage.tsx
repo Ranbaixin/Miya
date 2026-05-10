@@ -1,55 +1,97 @@
 // ============================================================
-// 弥娅 消息队列 · 樱梦琉璃
+// 弥娅 消息流 · MessageQueuePage — 消息队列监控
 // ============================================================
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
+import type { MessagePipelineEvent } from '../types/index.d';
 
-interface QueueEvent { id: number; timestamp: string; type: 'enqueue'|'dispatch'|'complete'; note: string; duration_ms?: number; }
+const MOCK_EVENTS: MessagePipelineEvent[] = [
+  { id: '1', timestamp: new Date().toISOString(), stage: 'receive', user: '佳', message: '帮我看看今天的天气', group: '私聊' },
+  { id: '2', timestamp: new Date().toISOString(), stage: 'perceive', duration_ms: 120, detail: '意图识别: 信息查询', model: 'perceive' },
+  { id: '3', timestamp: new Date().toISOString(), stage: 'cognitive', duration_ms: 85, detail: '认知处理', model: 'deepseek-v4-flash' },
+  { id: '4', timestamp: new Date().toISOString(), stage: 'soul', duration_ms: 45, detail: '情感分析: 积极', model: 'emotion' },
+  { id: '5', timestamp: new Date().toISOString(), stage: 'decision', duration_ms: 60, detail: '调度决策', model: 'hub' },
+  { id: '6', timestamp: new Date().toISOString(), stage: 'respond', duration_ms: 230, detail: '生成回复', model: 'deepseek-v4-flash' },
+  { id: '7', timestamp: new Date().toISOString(), stage: 'send', duration_ms: 15, detail: '发送回复', group: '私聊' },
+];
 
-const colors: Record<string,string> = { enqueue:'text-[#fcd4b6] border-[rgba(252,212,182,0.2)]', dispatch:'text-[#93c5fd] border-[rgba(147,197,253,0.2)]', complete:'text-[#a7f3d0] border-[rgba(167,243,208,0.2)]' };
-const icons: Record<string,string> = { enqueue:'↓入队', dispatch:'→发车', complete:'✓完成' };
+const stageColors: Record<string, string> = {
+  receive: 'text-aether-bright',
+  perceive: 'text-resonance-bright',
+  cognitive: 'text-starlight',
+  soul: 'text-status-active',
+  decision: 'text-aether',
+  respond: 'text-resonance-bright',
+  send: 'text-text-secondary',
+  enqueue: 'text-text-dim',
+  dispatch: 'text-text-dim',
+};
 
 const MessageQueuePage: React.FC = () => {
-  const [events, setEvents] = useState<QueueEvent[]>([]);
-  const [queueSize, setQueueSize] = useState(0);
-  const [processing, setProcessing] = useState(false);
-  const counterRef = useRef(0);
-
-  useEffect(() => {
-    const mockGroups = ['1092980378(索多玛)', '579433934(二元3队)'];
-    const mockUsers = ['1523878699(佳)', '2911746585(咕)'];
-    const addEvent = () => {
-      const cid = ++counterRef.current;
-      const baseId = cid * 100;  // unique block to prevent key overlap
-      const now = new Date();
-      const mkTs = () => `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}.${now.getMilliseconds().toString().padStart(3,'0')}`;
-      const group = mockGroups[Math.floor(Math.random()*mockGroups.length)];
-      const user = mockUsers[Math.floor(Math.random()*mockUsers.length)];
-      const dur = Math.floor(Math.random()*28000)+2000;
-
-      setProcessing(true);
-      setQueueSize(1);
-      setEvents(prev=>[...prev.slice(-200), {id:baseId,timestamp:mkTs(),type:'enqueue',note:`群聊: size=1 group=${group} user=${user}`}]);
-      setTimeout(()=>setEvents(prev=>[...prev.slice(-200),{id:baseId+1,timestamp:new Date().toTimeString().slice(0,12),type:'dispatch',note:`群聊: group=${group} user=${user}`}]),300);
-      setTimeout(()=>{setEvents(prev=>[...prev.slice(-200),{id:baseId+2,timestamp:new Date().toTimeString().slice(0,12),type:'complete',note:`群聊: ${(dur/1000).toFixed(2)}s group=${group} user=${user}`,duration_ms:dur}]);setQueueSize(0);setProcessing(false);},dur);
-    };
-    addEvent();
-    const t = setInterval(addEvent, 5000);
-    return ()=>clearInterval(t);
-  }, []);
+  const [events] = useState<MessagePipelineEvent[]>(MOCK_EVENTS);
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="grid grid-cols-4 gap-2 p-3 pb-1">
-        {[['队列模型','default','text-[#c4b5fd]'],['队列大小',String(queueSize),queueSize>0?'text-[#fcd4b6]':'text-[#b8aec8]'],['发车间隔','1.0s','text-[#93c5fd]'],['处理状态',processing?'● PROCESSING':'○ IDLE',processing?'text-[#a7f3d0]':'text-[#b8aec8]']].map(([l,v,c])=>(
-          <div key={l} className="frost-panel p-3"><div className="text-[10px] text-[#b8aec8] mb-1">{l}</div><div className={`text-sm font-bold font-mono ${c}`}>{v}</div></div>
-        ))}
-      </div>
-      <div className="flex-1 p-3 pt-2">
-        <div className="text-[10px] text-[#b8aec8] uppercase tracking-widest mb-1.5">≣ 事件时间线</div>
-        <div className="frost-panel max-h-[calc(100vh-280px)] overflow-y-auto">
-          {events.map(e=><motion.div key={e.id} initial={{opacity:0,x:-8}} animate={{opacity:1,x:0}} className={`flex items-center gap-2 px-2 py-1 border-b ${colors[e.type]} text-[10px] font-mono`}><span className="text-[#b8aec8] w-[80px]">{e.timestamp}</span><span className={`${colors[e.type]} w-[50px] font-bold`}>{icons[e.type]}</span><span className="text-[#887c9e]">[{e.type==='enqueue'?'default':''}]</span><span className="text-[#4a4058]">{e.note}</span><span className="text-[#b8aec8] text-[9px] ml-auto">{e.duration_ms?`${e.duration_ms}ms`:''}</span></motion.div>)}
+    <div className="p-4 overflow-auto h-full space-y-3">
+      <div className="text-[10px] text-text-dim uppercase tracking-[0.2em]">≣ 消息流</div>
+
+      {/* 流水线概览 */}
+      <div className="glass-panel p-4">
+        <div className="text-[10px] text-text-dim uppercase tracking-widest mb-3">消息处理流水线</div>
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-2">
+          {['接收', '感知', '认知', '灵魂', '决策', '响应', '发送'].map((stage, i) => (
+            <motion.div
+              key={stage}
+              className="flex items-center gap-2"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.08 }}
+            >
+              <div className="w-3 h-3 rounded-full bg-aether/20 border border-aether/30 relative">
+                <div className="absolute inset-0 rounded-full bg-aether/60 animate-pulse" />
+              </div>
+              <span className="text-[10px] text-text-secondary whitespace-nowrap">{stage}</span>
+              {i < 6 && (
+                <svg width="20" height="8" className="text-text-dim/20 shrink-0">
+                  <line x1="0" y1="4" x2="18" y2="4" stroke="currentColor" strokeWidth="1" strokeDasharray="2,2" />
+                </svg>
+              )}
+            </motion.div>
+          ))}
         </div>
+      </div>
+
+      {/* 事件列表 */}
+      <div className="space-y-1.5">
+        <div className="text-[10px] text-text-dim uppercase tracking-widest ml-1">事件日志</div>
+        {events.map((e, i) => {
+          const time = new Date(e.timestamp).toLocaleTimeString('zh-CN', { hour12: false });
+          return (
+            <motion.div
+              key={e.id}
+              className="flex items-center gap-3 glass-panel py-2.5 px-3 text-[11px]"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 + i * 0.04 }}
+            >
+              <span className="text-text-dim font-mono text-[10px] w-16 shrink-0">{time}</span>
+              <span className={`font-medium w-16 shrink-0 ${stageColors[e.stage] || 'text-text-secondary'}`}>
+                {e.stage.toUpperCase()}
+              </span>
+              {e.user && (
+                <span className="text-starlight shrink-0 w-10">{e.user}</span>
+              )}
+              <span className="text-text-secondary flex-1 truncate">
+                {e.message || e.detail || ''}
+              </span>
+              {e.duration_ms && (
+                <span className="text-text-dim font-mono text-[10px] shrink-0">{e.duration_ms}ms</span>
+              )}
+              {e.model && (
+                <span className="text-aether text-[10px] shrink-0 max-w-[120px] truncate">{e.model}</span>
+              )}
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );
