@@ -29,7 +29,6 @@ from memory.session_manager import (
 # 导入新的处理器类
 from hub.perception_handler import PerceptionHandler
 from hub.response_generator import ResponseGenerator
-from hub.emotion_controller import EmotionController
 from hub.memory_manager import MemoryManager
 from core.text_loader import get_text
 
@@ -201,10 +200,7 @@ class DecisionHub:
             onebot_client=self.onebot_client,
         )
 
-        # 2. 情绪控制器
-        self.emotion_controller = EmotionController(emotion_instance=self.emotion)
-
-        # 3. 记忆管理器
+        # 2. 记忆管理器
         self.memory_manager = MemoryManager(
             memory_net=self.memory_net,
             memory_engine=self.memory_engine,
@@ -1051,9 +1047,9 @@ class DecisionHub:
                 if hasattr(self.personality, "current_form")
                 else "normal"
             )
-            if hasattr(self.emotion_controller.emotion, "set_form"):
-                self.emotion_controller.emotion.set_form(current_form)
-            response = self.emotion_controller.influence_response(response)
+            if hasattr(self.emotion, "set_form"):
+                self.emotion.set_form(current_form)
+            response = self.emotion.influence_response(response)
 
         # 6. 存储AI回复到记忆（委托给记忆管理器）
         if response:
@@ -1099,8 +1095,8 @@ class DecisionHub:
             except Exception as e:
                 logger.debug(f"[决策层] 智能记忆处理失败: {e}")
 
-        # 7. 情绪衰减（委托给情绪控制器）
-        self.emotion_controller.decay_coloring()
+        # 7. 情绪衰减
+        self.emotion.decay_coloring()
 
         # 8. 返回响应
         message.content["response"] = response
@@ -1997,6 +1993,12 @@ class DecisionHub:
                         _thinking = (
                             getattr(collab_result, "reasoning_content", "") or ""
                         )
+                        if (
+                            not _thinking
+                            and hasattr(collab_result, "thinking")
+                            and collab_result.thinking
+                        ):
+                            _thinking = collab_result.thinking
 
                         # B方案：存储情绪上下文到短期记忆
                         from memory import store_auto
@@ -2060,6 +2062,18 @@ class DecisionHub:
                             print("[DEBUG协作] 协作引擎路径存储完成")
                         except Exception as cog_err:
                             logger.warning(f"[认知记忆] 协作路径存储失败: {cog_err}")
+
+                        # 存储到 decision_hub 供 SSE/API 读取（协作引擎路径）
+                        self._last_soul_output = {
+                            "emotions": _emotions or {},
+                            "inner_thought": _inner_thought or "",
+                            "attribution": _attribution or "",
+                            "reflection": _reflection or "",
+                            "thinking": _thinking or "",
+                        }
+                        print(
+                            f"[SSE] _last_soul_output (collab): inner={bool(_inner_thought)}, emotions={list(_emotions.keys()) if _emotions else []}"
+                        )
 
                         return collab_result.response
 
