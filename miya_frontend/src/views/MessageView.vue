@@ -9,7 +9,7 @@ import Markdown from '@/components/Markdown.vue'
 import MessageItem from '@/components/MessageItem.vue'
 import { CONFIG } from '@/utils/config'
 import { live2dState } from '@/utils/live2dController'
-import { activeTabId, CURRENT_SESSION_ID, formatRelativeTime, getActiveTab, IS_TEMPORARY_SESSION, latestEmotion, loadCurrentSession, MESSAGES, newSession, switchSession, tabs } from '@/utils/session'
+import { activeTabId, CURRENT_SESSION_ID, formatRelativeTime, getActiveTab, IS_TEMPORARY_SESSION, latestEmotion, loadCurrentSession, MESSAGES, newSession, saveMessages, switchSession, tabs } from '@/utils/session'
 import { clearSpeakQueue, isPlaying, queueSpeak, stop as stopTTS } from '@/utils/tts'
 import { setMessageViewExpanded } from '@/utils/uiState'
 
@@ -29,6 +29,7 @@ export function chatStream(content: string, options?: { skill?: string, images?:
   stopTTS()
 
   MESSAGES.value.push({ role: 'user', content: options?.images?.length ? `[截图x${options.images.length}] ${content}` : content })
+  saveMessages()
 
   messageQueue.push({ content, options })
   processQueue()
@@ -81,6 +82,10 @@ async function chatStreamInternal(content: string, options?: { skill?: string, i
   const pushContent = (text: string) => {
     contentBuf += text
     message.content = contentBuf
+    // 每次内容更新保存到 localStorage
+    try {
+      localStorage.setItem('miya-messages', JSON.stringify(MESSAGES.value.slice(-200)))
+    } catch {}
   }
 
   live2dState.value = 'thinking'
@@ -89,7 +94,7 @@ async function chatStreamInternal(content: string, options?: { skill?: string, i
 
   let roundContentStart = 0
 
-  API.chatSend({
+  return API.chatSend({
     message: content,
     session_id: CURRENT_SESSION_ID.value ?? 'default',
     platform: 'desktop',
@@ -142,7 +147,7 @@ async function chatStreamInternal(content: string, options?: { skill?: string, i
             .map(([name, val]: any) => ({ name, intensity: Math.round((val as number) * 100) }))
       ;(message as any).soulData = { emotions }
       latestEmotion.value = { emotions }
-      // 异步拉取灵魂数据 (独白/归因/反思/思考)
+      saveMessages()
       fetchSoulData()
     } else {
       console.log('[MessageView] no emotion data: soulRaw=', !!soulRaw.emotions, 'emotionData=', !!emotionData)
@@ -155,11 +160,13 @@ async function chatStreamInternal(content: string, options?: { skill?: string, i
     })
 
     isSending.value = false
+    saveMessages()
     processQueue()
   }).catch((err: any) => {
     message.content = `[连接失败: ${err?.message || '后端未响应'}]`
     message.generating = false
     isSending.value = false
+    saveMessages()
     processQueue()
   })
 }
@@ -292,7 +299,7 @@ function dispatchToActiveTab(content: string, options?: { skill?: string, images
 }
 
 onMounted(async () => {
-  loadCurrentSession()
+  await loadCurrentSession()
   scrollToBottom()
   nextTick(resizeComposer)
 })

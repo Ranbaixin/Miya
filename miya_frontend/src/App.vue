@@ -9,11 +9,13 @@ import { playBgm, stopBgm } from '@/composables/useAudio'
 import { useElectron } from '@/composables/useElectron'
 import { CONFIG } from '@/utils/config'
 import { useThemeColors } from '@/composables/useThemeColors'
+import { useMIYARealtime } from '@/composables/useMIYARealtime'
 import SciFiOverlay from '@/components/SciFiOverlay.vue'
 import FloatingView from '@/views/FloatingView.vue'
 
 const isElectron = !!window.electronAPI
-useThemeColors() // 初始化主题色 CSS 变量
+useThemeColors()
+const { connect: connectWS, disconnect: disconnectWS } = useMIYARealtime() // 初始化主题色 CSS 变量
 const { isMaximized } = useElectron()
 const isMac = window.electronAPI?.platform === 'darwin'
 
@@ -45,6 +47,7 @@ const frameStyle = computed(() => {
 
 onMounted(() => {
   playBgm('9.快乐的小曲.mp3')
+  connectWS()
 
   if (isElectron) {
     window.electronAPI?.floating.getState().then((s: FloatingState) => {
@@ -56,7 +59,7 @@ onMounted(() => {
   }
 })
 
-onUnmounted(() => {})
+onUnmounted(() => { disconnectWS() })
 
 const showResizeHandles = computed(() => isElectron && !isFloatingMode.value && !isMaximized.value)
 </script>

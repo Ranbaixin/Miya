@@ -1,6 +1,6 @@
 import type { StreamChunk } from '@/utils/encoding'
 import { useStorage } from '@vueuse/core'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import API from '@/api/core'
 
 export const proactiveNotifier = ref<null | ((source: string, content: string) => void)>(null)
@@ -42,9 +42,19 @@ export interface ChatTab {
   unread: number
 }
 
-export const tabs = ref<ChatTab[]>([
-  { id: 'default', name: '弥娅', messages: [], unread: 0 },
-])
+export const tabs = ref<ChatTab[]>(
+  (() => {
+    try {
+      const saved = localStorage.getItem('miya-chat-tabs')
+      return saved ? JSON.parse(saved) : [{ id: 'default', name: '弥娅', messages: [], unread: 0 }]
+    } catch { return [{ id: 'default', name: '弥娅', messages: [], unread: 0 }] }
+  })()
+)
+
+// 监听保存
+watch(tabs, (t) => {
+  try { localStorage.setItem('miya-chat-tabs', JSON.stringify(t)) } catch {}
+}, { deep: true })
 
 // 全局最新情绪（跨组件共享）
 export const latestEmotion = ref<SoulData>({ emotions: [] })
@@ -67,7 +77,7 @@ export function appendDefaultMessage(message: Message) {
 export async function reloadCurrentSessionMessages() {
   if (!CURRENT_SESSION_ID.value)
     return
-  const detail = await API.getSessionDetail(CURRENT_SESSION_ID.value)
+  const detail = await API.getSession(CURRENT_SESSION_ID.value)
   MESSAGES.value = normalizeMessages(detail.messages)
   syncDefaultMessages()
 }
@@ -232,7 +242,47 @@ export function normalizeMessages(messages: unknown, assistantName?: string): Me
 // ── 默认 tab 会话管理 ──
 
 export const CURRENT_SESSION_ID = useStorage<string | null>('miya-session', null)
-export const MESSAGES = ref<Message[]>([])
+// 从 localStorage 恢复消息（优先 miya-messages，fallback 到 miya-chat-tabs）
+function loadSavedMessages(): Message[] {
+  const tryLoad = (key: string, path?: (data: any) => any): Message[] | null => {
+    try {
+      const saved = localStorage.getItem(key)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        const arr = path ? path(parsed) : parsed
+        if (Array.isArray(arr) && arr.length > 0)
+          return arr as Message[]
+      }
+    }
+    catch (e) {
+      console.warn(`[MIYA] 无法从 localStorage 加载 ${key}:`, e)
+    }
+    return null
+  }
+
+  const primary = tryLoad('miya-messages')
+  if (primary)
+    return primary
+
+  const fallback = tryLoad('miya-chat-tabs', (data) => data?.[0]?.messages)
+  if (fallback) {
+    console.warn('[MIYA] miya-messages 为空，已从 tabs 恢复消息')
+    return fallback
+  }
+
+  return []
+}
+export const MESSAGES = ref<Message[]>(loadSavedMessages())
+
+export function saveMessages() {
+  try {
+    const toSave = MESSAGES.value.slice(-200)
+    localStorage.setItem('miya-messages', JSON.stringify(toSave))
+  } catch (e) {
+    console.warn('[MIYA] 保存消息到 localStorage 失败:', e)
+  }
+}
+
 export const IS_TEMPORARY_SESSION = ref(false)
 
 tabs.value[0]!.messages = MESSAGES.value
@@ -244,22 +294,27 @@ function syncDefaultMessages() {
 export async function loadCurrentSession() {
   if (CURRENT_SESSION_ID.value) {
     try {
-      const detail = await API.getSessionDetail(CURRENT_SESSION_ID.value)
-      MESSAGES.value = normalizeMessages(detail.messages)
-      syncDefaultMessages()
-      return
+      const detail = await API.getSession(CURRENT_SESSION_ID.value)
+      const normalized = normalizeMessages(detail.messages)
+      // 只有后端有数据时才替换，否则保留本地消息
+      if (normalized.length > 0) {
+        MESSAGES.value = normalized
+        syncDefaultMessages()
+        return
+      }
     }
     catch {
       CURRENT_SESSION_ID.value = null
     }
   }
-  MESSAGES.value = []
+  // 保留现有消息
   syncDefaultMessages()
 }
 
 export function newSession() {
   CURRENT_SESSION_ID.value = null
   MESSAGES.value = []
+  saveMessages()
   syncDefaultMessages()
   IS_TEMPORARY_SESSION.value = false
 }
@@ -267,6 +322,7 @@ export function newSession() {
 export function newTemporarySession() {
   CURRENT_SESSION_ID.value = null
   MESSAGES.value = []
+  saveMessages()
   syncDefaultMessages()
   IS_TEMPORARY_SESSION.value = true
 }
