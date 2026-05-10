@@ -2,8 +2,8 @@
 import type { Message, ToolEvent } from '@/utils/session'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { CONFIG } from '@/utils/config'
-import { latestEmotion } from '@/utils/session'
 import Markdown from './Markdown.vue'
+import SoulCard from './SoulCard.vue'
 
 const props = defineProps<Message>()
 
@@ -42,7 +42,7 @@ const EMOTION_COLORS: Record<string, string> = {
 }
 
 const soulBars = computed(() => {
-  const emos = props.soulData?.emotions || latestEmotion.value.emotions
+  const emos = props.soulData?.emotions
   if (!emos?.length) return []
   const total = emos.reduce((s, e) => s + e.intensity, 1) || 1
   return emos.slice(0, 5).map(e => ({
@@ -53,18 +53,18 @@ const soulBars = computed(() => {
 })
 
 const emotionList = computed(() => {
-  const emos = props.soulData?.emotions || latestEmotion.value.emotions
+  const emos = props.soulData?.emotions
   if (emos?.length) return emos.slice(0, 5).map(e => ({ name: e.name, pct: e.intensity, color: EMOTION_COLORS[e.name] || '#00e5ff' }))
   return []
 })
 
 const emotionText = computed(() => {
-  const emos = props.soulData?.emotions || latestEmotion.value.emotions
+  const emos = props.soulData?.emotions
   if (!emos?.length) return ''
   return emos.slice(0, 6).map(e => `${e.name} ${e.intensity}%`).join(' · ')
 })
 
-const soulDetail = computed(() => props.soulData || latestEmotion.value)
+const soulDetail = computed(() => props.soulData || null)
 
 const displaySource = computed(() => {
   if (typeof props.content === 'string') return props.content
@@ -187,39 +187,46 @@ watch(() => props.generating, (v) => {
 
     <!-- 灵魂详情面板 -->
     <div v-if="role === 'assistant' && detailOpen" class="soul-detail">
-      <div class="soul-section">
+      <div class="soul-section emotion-section">
         <div class="soul-section-title">♥ 情绪分析</div>
-        <div v-if="emotionText" class="soul-section-text">{{ emotionText }}</div>
+        <div v-if="emotionList.length" class="soul-emotion-list">
+          <div v-for="e in emotionList" :key="e.name" class="soul-emotion-row">
+            <span class="soul-em-name">{{ e.name }}</span>
+            <div class="soul-em-bar">
+              <div class="soul-em-fill" :style="{ width: `${e.pct}%`, background: e.color }" />
+            </div>
+            <span class="soul-em-val">{{ e.pct }}%</span>
+          </div>
+        </div>
         <div v-else class="soul-section-text dim">加载中...</div>
       </div>
-      <div v-if="soulDetail?.innerThought && soulDetail.innerThought !== '正常对话互动'" class="soul-section">
+      <div v-if="soulDetail?.innerThought && soulDetail.innerThought !== '正常对话互动'" class="soul-section thought-section">
         <div class="soul-section-title">✦ 内心独白</div>
-        <div class="soul-section-text">{{ soulDetail.innerThought }}</div>
+        <div class="soul-section-text thought-text">{{ soulDetail.innerThought }}</div>
       </div>
-      <div v-if="soulDetail?.attribution && soulDetail.attribution !== '正常对话互动'" class="soul-section">
+      <div v-if="soulDetail?.attribution && soulDetail.attribution !== '正常对话互动'" class="soul-section attrib-section">
         <div class="soul-section-title">→ 归因</div>
         <div class="soul-section-text dim">{{ soulDetail.attribution }}</div>
       </div>
-      <div v-if="soulDetail?.reflection" class="soul-section">
+      <div v-if="soulDetail?.reflection" class="soul-section reflection-section">
         <div class="soul-section-title">↻ 反思</div>
         <div class="soul-section-text dim">{{ soulDetail.reflection }}</div>
       </div>
-      <div v-if="soulDetail?.thinking" class="soul-section">
+      <div v-if="soulDetail?.thinking" class="soul-section thinking-section">
         <div class="soul-section-title">◇ 思考过程</div>
-        <div class="soul-section-text code" style="max-height:200px;overflow-y:auto">{{ soulDetail.thinking }}</div>
+        <div class="soul-section-text code">{{ soulDetail.thinking }}</div>
       </div>
-      <div v-if="latestEmotion.attribution" class="soul-section">
-        <div class="soul-section-title">→ 归因</div>
-        <div class="soul-section-text dim">{{ latestEmotion.attribution }}</div>
-      </div>
-      <div v-if="latestEmotion.reflection" class="soul-section">
-        <div class="soul-section-title">↻ 反思</div>
-        <div class="soul-section-text dim">{{ latestEmotion.reflection }}</div>
-      </div>
-      <div v-if="latestEmotion.thinking" class="soul-section">
-        <div class="soul-section-title">◇ 思考过程</div>
-        <div class="soul-section-text code" style="max-height:200px;overflow-y:auto">{{ latestEmotion.thinking }}</div>
-      </div>
+
+      <!-- SoulCard 浮动卡片 -->
+      <SoulCard
+        v-if="role === 'assistant' && soulDetail"
+        :emotions="soulDetail.emotions"
+        :inner-thought="soulDetail.innerThought"
+        :attribution="soulDetail.attribution"
+        :reflection="soulDetail.reflection"
+        :thinking="soulDetail.thinking"
+        :generating="generating"
+      />
     </div>
   </div>
 </template>
@@ -303,16 +310,104 @@ watch(() => props.generating, (v) => {
 .bar-expand-btn:hover { border-color:rgba(0,229,255,.4); color:rgba(0,229,255,.7); background:rgba(0,229,255,.08); }
 
 /* 灵魂详情面板 */
-.soul-detail { margin:.4rem 0; padding:.5rem .6rem; border:1px solid rgba(0,229,255,.08); background:rgba(0,6,16,.5); border-radius:2px; font-size:.7rem; }
-.soul-section { margin-bottom:.5rem; }
-.soul-section-title { font-family:'JetBrains Mono',monospace; font-size:.6rem; color:rgba(0,229,255,.4); letter-spacing:.1em; margin-bottom:.25rem; }
-.soul-section-text { color:rgba(200,215,240,.7); line-height:1.5; font-size:.72rem; }
-.soul-section-text.dim { color:rgba(0,229,255,.3); font-size:.65rem; }
-.soul-section-text.code { font-family:'JetBrains Mono',monospace; font-size:.6rem; color:rgba(160,190,220,.55); white-space:pre-wrap; }
-.soul-emotion-list { display:flex; flex-direction:column; gap:.25rem; }
-.soul-emotion-row { display:flex; align-items:center; gap:.4rem; }
-.soul-em-name { font-size:.6rem; color:rgba(180,200,220,.5); width:2.5rem; text-align:right; }
-.soul-em-bar { flex:1; height:5px; background:rgba(0,229,255,.06); border-radius:2px; overflow:hidden; }
-.soul-em-fill { height:100%; border-radius:2px; transition:width .5s ease; }
-.soul-em-val { font-size:.55rem; color:rgba(0,229,255,.3); width:2rem; text-align:right; font-family:'JetBrains Mono',monospace; }
+.soul-detail {
+  margin: 0.5rem 0 0;
+  padding: 0.6rem;
+  border: 1px solid rgba(0, 229, 255, 0.1);
+  background: linear-gradient(135deg, rgba(0, 6, 16, 0.7), rgba(4, 10, 22, 0.5));
+  border-radius: 4px;
+  font-size: 0.7rem;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+.soul-section {
+  margin-bottom: 0.6rem;
+  padding-left: 0.5rem;
+  border-left: 2px solid rgba(0, 229, 255, 0.15);
+}
+.soul-section:last-child {
+  margin-bottom: 0;
+}
+.soul-section.emotion-section { border-left-color: rgba(255, 170, 80, 0.3); }
+.soul-section.thought-section { border-left-color: rgba(160, 180, 255, 0.3); }
+.soul-section.attrib-section { border-left-color: rgba(0, 229, 255, 0.3); }
+.soul-section.reflection-section { border-left-color: rgba(180, 77, 255, 0.3); }
+.soul-section.thinking-section { border-left-color: rgba(80, 200, 120, 0.3); }
+
+.soul-section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: rgba(0, 229, 255, 0.45);
+  letter-spacing: 0.08em;
+  margin-bottom: 0.3rem;
+}
+.soul-section-text {
+  color: rgba(200, 215, 240, 0.7);
+  line-height: 1.55;
+  font-size: 0.72rem;
+}
+.soul-section-text.dim {
+  color: rgba(0, 229, 255, 0.35);
+  font-size: 0.67rem;
+}
+.soul-section-text.code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: rgba(160, 200, 180, 0.6);
+  background: rgba(0, 8, 16, 0.5);
+  border: 1px solid rgba(0, 229, 255, 0.06);
+  border-radius: 3px;
+  padding: 0.4rem 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.5;
+}
+.thought-text {
+  font-family: 'Noto Serif SC', serif;
+  font-style: italic;
+  color: rgba(200, 215, 240, 0.75);
+  padding: 0.3rem 0.4rem;
+  background: rgba(160, 180, 255, 0.04);
+  border-radius: 3px;
+}
+/* 情绪可视化条 */
+.soul-emotion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.soul-emotion-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.soul-em-name {
+  font-size: 0.6rem;
+  color: rgba(200, 215, 240, 0.55);
+  width: 2.5rem;
+  text-align: right;
+  flex-shrink: 0;
+}
+.soul-em-bar {
+  flex: 1;
+  height: 5px;
+  background: rgba(0, 229, 255, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.soul-em-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.soul-em-val {
+  font-size: 0.55rem;
+  color: rgba(0, 229, 255, 0.3);
+  width: 2rem;
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0;
+}
 </style>

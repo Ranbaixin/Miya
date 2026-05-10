@@ -8,6 +8,7 @@ import logging
 import re
 from typing import Dict, List, Optional, Set
 from collections import defaultdict
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +113,10 @@ class ConversationContextManager:
         )  # session_id -> 对话轮次
         self._pending_intent: Dict[str, str] = {}  # session_id -> 未完成的意图
 
+        self._persist_file = Path("data/conversation_context_state.json")
+        self._persist_file.parent.mkdir(parents=True, exist_ok=True)
+        self._load_topic_state()
+
     def _load_config(self) -> dict:
         """从 text_config.json 加载对话上下文配置"""
         try:
@@ -140,6 +145,9 @@ class ConversationContextManager:
         )
         is_important = any(kw in user_input for kw in important_keywords)
 
+        # 增量对话轮次
+        self._conversation_turns[session_id] += 1
+
         if current_topic:
             if session_id not in self._topic_history:
                 self._topic_history[session_id] = []
@@ -151,7 +159,88 @@ class ConversationContextManager:
                 ]
             self._last_topics[session_id] = current_topic
 
+        self._save_topic_state()
+
         return current_topic or ""
+
+    def _load_topic_state(self):
+        """从磁盘恢复话题追踪状态（含时间衰减过滤）"""
+        if not self._persist_file.exists():
+            return
+        try:
+            import json
+            import time
+            from memory.session_decay import get_phase, SessionPhase
+
+            with open(self._persist_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            now = time.time()
+            last_active_times = data.get("last_active_time", {})
+            filtered_sessions = 0
+
+            # 过滤休眠会话
+            for session_id in list(data.get("last_topics", {}).keys()):
+                last_time = last_active_times.get(session_id, 0)
+                if last_time > 0:
+                    elapsed = now - last_time
+                    phase = get_phase(elapsed)
+                    if phase == SessionPhase.DORMANT:
+                        filtered_sessions += 1
+                        continue
+
+                self._last_topics[session_id] = data["last_topics"][session_id]
+
+            for session_id in list(data.get("topic_history", {}).keys()):
+                if session_id not in self._last_topics:
+                    continue
+                self._topic_history[session_id] = data["topic_history"][session_id]
+
+            for session_id in list(data.get("conversation_turns", {}).keys()):
+                if session_id not in self._last_topics:
+                    continue
+                self._conversation_turns[session_id] = data["conversation_turns"][
+                    session_id
+                ]
+
+            self._pending_intent = {
+                sid: v
+                for sid, v in data.get("pending_intent", {}).items()
+                if sid in self._last_topics
+            }
+            self._last_active_time = last_active_times
+
+            loaded = len(self._last_topics)
+            if loaded > 0 or filtered_sessions > 0:
+                logger.info(
+                    f"[对话上下文] 恢复话题状态: {loaded} 个会话, "
+                    f"跳过 {filtered_sessions} 个休眠"
+                )
+        except Exception as e:
+            logger.warning(f"[对话上下文] 恢复话题状态失败: {e}")
+
+    def _save_topic_state(self):
+        """持久化话题追踪状态到磁盘"""
+        try:
+            import json
+
+            now = __import__("time").time()
+            self._last_active_time = getattr(self, "_last_active_time", {})
+            for sid in self._conversation_turns:
+                if sid not in self._last_active_time:
+                    self._last_active_time[sid] = now
+
+            data = {
+                "topic_history": dict(self._topic_history),
+                "last_topics": dict(self._last_topics),
+                "conversation_turns": dict(self._conversation_turns),
+                "pending_intent": dict(self._pending_intent),
+                "last_active_time": dict(self._last_active_time),
+            }
+            with open(self._persist_file, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.warning(f"[对话上下文] 保存话题状态失败: {e}")
 
     def _detect_topic(self, text: str) -> str:
         """检测当前输入的话题"""
@@ -164,11 +253,27 @@ class ConversationContextManager:
         return ""
 
     def get_topic_context(self, session_id: str) -> str:
-        """获取话题上下文信息"""
+        """获取话题上下文信息（含时间衰减状态）"""
         last_topic = self._last_topics.get(session_id, "")
         turns = self._conversation_turns.get(session_id, 0)
         if not last_topic:
             return ""
+
+        last_active = self._last_active_time.get(session_id, 0)
+        if last_active > 0:
+            import time
+            from memory.session_decay import (
+                get_phase,
+                SessionPhase,
+                get_phase_description,
+            )
+
+            elapsed = time.time() - last_active
+            phase = get_phase(elapsed)
+            if phase != SessionPhase.HOT:
+                desc = get_phase_description(phase)
+                return f"[话题追踪] {desc} | 话题: {last_topic}"
+
         return f"[话题追踪] 当前话题: {last_topic}, 连续对话: {turns}轮"
 
     def check_needs_recall(self, user_input: str) -> bool:

@@ -206,17 +206,13 @@ class WebAPI:
                 logger.error(f"[WebAPI] 获取系统状态失败: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
 
-        @self.router.get("/api/emotion")
-        async def get_legacy_emotion():
-            """获取情绪状态（兼容旧API路径）"""
-            try:
-                emotion_state = self.web_net.emotion_manager.get_emotion_state()
-                return emotion_state
-            except Exception as e:
-                logger.error(f"[WebAPI] 获取情绪状态失败: {e}")
-                raise HTTPException(status_code=500, detail=str(e))
-
         # ========== Web 端对话路由 (兼容旧API) ==========
+
+        @self.router.get("/api/soul/current")
+        async def get_current_soul():
+            """获取当前消息的灵魂数据"""
+            soul = getattr(self.decision_hub, "_last_soul_output", None)
+            return soul or {}
 
         @self.router.post("/api/chat")
         async def web_chat(request: ChatRequest):
@@ -434,16 +430,6 @@ class WebAPI:
                         }
                         yield f"data: {json.dumps(response_data, ensure_ascii=False)}\n\n"
 
-                        emotion_ = (
-                            self.decision_hub.emotion.get_emotion_state()
-                            if self.decision_hub
-                            and hasattr(self.decision_hub, "emotion")
-                            and self.decision_hub.emotion
-                            else None
-                        )
-                        if emotion_:
-                            yield f"data: {json.dumps({'type': 'emotion', 'data': emotion_}, ensure_ascii=False)}\n\n"
-
                         # 读取灵魂数据 (从 decision_hub._last_soul_output)
                         soul_ = getattr(self.decision_hub, "_last_soul_output", None)
                         if soul_:
@@ -462,7 +448,6 @@ class WebAPI:
                         final_result = {
                             "response": response,
                             "timestamp": datetime.utcnow().isoformat(),
-                            "emotion": emotion_,
                             "personality": personality_,
                         }
                         yield f"data: {json.dumps({'type': 'done', 'data': final_result}, ensure_ascii=False)}\n\n"

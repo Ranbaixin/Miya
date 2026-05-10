@@ -167,6 +167,22 @@ function buildMessageQueueKey(role: Message['role'], content: string): string {
   return `${role}\u0000${extractStructuredToolBlocks(content).content}`
 }
 
+function normalizeSoulData(input: any): SoulData | undefined {
+  if (!input || typeof input !== 'object') return undefined
+  const sd: SoulData = {}
+  if (Array.isArray(input.emotions) && input.emotions.length)
+    sd.emotions = input.emotions
+  if (typeof input.innerThought === 'string' && input.innerThought)
+    sd.innerThought = input.innerThought
+  if (typeof input.attribution === 'string' && input.attribution)
+    sd.attribution = input.attribution
+  if (typeof input.reflection === 'string' && input.reflection)
+    sd.reflection = input.reflection
+  if (typeof input.thinking === 'string' && input.thinking)
+    sd.thinking = input.thinking
+  return Object.keys(sd).length ? sd : undefined
+}
+
 function normalizeMessage(input: any, assistantName?: string): Message | null {
   if (!input || typeof input !== 'object')
     return null
@@ -195,6 +211,7 @@ function normalizeMessage(input: any, assistantName?: string): Message | null {
     status: typeof input.status === 'string' ? input.status : undefined,
     sender: typeof input.sender === 'string' ? input.sender : role === 'assistant' ? assistantName : undefined,
     toolEvents: toolEvents.length ? toolEvents : undefined,
+    soulData: normalizeSoulData(input.soulData || input.soul_data),
   }
 }
 
@@ -216,6 +233,8 @@ function mergeAssistantMessages(base: Message, extra: Message) {
     base.status = extra.status
   if (!base.sender && extra.sender)
     base.sender = extra.sender
+  if (extra.soulData && !base.soulData)
+    base.soulData = extra.soulData
   base.generating = base.generating || extra.generating
 }
 
@@ -300,6 +319,8 @@ export async function loadCurrentSession() {
       if (normalized.length > 0) {
         MESSAGES.value = normalized
         syncDefaultMessages()
+        // 异步回填灵魂数据（从认知记忆 / soul API）
+        backfillSoulDataForSession()
         return
       }
     }
@@ -309,6 +330,36 @@ export async function loadCurrentSession() {
   }
   // 保留现有消息
   syncDefaultMessages()
+}
+
+async function backfillSoulDataForSession() {
+  const msgs = MESSAGES.value
+  const lastAi = msgs
+    .filter(m => m.role === 'assistant')
+    .slice(-1)[0]
+  if (!lastAi || (lastAi as any).soulData?.emotions?.length) return
+
+  try {
+    const res = await fetch('http://localhost:8000/api/soul/current')
+    const soul = await res.json()
+    if (soul && ((soul.emotions && (Array.isArray(soul.emotions) ? soul.emotions.length : Object.keys(soul.emotions).length)) || soul.inner_thought || soul.thinking)) {
+      const existing = (lastAi as any).soulData || {}
+      if (soul.emotions && typeof soul.emotions === 'object' && !Array.isArray(soul.emotions)) {
+        existing.emotions = Object.entries(soul.emotions).map(([name, val]: any) => ({
+          name,
+          intensity: typeof val === 'number' ? Math.round(val) : 50,
+        }))
+      } else if (Array.isArray(soul.emotions)) {
+        existing.emotions = soul.emotions
+      }
+      if (!existing.innerThought && soul.inner_thought) existing.innerThought = soul.inner_thought
+      if (!existing.attribution && soul.attribution) existing.attribution = soul.attribution
+      if (!existing.reflection && soul.reflection) existing.reflection = soul.reflection
+      if (!existing.thinking && soul.thinking) existing.thinking = soul.thinking
+      ;(lastAi as any).soulData = existing
+      saveMessages()
+    }
+  } catch {}
 }
 
 export function newSession() {

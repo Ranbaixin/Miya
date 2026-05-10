@@ -595,6 +595,44 @@ export function clearEmotion() {
   }
 }
 
+/** 灵魂情绪 → EmotionCategory 映射 */
+const SOUL_EMOTION_CATEGORY: Record<string, EmotionCategory> = {
+  '喜悦': 'positive', '开心': 'positive', '快乐': 'positive', '甜蜜': 'positive',
+  '幸福': 'positive', '满足': 'positive', '温暖': 'positive', '期待': 'positive',
+  '感动': 'positive', '爱': 'positive', '心动': 'positive', '安心': 'positive',
+  '依恋': 'positive', '害羞': 'positive', '释然': 'positive', '挂念': 'positive',
+  '怀旧': 'positive', '好奇': 'positive',
+  '忧伤': 'negative', '悲伤': 'negative', '难过': 'negative', '愤怒': 'negative',
+  '烦躁': 'negative', '恐惧': 'negative', '害怕': 'negative', '愧疚': 'negative',
+  '无奈': 'negative', '心疼': 'negative', '思念': 'negative',
+  '惊喜': 'surprise', '惊讶': 'surprise',
+  sadness: 'negative', anger: 'negative', fear: 'negative',
+  disgust: 'negative', joy: 'positive', love: 'positive',
+}
+
+let soulEmotionTimer: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * 根据灵魂数据分析并应用 Live2D 表情。
+ * 取强度最高的情绪，映射到 .exp3.json 表情集，持续 8 秒后回归 normal。
+ */
+export function setSoulEmotion(emotions: Array<{ name: string, intensity: number }>) {
+  if (!emotions?.length) return
+
+  const top = emotions[0]!
+  const category = SOUL_EMOTION_CATEGORY[top.name] || 'normal'
+
+  setEmotion(category)
+
+  if (soulEmotionTimer) {
+    clearTimeout(soulEmotionTimer)
+  }
+  soulEmotionTimer = setTimeout(() => {
+    soulEmotionTimer = null
+    clearEmotion()
+  }, 8000)
+}
+
 // 情绪动作名 → EmotionCategory 映射
 const ACTION_EMOTION_MAP: Record<string, EmotionCategory> = {
   happy: 'positive',

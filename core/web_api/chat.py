@@ -218,16 +218,6 @@ class ChatRoutes:
             }
             yield f"data: {json.dumps(response_data, ensure_ascii=False)}\n\n"
 
-            emotion_state = (
-                self.decision_hub.emotion.get_emotion_state()
-                if self.decision_hub
-                and hasattr(self.decision_hub, "emotion")
-                and self.decision_hub.emotion
-                else None
-            )
-            if emotion_state:
-                yield f"data: {json.dumps({'type': 'emotion', 'data': emotion_state}, ensure_ascii=False)}\n\n"
-
             personality_state = (
                 self.decision_hub.personality.get_profile()
                 if self.decision_hub
@@ -241,7 +231,6 @@ class ChatRoutes:
             final_result = message_accumulator.get_final_result()
             final_result["response"] = response
             final_result["timestamp"] = datetime.utcnow().isoformat()
-            final_result["emotion"] = emotion_state
             final_result["personality"] = personality_state
             yield f"data: {json.dumps({'type': 'done', 'data': final_result}, ensure_ascii=False)}\n\n"
 

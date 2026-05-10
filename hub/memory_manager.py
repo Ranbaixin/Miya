@@ -74,7 +74,7 @@ class MemoryManager:
             platform = perception.get("platform", "qq")
             sender_name = perception.get("sender_name", "用户")
             message_type = perception.get("message_type", "")
-            session_id = f"qq_{user_id}"
+            session_id = f"{platform}_{user_id}"
 
             logger.info(f"[记忆管理器] 收到消息: {content[:50]}...")
 
@@ -95,6 +95,14 @@ class MemoryManager:
                     content=content,
                     metadata=metadata,
                 )
+
+                # 每 3 条消息强制 flush 到磁盘
+                self._conv_save_counter = getattr(self, "_conv_save_counter", 0) + 1
+                if self._conv_save_counter % 3 == 0:
+                    try:
+                        await self.memory_net.conversation_history.flush()
+                    except Exception:
+                        pass
 
             # 存储到统一记忆系统 (新版 API)
             await store_dialogue(
@@ -166,7 +174,7 @@ class MemoryManager:
             group_id = str(perception.get("group_id", ""))
             message_type = perception.get("message_type", "")
             platform = perception.get("platform", "qq")
-            session_id = f"qq_{user_id}"
+            session_id = f"{platform}_{user_id}"
 
             # 存储到 MemoryNet
             if self.memory_net and self.memory_net.conversation_history:
@@ -185,6 +193,14 @@ class MemoryManager:
                     content=response,
                     metadata=metadata,
                 )
+
+                # 每 3 条消息强制 flush 到磁盘
+                self._conv_save_counter = getattr(self, "_conv_save_counter", 0) + 1
+                if self._conv_save_counter % 3 == 0:
+                    try:
+                        await self.memory_net.conversation_history.flush()
+                    except Exception:
+                        pass
 
             # 存储到统一记忆系统 (新版 API)
             await store_dialogue(

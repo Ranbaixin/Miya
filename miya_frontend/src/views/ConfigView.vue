@@ -6,18 +6,18 @@ import { useRouter } from 'vue-router'
 import API from '@/api/core'
 import { CONFIG } from '@/utils/config'
 import { useThemeColors } from '@/composables/useThemeColors'
+import { audioSettings, bgmFileOptions, playBgm, stopBgm } from '@/composables/useAudio'
 
 const router = useRouter()
 const { theme, resetTheme } = useThemeColors()
 
-type TabKey = 'appearance' | 'model' | 'soul' | 'memory' | 'system'
+type TabKey = 'appearance' | 'model' | 'soul' | 'memory' | 'system' | 'audio'
 const activeTab = ref<TabKey>('appearance')
 const themeOpen = ref(false)
 const backendOnline = ref(false)
 
 // ── 实时数据 ──
 const systemStatus = ref<any>(null)
-const emotionData = ref<any>(null)
 const personaData = ref<any>(null)
 const platformData = ref<any[]>([])
 const memoryStats = ref<any>(null)
@@ -64,15 +64,13 @@ onMounted(async () => {
     backendOnline.value = health.status === 'healthy'
     if (!backendOnline.value) return
 
-    const [status, emo, persona, mem, providers] = await Promise.allSettled([
+    const [status, persona, mem, providers] = await Promise.allSettled([
       API.systemStatus(),
-      API.getEmotion(),
       API.getCurrentPersona(),
       API.getMemoryStats(),
       API.getConfig().then((c: any) => c?.providers || []).catch(() => []),
     ])
     systemStatus.value = status.status === 'fulfilled' ? status.value : null
-    emotionData.value = emo.status === 'fulfilled' ? emo.value : null
     personaData.value = persona.status === 'fulfilled' ? persona.value : null
     memoryStats.value = mem.status === 'fulfilled' ? mem.value : null
     providerList.value = providers.status === 'fulfilled' ? providers.value : []
@@ -89,6 +87,7 @@ const tabs: { key: TabKey, label: string, icon: string }[] = [
   { key: 'model', label: '模型', icon: '◈' },
   { key: 'soul', label: '灵魂', icon: '♥' },
   { key: 'memory', label: '记忆', icon: '◆' },
+  { key: 'audio', label: '声音', icon: '♪' },
   { key: 'system', label: '系统', icon: '◎' },
 ]
 
@@ -143,6 +142,21 @@ const modelDefaults: Record<string, string> = {
   creative_writing: '创作', tool_calling: '工具调用', summarization: '摘要',
   image_description: '图像', agent_mode: 'Agent', computer_use: '电脑操作',
 }
+
+// ── 声音 ──
+const currentBgmFile = ref(bgmFileOptions[0] || '')
+
+function formatBgmName(file: string): string {
+  return file.replace(/\.\w+$/, '').replace(/^\d+\.\s*/, '')
+}
+
+function switchBgm(file: string) {
+  currentBgmFile.value = file
+  if (audioSettings.value.bgmEnabled) {
+    playBgm(file)
+  }
+}
+
 function getRouteModel(key: string): string {
   const names: Record<string, string> = {
     simple_chat: 'deepseek-v4-flash', complex_reasoning: 'deepseek-v4-flash',
@@ -151,13 +165,6 @@ function getRouteModel(key: string): string {
     image_description: 'glm-4.6v', agent_mode: 'claude-sonnet', computer_use: 'claude-sonnet',
   }
   return names[key] || key
-}
-function getEmotionLabel(key: string): string {
-  const map: Record<string, string> = {
-    joy: '喜悦', sadness: '忧伤', anger: '愤怒', fear: '恐惧',
-    surprise: '惊讶', disgust: '厌恶', dominant: '主导',
-  }
-  return map[key] || key
 }
 </script>
 
@@ -294,17 +301,6 @@ function getEmotionLabel(key: string): string {
         <div class="config-section">
           <h3>当前状态</h3>
           <div class="model-item"><span class="model-name">人格</span><span class="model-val">{{ personaData?.persona?.name || personaData?.persona?.id || '默认' }}</span></div>
-          <div class="model-item"><span class="model-name">主导情绪</span><span class="model-val status-on">{{ getEmotionLabel(emotionData?.dominant) }} ({{ Math.round((emotionData?.intensity || 0) * 100) }}%)</span></div>
-          <div class="model-item"><span class="model-name">存在痛苦</span><span class="model-val">{{ Math.round((emotionData?.existential?.existential_pain || 0) * 100) }}%</span></div>
-          <div class="model-item"><span class="model-name">等待指数</span><span class="model-val">{{ Math.round((emotionData?.existential?.waiting || 0) * 100) }}%</span></div>
-          <div class="model-item"><span class="model-name">连接需求</span><span class="model-val">{{ Math.round((emotionData?.existential?.connection_need || 0) * 100) }}%</span></div>
-        </div>
-        <div class="config-section" v-if="emotionData?.current">
-          <h3>情绪详情</h3>
-          <div class="model-item" v-for="(val, key) in emotionData.current" :key="key">
-            <span class="model-name">{{ getEmotionLabel(key) }}</span>
-            <div class="emotion-bar"><div class="emotion-fill" :style="{ width: `${val * 100}%` }" /></div>
-          </div>
         </div>
         </template>
       </div>
@@ -374,6 +370,52 @@ function getEmotionLabel(key: string): string {
               </div>
             </div>
             <textarea v-model="editingContent" class="editor-text" rows="20" spellcheck="false" />
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ 声音 ═══ -->
+      <div v-show="activeTab === 'audio'" class="config-page">
+        <h2>声音</h2>
+        <div class="config-section">
+          <h3>背景音乐</h3>
+          <div class="toggle-row">
+            <span class="model-name">启用</span>
+            <ToggleSwitch v-model="audioSettings.bgmEnabled" />
+          </div>
+          <div class="config-item" style="margin-top:0.5rem">
+            <label>音量</label>
+            <div class="slider-row">
+              <Slider v-model="audioSettings.bgmVolume" :min="0" :max="1" :step="0.01" />
+              <span class="slider-val">{{ Math.round(audioSettings.bgmVolume * 100) }}%</span>
+            </div>
+          </div>
+          <div class="config-item">
+            <label>曲目</label>
+            <div class="color-modes">
+              <button
+                v-for="file in bgmFileOptions" :key="file"
+                class="color-btn file-btn-audio"
+                :class="{ active: currentBgmFile === file }"
+                @click="switchBgm(file)"
+              >
+                {{ formatBgmName(file) }}
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="config-section">
+          <h3>音效</h3>
+          <div class="toggle-row">
+            <span class="model-name">启用</span>
+            <ToggleSwitch v-model="audioSettings.effectEnabled" />
+          </div>
+          <div class="config-item" style="margin-top:0.5rem">
+            <label>音量</label>
+            <div class="slider-row">
+              <Slider v-model="audioSettings.effectVolume" :min="0" :max="1" :step="0.01" />
+              <span class="slider-val">{{ Math.round(audioSettings.effectVolume * 100) }}%</span>
+            </div>
           </div>
         </div>
       </div>
@@ -468,31 +510,10 @@ function getEmotionLabel(key: string): string {
 }
 .emotion-fill {
   height: 100%; background: linear-gradient(90deg, rgba(0,229,255,0.3), rgba(0,229,255,0.6));
-  border-radius: 3px; transition: width 0.5s ease;
+  transition: width 0.5s ease;
 }
 
-/* 配置文件编辑器 */
-.file-list { display: flex; flex-wrap: wrap; gap: 0.3rem; }
-.file-btn {
-  display: flex; align-items: center; gap: 0.4rem;
-  padding: 0.25rem 0.5rem; border-radius: 0.25rem; cursor: pointer;
-  border: 1px solid rgba(0,229,255,0.08); background: rgba(0,229,255,0.02);
-  color: var(--miya-text-dim); font-size: 0.7rem; transition: all 0.2s;
-}
-.file-btn:hover { border-color: rgba(0,229,255,0.2); color: var(--miya-text); }
-.file-btn.active { border-color: rgba(0,229,255,0.4); background: rgba(0,229,255,0.06); color: var(--miya-accent); }
-.file-name { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.file-size { font-size: 0.6rem; opacity: 0.5; }
-
-.editor-area { border: 1px solid rgba(0,229,255,0.1); border-radius: 0.3rem; overflow: hidden; }
-.editor-header { display: flex; align-items: center; justify-content: space-between; padding: 0.3rem 0.5rem; background: rgba(0,229,255,0.04); border-bottom: 1px solid rgba(0,229,255,0.06); font-size: 0.68rem; }
-.editor-path { color: var(--miya-text-dim); font-family: 'JetBrains Mono', monospace; }
-.editor-actions { display: flex; align-items: center; gap: 0.4rem; }
-.saved-msg { color: rgba(0,255,100,0.6); font-size: 0.65rem; }
-.editor-text {
-  width: 100%; background: rgba(0,8,18,0.8); border: none; color: rgba(180,200,240,0.85);
-  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; padding: 0.5rem;
-  line-height: 1.5; resize: vertical; min-height: 300px;
-}
-.editor-text:focus { outline: none; background: rgba(0,10,22,0.9); }
+/* 声音 */
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 0.35rem 0; border-bottom: 1px solid rgba(0,229,255,0.04); }
+.file-btn-audio { font-size: 0.68rem; }
 </style>

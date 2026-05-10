@@ -336,8 +336,6 @@ class ResponseGenerator:
             return intro_template.format(name=name, empathy=empathy, warmth=warmth)
 
         elif "状态" in content:
-            from hub.emotion_controller import EmotionController
-
             # 需要传入emotion实例
             return f"当前平台: {platform}"
 

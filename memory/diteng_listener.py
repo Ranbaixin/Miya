@@ -14,7 +14,7 @@ import time
 import asyncio
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from typing import Dict, List, Optional, Tuple
 from collections import defaultdict
 from pathlib import Path
@@ -123,7 +123,142 @@ class DiTingListener:
             lambda: defaultdict(int)
         )
 
+        self._persist_file = Path("data/diting_state.json")
+        self._persist_file.parent.mkdir(parents=True, exist_ok=True)
+        self._loaded_from_disk = False
+
+        self._load()
+        self._loaded_from_disk = True
+
         logger.info("[谛听] 分层摘要监听器初始化完成")
+
+    def _load(self):
+        """从磁盘恢复谛听状态（分层时间衰减）"""
+        if not self._persist_file.exists():
+            return
+        try:
+            from memory.session_decay import get_phase, SessionPhase, get_decay_config
+
+            config = get_decay_config()
+            hot_seconds = config.get("hot_window_minutes", 30) * 60
+            warm_seconds = config.get("warm_window_hours", 6) * 3600
+
+            with open(self._persist_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            now = time.time()
+
+            # 恢复群聊消息：HOT 保留，WARM 保留最后5条供摘要，COLD/DORMANT 丢弃
+            for gid, snippets_raw in data.get("_group_snippets", {}).items():
+                last_ts = max((s.get("timestamp", 0) for s in snippets_raw), default=0)
+                elapsed = now - last_ts
+                phase = get_phase(elapsed)
+
+                if phase == SessionPhase.HOT:
+                    snippets = [
+                        MessageSnippet(**s)
+                        for s in snippets_raw
+                        if now - s.get("timestamp", 0) < hot_seconds
+                    ]
+                    if snippets:
+                        self._group_snippets[gid] = snippets
+                elif phase == SessionPhase.WARM:
+                    snippets = [
+                        MessageSnippet(**s)
+                        for s in snippets_raw[-5:]
+                        if now - s.get("timestamp", 0) < warm_seconds
+                    ]
+                    if snippets:
+                        self._group_snippets[gid] = snippets
+
+            # 恢复活跃对话：HOT/WARM 保留
+            for gid, users in data.get("_active_conversations", {}).items():
+                valid_users = {}
+                for uid, t in users.items():
+                    elapsed = now - t
+                    phase = get_phase(elapsed)
+                    if phase in (SessionPhase.HOT, SessionPhase.WARM):
+                        valid_users[uid] = t
+                if valid_users:
+                    self._active_conversations[gid] = valid_users
+
+            # 恢复用户连续发言计数
+            for gid, streaks in data.get("_user_streaks", {}).items():
+                if gid in self._active_conversations:
+                    self._user_streaks[gid] = defaultdict(int, streaks)
+
+            # 恢复话题线程：HOT/WARM 保留
+            for gid, threads_raw in data.get("_topic_threads", {}).items():
+                threads = []
+                for t in threads_raw:
+                    last_active = t.get("last_active", 0)
+                    elapsed = now - last_active
+                    phase = get_phase(elapsed)
+                    if phase in (SessionPhase.HOT, SessionPhase.WARM):
+                        msgs = [MessageSnippet(**m) for m in t.get("messages", [])]
+                        if msgs:
+                            thread = TopicThread(
+                                topic=t.get("topic", ""),
+                                participants=t.get("participants", []),
+                                messages=msgs,
+                                start_time=t.get("start_time", 0),
+                                last_active=last_active,
+                                is_active=phase == SessionPhase.HOT,
+                            )
+                            threads.append(thread)
+                if threads:
+                    self._topic_threads[gid] = threads
+
+            loaded_groups = len(self._group_snippets)
+            loaded_active = sum(len(u) for u in self._active_conversations.values())
+            if loaded_groups > 0 or loaded_active > 0:
+                logger.info(
+                    f"[谛听] 从磁盘恢复状态: {loaded_groups} 群, "
+                    f"{loaded_active} 活跃用户"
+                )
+        except Exception as e:
+            logger.warning(f"[谛听] 恢复状态失败: {e}")
+
+    def save(self):
+        """持久化谛听状态到磁盘"""
+        try:
+            data = {
+                "max_age_hours": max(self.active_window // 3600, 1),
+                "_group_snippets": {
+                    gid: [asdict(s) for s in snippets[-30:]]
+                    for gid, snippets in self._group_snippets.items()
+                    if snippets
+                },
+                "_active_conversations": {
+                    gid: dict(users)
+                    for gid, users in self._active_conversations.items()
+                    if users
+                },
+                "_user_streaks": {
+                    gid: dict(streaks)
+                    for gid, streaks in self._user_streaks.items()
+                    if streaks
+                },
+                "_topic_threads": {
+                    gid: [
+                        {
+                            "topic": t.topic,
+                            "participants": t.participants,
+                            "messages": [asdict(m) for m in t.messages[-5:]],
+                            "start_time": t.start_time,
+                            "last_active": t.last_active,
+                            "is_active": t.is_active,
+                        }
+                        for t in threads[-3:]
+                    ]
+                    for gid, threads in self._topic_threads.items()
+                    if threads
+                },
+            }
+            with open(self._persist_file, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.warning(f"[谛听] 保存状态失败: {e}")
 
     def on_group_message(
         self,
@@ -166,6 +301,11 @@ class DiTingListener:
                     self._active_conversations[group_id][user_id] = time.time()
             else:
                 self._user_streaks[group_id][user_id] = 0
+
+        # 每 5 条消息自动持久化
+        self._save_counter = getattr(self, "_save_counter", 0) + 1
+        if self._save_counter % 5 == 0:
+            self.save()
 
     def _update_topic_thread(self, group_id: str, snippet: MessageSnippet):
         """更新话题线程"""
@@ -381,6 +521,8 @@ class DiTingListener:
 
         if expired_groups:
             logger.debug(f"[谛听] 清理了 {len(expired_groups)} 个过期群数据")
+
+        self.save()
 
     async def analyze_message_strategy(
         self,

@@ -8,7 +8,7 @@ import BoxContainer from '@/components/BoxContainer.vue'
 import Markdown from '@/components/Markdown.vue'
 import MessageItem from '@/components/MessageItem.vue'
 import { CONFIG } from '@/utils/config'
-import { live2dState } from '@/utils/live2dController'
+import { live2dState, setSoulEmotion } from '@/utils/live2dController'
 import { activeTabId, CURRENT_SESSION_ID, formatRelativeTime, getActiveTab, IS_TEMPORARY_SESSION, latestEmotion, loadCurrentSession, MESSAGES, newSession, saveMessages, switchSession, tabs } from '@/utils/session'
 import { clearSpeakQueue, isPlaying, queueSpeak, stop as stopTTS } from '@/utils/tts'
 import { setMessageViewExpanded } from '@/utils/uiState'
@@ -16,6 +16,7 @@ import { setMessageViewExpanded } from '@/utils/uiState'
 const isSending = ref(false)
 const messageQueue: Array<{ content: string, options?: any }> = []
 const ttsEnabled = ref(localStorage.getItem('ttsEnabled') !== 'false')
+let lastAppliedMemoryHash = ''
 
 async function processQueue() {
   if (messageQueue.length === 0 || isSending.value)
@@ -35,36 +36,78 @@ export function chatStream(content: string, options?: { skill?: string, images?:
   processQueue()
 }
 
-async function fetchSoulData() {
+function applySoulToMessage(soul: any) {
+  const msgs = MESSAGES.value
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    if (msgs[i]!.role === 'assistant') {
+      const existing = (msgs[i]! as any).soulData || {}
+      if (soul.emotions && Array.isArray(soul.emotions)) {
+        existing.emotions = soul.emotions
+      } else if (soul.emotions && typeof soul.emotions === 'object') {
+        existing.emotions = Object.entries(soul.emotions).map(([name, val]: any) => ({ name, intensity: typeof val === 'number' ? Math.round(val) : 50 }))
+      }
+      if (!existing.innerThought && soul.inner_thought) existing.innerThought = soul.inner_thought
+      if (!existing.attribution && soul.attribution) existing.attribution = soul.attribution
+      if (!existing.reflection && soul.reflection) existing.reflection = soul.reflection
+      if (!existing.thinking && soul.thinking) existing.thinking = soul.thinking
+      ;(msgs[i]! as any).soulData = existing
+      if (existing.emotions?.length) latestEmotion.value = { ...latestEmotion.value, emotions: existing.emotions }
+      break
+    }
+  }
+}
+
+async function fetchSoulData(retryCount = 0) {
   try {
+    // 优先：直连后端灵魂数据（_last_soul_output）
+    const soulRes = await fetch('http://localhost:8000/api/soul/current')
+    const directSoul = await soulRes.json()
+    if (directSoul && (directSoul.emotions || directSoul.inner_thought || directSoul.thinking)) {
+      applySoulToMessage(directSoul)
+      return
+    }
+
+    // Fallback: 认知记忆文件
     const res = await fetch('http://localhost:8000/api/desktop/files/read?path=data%2Fmemory%2Fcognitive_memories.json')
     const data = await res.json()
     if (data?.lines) {
       const items = JSON.parse(data.lines.join(''))
-      const latest = items[items.length - 1]
-      if (latest && String(latest.user_id) === '1523878699') {
-        let emo = latest.emotions
-        if (typeof emo === 'string') {
-          try { emo = eval(`(${emo})`) } catch { emo = null }
-        }
-        const soul: any = { ...latestEmotion.value }
-        if (latest.inner_thought) soul.innerThought = latest.inner_thought
-        if (latest.attribution) soul.attribution = latest.attribution
-        if (latest.reflection) soul.reflection = latest.reflection
-        if (latest.thinking) soul.thinking = latest.thinking
-        if (emo && typeof emo === 'object') {
-          soul.emotions = Object.entries(emo).map(([name, val]) => ({ name, intensity: val as number }))
-        }
-        latestEmotion.value = soul
-        // 同时更新最后一条 AI 消息
-        const msgs = MESSAGES.value
-        for (let i = msgs.length - 1; i >= 0; i--) {
-          if (msgs[i]!.role === 'assistant') {
-            ;(msgs[i]! as any).soulData = { ...msgs[i]!.soulData, ...soul }
-            break
-          }
-        }
+      if (!Array.isArray(items) || items.length === 0) {
+        if (retryCount < 2) { setTimeout(() => fetchSoulData(retryCount + 1), 1500) }
+        return
       }
+
+      const memoryHash = JSON.stringify(items[items.length - 1])
+      if (memoryHash === lastAppliedMemoryHash) {
+        if (retryCount < 2) { setTimeout(() => fetchSoulData(retryCount + 1), 1500) }
+        return
+      }
+      lastAppliedMemoryHash = memoryHash
+
+      const merged: any = {}
+      for (let i = items.length - 1; i >= Math.max(0, items.length - 5); i--) {
+        const entry = items[i]
+        if (!entry || String(entry.user_id) !== '1523878699') continue
+        let emo = entry.emotions
+        if (typeof emo === 'string') { try { emo = eval(`(${emo})`) } catch { emo = null } }
+        if (!merged.emotions && emo && typeof emo === 'object') {
+          merged.emotions = Object.entries(emo).map(([name, val]: any) => ({ name, intensity: val as number }))
+        }
+        if (!merged.innerThought && entry.inner_thought) merged.innerThought = entry.inner_thought
+        if (!merged.attribution && entry.attribution) merged.attribution = entry.attribution
+        if (!merged.reflection && entry.reflection) merged.reflection = entry.reflection
+        if (!merged.thinking && entry.thinking) merged.thinking = entry.thinking
+      }
+      if (merged.emotions) merged.emotions = merged.emotions.slice(0, 6)
+
+      if (!merged.emotions?.length && !merged.innerThought && retryCount < 2) {
+        setTimeout(() => fetchSoulData(retryCount + 1), 1500)
+        return
+      }
+
+      applySoulToMessage(merged)
+    } else if (retryCount < 2) {
+      setTimeout(() => fetchSoulData(retryCount + 1), 1500)
     }
   } catch {}
 }
@@ -103,7 +146,6 @@ async function chatStreamInternal(content: string, options?: { skill?: string, i
   }).then((res: any) => {
     // 解析响应 (可能是 SSE 或 JSON)
     let responseText = ''
-    let emotionData: any = null
     const soulRaw: any = {}
     if (typeof res === 'string' && res.startsWith('data:')) {
       // SSE 格式 - 弥娅后端返回: data: {"type":"plain","data":"...","chain_type":"final"}
@@ -119,8 +161,6 @@ async function chatStreamInternal(content: string, options?: { skill?: string, i
             responseText = chunk.data
           } else if (chunk.type === 'reasoning') {
             message.reasoning = (message.reasoning || '') + (chunk.data || chunk.text || '')
-          } else if (chunk.type === 'emotion' && chunk.data) {
-            emotionData = chunk.data
           } else if (chunk.type === 'soul' && chunk.data) {
             Object.assign(soulRaw, chunk.data)
           } else if (chunk.type === 'done' && chunk.data?.response && !responseText) {
@@ -130,7 +170,10 @@ async function chatStreamInternal(content: string, options?: { skill?: string, i
       }
     } else {
       responseText = res?.response || res?.data?.response || JSON.stringify(res)
-      emotionData = res?.emotion
+      // JSON 响应路径：直接提取 soul 数据
+      if (res?.soul) {
+        Object.assign(soulRaw, res.soul)
+      }
     }
 
     pushContent(responseText || res?.response || JSON.stringify(res))
@@ -138,19 +181,25 @@ async function chatStreamInternal(content: string, options?: { skill?: string, i
     message.status = undefined
     live2dState.value = 'idle'
 
-    // 存储情绪数据到消息
-    if (soulRaw.emotions || emotionData) {
-      const emotions = soulRaw.emotions
-        ? Object.entries(soulRaw.emotions).map(([name, val]: any) => ({ name, intensity: typeof val === 'number' ? Math.round(val) : 50 }))
-        : Object.entries(emotionData.current || emotionData)
-            .filter(([k]) => !['dominant', 'intensity', 'existential', 'coloring', 'active_existential'].includes(k))
-            .map(([name, val]: any) => ({ name, intensity: Math.round((val as number) * 100) }))
-      ;(message as any).soulData = { emotions }
-      latestEmotion.value = { emotions }
+    // 存储灵魂数据到消息（仅来自 SSE 流每句专属数据）
+    if (Object.keys(soulRaw).length > 0) {
+      const soulData: any = {}
+      if (soulRaw.emotions) {
+        soulData.emotions = Object.entries(soulRaw.emotions).map(([name, val]: any) => ({
+          name,
+          intensity: typeof val === 'number' ? Math.round(val) : 50,
+        }))
+        latestEmotion.value = { emotions: soulData.emotions }
+        setSoulEmotion(soulData.emotions)
+      }
+      if (soulRaw.inner_thought) soulData.innerThought = soulRaw.inner_thought
+      if (soulRaw.attribution) soulData.attribution = soulRaw.attribution
+      if (soulRaw.reflection) soulData.reflection = soulRaw.reflection
+      if (soulRaw.thinking) soulData.thinking = soulRaw.thinking
+      ;(message as any).soulData = soulData
       saveMessages()
+      // 异步从认知记忆补全灵魂数据（内心独白/归因/反思/思考/情绪）
       fetchSoulData()
-    } else {
-      console.log('[MessageView] no emotion data: soulRaw=', !!soulRaw.emotions, 'emotionData=', !!emotionData)
     }
 
     // 滚动到底部
@@ -522,6 +571,7 @@ function getSupportedMimeType(): string {
             :reasoning="item.reasoning" :sender="item.sender"
             :generating="item.generating" :status="item.status"
             :tool-events="item.toolEvents"
+            :soul-data="item.soulData"
                 :class="(item.generating && index === activeMessages.length - 1) || 'msg-sep'"
           />
         </div>
@@ -563,6 +613,7 @@ function getSupportedMimeType(): string {
                 :reasoning="item.reasoning" :sender="item.sender"
                 :generating="item.generating" :status="item.status"
                 :tool-events="item.toolEvents"
+                :soul-data="item.soulData"
             :class="(item.generating && index === activeMessages.length - 1) || 'msg-sep'"
               />
             </div>

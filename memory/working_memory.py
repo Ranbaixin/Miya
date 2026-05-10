@@ -58,12 +58,12 @@ class WorkingMemoryState:
     current_topic: Optional[TopicSegment] = None
     background_topics: List[TopicSegment] = field(default_factory=list)
     recent_messages: List[str] = field(default_factory=list)
-    # 【新增】保存发送者ID用于区分同名用户
     recent_senders: Dict[int, str] = field(default_factory=dict)
     topic_switch_count: int = 0
     last_update: float = 0.0
-    # 专门保存图片/文件分析结果
     media_analysis: List[Dict[str, str]] = field(default_factory=list)
+    # 上次持久化的活跃时间（用于重启后检测间隔）
+    last_persisted_active: float = 0.0
 
 
 class TopicDriftDetector:
@@ -351,6 +351,9 @@ class WorkingMemoryManager:
 
         state.last_update = time.time()
 
+        # 每条消息自动持久化
+        self.save()
+
         return {
             "is_drift": is_drift,
             "similarity": similarity,
@@ -463,18 +466,37 @@ class WorkingMemoryManager:
 
     def build_prompt_context(self, group_id: str) -> str:
         """
-        构建 Prompt 上下文（分层记忆架构）
+        构建 Prompt 上下文（分层记忆架构 + 时间衰减恢复）
 
         分层策略：
         1. 即时层（最近3条）：完整原文，让AI理解当前对话
         2. 摘要层（4-15条）：一句话摘要，保留话题脉络
         3. 话题层（15+条）：话题标签+关键词，提供背景
+
+        时间衰减恢复（重启后）：
+        - HOT：完整恢复，无缝接续
+        - WARM：注入摘要 + 提示自然接续
+        - COLD：注入标签 + 最后1-2条原文
+        - DORMANT：不注入
         """
         state = self._get_state(group_id)
-        if not state.recent_messages and not state.background_topics:
+
+        # === 时间衰减恢复上下文 ===
+        recovery_context = self._build_recovery_context(group_id, state)
+
+        if (
+            not state.recent_messages
+            and not state.background_topics
+            and not recovery_context
+        ):
             return ""
 
         lines = []
+
+        # 恢复上下文优先插入
+        if recovery_context:
+            lines.append(recovery_context)
+
         total_msgs = len(state.recent_messages)
 
         # === 第1层：即时层（最近3条完整原文）===
@@ -487,21 +509,18 @@ class WorkingMemoryManager:
         # === 第2层：摘要层（4-15条压缩摘要）===
         if total_msgs > 3:
             older_msgs = state.recent_messages[:-recent_count]
-            # 每3条压缩为一条摘要
             summary_msgs = []
             for i in range(0, len(older_msgs), 3):
                 chunk = older_msgs[i : i + 3]
                 if len(chunk) == 1:
                     summary_msgs.append(chunk[0])
                 else:
-                    # 提取关键信息
                     senders = []
                     keywords = []
                     for msg in chunk:
                         if ":" in msg:
                             sender, content = msg.split(":", 1)
                             senders.append(sender.strip())
-                            # 提取内容中的关键词（去掉语气词）
                             words = [w for w in content.strip().split() if len(w) > 1]
                             keywords.extend(words[:2])
                     unique_senders = list(dict.fromkeys(senders))
@@ -516,7 +535,7 @@ class WorkingMemoryManager:
 
             if summary_msgs:
                 lines.append("\n【近期话题】")
-                lines.extend(summary_msgs[-5:])  # 最多5条摘要
+                lines.extend(summary_msgs[-5:])
 
         # === 第3层：话题层（背景话题）===
         if state.background_topics:
@@ -536,7 +555,7 @@ class WorkingMemoryManager:
         # === 媒体分析记忆区块（图片/文件分析结果）===
         if state.media_analysis:
             lines.append("\n【已识别内容】")
-            for analysis in state.media_analysis[-3:]:  # 最多显示最近3条
+            for analysis in state.media_analysis[-3:]:
                 type_emoji = "🖼️" if analysis.get("type") == "image" else "📄"
                 desc = analysis.get("description", "")[:100]
                 labels = analysis.get("labels", "")
@@ -545,6 +564,242 @@ class WorkingMemoryManager:
                     lines.append(f"     标签: {labels}")
 
         return "\n".join(lines)
+
+    def _build_recovery_context(self, group_id: str, state: WorkingMemoryState) -> str:
+        """构建时间衰减恢复上下文（重启后首次对话时注入）"""
+        from memory.session_decay import (
+            get_phase,
+            SessionPhase,
+            generate_topic_summary,
+            generate_cold_summary,
+            get_phase_description,
+        )
+
+        now = time.time()
+
+        # 用持久化的活跃时间（不受 add_message 重置影响）
+        persisted_active = state.last_persisted_active
+        if persisted_active <= 0:
+            persisted_active = self._get_last_message_time_from_disk(group_id)
+
+        if persisted_active <= 0:
+            return ""
+
+        elapsed = now - persisted_active
+        phase = get_phase(elapsed)
+
+        if phase == SessionPhase.DORMANT:
+            return ""
+
+        phase_desc = get_phase_description(phase)
+        extra_messages = self._load_conversation_history_messages(group_id)
+
+        if phase == SessionPhase.HOT:
+            if extra_messages and not state.recent_messages:
+                state.recent_messages = extra_messages[-self.max_recent :]
+            return ""
+
+        elif phase == SessionPhase.WARM:
+            topic_history = self._get_topic_history_for(group_id)
+            messages_for_summary = (
+                state.recent_messages[-10:]
+                if state.recent_messages
+                else extra_messages[-10:]
+            )
+            summary = (
+                generate_topic_summary(messages_for_summary)
+                if messages_for_summary
+                else ""
+            )
+            topic_tags = ""
+            if topic_history:
+                unique = list(dict.fromkeys(topic_history))[:3]
+                topic_tags = f"【{'、'.join(unique)}】"
+            return (
+                f"【{phase_desc}】{topic_tags}{summary}\n"
+                f"[提示] 以上为上次对话摘要，请自然接续"
+            )
+
+        elif phase == SessionPhase.COLD:
+            topic_history = self._get_topic_history_for(group_id)
+            messages_for_summary = (
+                state.recent_messages if state.recent_messages else extra_messages[-5:]
+            )
+            summary = generate_cold_summary(messages_for_summary, topic_history)
+            if summary:
+                return f"【{phase_desc}】{summary}"
+            return ""
+
+        return ""
+
+    def _load_conversation_history_messages(self, group_id: str) -> list:
+        """从 conversation history 文件中加载原始消息（含模糊匹配）"""
+        try:
+            messages = self._try_load_history(group_id)
+            if messages:
+                return messages
+
+            user_id = group_id.split("_")[-1] if "_" in group_id else group_id
+            if user_id.isdigit():
+                session_id = self._find_session_file_for_user(user_id)
+                if session_id:
+                    return self._try_load_history(session_id)
+        except Exception as e:
+            logger.debug(f"[工作记忆] 加载历史消息失败 ({group_id}): {e}")
+        return []
+
+    def _try_load_history(self, session_id: str) -> list:
+        """精确加载某个 session_id 的历史消息"""
+        try:
+            import json
+            from pathlib import Path
+
+            data_dir = Path("data/conversations")
+            hash_obj = __import__("hashlib").md5(session_id.encode("utf-8"))
+            file_path = data_dir / f"session_{hash_obj.hexdigest()[:16]}.json"
+
+            if not file_path.exists():
+                return []
+
+            with open(file_path, "r", encoding="utf-8") as f:
+                messages = json.load(f)
+
+            result = []
+            for m in messages:
+                role = m.get("role", "")
+                content = m.get("content", "")
+                if not content:
+                    continue
+                sender = m.get("metadata", {}).get("sender_name", role)
+                if sender == "user":
+                    sender = ""
+                result.append(f"{sender}: {content[:80]}" if sender else content[:80])
+
+            return result
+        except Exception:
+            return []
+
+    def _get_topic_history_for(self, group_id: str) -> list:
+        """从持久化的话题追踪文件获取话题历史"""
+        try:
+            import json
+            from pathlib import Path
+
+            topic_file = Path("data/conversation_context_state.json")
+            if not topic_file.exists():
+                return []
+            with open(topic_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return data.get("topic_history", {}).get(group_id, [])
+        except Exception:
+            return []
+
+    def _get_last_message_time_from_disk(self, group_id: str) -> float:
+        """从 conversation history 文件推断最后活跃时间（含模糊匹配）"""
+        try:
+            result = self._try_get_time_from_disk(group_id)
+            if result > 0:
+                return result
+
+            # 精确匹配失败 → 从 key 中提取 user_id 做模糊搜索
+            user_id = group_id.split("_")[-1] if "_" in group_id else group_id
+            if user_id.isdigit():
+                result = self._scan_sessions_for_user(user_id)
+                if result > 0:
+                    return result
+        except Exception:
+            pass
+        return 0.0
+
+    def _try_get_time_from_disk(self, session_id: str) -> float:
+        """精确匹配某个 session_id 的最后消息时间"""
+        try:
+            import json
+            from pathlib import Path
+
+            data_dir = Path("data/conversations")
+            hash_obj = __import__("hashlib").md5(session_id.encode("utf-8"))
+            file_path = data_dir / f"session_{hash_obj.hexdigest()[:16]}.json"
+
+            if not file_path.exists():
+                return 0.0
+
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    messages = json.load(f)
+                if messages:
+                    last_ts = messages[-1].get("timestamp", "")
+                    if last_ts:
+                        from datetime import datetime
+
+                        return datetime.fromisoformat(last_ts).timestamp()
+            except Exception:
+                pass
+
+            return file_path.stat().st_mtime
+        except Exception:
+            return 0.0
+
+    def _scan_sessions_for_user(self, user_id: str) -> float:
+        """扫描所有会话文件，找到包含指定 user_id 的会话，返回最后时间"""
+        try:
+            import json
+            from pathlib import Path
+
+            data_dir = Path("data/conversations")
+            best_time = 0.0
+
+            for file_path in data_dir.glob("session_*.json"):
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        messages = json.load(f)
+                    if not messages:
+                        continue
+
+                    sid = messages[0].get("session_id", "")
+                    is_private = sid.endswith(f"_{user_id}") or sid.endswith(
+                        f"_用户-{user_id}"
+                    )
+                    if not is_private:
+                        continue
+
+                    last_ts = messages[-1].get("timestamp", "")
+                    if last_ts:
+                        from datetime import datetime
+
+                        t = datetime.fromisoformat(last_ts).timestamp()
+                        if t > best_time:
+                            best_time = t
+                except Exception:
+                    continue
+
+            return best_time
+        except Exception:
+            return 0.0
+
+    def _find_session_file_for_user(self, user_id: str) -> str:
+        """找到包含指定 user_id 的会话文件路径，返回 session_id"""
+        try:
+            import json
+            from pathlib import Path
+
+            data_dir = Path("data/conversations")
+
+            for file_path in data_dir.glob("session_*.json"):
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        messages = json.load(f)
+                    if not messages:
+                        continue
+
+                    sid = messages[0].get("session_id", "")
+                    if sid.endswith(f"_{user_id}") or sid.endswith(f"_用户-{user_id}"):
+                        return sid
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return ""
 
     def get_full_context(self, group_id: str) -> Dict:
         """获取完整上下文（用于调试或特殊查询）"""
@@ -590,21 +845,49 @@ class WorkingMemoryManager:
         self._persist_file.parent.mkdir(parents=True, exist_ok=True)
 
     def _load(self):
-        """从文件加载工作记忆"""
+        """从文件加载工作记忆（含分层时间衰减恢复）"""
         if not self._persist_file.exists():
             return
         try:
             with open(self._persist_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
+            from memory.session_decay import get_phase, SessionPhase
+
+            now = time.time()
+            loaded = 0
+            skipped = 0
+
             for gid, state_data in data.get("states", {}).items():
                 media = state_data.get("media_analysis", [])
-                if media:
-                    state = WorkingMemoryState()
-                    state.media_analysis = media
-                    self._states[gid] = state
+                recent_msgs = state_data.get("recent_messages", [])
+                recent_senders_raw = state_data.get("recent_senders", {})
+                last_active = state_data.get("last_active_time", 0)
 
-            logger.info(f"[工作记忆] 加载了 {len(self._states)} 个群的工作记忆")
+                # 旧数据没有时间戳 → 用文件修改时间作为近似
+                if last_active <= 0 and self._persist_file.exists():
+                    last_active = self._persist_file.stat().st_mtime
+                elif last_active <= 0:
+                    last_active = now
+
+                state = WorkingMemoryState()
+                state.media_analysis = media
+                state.recent_messages = (
+                    recent_msgs[-self.max_recent :] if recent_msgs else []
+                )
+                state.recent_senders = (
+                    {int(k): v for k, v in recent_senders_raw.items()}
+                    if recent_senders_raw
+                    else {}
+                )
+                state.last_update = last_active
+                state.last_persisted_active = last_active
+                self._states[gid] = state
+                loaded += 1
+
+            # 不在这里过滤休眠状态——phase 判断在 build_prompt_context 时进行
+            if loaded > 0:
+                logger.info(f"[工作记忆] 加载了 {loaded} 个会话状态")
         except Exception as e:
             logger.warning(f"[工作记忆] 加载失败: {e}")
 
@@ -613,16 +896,21 @@ class WorkingMemoryManager:
         try:
             data = {
                 "states": {
-                    gid: {"media_analysis": state.media_analysis}
+                    gid: {
+                        "media_analysis": state.media_analysis,
+                        "recent_messages": state.recent_messages,
+                        "recent_senders": {
+                            str(k): v for k, v in state.recent_senders.items()
+                        },
+                        "last_active_time": state.last_update,
+                    }
                     for gid, state in self._states.items()
-                    if state.media_analysis
+                    if state.media_analysis or state.recent_messages
                 }
             }
             with open(self._persist_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
-            logger.debug(
-                f"[工作记忆] 已保存 {len(data['states'])} 个群的 media_analysis"
-            )
+            logger.debug(f"[工作记忆] 已保存 {len(data['states'])} 个群的上下文")
         except Exception as e:
             logger.warning(f"[工作记忆] 保存失败: {e}")
 

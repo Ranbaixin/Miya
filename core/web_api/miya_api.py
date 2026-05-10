@@ -114,31 +114,6 @@ class MiyaAPI:
             """系统监控"""
             return self._get_monitor_data()
 
-        # ========== 情绪 ==========
-        @self.router.get("/api/emotion")
-        async def get_emotion():
-            """获取当前情绪"""
-            return self._get_emotion_state()
-
-        @self.router.get("/api/emotion/history")
-        async def get_emotion_history():
-            """获取情绪历史"""
-            return {
-                "success": True,
-                "history": [
-                    {
-                        "emotion": "平静",
-                        "intensity": 60,
-                        "time": datetime.now().isoformat(),
-                    },
-                    {
-                        "emotion": "开心",
-                        "intensity": 75,
-                        "time": datetime.now().isoformat(),
-                    },
-                ],
-            }
-
         # ========== 人格向量 ==========
         @self.router.get("/api/v1/personality/vectors")
         async def get_personality_vectors():
@@ -1049,6 +1024,7 @@ class MiyaAPI:
                     "timestamp": datetime.utcnow().isoformat(),
                     "emotion": emotion_result,
                     "personality": personality_result,
+                    "soul": getattr(self.decision_hub, "_last_soul_output", None),
                     "tools_used": getattr(self.decision_hub, "_last_tools_used", []),
                     "memory_retrieved": getattr(
                         self.decision_hub, "_last_memory_retrieved", False
@@ -2282,14 +2258,6 @@ class MiyaAPI:
         @self.router.post("/api/chat/stop")
         async def stop_chat(request_data: dict = {}):
             return {"success": True}
-
-        @self.router.get("/api/emotion")
-        async def get_emotion():
-            return {"success": True, "data": {"state": "happy", "intensity": 0.5}}
-
-        @self.router.get("/api/emotion/history")
-        async def get_emotion_history():
-            return {"success": True, "data": []}
 
         @self.router.get("/api/memory/stats")
         async def get_memory_stats_legacy():

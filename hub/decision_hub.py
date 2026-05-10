@@ -982,6 +982,13 @@ class DecisionHub:
         if not game_mode:
             await self.memory_manager.store_user_message(perception)
 
+            # 【会话连续性】记录用户活跃时间戳（同步写盘，绕过异步 history 写的不确定性）
+            from memory.user_activity_tracker import record_activity
+
+            uid = perception.get("user_id", "")
+            if uid:
+                record_activity(str(uid), str(perception.get("content", ""))[:100])
+
         # 6. 生成响应（委托给响应生成器）
         raw_content = perception.get("content", "")
 

@@ -1,6 +1,6 @@
 import type { Message } from '@/utils/session'
 import { ref } from 'vue'
-import { MESSAGES, latestEmotion } from '@/utils/session'
+import { MESSAGES } from '@/utils/session'
 
 const wsUrl = 'ws://localhost:9800/api/v1/ws'
 const connected = ref(false)
@@ -62,16 +62,6 @@ export function useMIYARealtime() {
         sender: sender,
       }
       MESSAGES.value.push(newMsg)
-
-      // 更新情绪
-      if (msg.emotion || data.emotion) {
-        const emo = msg.emotion || data.emotion
-        latestEmotion.value = {
-          emotions: Object.entries(emo.current || emo)
-            .filter(([k]) => !['dominant', 'intensity'].includes(k))
-            .map(([name, val]: any) => ({ name, intensity: Math.round((val as number) * 100) })),
-        }
-      }
     }
   }
 

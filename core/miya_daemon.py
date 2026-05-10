@@ -226,10 +226,25 @@ class MiyaDaemon:
         logger.info("=" * 60)
 
     async def _save_state(self):
-        """保存状态"""
+        """保存状态（关闭前持久化工作记忆、谛听、话题追踪）"""
         try:
-            if self._miya and hasattr(self._miya, "memory_engine"):
-                pass
+            from memory.working_memory import get_working_memory
+            from memory.diteng_listener import get_diting
+
+            try:
+                wm = get_working_memory()
+                wm.save()
+                logger.debug("[关闭] 工作记忆已保存")
+            except Exception as e:
+                logger.debug(f"[关闭] 工作记忆保存失败: {e}")
+
+            try:
+                diting = get_diting()
+                diting.save()
+                logger.debug("[关闭] 谛听状态已保存")
+            except Exception as e:
+                logger.debug(f"[关闭] 谛听保存失败: {e}")
+
         except Exception as e:
             logger.warning(f"状态保存失败: {e}")
 
@@ -238,8 +253,10 @@ class MiyaDaemon:
         try:
             if self._miya:
                 conv_hist = getattr(self._miya, "conversation_history", None)
+                if conv_hist and hasattr(conv_hist, "flush"):
+                    await conv_hist.flush()
                 if conv_hist and hasattr(conv_hist, "close"):
-                    conv_hist.close()
+                    await conv_hist.close()
         except Exception as e:
             logger.warning(f"Miya 核心关闭异常: {e}")
 

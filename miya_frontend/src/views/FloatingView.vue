@@ -883,6 +883,7 @@ useEventListener('token', () => {
           :role="item.role" :content="item.content"
           :reasoning="item.reasoning" :sender="item.sender"
           :generating="item.generating" :status="item.status"
+          :soul-data="item.soulData"
           :class="(item.generating && index === MESSAGES.length - 1) || 'border-b border-white/6'"
         />
       </div>

@@ -103,32 +103,68 @@ class LocationAwareness:
 
 
 class ActivityAwareness:
-    """活动感知（基于谛听）"""
+    """活动感知（基于谛听 + 时间衰减）"""
 
     @staticmethod
-    def get_activity_context(group_id: str = "", user_id: str = "") -> Dict[str, str]:
-        """获取当前活动上下文"""
+    def get_activity_context(group_id: str = "", user_id: str = "") -> Dict[str, any]:
+        """获取当前活动上下文（含时间衰减分层）"""
+        from memory.session_decay import (
+            get_phase,
+            SessionPhase,
+            get_phase_description,
+        )
+
+        is_active = False
+        summary = ""
+        conversation_status = "新对话"
+
+        # 1. 先检查谛听活跃状态
         try:
             from memory.diteng_listener import get_diting
 
             diteng = get_diting()
-        except Exception:
-            return {"activity_summary": "", "is_active_conversation": False}
+            if group_id and user_id:
+                is_active = diteng.is_user_active_with_bot(group_id, user_id)
+                summary = diteng.get_layered_context(group_id)
+                if summary:
+                    summary = f"\n[群聊动态]\n{summary}"
+                else:
+                    summary = "\n[群聊动态] 暂无近期消息"
+        except Exception as e:
+            logger.debug(f"[意识] 谛听检查失败: {e}")
 
-        is_active = False
-        summary = ""
+        # 2. 如果不活跃，通过用户活跃追踪器检查衰减层级（最可靠）
+        if not is_active:
+            try:
+                from memory.user_activity_tracker import get_last_active
+                from memory.session_decay import get_phase, get_phase_description
 
-        if group_id and user_id:
-            is_active = diteng.is_user_active_with_bot(group_id, user_id)
-            summary = diteng.get_layered_context(group_id)
-            if summary:
-                summary = f"\n[群聊动态]\n{summary}"
-            else:
-                summary = "\n[群聊动态] 暂无近期消息"
+                last_active = get_last_active(str(user_id))
+                if last_active > 0:
+                    elapsed = time.time() - last_active
+                    phase = get_phase(elapsed)
+                    conversation_status = get_phase_description(phase)
+
+                    if phase in (SessionPhase.WARM, SessionPhase.COLD):
+                        # 尝试从话题追踪获取最后话题
+                        try:
+                            from memory.user_activity_tracker import get_last_topic
+
+                            last_topic = get_last_topic(str(user_id))
+                            if last_topic:
+                                summary = f"\n[上次对话] {last_topic[:80]}"
+                        except Exception:
+                            pass
+            except Exception as e:
+                logger.debug(f"[意识] 活跃追踪检查失败: {e}")
+
+        if is_active:
+            conversation_status = "活跃对话中"
 
         return {
             "activity_summary": summary,
             "is_active_conversation": is_active,
+            "conversation_status": conversation_status,
         }
 
 
@@ -180,12 +216,13 @@ class FrontendAwareness:
         }
 
         # 生成人类可读的感知摘要（用于 Prompt 注入）
+        conversation_status = context.get("conversation_status", "新对话")
         perception_text = (
             f"【当前感知】\n"
             f"时间：{context['current_time']} ({context['time_period']}, {context['weekday']})\n"
             f"地点：{context['location']}\n"
             f"对话对象：{context['user_role']}\n"
-            f"对话状态：{'活跃对话中' if context['is_active_conversation'] else '新对话'}"
+            f"对话状态：{conversation_status}"
         )
         if context["activity_summary"]:
             perception_text += context["activity_summary"]

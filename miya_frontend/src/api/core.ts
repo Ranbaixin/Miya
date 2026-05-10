@@ -34,11 +34,6 @@ export class CoreApiClient extends ApiClient {
     return this.instance.get('/api/status')
   }
 
-  // ── 情感 ──
-  async getEmotion(): Promise<EmotionState> {
-    return this.instance.get('/api/emotion')
-  }
-
   // ── 对话 ──
   async chatSend(data: {
     message: string

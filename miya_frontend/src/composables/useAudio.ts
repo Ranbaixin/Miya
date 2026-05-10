@@ -53,6 +53,17 @@ export const wakeVoiceMap = parseStartVoices()
 export const wakeVoiceOptions = Object.keys(wakeVoiceMap)
 export const effectFileOptions = parseEffectFiles()
 
+// ─── BGM 文件列表 ──────────────────────────────────
+const bgmGlob = import.meta.glob('/public/voices/background/*.*', { query: '?url', import: 'default' })
+export const bgmFileOptions = (() => {
+  const files: string[] = []
+  for (const key of Object.keys(bgmGlob)) {
+    const file = key.replace('/public/voices/background/', '')
+    if (AUDIO_EXTENSIONS.test(file)) files.push(file)
+  }
+  return files.sort()
+})()
+
 // ─── BGM 播放器（单例） ──────────────────────────────
 // 当音律坊注册为委托时，BGM 由音律坊统一播放，避免重复
 interface BgmDelegate { playFile: (file: string) => void, pause: () => void }

@@ -7,7 +7,6 @@ import API from '@/api/core'
 const router = useRouter()
 import { CONFIG } from '@/utils/config'
 
-const miyaEmotion = ref('')
 const miyaPersona = ref('')
 const miyaBackendOnline = ref(false)
 const miyaPlatforms = ref(0)
@@ -16,8 +15,6 @@ onMounted(async () => {
   try {
     const health = await API.health()
     miyaBackendOnline.value = health.status === 'healthy'
-    const emo = await API.getEmotion()
-    miyaEmotion.value = emo.dominant === 'joy' ? '喜悦' : emo.dominant === 'sadness' ? '忧伤' : emo.dominant === 'anger' ? '愤怒' : emo.dominant
     const persona = await API.getCurrentPersona()
     miyaPersona.value = persona?.persona?.name || persona?.persona?.id || '默认'
     const platforms = await fetch('http://localhost:9800/api/v1/platforms').then(r => r.json())
@@ -151,7 +148,6 @@ function enterFloatingMode() {
         <span class="status-badge online">● 在线</span>
         <span class="status-item">{{ miyaPlatforms }} 平台</span>
         <span class="status-item">人格: {{ miyaPersona }}</span>
-        <span class="status-item">{{ miyaEmotion }}</span>
       </div>
     </div>
   </div>
