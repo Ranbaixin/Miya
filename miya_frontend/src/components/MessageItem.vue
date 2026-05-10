@@ -232,89 +232,102 @@ watch(() => props.generating, (v) => {
 </template>
 
 <style scoped>
+/* ── 组件调色变量 ── */
 .msg-card {
+  --ai: var(--miya-comp-message-ai, #00e5ff);
+  --usr: var(--miya-comp-message-user, #b44dff);
+  --bg: var(--miya-comp-message-bg, #0a0815);
+  --in: var(--miya-comp-message-input, #00e5ff);
+  --tx: var(--miya-comp-message-text, #e8d5f5);
+
   position: relative; padding: .8rem 1rem .6rem;
-  background: linear-gradient(135deg, rgba(8,16,28,.7), rgba(10,20,35,.5));
-  border: 1px solid rgba(0,229,255,.12);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--bg) 35%, #000), color-mix(in srgb, var(--bg) 20%, #000));
+  border: 1px solid color-mix(in srgb, var(--ai) 12%, transparent);
   clip-path: polygon(0 8px, 6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%);
   overflow: visible;
   transition: border-color .4s;
 }
-.msg-card.user { background: linear-gradient(135deg, rgba(15,10,25,.7), rgba(20,12,30,.5)); border-color: rgba(180,77,255,.12); }
-.msg-card.generating { border-color: rgba(0,229,255,.45); animation: card-glow 2.5s ease-in-out infinite; }
-.msg-card.user.generating { border-color: rgba(180,77,255,.45); animation: card-glow-u 2.5s ease-in-out infinite; }
-@keyframes card-glow { 0%,100%{border-color:rgba(0,229,255,.18)} 50%{border-color:rgba(0,229,255,.5)} }
-@keyframes card-glow-u { 0%,100%{border-color:rgba(180,77,255,.18)} 50%{border-color:rgba(180,77,255,.5)} }
+.msg-card.user { border-color: color-mix(in srgb, var(--usr) 12%, transparent); }
+.msg-card.generating { border-color: color-mix(in srgb, var(--ai) 45%, transparent); animation: card-glow 2.5s ease-in-out infinite; }
+.msg-card.user.generating { border-color: color-mix(in srgb, var(--usr) 45%, transparent); animation: card-glow-u 2.5s ease-in-out infinite; }
+@keyframes card-glow { 0%,100%{border-color:color-mix(in srgb, var(--ai) 18%, transparent)} 50%{border-color:color-mix(in srgb, var(--ai) 50%, transparent)} }
+@keyframes card-glow-u { 0%,100%{border-color:color-mix(in srgb, var(--usr) 18%, transparent)} 50%{border-color:color-mix(in srgb, var(--usr) 50%, transparent)} }
 
 /* bracket */
 .card-bracket { position:absolute; z-index:1; pointer-events:none; }
-.card-bracket.tl { top:1px; left:1px; width:10px; height:10px; border-top:1px solid rgba(0,229,255,.45); border-left:1px solid rgba(0,229,255,.45); }
-.card-bracket.br { bottom:1px; right:1px; width:6px; height:6px; border-bottom:1px solid rgba(0,229,255,.2); border-right:1px solid rgba(0,229,255,.2); }
-.msg-card.user .card-bracket.tl { border-color: rgba(180,77,255,.45) rgba(180,77,255,.45) transparent transparent; }
+.card-bracket.tl { top:1px; left:1px; width:10px; height:10px; border-top:1px solid color-mix(in srgb, var(--ai) 45%, transparent); border-left:1px solid color-mix(in srgb, var(--ai) 45%, transparent); }
+.card-bracket.br { bottom:1px; right:1px; width:6px; height:6px; border-bottom:1px solid color-mix(in srgb, var(--ai) 20%, transparent); border-right:1px solid color-mix(in srgb, var(--ai) 20%, transparent); }
+.msg-card.user .card-bracket.tl { border-color: color-mix(in srgb, var(--usr) 45%, transparent) color-mix(in srgb, var(--usr) 45%, transparent) transparent transparent; }
 
 /* bar */
-.card-bar { display:flex; align-items:center; gap:.5rem; padding-bottom:.4rem; margin-bottom:.5rem; border-bottom:1px solid rgba(0,229,255,.08); font-family:'JetBrains Mono',monospace; font-size:.65rem; }
-.msg-card.user .card-bar { border-color: rgba(180,77,255,.08); }
-.bar-id { color:rgba(0,229,255,.65); font-weight:700; letter-spacing:.1em; border-right:1px solid rgba(0,229,255,.12); padding-right:.5rem; }
-.msg-card.user .bar-id { color: rgba(180,77,255,.65); border-color: rgba(180,77,255,.12); }
-.bar-sender { color:rgba(0,229,255,.85); letter-spacing:.05em; }
-.msg-card.user .bar-sender { color: rgba(180,77,255,.85); }
-.bar-status { display:flex; align-items:center; gap:.3rem; margin-left:auto; color:rgba(0,229,255,.35); font-size:.6rem; }
-.bar-pulse { width:4px; height:4px; border-radius:50%; background:rgba(0,229,255,.6); animation:dot-pulse 1s ease-in-out infinite; }
-@keyframes dot-pulse { 0%,100%{opacity:.25;box-shadow:none} 50%{opacity:1;box-shadow:0 0 6px rgba(0,229,255,.7)} }
+.card-bar { display:flex; align-items:center; gap:.5rem; padding-bottom:.4rem; margin-bottom:.5rem; border-bottom:1px solid color-mix(in srgb, var(--ai) 8%, transparent); font-family:'JetBrains Mono',monospace; font-size:.65rem; }
+.msg-card.user .card-bar { border-color: color-mix(in srgb, var(--usr) 8%, transparent); }
+.bar-id { color:color-mix(in srgb, var(--ai) 65%, transparent); font-weight:700; letter-spacing:.1em; border-right:1px solid color-mix(in srgb, var(--ai) 12%, transparent); padding-right:.5rem; }
+.msg-card.user .bar-id { color: color-mix(in srgb, var(--usr) 65%, transparent); border-color: color-mix(in srgb, var(--usr) 12%, transparent); }
+.bar-sender { color:color-mix(in srgb, var(--ai) 85%, transparent); letter-spacing:.05em; }
+.msg-card.user .bar-sender { color: color-mix(in srgb, var(--usr) 85%, transparent); }
+.bar-status { display:flex; align-items:center; gap:.3rem; margin-left:auto; color:color-mix(in srgb, var(--ai) 35%, transparent); font-size:.6rem; }
+.bar-pulse { width:4px; height:4px; border-radius:50%; background:color-mix(in srgb, var(--ai) 60%, transparent); animation:dot-pulse 1s ease-in-out infinite; }
+@keyframes dot-pulse { 0%,100%{opacity:.25;box-shadow:none} 50%{opacity:1;box-shadow:0 0 6px color-mix(in srgb, var(--ai) 70%, transparent)} }
 
 /* scan */
-.card-scan { position:absolute; left:0; width:100%; height:1px; background:linear-gradient(90deg,transparent,rgba(0,229,255,.12),transparent); transition:top .4s,opacity .2s; top:0; opacity:0; }
+.card-scan { position:absolute; left:0; width:100%; height:1px; background:linear-gradient(90deg,transparent,color-mix(in srgb, var(--ai) 12%, transparent),transparent); transition:top .4s,opacity .2s; top:0; opacity:0; }
 .card-scan.flicker { top:50%; opacity:1; }
 
 /* reason */
-.card-reason { margin:0 0 .6rem; border:1px solid rgba(0,229,255,.06); background:rgba(0,8,20,.5); clip-path:polygon(0 4px,4px 0,100% 0,100% 100%,0 100%); }
-.reason-toggle { display:flex; align-items:center; gap:.4rem; padding:.35rem .6rem; cursor:pointer; user-select:none; font-family:'JetBrains Mono',monospace; font-size:.65rem; color:rgba(0,229,255,.35); transition:color .2s; }
-.reason-toggle:hover { color:rgba(0,229,255,.7); }
-.reason-dot { width:4px; height:4px; border-radius:50%; background:rgba(0,229,255,.35); }
+.card-reason { margin:0 0 .6rem; border:1px solid color-mix(in srgb, var(--ai) 6%, transparent); background:color-mix(in srgb, var(--bg) 30%, #0008); clip-path:polygon(0 4px,4px 0,100% 0,100% 100%,0 100%); }
+.reason-toggle { display:flex; align-items:center; gap:.4rem; padding:.35rem .6rem; cursor:pointer; user-select:none; font-family:'JetBrains Mono',monospace; font-size:.65rem; color:color-mix(in srgb, var(--ai) 35%, transparent); transition:color .2s; }
+.reason-toggle:hover { color:color-mix(in srgb, var(--ai) 70%, transparent); }
+.reason-dot { width:4px; height:4px; border-radius:50%; background:color-mix(in srgb, var(--ai) 35%, transparent); }
 .reason-dot.pulse { animation:dot-pulse 1s ease-in-out infinite; }
 .reason-arrow { margin-left:auto; font-size:.55rem; }
-.reason-body { padding:.2rem .6rem .5rem; border-top:1px solid rgba(0,229,255,.04); font-size:.75rem; color:rgba(180,200,220,.65); line-height:1.5; }
+.reason-body { padding:.2rem .6rem .5rem; border-top:1px solid color-mix(in srgb, var(--ai) 4%, transparent); font-size:.75rem; color:color-mix(in srgb, var(--tx) 65%, transparent); line-height:1.5; }
 
 /* body */
-.card-body { font-size:.88rem; line-height:1.7; color:rgba(210,225,245,.9); overflow-wrap:break-word; word-break:break-word; min-width:0; }
-.card-body :deep(pre) { background:rgba(0,8,18,.8); border:1px solid rgba(0,229,255,.1); border-left:2px solid rgba(0,229,255,.25); padding:.6rem .8rem; overflow-x:auto; font-family:'JetBrains Mono',monospace; font-size:.75rem; color:rgba(160,200,240,.85); }
-.msg-card.user .card-body :deep(pre) { border-color:rgba(180,77,255,.1); border-left-color:rgba(180,77,255,.25); }
-.card-body :deep(code) { background:rgba(0,229,255,.05); color:rgba(0,229,255,.8); padding:.12em .35em; font-size:.85em; }
+.card-body { font-size:.88rem; line-height:1.7; color:color-mix(in srgb, var(--tx) 90%, transparent); overflow-wrap:break-word; word-break:break-word; min-width:0; }
+.card-body :deep(pre) { background:color-mix(in srgb, var(--bg) 50%, #000); border:1px solid color-mix(in srgb, var(--ai) 10%, transparent); border-left:2px solid color-mix(in srgb, var(--ai) 25%, transparent); padding:.6rem .8rem; overflow-x:auto; font-family:'JetBrains Mono',monospace; font-size:.75rem; color:color-mix(in srgb, var(--ai) 85%, #fff); }
+.msg-card.user .card-body :deep(pre) { border-color:color-mix(in srgb, var(--usr) 10%, transparent); border-left-color:color-mix(in srgb, var(--usr) 25%, transparent); }
+.card-body :deep(code) { background:color-mix(in srgb, var(--ai) 5%, transparent); color:color-mix(in srgb, var(--ai) 80%, transparent); padding:.12em .35em; font-size:.85em; }
 .card-body :deep(pre code) { background:none; color:inherit; padding:0; }
-.msg-card.user .card-body :deep(code) { background:rgba(180,77,255,.05); color:rgba(180,77,255,.8); }
-.card-body :deep(blockquote) { border-left:2px solid rgba(0,229,255,.3); background:rgba(0,229,255,.025); padding:.35rem .7rem; margin:.4rem 0; }
-.msg-card.user .card-body :deep(blockquote) { border-left-color:rgba(180,77,255,.3); }
+.msg-card.user .card-body :deep(code) { background:color-mix(in srgb, var(--usr) 5%, transparent); color:color-mix(in srgb, var(--usr) 80%, transparent); }
+.card-body :deep(blockquote) { border-left:2px solid color-mix(in srgb, var(--ai) 30%, transparent); background:color-mix(in srgb, var(--ai) 2.5%, transparent); padding:.35rem .7rem; margin:.4rem 0; }
+.msg-card.user .card-body :deep(blockquote) { border-left-color:color-mix(in srgb, var(--usr) 30%, transparent); }
 
 /* wait */
-.card-waiting { display:flex; align-items:center; gap:.4rem; color:rgba(0,229,255,.35); font-family:'JetBrains Mono',monospace; font-size:.75rem; }
-.wait-cursor { animation:blinker .7s step-end infinite; color:rgba(0,229,255,.55); }
+.card-waiting { display:flex; align-items:center; gap:.4rem; color:color-mix(in srgb, var(--ai) 35%, transparent); font-family:'JetBrains Mono',monospace; font-size:.75rem; }
+.wait-cursor { animation:blinker .7s step-end infinite; color:color-mix(in srgb, var(--ai) 55%, transparent); }
 @keyframes blinker { 0%,100%{opacity:1} 50%{opacity:0} }
 
 /* tools */
-.card-tools { margin-top:.5rem; padding-top:.3rem; border-top:1px solid rgba(0,229,255,.05); }
-.tool-block { margin:.15rem 0; font-size:.7rem; color:rgba(0,229,255,.35); }
+.card-tools { margin-top:.5rem; padding-top:.3rem; border-top:1px solid color-mix(in srgb, var(--ai) 5%, transparent); }
+.tool-block { margin:.15rem 0; font-size:.7rem; color:color-mix(in srgb, var(--ai) 35%, transparent); }
 .tool-block summary { cursor:pointer; padding:.15rem 0; }
-.tool-block summary:hover { color:rgba(0,229,255,.65); }
-.tool-block pre { background:rgba(0,5,15,.8); border:1px solid rgba(0,229,255,.06); padding:.4rem; font-size:.65rem; color:rgba(140,190,230,.6); overflow-x:auto; white-space:pre-wrap; font-family:'JetBrains Mono',monospace; }
+.tool-block summary:hover { color:color-mix(in srgb, var(--ai) 65%, transparent); }
+.tool-block pre { background:color-mix(in srgb, var(--bg) 80%, #000); border:1px solid color-mix(in srgb, var(--ai) 6%, transparent); padding:.4rem; font-size:.65rem; color:color-mix(in srgb, var(--ai) 60%, #fff); overflow-x:auto; white-space:pre-wrap; font-family:'JetBrains Mono',monospace; }
 
 /* divider */
 .info-divider { display:flex; align-items:center; gap:.6rem; padding:.3rem 0; }
-.info-divider::before,.info-divider::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,transparent,rgba(0,229,255,.12),transparent); }
-.info-text { font-family:'JetBrains Mono',monospace; font-size:.6rem; color:rgba(0,229,255,.25); white-space:nowrap; }
+.info-divider::before,.info-divider::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,transparent,color-mix(in srgb, var(--ai) 12%, transparent),transparent); }
+.info-text { font-family:'JetBrains Mono',monospace; font-size:.6rem; color:color-mix(in srgb, var(--ai) 25%, transparent); white-space:nowrap; }
 
 /* 情绪光带 */
 .bar-emotion-strip { display:flex; flex:1; min-width:60px; height:3px; border-radius:2px; overflow:hidden; gap:1px; opacity:.8; margin:0 .25rem; }
 .bar-emotion-seg { height:100%; border-radius:1px; transition:width .5s ease; }
-.bar-expand-btn { margin-left:auto; padding:0 4px; border:1px solid rgba(0,229,255,.15); border-radius:3px; background:rgba(0,229,255,.04); color:rgba(0,229,255,.4); cursor:pointer; font-size:.55rem; line-height:1.2; transition:all .2s; }
-.bar-expand-btn:hover { border-color:rgba(0,229,255,.4); color:rgba(0,229,255,.7); background:rgba(0,229,255,.08); }
+.bar-expand-btn { margin-left:auto; padding:0 4px; border:1px solid color-mix(in srgb, var(--ai) 15%, transparent); border-radius:3px; background:color-mix(in srgb, var(--ai) 4%, transparent); color:color-mix(in srgb, var(--ai) 40%, transparent); cursor:pointer; font-size:.55rem; line-height:1.2; transition:all .2s; }
+.bar-expand-btn:hover { border-color:color-mix(in srgb, var(--ai) 40%, transparent); color:color-mix(in srgb, var(--ai) 70%, transparent); background:color-mix(in srgb, var(--ai) 8%, transparent); }
 
 /* 灵魂详情面板 */
 .soul-detail {
+  --sp: var(--miya-comp-soul-primary, #00e5ff);
+  --spo: var(--miya-comp-soul-positive, #ff6b9d);
+  --sne: var(--miya-comp-soul-negative, #7dd3fc);
+  --ssu: var(--miya-comp-soul-surprise, #facc15);
+  --sth: var(--miya-comp-soul-thought, #00e5ff);
+  --stk: var(--miya-comp-soul-think, #4ade80);
   margin: 0.5rem 0 0;
   padding: 0.6rem;
-  border: 1px solid rgba(0, 229, 255, 0.1);
-  background: linear-gradient(135deg, rgba(0, 6, 16, 0.7), rgba(4, 10, 22, 0.5));
+  border: 1px solid color-mix(in srgb, var(--sp) 10%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--sp) 4%, #0008), color-mix(in srgb, var(--sp) 2%, #0008));
   border-radius: 4px;
   font-size: 0.7rem;
   transition: all 0.3s ease;
@@ -323,39 +336,39 @@ watch(() => props.generating, (v) => {
 .soul-section {
   margin-bottom: 0.6rem;
   padding-left: 0.5rem;
-  border-left: 2px solid rgba(0, 229, 255, 0.15);
+  border-left: 2px solid color-mix(in srgb, var(--sp) 15%, transparent);
 }
 .soul-section:last-child {
   margin-bottom: 0;
 }
-.soul-section.emotion-section { border-left-color: rgba(255, 170, 80, 0.3); }
-.soul-section.thought-section { border-left-color: rgba(160, 180, 255, 0.3); }
-.soul-section.attrib-section { border-left-color: rgba(0, 229, 255, 0.3); }
-.soul-section.reflection-section { border-left-color: rgba(180, 77, 255, 0.3); }
-.soul-section.thinking-section { border-left-color: rgba(80, 200, 120, 0.3); }
+.soul-section.emotion-section { border-left-color: color-mix(in srgb, var(--spo) 30%, transparent); }
+.soul-section.thought-section { border-left-color: color-mix(in srgb, var(--sth) 30%, transparent); }
+.soul-section.attrib-section { border-left-color: color-mix(in srgb, var(--sp) 30%, transparent); }
+.soul-section.reflection-section { border-left-color: color-mix(in srgb, var(--usr) 30%, transparent); }
+.soul-section.thinking-section { border-left-color: color-mix(in srgb, var(--stk) 30%, transparent); }
 
 .soul-section-title {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.6rem;
-  color: rgba(0, 229, 255, 0.45);
+  color: color-mix(in srgb, var(--sp) 45%, transparent);
   letter-spacing: 0.08em;
   margin-bottom: 0.3rem;
 }
 .soul-section-text {
-  color: rgba(200, 215, 240, 0.7);
+  color: color-mix(in srgb, var(--tx) 70%, transparent);
   line-height: 1.55;
   font-size: 0.72rem;
 }
 .soul-section-text.dim {
-  color: rgba(0, 229, 255, 0.35);
+  color: color-mix(in srgb, var(--sp) 35%, transparent);
   font-size: 0.67rem;
 }
 .soul-section-text.code {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.6rem;
-  color: rgba(160, 200, 180, 0.6);
-  background: rgba(0, 8, 16, 0.5);
-  border: 1px solid rgba(0, 229, 255, 0.06);
+  color: color-mix(in srgb, var(--stk) 60%, transparent);
+  background: color-mix(in srgb, var(--bg) 30%, #0004);
+  border: 1px solid color-mix(in srgb, var(--sp) 6%, transparent);
   border-radius: 3px;
   padding: 0.4rem 0.5rem;
   max-height: 200px;
@@ -367,9 +380,9 @@ watch(() => props.generating, (v) => {
 .thought-text {
   font-family: 'Noto Serif SC', serif;
   font-style: italic;
-  color: rgba(200, 215, 240, 0.75);
+  color: color-mix(in srgb, var(--tx) 75%, transparent);
   padding: 0.3rem 0.4rem;
-  background: rgba(160, 180, 255, 0.04);
+  background: color-mix(in srgb, var(--sth) 4%, transparent);
   border-radius: 3px;
 }
 /* 情绪可视化条 */
@@ -385,7 +398,7 @@ watch(() => props.generating, (v) => {
 }
 .soul-em-name {
   font-size: 0.6rem;
-  color: rgba(200, 215, 240, 0.55);
+  color: color-mix(in srgb, var(--tx) 55%, transparent);
   width: 2.5rem;
   text-align: right;
   flex-shrink: 0;
@@ -393,7 +406,7 @@ watch(() => props.generating, (v) => {
 .soul-em-bar {
   flex: 1;
   height: 5px;
-  background: rgba(0, 229, 255, 0.06);
+  background: color-mix(in srgb, var(--sp) 6%, transparent);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -404,7 +417,7 @@ watch(() => props.generating, (v) => {
 }
 .soul-em-val {
   font-size: 0.55rem;
-  color: rgba(0, 229, 255, 0.3);
+  color: color-mix(in srgb, var(--sp) 30%, transparent);
   width: 2rem;
   text-align: right;
   font-family: 'JetBrains Mono', monospace;

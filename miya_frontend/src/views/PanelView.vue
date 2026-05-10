@@ -222,9 +222,12 @@ function enterFloatingMode() {
 
 /* ── 卡片 ── */
 .miya-card {
+  --p-border: var(--miya-comp-panel-border, #a78bfa);
+  --p-btn: var(--miya-comp-panel-btn, #a78bfa);
+  --p-icon: var(--miya-comp-panel-icon, #a78bfa);
   position: relative;
   background: var(--miya-surface);
-  border: 1px solid rgba(167, 139, 250, 0.12);
+  border: 1px solid color-mix(in srgb, var(--p-border) 12%, transparent);
   border-radius: 1rem;
   color: var(--miya-text);
   cursor: pointer;

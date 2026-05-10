@@ -438,7 +438,11 @@ onUnmounted(() => cancelAnimationFrame(animId))
 </template>
 
 <style scoped>
-.star-river { height: 100%; display: flex; flex-direction: column; color: var(--miya-text); }
+.star-river {
+  --line: var(--miya-comp-mind-line, #00e5ff);
+  --anchor: var(--miya-comp-mind-anchor, #ffd700);
+  --highlight: var(--miya-comp-mind-highlight, #00e5ff);
+  height: 100%; display: flex; flex-direction: column; color: var(--miya-text); }
 .sr-header { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 1rem; border-bottom: 1px solid rgba(0,229,255,0.06); flex-shrink: 0; }
 .sr-header h1 { font-family: 'Noto Serif SC', serif; font-size: 1rem; color: var(--miya-accent); margin: 0; }
 .sr-counts { font-size: 0.65rem; color: var(--miya-text-dim); font-family: 'JetBrains Mono', monospace; }

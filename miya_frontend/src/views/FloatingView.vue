@@ -956,11 +956,11 @@ useEventListener('token', () => {
 
 /* Hover */
 .floating-ball:hover .ball-outer-ring {
-  border-color: rgba(0, 229, 255, 0.6);
-  box-shadow: 0 0 12px rgba(0, 229, 255, 0.2);
+  border-color: color-mix(in srgb, var(--miya-comp-floating-ball, #00e5ff) 60%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--miya-comp-floating-ball, #00e5ff) 20%, transparent);
 }
 .floating-ball:hover .ball-inner-ring {
-  border-color: rgba(180, 77, 255, 0.4);
+  border-color: color-mix(in srgb, var(--miya-comp-floating-ring, #ac45f1) 40%, transparent);
 }
 
 /* 彩色光环（保持在窗口 100x100 内，避免方形裁切） */
@@ -968,7 +968,8 @@ useEventListener('token', () => {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: conic-gradient(from 0deg, #ac45f1, #7a7ef4, #3dc6f8, #55a9f6, #ac45f1);
+  --r: var(--miya-comp-floating-ring, #ac45f1);
+  background: conic-gradient(from 0deg, var(--r), #7a7ef4, #3dc6f8, #55a9f6, var(--r));
   opacity: 0.7;
   z-index: 0;
   animation: glow-spin 6s linear infinite;

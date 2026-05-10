@@ -772,11 +772,11 @@ function getSupportedMimeType(): string {
 }
 
 .composer-textarea::placeholder {
-  color: rgba(0, 229, 255, 0.3);
+  color: color-mix(in srgb, var(--miya-comp-message-ai) 30%, transparent);
 }
 
 .input-prefix {
-  color: rgba(0, 229, 255, 0.5);
+  color: color-mix(in srgb, var(--miya-comp-message-ai) 50%, transparent);
   font-size: 1rem;
   line-height: 1;
   padding-left: 0.15rem;
@@ -790,25 +790,25 @@ function getSupportedMimeType(): string {
   align-self: center;
   width: 36px;
   height: 36px;
-  border: 1px solid rgba(0, 229, 255, 0.3);
+  border: 1px solid color-mix(in srgb, var(--miya-comp-message-ai) 30%, transparent);
   border-radius: 999px;
-  background: rgba(0, 229, 255, 0.08);
-  color: rgba(0, 229, 255, 0.9);
+  background: color-mix(in srgb, var(--miya-comp-message-ai) 8%, transparent);
+  color: color-mix(in srgb, var(--miya-comp-message-ai) 90%, transparent);
   cursor: pointer;
   transition: all 0.25s ease;
 }
 
 .send-btn:hover:not(:disabled) {
-  background: rgba(0, 229, 255, 0.18);
-  border-color: rgba(0, 229, 255, 0.6);
-  box-shadow: 0 0 16px rgba(0, 229, 255, 0.25);
+  background: color-mix(in srgb, var(--miya-comp-message-ai) 18%, transparent);
+  border-color: color-mix(in srgb, var(--miya-comp-message-ai) 60%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--miya-comp-message-ai) 25%, transparent);
   transform: translateY(-1px);
 }
 
 .send-btn:disabled {
   opacity: 0.3;
   cursor: default;
-  border-color: rgba(0, 229, 255, 0.1);
+  border-color: color-mix(in srgb, var(--miya-comp-message-ai) 10%, transparent);
   background: transparent;
 }
 
@@ -839,27 +839,27 @@ function getSupportedMimeType(): string {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(0, 229, 255, 0.15);
+  border: 1px solid color-mix(in srgb, var(--miya-comp-message-ai) 15%, transparent);
   border-radius: 8px;
-  background: rgba(0, 229, 255, 0.05);
-  color: rgba(0, 229, 255, 0.6);
+  background: color-mix(in srgb, var(--miya-comp-message-ai) 5%, transparent);
+  color: color-mix(in srgb, var(--miya-comp-message-ai) 60%, transparent);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .window-btn:hover {
-  background: rgba(0, 229, 255, 0.12);
-  color: rgba(0, 229, 255, 0.95);
-  border-color: rgba(0, 229, 255, 0.4);
-  box-shadow: 0 0 12px rgba(0, 229, 255, 0.15);
+  background: color-mix(in srgb, var(--miya-comp-message-ai) 12%, transparent);
+  color: color-mix(in srgb, var(--miya-comp-message-ai) 95%, transparent);
+  border-color: color-mix(in srgb, var(--miya-comp-message-ai) 40%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--miya-comp-message-ai) 15%, transparent);
 }
 
 .msg-sep {
-  border-bottom: 1px solid rgba(0, 229, 255, 0.08);
+  border-bottom: 1px solid color-mix(in srgb, var(--miya-comp-message-ai) 8%, transparent);
 }
 
 .session-panel-header {
-  border-bottom: 1px solid rgba(0, 229, 255, 0.08);
+  border-bottom: 1px solid color-mix(in srgb, var(--miya-comp-message-ai) 8%, transparent);
 }
 
 .session-panel {
@@ -899,7 +899,7 @@ function getSupportedMimeType(): string {
 
 .input-icon-btn {
   padding: 0.5rem;
-  color: rgba(0, 229, 255, 0.4);
+  color: color-mix(in srgb, var(--miya-comp-message-ai) 40%, transparent);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -909,13 +909,13 @@ function getSupportedMimeType(): string {
 }
 
 .input-icon-btn:hover {
-  color: rgba(0, 229, 255, 0.8);
-  background: rgba(0, 229, 255, 0.08);
+  color: color-mix(in srgb, var(--miya-comp-message-ai) 80%, transparent);
+  background: color-mix(in srgb, var(--miya-comp-message-ai) 8%, transparent);
 }
 
 .miya-input-box {
-  background: rgba(8, 14, 26, 0.88);
-  border: 1px solid rgba(0, 229, 255, 0.15);
+  background: color-mix(in srgb, var(--miya-comp-message-bg) 50%, #000);
+  border: 1px solid color-mix(in srgb, var(--miya-comp-message-ai) 15%, transparent);
   clip-path: polygon(0 4px, 4px 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 0 100%);
   padding: 0.4rem 0.6rem;
   backdrop-filter: blur(12px);

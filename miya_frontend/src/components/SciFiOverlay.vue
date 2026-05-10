@@ -1,8 +1,25 @@
 <script setup lang="ts">
 import { useStorage } from '@vueuse/core'
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, watchEffect } from 'vue'
 
 const colorMode = useStorage('miya-hud-color', 'mixed')
+
+function hexToRgb(hex: string): string {
+  const h = hex.replace('#', '')
+  const r = parseInt(h.substring(0, 2), 16)
+  const g = parseInt(h.substring(2, 4), 16)
+  const b = parseInt(h.substring(4, 6), 16)
+  return isNaN(r) ? '0,229,255' : `${r},${g},${b}`
+}
+
+// 注入 RGB 版本到 CSS 变量
+watchEffect(() => {
+  const style = getComputedStyle(document.documentElement)
+  const primary = style.getPropertyValue('--miya-comp-hud-primary').trim() || '#00e5ff'
+  const secondary = style.getPropertyValue('--miya-comp-hud-secondary').trim() || '#b44dff'
+  document.documentElement.style.setProperty('--miya-comp-hud-primary-r', hexToRgb(primary))
+  document.documentElement.style.setProperty('--miya-comp-hud-secondary-r', hexToRgb(secondary))
+})
 
 const hudTextL = ref('SYS.OK')
 const hudValsL = ref(['01', '7F', '3A', '88'])
@@ -155,8 +172,10 @@ onUnmounted(() => {
 /* ═══ 颜色模式 ═══ */
 .sci-fi-overlay {
   position: fixed; inset: 0; pointer-events: none; z-index: 100; overflow: hidden;
-  /* default cyan */
-  --c1: 0,229,255; --c2: 0,229,255; --c3: 0,229,255; --c4: 180,77,255;
+  --c1: var(--miya-comp-hud-primary-r, 0,229,255);
+  --c2: var(--miya-comp-hud-secondary-r, 180,77,255);
+  --c3: var(--miya-comp-hud-primary-r, 0,229,255);
+  --c4: var(--miya-comp-hud-secondary-r, 180,77,255);
 }
 
 /* 暖色: 粉+红+橙 */
@@ -166,15 +185,10 @@ onUnmounted(() => {
 
 /* 混色: 不同元素不同色 */
 .sci-fi-overlay.mode-mixed {
-  --c1: 0,229,255;    /* 左上 - 青色 */
-  --c2: 255,107,157;   /* 右上 - 粉色 */
-  --c3: 180,77,255;    /* 左下 - 紫色 */
-  --c4: 255,68,136;    /* 右下 - 红粉 */
-}
-
-/* 紫色 */
-.sci-fi-overlay.mode-purple {
-  --c1: 167,139,250; --c2: 180,77,255; --c3: 167,139,250; --c4: 200,150,255;
+  --c1: 0,229,255;
+  --c2: 255,107,157;
+  --c3: 180,77,255;
+  --c4: 255,68,136;
 }
 
 /* 紫色 */

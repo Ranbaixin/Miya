@@ -120,15 +120,25 @@ const accentGlow = computed(() => `0 0 18px ${dominantColor.value}22, 0 0 4px ${
 </template>
 
 <style scoped>
+/* ── 组件调色变量 ── */
 .soul-card {
+  --sp: var(--miya-comp-soul-primary, #00e5ff);
+  --spo: var(--miya-comp-soul-positive, #ff6b9d);
+  --sne: var(--miya-comp-soul-negative, #7dd3fc);
+  --ssu: var(--miya-comp-soul-surprise, #facc15);
+  --sth: var(--miya-comp-soul-thought, #00e5ff);
+  --stk: var(--miya-comp-soul-think, #4ade80);
+  --bg: var(--miya-comp-message-bg, #0a0815);
+  --tx: var(--miya-comp-message-text, #e8d5f5);
+
   position: absolute;
   right: -188px;
   top: 0;
   width: 172px;
   max-height: 240px;
   overflow-y: auto;
-  background: linear-gradient(135deg, rgba(8, 14, 26, 0.95), rgba(12, 18, 32, 0.93));
-  border: 1px solid rgba(0, 229, 255, 0.12);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--bg) 90%, #000), color-mix(in srgb, var(--bg) 70%, #000));
+  border: 1px solid color-mix(in srgb, var(--sp) 12%, transparent);
   border-radius: 6px;
   padding: 0.7rem;
   font-size: 0.65rem;
@@ -152,13 +162,13 @@ const accentGlow = computed(() => `0 0 18px ${dominantColor.value}22, 0 0 4px ${
 }
 
 .soul-card.loading {
-  border-color: rgba(0, 229, 255, 0.2);
+  border-color: color-mix(in srgb, var(--sp) 20%, transparent);
   animation: card-pulse 2s ease-in-out infinite;
 }
 
 @keyframes card-pulse {
-  0%, 100% { border-color: rgba(0, 229, 255, 0.12); }
-  50% { border-color: rgba(0, 229, 255, 0.3); }
+  0%, 100% { border-color: color-mix(in srgb, var(--sp) 12%, transparent); }
+  50% { border-color: color-mix(in srgb, var(--sp) 30%, transparent); }
 }
 
 /* 滚动条 */

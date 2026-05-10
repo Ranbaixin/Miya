@@ -7,11 +7,12 @@ import API from '@/api/core'
 import { CONFIG } from '@/utils/config'
 import { useThemeColors } from '@/composables/useThemeColors'
 import { audioSettings, bgmFileOptions, playBgm, stopBgm } from '@/composables/useAudio'
+import { componentColors, COLOR_GROUPS } from '@/composables/useComponentColors'
 
 const router = useRouter()
 const { theme, resetTheme } = useThemeColors()
 
-type TabKey = 'appearance' | 'model' | 'soul' | 'memory' | 'system' | 'audio'
+type TabKey = 'appearance' | 'model' | 'soul' | 'memory' | 'system' | 'audio' | 'color'
 const activeTab = ref<TabKey>('appearance')
 const themeOpen = ref(false)
 const backendOnline = ref(false)
@@ -88,6 +89,7 @@ const tabs: { key: TabKey, label: string, icon: string }[] = [
   { key: 'soul', label: '灵魂', icon: '♥' },
   { key: 'memory', label: '记忆', icon: '◆' },
   { key: 'audio', label: '声音', icon: '♪' },
+  { key: 'color', label: '调色', icon: '⬡' },
   { key: 'system', label: '系统', icon: '◎' },
 ]
 
@@ -155,6 +157,22 @@ function switchBgm(file: string) {
   if (audioSettings.value.bgmEnabled) {
     playBgm(file)
   }
+}
+
+// ── 调色 ──
+function resetAllComponentColors() {
+  const map: Record<string, string> = {}
+  for (const g of COLOR_GROUPS) {
+    for (const c of g.colors) map[c.key] = c.default
+  }
+  componentColors.value = map
+}
+function resetComponentGroup(id: string) {
+  const g = COLOR_GROUPS.find(x => x.id === id)
+  if (!g) return
+  const updated = { ...(componentColors.value as Record<string, string>) }
+  for (const c of g.colors) updated[c.key] = c.default
+  componentColors.value = updated
 }
 
 function getRouteModel(key: string): string {
@@ -419,6 +437,35 @@ function getRouteModel(key: string): string {
           </div>
         </div>
       </div>
+
+      <!-- ═══ 调色 ═══ -->
+      <div v-show="activeTab === 'color'" class="config-page">
+        <h2>组件调色</h2>
+        <p class="hint" style="margin-top:-0.5rem">每个组件独立配色，点击色块即可调整</p>
+        <button class="action-btn" style="margin-bottom:0.8rem" @click="resetAllComponentColors()">
+          恢复全部默认
+        </button>
+        <div v-for="group in COLOR_GROUPS" :key="group.id" class="config-section color-group">
+          <h3 class="color-group-header">
+            <span>{{ group.icon }} {{ group.label }}</span>
+            <button class="action-btn ml-a" @click="resetComponentGroup(group.id)">恢复</button>
+          </h3>
+          <div class="color-picker-grid">
+            <div v-for="c in group.colors" :key="c.key" class="color-picker-item">
+              <label class="cp-label">{{ c.label }}</label>
+              <div class="cp-row">
+                <input
+                  type="color"
+                  :value="componentColors[c.key] || c.default"
+                  class="cp-input"
+                  @input="(e: Event) => { const tar = e.target as HTMLInputElement; componentColors[c.key] = tar.value }"
+                >
+                <span class="cp-val">{{ componentColors[c.key] || c.default }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 </template>
@@ -516,4 +563,13 @@ function getRouteModel(key: string): string {
 /* 声音 */
 .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 0.35rem 0; border-bottom: 1px solid rgba(0,229,255,0.04); }
 .file-btn-audio { font-size: 0.68rem; }
+
+/* 调色 */
+.color-group-header { display: flex; align-items: center; gap: 0.4rem; }
+.color-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 0.4rem; }
+.color-picker-item { padding: 0.4rem; background: rgba(0,0,0,0.15); border-radius: 0.25rem; border: 1px solid rgba(0,229,255,0.05); }
+.cp-label { display: block; font-size: 0.65rem; color: var(--miya-text-dim); margin-bottom: 0.3rem; }
+.cp-row { display: flex; align-items: center; gap: 0.4rem; }
+.cp-input { width: 28px; height: 22px; border: 1px solid rgba(0,229,255,0.15); border-radius: 0.2rem; background: transparent; cursor: pointer; padding: 1px; }
+.cp-val { font-size: 0.6rem; color: var(--miya-text-dim); font-family: 'JetBrains Mono', monospace; }
 </style>
