@@ -657,19 +657,18 @@ useEventListener('token', () => {
     @pointerup="onDragPointerUp"
   >
     <!-- 左侧方块：与球态视觉一致，拖拽移动/点击收起 -->
-    <div class="compact-ball" @pointerdown="onCompactBallPointerDown" @pointermove="onDragPointerMove" @pointerup="onCompactBallPointerUp" @dragstart.prevent>
-      <div class="ball-content">
-          <img src="/my.png" class="ball-frame" draggable="false" alt="弥娅">
+      <div class="compact-ball" @pointerdown="onCompactBallPointerDown" @pointermove="onDragPointerMove" @pointerup="onCompactBallPointerUp" @dragstart.prevent>
+        <div class="ball-avatar-wrap">
+          <img src="/my.png" class="ball-avatar" draggable="false" alt="弥娅">
+        </div>
       </div>
-      <div class="ball-ring" />
-    </div>
     <!-- 右侧内容（带入场动画） -->
     <div
       class="flex-1 flex flex-col justify-center gap-1 min-w-0 px-4"
       :class="{ 'enter-anim': showContent }"
     >
       <div class="flex items-center gap-1">
-        <span class="flex-1 text-white/40 text-xs truncate select-none">有什么可以帮你的吗？</span>
+        <span class="flex-1 text-white/40 text-xs truncate select-none">雪落无声 · 愿系铃中</span>
         <div class="flex items-center shrink-0" @pointerdown.stop>
           <button class="action-btn" :class="{ active: IS_TEMPORARY_SESSION }" title="临时聊天" @click="handleNewTemporarySession">🕶</button>
           <button class="action-btn" title="对话历史" @click="toggleHistory">📋</button>
@@ -727,10 +726,9 @@ useEventListener('token', () => {
       @pointerup="onDragPointerUp"
     >
       <div class="compact-ball" @pointerdown="onCompactBallPointerDown" @pointermove="onDragPointerMove" @pointerup="onCompactBallPointerUp" @dragstart.prevent>
-        <div class="ball-content">
-        <img src="/my.png" class="ball-frame" draggable="false" alt="弥娅">
+        <div class="ball-avatar-wrap">
+        <img src="/my.png" class="ball-avatar" draggable="false" alt="弥娅">
         </div>
-        <div class="ball-ring" />
       </div>
       <div class="flex-1 flex flex-col justify-center gap-1 min-w-0 px-4">
         <div class="flex items-center gap-1">
@@ -911,6 +909,7 @@ useEventListener('token', () => {
   cursor: pointer;
   touch-action: none;
   border-radius: 50%;
+  overflow: hidden;
 }
 
 /* 外层光晕环 */
@@ -918,11 +917,13 @@ useEventListener('token', () => {
   position: absolute;
   inset: -2px;
   border-radius: 50%;
-  border: 2px solid rgba(0, 229, 255, 0.3);
+  border: 2px solid rgba(0, 229, 255, 0.4);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.2), inset 0 0 6px rgba(0, 229, 255, 0.1);
   animation: ring-rotate 6s linear infinite;
 }
 .ball-outer-ring.active {
-  border-color: rgba(0, 229, 255, 0.6);
+  border-color: rgba(0, 229, 255, 0.7);
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.4), inset 0 0 10px rgba(0, 229, 255, 0.2);
   animation: ring-rotate 2s linear infinite, ring-pulse 1s ease-in-out infinite;
 }
 @keyframes ring-rotate { to { transform: rotate(360deg); } }
@@ -1045,8 +1046,8 @@ useEventListener('token', () => {
   height: 100%;
   display: flex;
   align-items: stretch;
-  background: #110901;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(8, 14, 24, 0.95);
+  border: 1px solid rgba(0, 229, 255, 0.1);
   overflow: hidden;
 }
 
@@ -1056,7 +1057,11 @@ useEventListener('token', () => {
   flex-shrink: 0;
   cursor: pointer;
   position: relative;
-  background: radial-gradient(circle at 40% 35%, #2a1810, #110901);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
   transition: filter 0.2s ease;
 }
 
@@ -1064,30 +1069,20 @@ useEventListener('token', () => {
   filter: brightness(1.08);
 }
 
-/* 紧凑/完整态的球无光环，内容占满 */
+/* 紧凑/完整态的球无光环，头像居中 */
 .compact-ball .ball-avatar-wrap {
-  width: 36px; height: 36px; position: relative; inset: auto;
+  width: 40px; height: 40px; position: relative; inset: auto;
+  box-shadow: 0 0 10px rgba(0,229,255,0.1);
 }
 .compact-ball .ball-border {
-  border-color: rgba(0,229,255,0.12);
-}
-.compact-ball:hover .ball-border {
-  border-color: rgba(0,229,255,0.4);
-}
-
-.compact-ball .ball-ring {
-  inset: 0;
-}
-
-.compact-ball:hover .ball-ring {
-  border-color: rgba(255, 255, 255, 0.4);
+  display: none;
 }
 
 /* ========== 操作按钮 ========== */
 .action-btn {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(0, 229, 255, 0.3);
   cursor: pointer;
   font-size: 10px;
   padding: 2px 6px;
@@ -1097,38 +1092,40 @@ useEventListener('token', () => {
 }
 
 .action-btn:hover {
-  color: rgba(255, 255, 255, 0.8);
-  background-color: rgba(255, 255, 255, 0.08);
+  color: rgba(0, 229, 255, 0.8);
+  background-color: rgba(0, 229, 255, 0.06);
 }
 
 .action-btn.active {
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(0, 229, 255, 0.8);
+  background: rgba(0, 229, 255, 0.08);
 }
 
 /* ========== 快捷技能标签 ========== */
 .skill-tag {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.5);
+  background: rgba(0, 229, 255, 0.04);
+  border: 1px solid rgba(0, 229, 255, 0.1);
+  color: rgba(0, 229, 255, 0.5);
   cursor: pointer;
   font-size: 10px;
-  padding: 1px 8px;
-  border-radius: 10px;
-  transition: color 0.2s, background-color 0.2s, border-color 0.2s;
+  padding: 2px 10px;
+  border-radius: 12px;
+  transition: all 0.2s;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .skill-tag:hover {
-  color: rgba(255, 255, 255, 0.9);
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.25);
+  color: rgba(0, 229, 255, 0.9);
+  background: rgba(0, 229, 255, 0.1);
+  border-color: rgba(0, 229, 255, 0.35);
 }
 
 .skill-tag.active {
-  color: rgba(255, 255, 255, 0.95);
-  background: rgba(172, 69, 241, 0.25);
-  border-color: rgba(172, 69, 241, 0.5);
+  color: rgba(0, 229, 255, 0.95);
+  background: rgba(0, 229, 255, 0.15);
+  border-color: rgba(0, 229, 255, 0.5);
+  box-shadow: 0 0 8px rgba(0,229,255,0.1);
 }
 
 /* ========== 完整态 ========== */
@@ -1138,8 +1135,8 @@ useEventListener('token', () => {
   max-width: 420px;
   display: flex;
   flex-direction: column;
-  background: #110901;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(8, 14, 24, 0.95);
+  border: 1px solid rgba(0, 229, 255, 0.1);
   overflow: hidden;
 }
 
@@ -1150,6 +1147,8 @@ useEventListener('token', () => {
   height: 100px;
   max-height: 100px;
   overflow: hidden;
+  border-bottom: 1px solid rgba(0,229,255,0.06);
+  background: rgba(6, 10, 18, 0.6);
 }
 
 /* ========== 内容入场动画 ========== */
