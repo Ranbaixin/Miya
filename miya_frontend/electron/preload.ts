@@ -122,6 +122,26 @@ const electronAPI = {
     set: (enabled: boolean) => ipcRenderer.invoke('autoLaunch:set', enabled) as Promise<void>,
   },
 
+  // Terminal (Claude Code Engine)
+  terminal: {
+    start: (options?: { model?: string }) => ipcRenderer.invoke('terminal:start', options) as Promise<void>,
+    write: (data: string) => ipcRenderer.invoke('terminal:write', data),
+    resize: (cols: number, rows: number) => ipcRenderer.invoke('terminal:resize', cols, rows),
+    stop: () => ipcRenderer.invoke('terminal:stop'),
+    isRunning: () => ipcRenderer.invoke('terminal:isRunning') as Promise<boolean>,
+    getBuffer: () => ipcRenderer.invoke('terminal:getBuffer') as Promise<string>,
+    onData: (callback: (data: string) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: string) => callback(data)
+      ipcRenderer.on('terminal:data', handler)
+      return () => ipcRenderer.removeListener('terminal:data', handler)
+    },
+    onExit: (callback: (code: number) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, code: number) => callback(code)
+      ipcRenderer.on('terminal:exit', handler)
+      return () => ipcRenderer.removeListener('terminal:exit', handler)
+    },
+  },
+
   // Platform info
   platform: detectPlatform(),
 }

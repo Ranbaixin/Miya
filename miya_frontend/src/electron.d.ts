@@ -44,6 +44,17 @@ export interface AutoLaunchAPI {
   set: (enabled: boolean) => Promise<void>
 }
 
+export interface TerminalAPI {
+  start: (options?: { model?: string }) => Promise<void>
+  write: (data: string) => Promise<void>
+  resize: (cols: number, rows: number) => Promise<void>
+  stop: () => Promise<void>
+  isRunning: () => Promise<boolean>
+  getBuffer: () => Promise<string>
+  onData: (callback: (data: string) => void) => () => void
+  onExit: (callback: (code: number) => void) => () => void
+}
+
 export interface ElectronAPI {
   minimize: () => void
   maximize: () => void
@@ -63,6 +74,7 @@ export interface ElectronAPI {
   backend: BackendAPI
   backgrounds: BackgroundsAPI
   autoLaunch: AutoLaunchAPI
+  terminal: TerminalAPI
   writeFile: (relPath: string, base64: string) => Promise<void>
   platform: string
 }

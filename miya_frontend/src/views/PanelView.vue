@@ -25,23 +25,79 @@ onMounted(async () => {
 })
 
 const { height } = useWindowSize()
-const scale = computed(() => Math.min(1.2, Math.max(0.65, height.value / 800)))
 
+// ─── Wing layout — 左翼 4 张 + 右翼 4 张 ──────────────────────────
+// radii: tip 羽尖 / inner 内羽 — staggered for feather look
+const cards = [
+  // ═══ 左翼（扇展 150°→210°）═══
+  { id: 'community', label: '娜迦社区', desc: '发帖 · 交友 · 互动', path: '/community', angle: 150, radius: 1, color: '#ff77aa', emoji: '✧' },
+  { id: 'screen',    label: '屏幕视觉', desc: '截图 · AI 分析',       path: '/screen',    angle: 167, radius: 2, color: '#ff9944', emoji: '⊙' },
+  { id: 'terminal',  label: '终端引擎', desc: 'Claude Code · 代码',   path: '/terminal',  angle: 193, radius: 2, color: '#00e88f', emoji: '⬡' },
+  { id: 'openclaw',  label: '电脑控制', desc: 'OpenClaw · AI 操作',   path: '/openclaw',  angle: 210, radius: 1, color: '#ff5577', emoji: '⬢' },
+  // ═══ 右翼（扇展 -30°→30°）═══
+  { id: 'chat',      label: '弥娅对话', desc: '决策层 · 感知 · 协作', path: '/chat',      angle: -30, radius: 1, color: '#b44dff', emoji: '◆' },
+  { id: 'mind',      label: '记忆星河', desc: '认知引擎 · 记忆网络',  path: '/mind',      angle: -13, radius: 2, color: '#00e5ff', emoji: '◇' },
+  { id: 'config',    label: '灵魂调谐', desc: '人格 · 情绪 · 模型池', path: '/config',    angle:  13, radius: 2, color: '#d4af37', emoji: '❖' },
+  { id: 'floating',  label: '铃音守护', desc: '轻量陪伴 · 悬浮球',   icon: 'floating',  angle:  30, radius: 1, color: '#4da6ff', emoji: '◈' },
+]
+
+// ─── Mouse tracking ──────────────────────────────────────────────────
 const mouse = reactive({ x: 0.5, y: 0.5 })
-
-function onMouseMove(e: MouseEvent) {
-  mouse.x = e.clientX / window.innerWidth
-  mouse.y = e.clientY / window.innerHeight
-}
-
+function onMouseMove(e: MouseEvent) { mouse.x = e.clientX / window.innerWidth; mouse.y = e.clientY / window.innerHeight }
+const hoveredCard = ref<string | null>(null)
 onMounted(() => window.addEventListener('mousemove', onMouseMove))
 onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
 
-const rx = computed(() => (mouse.y - 0.5) * -8)
-const ry = computed(() => (mouse.x - 0.5) * 12)
-const tx = computed(() => (mouse.x - 0.5) * -20)
-const ty = computed(() => (mouse.y - 0.5) * -15)
+// ─── Wing geometry ───────────────────────────────────────────────────
+const tipRadius   = computed(() => Math.min(260, height.value * 0.30))
+const innerRadius = computed(() => Math.min(200, height.value * 0.24))
+const rotationRx  = computed(() => (mouse.y - 0.5) * -5)
+const rotationRy  = computed(() => (mouse.x - 0.5) * 8)
+const SCALE       = computed(() => Math.min(1.08, Math.max(0.72, height.value / 900)))
 
+const cardPositions = computed(() =>
+  cards.map(c => {
+    const rad = (c.angle * Math.PI) / 180
+    const r = c.radius === 1 ? tipRadius.value : innerRadius.value
+    return { x: Math.cos(rad) * r, y: Math.sin(rad) * r }
+  }),
+)
+
+// ─── Constellation ───────────────────────────────────────────────────
+const wingLines = computed(() => {
+  const pos = cardPositions.value
+  const lines: { x1: number; y1: number; x2: number; y2: number; cls: string }[] = []
+  // Left wing: feather chain (0→1→2→3)
+  for (let i = 0; i < 3; i++) lines.push({ x1: pos[i].x, y1: pos[i].y, x2: pos[i + 1].x, y2: pos[i + 1].y, cls: 'wing-feather' })
+  // Right wing: feather chain (4→5→6→7)
+  for (let i = 4; i < 7; i++) lines.push({ x1: pos[i].x, y1: pos[i].y, x2: pos[i + 1].x, y2: pos[i + 1].y, cls: 'wing-feather' })
+  // Each feather to center
+  for (let i = 0; i < cards.length; i++) lines.push({ x1: 0, y1: 0, x2: pos[i].x, y2: pos[i].y, cls: 'feather-to-center' })
+  // Wing root connectors (tip feathers → center with highlight)
+  lines.push({ x1: 0, y1: 0, x2: pos[0].x, y2: pos[0].y, cls: 'wing-root' })
+  lines.push({ x1: 0, y1: 0, x2: pos[3].x, y2: pos[3].y, cls: 'wing-root' })
+  lines.push({ x1: 0, y1: 0, x2: pos[4].x, y2: pos[4].y, cls: 'wing-root' })
+  lines.push({ x1: 0, y1: 0, x2: pos[7].x, y2: pos[7].y, cls: 'wing-root' })
+  return lines
+})
+
+// ─── Per-card tilt ───────────────────────────────────────────────────
+const TILT = 10
+function cardTilt(idx: number) {
+  const pos = cardPositions.value[idx]
+  if (!pos) return { rx: 0, ry: 0 }
+  return { rx: (mouse.y - 0.5) * -TILT, ry: (mouse.x - 0.5) * TILT }
+}
+function cardTransform(i: number) {
+  const t = cardTilt(i)
+  const s = hoveredCard.value === cards[i].id ? SCALE.value * 1.12 : SCALE.value
+  return `translate(-50%,-50%) perspective(800px) rotateX(${t.rx}deg) rotateY(${t.ry}deg) scale(${s})`
+}
+
+function navigate(card: typeof cards[0]) {
+  if (card.id === 'floating') return enterFloatingMode()
+  if (card.path) router.push(card.path)
+}
 function enterFloatingMode() {
   CONFIG.value.floating.enabled = true
   window.electronAPI?.floating.enter()
@@ -49,298 +105,269 @@ function enterFloatingMode() {
 </script>
 
 <template>
-  <div class="miya-home">
+  <div class="star-orbit">
+    <!-- ── Center Logo ── -->
+    <div class="logo-center">
+      <div class="logo-ring">
+        <svg viewBox="0 0 100 100" fill="none">
+          <circle cx="50" cy="42" r="40" stroke="var(--miya-primary)" stroke-width="0.8" opacity="0.18" />
+          <circle cx="50" cy="42" r="36" stroke="var(--miya-primary)" stroke-width="1.0" opacity="0.25" />
+          <circle cx="50" cy="42" r="28" stroke="var(--miya-accent)" stroke-width="1.5" opacity="0.35" />
+          <circle cx="50" cy="42" r="18" stroke="var(--miya-primary)" stroke-width="1.8" opacity="0.4" />
+          <circle cx="50" cy="42" r="8" stroke="var(--miya-accent)" stroke-width="2" opacity="0.5" />
+          <path d="M50 5C50 5 22 25 22 50C22 68 50 85 50 85" stroke="var(--miya-primary)" stroke-width="1.2" stroke-linecap="round" opacity="0.35" />
+          <path d="M50 5C50 5 78 25 78 50C78 68 50 85 50 85" stroke="var(--miya-primary)" stroke-width="1.2" stroke-linecap="round" opacity="0.25" />
+          <circle cx="50" cy="42" r="2" fill="var(--miya-accent)" opacity="0.9" />
+          <circle cx="38" cy="36" r="1.5" fill="var(--miya-gold)" opacity="0.7" />
+          <circle cx="62" cy="36" r="1.2" fill="var(--miya-gold)" opacity="0.6" />
+          <circle cx="30" cy="52" r="1" fill="var(--miya-gold)" opacity="0.4" />
+          <circle cx="70" cy="52" r="0.8" fill="var(--miya-gold)" opacity="0.35" />
+          <circle cx="50" cy="58" r="1" fill="var(--miya-gold)" opacity="0.3" />
+        </svg>
+      </div>
+      <div class="logo-title">弥娅</div>
+      <div class="logo-sub">MIYA · AI COMPANION</div>
+      <div class="logo-pulse" />
+    </div>
+
+    <!-- ── Wing system ── -->
     <div
-      class="miya-parallax"
-      :style="{
-        transform: `perspective(1000px) rotateX(${rx}deg) rotateY(${ry}deg) translate(${tx}px, ${ty}px) scale(${scale})`,
-      }"
+      class="orbit-system"
+      :style="{ transform: `perspective(1000px) rotateX(${rotationRx}deg) rotateY(${rotationRy}deg)` }"
     >
-      <!-- Logo -->
-      <div class="miya-logo">
-        <div class="miya-logo-ring">
-          <svg viewBox="0 0 100 100" fill="none">
-            <circle cx="50" cy="42" r="36" stroke="var(--miya-primary)" stroke-width="1.2" opacity="0.3" />
-            <circle cx="50" cy="42" r="24" stroke="var(--miya-accent)" stroke-width="1.8" opacity="0.5" />
-            <circle cx="50" cy="42" r="12" stroke="var(--miya-primary)" stroke-width="2" opacity="0.4" />
-            <path d="M50 5C50 5 22 25 22 50C22 68 50 85 50 85" stroke="var(--miya-primary)" stroke-width="1.5" stroke-linecap="round" opacity="0.6" />
-            <path d="M50 5C50 5 78 25 78 50C78 68 50 85 50 85" stroke="var(--miya-primary)" stroke-width="1.5" stroke-linecap="round" opacity="0.4" />
-            <circle cx="50" cy="42" r="5" fill="var(--miya-accent)" opacity="0.8" />
-            <circle cx="38" cy="38" r="2" fill="var(--miya-gold)" opacity="0.6" />
-            <circle cx="62" cy="38" r="2" fill="var(--miya-gold)" opacity="0.6" />
-            <circle cx="50" cy="55" r="1.5" fill="var(--miya-gold)" opacity="0.4" />
-          </svg>
-        </div>
-        <div class="miya-title">弥娅</div>
-        <div class="miya-sub">MIYA</div>
-      </div>
+      <!-- Wing SVG overlay -->
+      <svg class="wing-svg" viewBox="-350 -350 700 700">
+        <defs>
+          <filter id="wing-glow">
+            <feGaussianBlur stdDeviation="1.5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+          <linearGradient id="left-wing-grad" x1="1" y1="0.5" x2="0" y2="0.5">
+            <stop offset="0%" stop-color="rgba(167,139,250,0)" />
+            <stop offset="100%" stop-color="rgba(167,139,250,0.18)" />
+          </linearGradient>
+          <linearGradient id="right-wing-grad" x1="0" y1="0.5" x2="1" y2="0.5">
+            <stop offset="0%" stop-color="rgba(167,139,250,0.18)" />
+            <stop offset="100%" stop-color="rgba(167,139,250,0)" />
+          </linearGradient>
+        </defs>
+        <!-- Left wing energy field -->
+        <polygon
+          :points="`0,0 ${cardPositions[0].x},${cardPositions[0].y} ${cardPositions[1].x},${cardPositions[1].y} ${cardPositions[2].x},${cardPositions[2].y} ${cardPositions[3].x},${cardPositions[3].y}`"
+          fill="url(#left-wing-grad)" opacity="0.15" stroke="var(--miya-accent)" stroke-width="0.4" stroke-dasharray="3 5" />
+        <!-- Right wing energy field -->
+        <polygon
+          :points="`0,0 ${cardPositions[4].x},${cardPositions[4].y} ${cardPositions[5].x},${cardPositions[5].y} ${cardPositions[6].x},${cardPositions[6].y} ${cardPositions[7].x},${cardPositions[7].y}`"
+          fill="url(#right-wing-grad)" opacity="0.15" stroke="var(--miya-accent)" stroke-width="0.4" stroke-dasharray="3 5" />
+        <!-- Lines -->
+        <g opacity="0.3">
+          <line v-for="(l,i) in wingLines.filter(l=>l.cls==='feather-to-center')" :key="'fc'+i"
+            :x1="l.x1" :y1="l.y1" :x2="l.x2" :y2="l.y2"
+            stroke="var(--miya-accent,#a78bfa)" stroke-width="0.35" stroke-dasharray="2 6" opacity="0.3" />
+          <line v-for="(l,i) in wingLines.filter(l=>l.cls==='wing-feather')" :key="'wf'+i"
+            :x1="l.x1" :y1="l.y1" :x2="l.x2" :y2="l.y2"
+            stroke="var(--miya-accent,#a78bfa)" stroke-width="0.4" stroke-dasharray="3 4" opacity="0.35" />
+          <line v-for="(l,i) in wingLines.filter(l=>l.cls==='wing-root')" :key="'wr'+i"
+            :x1="l.x1" :y1="l.y1" :x2="l.x2" :y2="l.y2"
+            stroke="var(--miya-gold,#d4af37)" stroke-width="0.8" opacity="0.4" filter="url(#wing-glow)" />
+        </g>
+      </svg>
 
-      <!-- 导航区域 -->
-      <div class="miya-nav">
-        <button class="miya-card chat-card" @click="router.push('/chat')">
-          <div class="miya-card-glow" />
-          <div class="miya-card-content">
-            <span class="card-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /></svg>
-            </span>
-            <div class="card-text">
-              <span class="card-label">弥娅对话</span>
-              <span class="card-desc">决策层 · 感知 · 协作引擎</span>
-            </div>
+      <!-- Orbit cards (wings) -->
+      <div
+        v-for="(card, i) in cards"
+        :key="card.id"
+        class="orbit-card"
+        :class="[{ 'is-hovered': hoveredCard === card.id }, `wing-${i < 4 ? 'left' : 'right'}`]"
+        :style="{
+          '--card-color': card.color,
+          left: `calc(50% + ${cardPositions[i].x}px)`,
+          top: `calc(50% + ${cardPositions[i].y}px)`,
+          transform: cardTransform(i),
+          transition: hoveredCard === card.id
+            ? 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s, border-color 0.3s'
+            : 'transform 0.18s ease-out, box-shadow 0.35s, border-color 0.3s',
+        }"
+        @click="navigate(card)"
+        @mouseenter="hoveredCard = card.id"
+        @mouseleave="hoveredCard = null"
+      >
+        <div class="card-track" />
+        <div class="card-corners" />
+        <div class="card-sheen" />
+        <div class="card-aurora" />
+        <div class="card-particles">
+          <span v-for="n in 6" :key="n" class="particle-dot" :style="{ '--i': n }" />
+        </div>
+        <div class="card-inner">
+          <span class="card-emoji">{{ card.emoji }}</span>
+          <div class="card-text">
+            <span class="card-label">{{ card.label }}</span>
+            <span class="card-desc">{{ card.desc }}</span>
           </div>
-        </button>
-
-        <div class="miya-grid">
-          <button class="miya-card" @click="router.push('/mind')">
-            <div class="miya-card-content">
-              <span class="card-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10" /><circle cx="8" cy="9" r="1.2" fill="currentColor" opacity="0.6" /><circle cx="16" cy="8" r="1" fill="currentColor" opacity="0.4" /><circle cx="14" cy="14" r="1.2" fill="currentColor" opacity="0.5" /><circle cx="6" cy="15" r="0.8" fill="currentColor" opacity="0.3" /><circle cx="18" cy="15" r="0.8" fill="currentColor" opacity="0.3" /><path d="M2 12h2M20 12h2" opacity="0.3" /></svg>
-              </span>
-              <div class="card-text">
-                <span class="card-label">记忆星河</span>
-                <span class="card-desc">认知引擎 · 记忆网络</span>
-              </div>
-            </div>
-          </button>
-
-          <button class="miya-card" @click="router.push('/config')">
-            <div class="miya-card-content">
-              <span class="card-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" /></svg>
-              </span>
-              <div class="card-text">
-                <span class="card-label">灵魂调谐</span>
-                <span class="card-desc">人格 · 情绪 · 模型池</span>
-              </div>
-            </div>
-          </button>
-
-          <button class="miya-card" @click="enterFloatingMode">
-            <div class="miya-card-content">
-              <span class="card-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a3 3 0 013 3v1a1 1 0 01-1 1h-4a1 1 0 01-1-1V5a3 3 0 013-3z" /><path d="M9 8h6a3 3 0 013 3v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-1a3 3 0 013-3z" /><circle cx="12" cy="17" r="4" /><path d="M10 17h4" /></svg>
-              </span>
-              <div class="card-text">
-                <span class="card-label">铃音守护</span>
-                <span class="card-desc">轻量陪伴 · 悬浮球</span>
-              </div>
-            </div>
-          </button>
-
-          <button class="miya-card" disabled>
-            <div class="miya-card-content">
-              <span class="card-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>
-              </span>
-              <div class="card-text">
-                <span class="card-label">感知画卷</span>
-                <span class="card-desc">即将开放</span>
-              </div>
-            </div>
-          </button>
         </div>
       </div>
+    </div>
 
-      <div class="miya-verse">雪落无声 — 愿系铃中</div>
-
-      <!-- 弥娅系统状态 -->
-      <div v-if="miyaBackendOnline" class="miya-status">
-        <span class="status-badge online">● 在线</span>
-        <span class="status-item">{{ miyaPlatforms }} 平台</span>
-        <span class="status-item">人格: {{ miyaPersona }}</span>
-      </div>
+    <div class="orbit-verse">雪落无声 — 愿系铃中</div>
+    <div v-if="miyaBackendOnline" class="orbit-status">
+      <span class="status-dot" />
+      <span class="status-item">在线</span>
+      <span class="status-sep">·</span>
+      <span class="status-item">{{ miyaPlatforms }} 平台</span>
+      <span class="status-sep">·</span>
+      <span class="status-item">人格：{{ miyaPersona }}</span>
     </div>
   </div>
 </template>
 
 <style scoped>
-.miya-home {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  user-select: none;
-  overflow: hidden;
+/* ─── Container ───────────────────────────────────── */
+.star-orbit {
+  position: relative; width: 100%; height: 100%;
+  overflow: hidden; user-select: none;
+  font-family: 'Noto Serif SC','Inter',system-ui,sans-serif;
+}
+.orbit-system { position: relative; width: 100%; height: 100%; will-change: transform; }
+
+/* ─── Wing SVG ────────────────────────────────────── */
+.wing-svg {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+  width: 700px; height: 700px; pointer-events: none; z-index: 0;
 }
 
-.miya-parallax {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2rem;
-  will-change: transform;
-  transform-style: preserve-3d;
-  transition: transform 0.1s linear;
+/* ─── Center Logo ─────────────────────────────────── */
+.logo-center {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 0.25rem; z-index: 10;
+  filter: drop-shadow(0 0 40px var(--miya-glow,rgba(167,139,250,0.3)));
+}
+.logo-ring { width: 130px; height: 130px; animation: logo-glow 4s ease-in-out infinite; }
+.logo-title {
+  font-family: 'Noto Serif SC',serif; font-size: 2.6rem; font-weight: 700;
+  background: linear-gradient(135deg,#e8d5f5 0%,var(--miya-accent) 35%,var(--miya-primary,#a78bfa) 70%,#bae6fd 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  letter-spacing: 0.25em;
+  filter: drop-shadow(0 0 14px var(--miya-glow,rgba(167,139,250,0.35)));
+}
+.logo-sub { font-size: 0.58rem; color: var(--miya-text-dim,#888); letter-spacing: 0.55em; opacity: 0.6; }
+.logo-pulse {
+  position: absolute; width: 200px; height: 200px; border-radius: 50%;
+  background: radial-gradient(circle,rgba(167,139,250,0.06) 0%,transparent 70%);
+  animation: pulse-ring 3s ease-in-out infinite; pointer-events: none;
+}
+@keyframes logo-glow {
+  0%,100% { filter: drop-shadow(0 0 20px var(--miya-glow,rgba(167,139,250,0.25))); }
+  50% { filter: drop-shadow(0 0 45px var(--miya-glow,rgba(167,139,250,0.5))); }
+}
+@keyframes pulse-ring {
+  0%,100% { transform: scale(0.92); opacity: 0.25; }
+  50% { transform: scale(1.08); opacity: 0.08; }
 }
 
-/* ── Logo ── */
-.miya-logo {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.3rem;
+/* ─── Orbit Cards — 透明浮空 + 双层轨线 ──────────── */
+.orbit-card {
+  --card-color: #a78bfa;
+  position: absolute; cursor: pointer;
+  width: 162px; padding: 1rem 1.1rem;
+  background: rgba(10, 8, 21, 0.06);
+  border: 1px solid color-mix(in srgb, var(--card-color) 20%, transparent);
+  border-radius: 12px;
+  overflow: visible; z-index: 5;
+  will-change: transform, box-shadow;
+}
+.orbit-card.is-hovered {
+  background: rgba(10, 8, 21, 0.15);
+  border-color: color-mix(in srgb, var(--card-color) 65%, transparent);
+  box-shadow: 0 0 26px color-mix(in srgb, var(--card-color) 38%, transparent), 0 6px 34px rgba(0,0,0,0.35);
+  z-index: 20;
 }
 
-.miya-logo-ring {
-  width: 100px;
-  height: 100px;
-  filter: drop-shadow(0 0 20px var(--miya-glow));
+/* Inner track */
+.card-track {
+  position: absolute; inset: 3px; border-radius: 9px;
+  border: 0.5px solid color-mix(in srgb, var(--card-color) 8%, transparent);
+  pointer-events: none; z-index: 0; opacity: 0.5;
+  transition: border-color 0.35s, opacity 0.35s;
+}
+.orbit-card.is-hovered .card-track { border-color: color-mix(in srgb, var(--card-color) 35%, transparent); opacity: 0.9; }
+
+/* Corner dots */
+.card-corners {
+  position: absolute; inset: -3px; border-radius: 14px;
+  background:
+    radial-gradient(1.8px, var(--card-color) 100%, transparent) 0 0,
+    radial-gradient(1.8px, var(--card-color) 100%, transparent) 100% 0,
+    radial-gradient(1.8px, var(--card-color) 100%, transparent) 0 100%,
+    radial-gradient(1.8px, var(--card-color) 100%, transparent) 100% 100%;
+  background-size: 4px 4px; background-repeat: no-repeat;
+  opacity: 0; transition: opacity 0.35s; pointer-events: none; z-index: 4;
+  filter: drop-shadow(0 0 3px var(--card-color));
+}
+.orbit-card.is-hovered .card-corners { opacity: 0.85; }
+
+/* Glass sheen */
+.card-sheen {
+  position: absolute; inset: 0; border-radius: inherit;
+  background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.03) 38%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.02) 62%, transparent 100%);
+  opacity: 0.3; transition: opacity 0.4s; pointer-events: none; z-index: 1;
+}
+.orbit-card.is-hovered .card-sheen { opacity: 0.65; }
+
+/* Aurora */
+.card-aurora {
+  position: absolute; inset: 0; border-radius: inherit;
+  background: linear-gradient(120deg, transparent 0%, color-mix(in srgb, var(--card-color) 5%, transparent) 25%, color-mix(in srgb, var(--miya-gold,#d4af37) 3%, transparent) 50%, color-mix(in srgb, var(--card-color) 5%, transparent) 75%, transparent 100%);
+  background-size: 300% 100%;
+  animation: aurora-sweep 5s ease-in-out infinite;
+  pointer-events: none; z-index: 0; opacity: 0.55;
+}
+.orbit-card.is-hovered .card-aurora { animation-duration: 2s; opacity: 1; }
+@keyframes aurora-sweep { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+
+/* Particles */
+.card-particles { position: absolute; inset: -10px; pointer-events: none; opacity: 0; transition: opacity 0.4s; z-index: 0; }
+.orbit-card.is-hovered .card-particles { opacity: 1; }
+.particle-dot {
+  --i: 1; position: absolute; width: 2.5px; height: 2.5px; border-radius: 50%;
+  background: var(--card-color); box-shadow: 0 0 4px var(--card-color);
+  top: 50%; left: 50%;
+  animation: particle-orbit 2.8s linear infinite;
+  animation-delay: calc(var(--i) * -0.45s);
+}
+@keyframes particle-orbit {
+  0% { transform: translate(-50%,-50%) rotate(calc(var(--i)*60deg)) translateX(80px) rotate(calc(var(--i)*-60deg)); }
+  to { transform: translate(-50%,-50%) rotate(calc(var(--i)*60deg + 360deg)) translateX(80px) rotate(calc(var(--i)*-60deg - 360deg)); }
 }
 
-.miya-title {
-  font-family: 'Noto Serif SC', serif;
-  font-size: 3rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #e8d5f5 0%, var(--miya-accent) 40%, var(--miya-primary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  letter-spacing: 0.2em;
-  text-shadow: none;
-  filter: drop-shadow(0 0 12px var(--miya-glow));
+/* Inner content */
+.card-inner { position: relative; z-index: 2; display: flex; align-items: center; gap: 0.7rem; }
+.card-emoji {
+  font-size: 1.3rem; flex-shrink: 0;
+  transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), filter 0.3s;
+  filter: drop-shadow(0 0 4px color-mix(in srgb,var(--card-color) 40%,transparent));
 }
-
-.miya-sub {
-  font-size: 0.65rem;
-  color: var(--miya-text-dim);
-  letter-spacing: 0.4em;
-}
-
-/* ── 导航 ── */
-.miya-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-  width: min(420px, 80vw);
-}
-
-.miya-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.8rem;
-}
-
-/* ── 卡片 ── */
-.miya-card {
-  --p-border: var(--miya-comp-panel-border, #a78bfa);
-  --p-btn: var(--miya-comp-panel-btn, #a78bfa);
-  --p-icon: var(--miya-comp-panel-icon, #a78bfa);
-  position: relative;
-  background: var(--miya-surface);
-  border: 1px solid color-mix(in srgb, var(--p-border) 12%, transparent);
-  border-radius: 1rem;
-  color: var(--miya-text);
-  cursor: pointer;
-  padding: 0;
-  overflow: hidden;
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(10px);
-}
-
-.miya-card:hover:not(:disabled) {
-  border-color: var(--miya-primary);
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 12px 40px rgba(167, 139, 250, 0.2), 0 0 20px var(--miya-glow);
-}
-
-.miya-card:active:not(:disabled) {
-  transform: translateY(-1px) scale(0.98);
-}
-
-.miya-card:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.miya-card-content {
-  position: relative;
-  z-index: 1;
-  padding: 1.2rem 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.card-icon {
-  width: 2rem;
-  height: 2rem;
-  color: var(--miya-primary);
-  flex-shrink: 0;
-  transition: transform 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-}
-
-.miya-card:hover:not(:disabled) .card-icon {
-  transform: scale(1.15);
-}
-
-.card-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
-.card-label {
-  font-size: 1.05rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-}
-
+.orbit-card.is-hovered .card-emoji { transform: scale(1.25) rotate(-5deg); filter: drop-shadow(0 0 10px var(--card-color)); }
+.card-text { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.card-label { font-size: 0.85rem; font-weight: 600; letter-spacing: 0.06em; color: var(--miya-text,#e8d5f5); white-space: nowrap; }
 .card-desc {
-  font-size: 0.7rem;
-  color: var(--miya-text-dim);
-  letter-spacing: 0.05em;
+  font-size: 0.58rem; color: var(--miya-text-dim,#666); letter-spacing: 0.05em; white-space: nowrap;
+  max-height: 0; opacity: 0; overflow: hidden;
+  transition: max-height 0.4s ease, opacity 0.35s ease, margin 0.35s ease;
 }
+.orbit-card.is-hovered .card-desc { max-height: 1.2em; opacity: 0.8; margin-top: 2px; }
 
-/* ── 对话卡片（突出） ── */
-.chat-card {
-  background: linear-gradient(135deg, rgba(167, 139, 250, 0.12), var(--miya-surface));
-  border-color: rgba(167, 139, 250, 0.25);
+/* ─── Bottom ──────────────────────────────────────── */
+.orbit-verse {
+  position: absolute; bottom: 38px; left: 50%; transform: translateX(-50%);
+  font-family: 'Noto Serif SC',serif; font-size: 0.72rem; color: var(--miya-text-dim,#666);
+  letter-spacing: 0.25em; opacity: 0.35; white-space: nowrap;
 }
-
-.chat-card:hover {
-  border-color: var(--miya-primary);
-  box-shadow: 0 12px 50px rgba(167, 139, 250, 0.3);
+.orbit-status {
+  position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 0.5rem;
+  font-family: 'JetBrains Mono',monospace; font-size: 0.6rem; color: var(--miya-text-dim,#666); opacity: 0.5;
 }
-
-.chat-card .card-label {
-  font-size: 1.2rem;
-}
-
-.chat-card .miya-card-content {
-  padding: 1.5rem 1.5rem;
-}
-
-.miya-card-glow {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 30% 50%, var(--miya-glow), transparent 70%);
-  opacity: 0;
-  transition: opacity 0.4s ease;
-}
-
-.chat-card:hover .miya-card-glow {
-  opacity: 0.5;
-}
-
-/* ── 意境文字 ── */
-.miya-verse {
-  font-family: 'Noto Serif SC', serif;
-  font-size: 0.72rem;
-  color: var(--miya-text-dim);
-  letter-spacing: 0.2em;
-  opacity: 0.5;
-}
-
-.miya-status {
-  display: flex; align-items: center; gap: 1rem; margin-top: 0.5rem;
-  font-family: 'JetBrains Mono', monospace; font-size: 0.65rem;
-  color: var(--miya-text-dim);
-}
-.status-badge { color: rgba(0,255,100,0.6); }
-.status-badge.online { color: rgba(0,229,255,0.6); }
-.status-item { opacity: 0.6; }
+.status-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(0,229,255,0.6); box-shadow: 0 0 6px rgba(0,229,255,0.3); }
+.status-sep { opacity: 0.3; }
+.status-item { opacity: 0.7; }
 </style>

@@ -68,7 +68,8 @@ class ConfigLoader:
             "openai_api_key": os.getenv("OPENAI_API_KEY", ""),
             # Base URLs
             "siliconflow_base_url": os.getenv(
-                "SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1"
+                "SILICONFLOW_API_BASE",
+                os.getenv("SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1"),
             ),
             "deepseek_base_url": os.getenv(
                 "DEEPSEEK_API_BASE", "https://api.deepseek.com/v1"

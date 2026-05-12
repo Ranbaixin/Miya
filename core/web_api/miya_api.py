@@ -1363,6 +1363,41 @@ class MiyaAPI:
                     "total": 0,
                 }
 
+        @self.router.post("/api/mcp/call")
+        async def mcp_call(request_data: dict = {}):
+            """统一 MCP 工具调用接口"""
+            try:
+                import json
+                from core.mcp_manager import get_mcp_manager
+
+                manager = get_mcp_manager()
+                if not manager:
+                    return {"success": False, "error": "MCP 管理器未初始化"}
+
+                svc_name = str(request_data.get("service", ""))
+                tool_name = str(request_data.get("tool", ""))
+
+                if not svc_name or not tool_name:
+                    return {"success": False, "error": "缺少 service 或 tool 参数"}
+
+                # 构建额外参数（排除 service 和 tool）
+                extra_kwargs = {
+                    k: v
+                    for k, v in request_data.items()
+                    if k not in ("service", "tool")
+                }
+
+                result = await manager.call(svc_name, tool_name, **extra_kwargs)
+                return {
+                    "success": result.success,
+                    "result": result.result if result.success else result.error,
+                    "service": svc_name,
+                    "tool": tool_name,
+                }
+            except Exception as e:
+                logger.exception(f"[MiyaAPI] MCP 调用失败")
+                return {"success": False, "error": str(e)}
+
         @self.router.get("/api/skills")
         async def get_skills():
             """技能列表 - 从 skills.yaml 读取"""
@@ -2206,6 +2241,10 @@ class MiyaAPI:
         @self.router.get("/api/mcp/list")
         async def get_mcp_list():
             return {"success": True, "data": []}
+
+        @self.router.post("/api/mcp/call")
+        async def mcp_call():
+            return {"success": False, "error": "MCP 未初始化（stub 路由）"}
 
         @self.router.get("/api/skills")
         async def get_skills():

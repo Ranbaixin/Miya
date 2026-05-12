@@ -116,6 +116,9 @@ pillow>=10.0.0                  # Python Imaging Library
 opencv-python>=4.8.0            # OpenCV（可选）
 imageio>=2.31.0                 # 图片I/O
 
+# 截图 & 屏幕视觉
+mss>=9.0.0                     # 跨平台截图 (Windows/macOS/Linux)
+
 # 文件处理
 chardet>=5.1.0                  # 字符编码检测
 python-magic>=0.4.27            # 文件类型检测

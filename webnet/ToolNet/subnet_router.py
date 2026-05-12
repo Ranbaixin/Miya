@@ -77,6 +77,20 @@ SUBNET_CATEGORIES = {
         "send_poke",
         "react_emoji",
     ],
+    "MCPNet": [
+        "mcp_openclaw_send_message",
+        "mcp_openclaw_get_status",
+        "mcp_openclaw_get_history",
+        "mcp_code_executor_execute",
+        "mcp_web_search_search",
+        "mcp_web_search_fetch",
+        "mcp_screen_vision_look_screen",
+        "mcp_screen_vision_screenshot",
+        "mcp_filesystem_read_file",
+        "mcp_filesystem_write_file",
+        "mcp_filesystem_list_files",
+        "mcp_filesystem_search_files",
+    ],
 }
 
 

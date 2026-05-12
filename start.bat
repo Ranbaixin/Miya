@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title MIYA AI Virtual Avatar System - Powered by Claude Code
+title MIYA AI Virtual Avatar System - Claude Code Engine v2.4.2
 color 0B
 
 set DEFAULT_MODEL=miya-deepseek_v3_official
@@ -11,7 +11,7 @@ cls
 echo ================================================================================
 echo                          MIYA AI VIRTUAL AVATAR SYSTEM
 echo                            Version 7.0.0
-echo                          Powered by Open-ClaudeCode
+echo                          Powered by Claude Code Engine v2.4.2
 echo ================================================================================
 echo.
 echo MAIN MENU:
@@ -20,7 +20,7 @@ echo   === Unified Core (v7.0) ===
 echo   [D] MIYA Daemon       - Unified backend for ALL platforms (hot-plug enabled!)
 echo.
 echo   === Core Modes ===
-echo   [1] MIYA Terminal     - Claude Code with Miya Soul (Personality+Memory+Emotion)
+echo   [1] MIYA Terminal     - Claude Code Engine (DeepSeek V4, direct API)
 echo   [2] QQ Client         - QQ Bot Client
 echo   [3] Desktop Console   - PyQt5 Desktop App (New!)
 echo   [W] Web Frontend      - Browser-based Chat UI (New!)
@@ -348,14 +348,6 @@ echo.
 echo Starting QQ + Desktop Console + MIYA Terminal...
 echo.
 
-REM Start Model Bridge
-if exist "mcpserver\model-bridge\server.py" (
-    echo Starting Model Bridge...
-    start "MIYA Model Bridge" /B python mcpserver\model-bridge\server.py
-    timeout /t 3 >nul
-    echo [OK] Model Bridge started
-)
-
 REM Start Miya Core (port 8000)
 echo Starting Miya Core...
 start "MIYA Core" cmd /k "python run\main.py"
@@ -381,7 +373,8 @@ if exist "miya_frontend\main.py" (
 set MODEL_DISPLAY=%DEFAULT_MODEL:miya-%
 echo.
 echo Starting MIYA Terminal...
-start "MIYA - %MODEL_DISPLAY%" wt node Open-ClaudeCode\package\cli.js
+for /f "tokens=2 delims==" %%a in ('findstr /r "^DEEPSEEK_API_KEY=" config\.env 2^>nul') do set DEEPSEEK_API_KEY=%%a
+start "MIYA - %MODEL_DISPLAY%" wt cmd /c "set CLAUDE_CODE_USE_OPENAI=1 && set OPENAI_API_KEY=%DEEPSEEK_API_KEY% && set OPENAI_BASE_URL=https://api.deepseek.com/v1 && set OPENAI_MODEL=deepseek-v4-flash && set CLAUDE_CODE_SKIP_AUTH=1 && node claude-code-engine\dist\cli-node.js"
 timeout /t 2 >nul
 
 echo.
@@ -389,7 +382,6 @@ echo [OK] Full System started!
 echo   - MIYA Terminal
 echo   - Desktop Console
 echo   - QQ Client
-echo   - Model Bridge
 echo.
 pause
 goto :main_menu
@@ -417,16 +409,16 @@ echo ===========================================================================
 echo STARTING: MIYA TERMINAL (Claude Code + Miya Soul)
 echo ================================================================================
 echo.
-echo This mode launches Claude Code with Miya's personality, memory, and emotion.
-echo ClaudeCode uses Miya's model pool via the Model Bridge.
+echo This mode launches Claude Code Engine with Miya's personality, memory, and emotion.
+echo CCB connects directly to DeepSeek API - no model bridge required.
 echo.
 echo Features:
-echo   - Full Claude Code terminal capabilities
+echo   - Full Claude Code terminal (v2.4.2, native OpenAI adapter)
+echo   - Direct DeepSeek API connection (zero proxy overhead)
 echo   - Miya personality system integration
 echo   - Persistent memory across sessions
 echo   - Dynamic emotion responses
-echo   - Custom Miya-themed UI
-echo   - Miya model pool (DeepSeek, Qwen, GLM, etc.)
+echo.
 echo.
 echo MCP Tools available:
 echo   - miya_get_personality   - Get current personality state
@@ -442,12 +434,12 @@ echo Press Ctrl+C to stop.
 echo ================================================================================
 echo.
 
-REM Check if Claude Code CLI exists
-if exist "Open-ClaudeCode\package\cli.js" (
-    echo [OK] Claude Code found
+REM Check if Claude Code Engine exists
+if exist "claude-code-engine\dist\cli-node.js" (
+    echo [OK] Claude Code Engine found (v2.4.2)
 ) else (
-    echo [ERROR] Claude Code not found at Open-ClaudeCode\package\cli.js
-    echo Please ensure Open-ClaudeCode is properly set up.
+    echo [ERROR] Claude Code Engine not found at claude-code-engine\dist\cli-node.js
+    echo Please run: cd claude-code-engine ^&^& bun run build:miya
     pause
     goto :main_menu
 )
@@ -460,53 +452,31 @@ if exist "mcpserver\miya\server.py" (
     echo Miya soul features will not be available.
 )
 
-REM Check Model Bridge
-echo [INFO] Cleaning up any existing Model Bridge processes...
-if exist .miya_bridge.pid (
-    for /f %%a in (.miya_bridge.pid) do (
-        taskkill /F /PID %%a >nul 2>nul
-    )
-    del .miya_bridge.pid >nul 2>nul
-)
-timeout /t 1 >nul
-
-if exist "mcpserver\model-bridge\server.py" (
-    echo [OK] Miya Model Bridge found
-    echo Starting Model Bridge in background...
-    start "MIYA Model Bridge" /MIN /B pythonw mcpserver\model-bridge\server.py >nul 2>&1
-    timeout /t 3 >nul
-    echo [OK] Model Bridge started at http://localhost:8888
-) else (
-    echo [WARNING] Miya Model Bridge not found
-)
+REM Load API key from config\.env
+for /f "tokens=2 delims==" %%a in ('findstr /r "^DEEPSEEK_API_KEY=" config\.env 2^>nul') do set DEEPSEEK_API_KEY=%%a
 
 echo.
-echo Starting MIYA Terminal...
+echo Starting MIYA Terminal (direct DeepSeek API)...
 echo ================================================================================
 echo Selected model: %DEFAULT_MODEL%
+echo API: DeepSeek v4 Flash
 echo.
 
-REM Extract model display name (remove miya- prefix)
-set MODEL_DISPLAY=%DEFAULT_MODEL:miya-%
-
-REM Launch Claude Code with Miya configuration
-set ANTHROPIC_BASE_URL=http://localhost:8888
-set ANTHROPIC_AUTH_TOKEN=%DEFAULT_MODEL%
+REM Launch CCB with direct OpenAI adapter
+set CLAUDE_CODE_USE_OPENAI=1
+set OPENAI_API_KEY=%DEEPSEEK_API_KEY%
+set OPENAI_BASE_URL=https://api.deepseek.com/v1
+set OPENAI_MODEL=deepseek-v4-flash
 set CLAUDE_CODE_SKIP_AUTH=1
-set ANTHROPIC_MODEL=%DEFAULT_MODEL%
 
 set MODEL_DISPLAY=%DEFAULT_MODEL:miya-%
 echo Starting MIYA Terminal in Windows Terminal...
 echo IMPORTANT: Close the MIYA Terminal window when done to continue...
-start "MIYA - %MODEL_DISPLAY%" wt node Open-ClaudeCode\package\cli.js
+start "MIYA - %MODEL_DISPLAY%" wt node claude-code-engine\dist\cli-node.js
 timeout /t 2 >nul
 
 echo.
-echo Stopping background services...
-taskkill /F /FI "WINDOWTITLE eq MIYA Model Bridge" >nul 2>nul
-taskkill /F /FI "WINDOWTITLE eq MIYA Web" >nul 2>nul
-taskkill /F /FI "WINDOWTITLE eq MIYA QQ" >nul 2>nul
-echo [OK] All services stopped
+echo [OK] MIYA Terminal session ended
 goto :restart_prompt
 
 :mcp_setup
@@ -573,11 +543,11 @@ echo [2/8] Node.js Environment:
 node --version 2>nul && echo   [OK] Node.js found || echo   [WARNING] Node.js not found
 echo.
 
-echo [3/8] Claude Code:
-if exist "Open-ClaudeCode\package\cli.js" (
-    echo   [OK] Claude Code found
+echo [3/8] Claude Code Engine:
+if exist "claude-code-engine\dist\cli-node.js" (
+    echo   [OK] Claude Code Engine found (v2.4.2)
 ) else (
-    echo   [ERROR] Claude Code not found
+    echo   [ERROR] Claude Code Engine not found - run 'build:miya'
 )
 echo.
 
@@ -589,12 +559,9 @@ if exist "mcpserver\miya\server.py" (
 )
 echo.
 
-echo [5/8] Miya Model Bridge:
-if exist "mcpserver\model-bridge\server.py" (
-    echo   [OK] Miya Model Bridge found
-) else (
-    echo   [ERROR] Miya Model Bridge not found
-)
+echo [5/8] DeepSeek API:
+for /f "tokens=2 delims==" %%a in ('findstr /r "^DEEPSEEK_API_KEY=" config\.env 2^>nul') do set _DS_KEY=%%a
+if defined _DS_KEY (echo   [OK] DEEPSEEK_API_KEY configured) else (echo   [WARN] DEEPSEEK_API_KEY not found)
 echo.
 
 echo [6/8] PyQt5 Frontend:
@@ -613,7 +580,7 @@ if exist ".mcp.json" (
 )
 echo.
 
-echo [7/7] Claude Code Config:
+echo [8/8] Claude Code Config:
 if exist ".claude\settings.json" (
     echo   [OK] .claude\settings.json found
 ) else (
@@ -676,31 +643,23 @@ echo.
 echo Fast startup of Claude Code with Miya Soul and Model Bridge...
 echo.
 
-REM Start Model Bridge
-if exist "mcpserver\model-bridge\server.py" (
-    echo Starting Model Bridge...
-    start "MIYA Model Bridge" /B python mcpserver\model-bridge\server.py
-    timeout /t 3 >nul
-    echo [OK] Model Bridge started
-)
+REM Load API key from config\.env
+for /f "tokens=2 delims==" %%a in ('findstr /r "^DEEPSEEK_API_KEY=" config\.env 2^>nul') do set DEEPSEEK_API_KEY=%%a
 
-set ANTHROPIC_BASE_URL=http://localhost:8888
-set ANTHROPIC_AUTH_TOKEN=%DEFAULT_MODEL%
+set CLAUDE_CODE_USE_OPENAI=1
+set OPENAI_API_KEY=%DEEPSEEK_API_KEY%
+set OPENAI_BASE_URL=https://api.deepseek.com/v1
+set OPENAI_MODEL=deepseek-v4-flash
 set CLAUDE_CODE_SKIP_AUTH=1
-set CLAUDE_CODE_ENTRYPOINT=local
-set ANTHROPIC_MODEL=%DEFAULT_MODEL%
-set ANTHROPIC_STREAMING=false
 
 set MODEL_DISPLAY=%DEFAULT_MODEL:miya-%
 echo Starting MIYA Terminal in Windows Terminal...
 echo IMPORTANT: Close the MIYA Terminal window when done to continue...
-start "MIYA - %MODEL_DISPLAY%" wt node Open-ClaudeCode\package\cli.js --settings .claude\settings.json
+start "MIYA - %MODEL_DISPLAY%" wt node claude-code-engine\dist\cli-node.js
 timeout /t 2 >nul
 
 echo.
-echo Stopping background Model Bridge...
-taskkill /F /FI "WINDOWTITLE eq MIYA Model Bridge" >nul 2>nul
-echo [OK] Cleanup completed.
+echo [OK] MIYA Terminal session ended
 goto :restart_prompt
 
 :custom_launch
@@ -711,13 +670,13 @@ echo ===========================================================================
 echo.
 echo Select services to start (space-separated numbers):
 echo.
-echo   [1] MIYA Terminal        - Claude Code + Miya Soul
+echo   [1] MIYA Terminal        - Claude Code Engine (direct DeepSeek)
 echo   [2] Desktop Console      - PyQt5 Desktop App
 echo   [3] QQ Client            - QQ Bot
-echo   [4] Model Bridge         - Anthropic to OpenAI Bridge
+echo   [4] Model Bridge         - Standalone bridge (for external tools)
 echo   [W] Web Frontend        - Browser-based Chat UI
 echo.
-echo Example: 1 4 (Start Terminal + Model Bridge)
+echo Example: 1 3 (Start Terminal + QQ)
 echo.
 set /p service_choice=Enter service numbers (space-separated):
 
@@ -726,26 +685,23 @@ echo You selected: %service_choice%
 echo.
 
 if "%service_choice:4=%" neq "%service_choice%" (
-    echo [1/4] Starting Model Bridge...
+    echo [*] Starting Model Bridge (standalone)...
     start "MIYA Model Bridge" /B python mcpserver\model-bridge\server.py
-    timeout /t 3 >nul
-    echo [OK] Model Bridge started
-    set ANTHROPIC_BASE_URL=http://localhost:8888
-    set ANTHROPIC_AUTH_TOKEN=%DEFAULT_MODEL%
-    set CLAUDE_CODE_SKIP_AUTH=1
-    set ANTHROPIC_MODEL=%DEFAULT_MODEL%
+    timeout /t 2 >nul
+    echo [OK] Model Bridge started at http://localhost:8888
 )
 
 if "%service_choice:1=%" neq "%service_choice%" (
-    echo [2/4] Starting MIYA Terminal...
+    echo [*] Starting MIYA Terminal...
+    for /f "tokens=2 delims==" %%a in ('findstr /r "^DEEPSEEK_API_KEY=" config\.env 2^>nul') do set DEEPSEEK_API_KEY=%%a
     set MODEL_DISPLAY=%DEFAULT_MODEL:miya-%
-    start "MIYA - %MODEL_DISPLAY%" /B cmd /c "set ANTHROPIC_BASE_URL=http://localhost:8888 && set ANTHROPIC_AUTH_TOKEN=%DEFAULT_MODEL% && set CLAUDE_CODE_SKIP_AUTH=1 && set ANTHROPIC_MODEL=%DEFAULT_MODEL% && title MIYA - %MODEL_DISPLAY% && node Open-ClaudeCode\package\cli.js"
+    start "MIYA - %MODEL_DISPLAY%" /B cmd /c "set CLAUDE_CODE_USE_OPENAI=1 && set OPENAI_API_KEY=!DEEPSEEK_API_KEY! && set OPENAI_BASE_URL=https://api.deepseek.com/v1 && set OPENAI_MODEL=deepseek-v4-flash && set CLAUDE_CODE_SKIP_AUTH=1 && title MIYA - %MODEL_DISPLAY% && node claude-code-engine\dist\cli-node.js"
     timeout /t 2 >nul
     echo [OK] MIYA Terminal started in new window
 )
 
 if "%service_choice:2=%" neq "%service_choice%" (
-    echo [3/4] Starting Desktop Console...
+    echo [*] Starting Desktop Console...
     call :check_file "miya_frontend\main.py"
     if not errorlevel 1 (
         REM Start Miya Core (port 8000)
@@ -821,57 +777,37 @@ goto :model_select
 
 :end_of_file
 
-REM Check if Claude Code CLI exists
-if exist "Open-ClaudeCode\package\cli.js" (
-    echo [OK] Claude Code found
+REM Check if Claude Code Engine exists
+if exist "claude-code-engine\dist\cli-node.js" (
+    echo [OK] Claude Code Engine found
 ) else (
-    echo [ERROR] Claude Code not found at Open-ClaudeCode\package\cli.js
+    echo [ERROR] Claude Code Engine not found at claude-code-engine\dist\cli-node.js
     pause
     goto :main_menu
 )
 
-REM Check Model Bridge
-echo [INFO] Cleaning up any existing Model Bridge processes...
-if exist .miya_bridge.pid (
-    for /f %%a in (.miya_bridge.pid) do (
-        taskkill /F /PID %%a >nul 2>nul
-    )
-    del .miya_bridge.pid >nul 2>nul
-)
-timeout /t 1 >nul
-
-if exist "mcpserver\model-bridge\server.py" (
-    echo [OK] Miya Model Bridge found
-    echo Starting Model Bridge in background...
-    start "MIYA Model Bridge" /MIN /B pythonw mcpserver\model-bridge\server.py >nul 2>&1
-    timeout /t 3 >nul
-    echo [OK] Model Bridge started at http://localhost:8888
-) else (
-    echo [WARNING] Miya Model Bridge not found
-)
-
 echo.
-echo Starting MIYA Terminal (Chinese Models)...
-echo Selected model: %DEFAULT_MODEL%
+echo Starting MIYA Terminal (Direct DeepSeek API)...
+echo Selected model: deepseek-v4-flash
 echo.
 
-set ANTHROPIC_BASE_URL=http://localhost:8888
-set ANTHROPIC_AUTH_TOKEN=%DEFAULT_MODEL%
+for /f "tokens=2 delims==" %%a in ('findstr /r "^DEEPSEEK_API_KEY=" config\.env 2^>nul') do set DEEPSEEK_API_KEY=%%a
+
+set CLAUDE_CODE_USE_OPENAI=1
+set OPENAI_API_KEY=%DEEPSEEK_API_KEY%
+set OPENAI_BASE_URL=https://api.deepseek.com/v1
+set OPENAI_MODEL=deepseek-v4-flash
 set CLAUDE_CODE_SKIP_AUTH=1
-set ANTHROPIC_MODEL=%DEFAULT_MODEL%
-set ANTHROPIC_STREAMING=false
 
 set MODEL_DISPLAY=%DEFAULT_MODEL:miya-%
 title MIYA - %MODEL_DISPLAY%
 
-echo Starting Claude Code with Miya Model Bridge (Chinese Models)...
+echo Starting Claude Code Engine v2.4.2...
 echo.
-node Open-ClaudeCode\package\cli.js
+node claude-code-engine\dist\cli-node.js
 
 echo.
-echo Stopping background Model Bridge...
-taskkill /F /FI "WINDOWTITLE eq MIYA Model Bridge" >nul 2>nul
-echo [OK] Cleanup completed.
+echo [OK] Terminal session ended.
 goto :restart_prompt
 
 :restart_prompt

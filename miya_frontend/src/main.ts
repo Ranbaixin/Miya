@@ -16,6 +16,16 @@ const router = createRouter({
     { path: '/mind', component: () => import('@/views/MindView.vue') },
     { path: '/config', component: () => import('@/views/ConfigView.vue') },
     { path: '/float', component: () => import('@/views/FloatingView.vue') },
+    { path: '/openclaw', component: () => import('@/views/OpenClawView.vue') },
+    { path: '/screen', component: () => import('@/views/ScreenVisionView.vue') },
+    { path: '/terminal', component: () => import('@/views/TerminalView.vue') },
+    {
+      path: '/community',
+      children: [
+        { path: '', component: () => import('@/forum/ForumListView.vue') },
+        { path: ':id', component: () => import('@/forum/ForumPostView.vue') },
+      ],
+    },
   ],
 })
 

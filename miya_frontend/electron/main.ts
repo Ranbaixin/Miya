@@ -7,6 +7,7 @@ import { app, BrowserWindow, desktopCapturer, ipcMain, Menu, nativeTheme, net, p
 import { getBackendLogs, startBackend, stopBackend } from './modules/backend'
 import { registerHotkeys, unregisterHotkeys } from './modules/hotkeys'
 import { createMenu } from './modules/menu'
+import { startTerminal, stopTerminal, writeToTerminal, resizeTerminal, isTerminalRunning, getTerminalBuffer, setMiyaRoot } from './modules/terminal'
 import { createTray, destroyTray } from './modules/tray'
 import { downloadUpdate, installUpdate, setupAutoUpdater } from './modules/updater'
 import {
@@ -41,6 +42,9 @@ if (!gotTheLock) {
 const CHARACTERS_DIR = app.isPackaged
   ? resolve(process.resourcesPath, 'characters')
   : resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', 'characters')
+const MIYA_ROOT = app.isPackaged
+  ? resolve(process.resourcesPath, '..')
+  : resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const DEFAULT_CHARACTER = '弥娅'
 // ── 自定义协议：miya-bg:// 用于加载 premium-assets/backgrounds 目录下的背景图片 ──
 const BACKGROUNDS_DIR = app.isPackaged
@@ -63,6 +67,9 @@ app.on('second-instance', () => {
 })
 
 app.whenReady().then(async () => {
+  // Set Miya project root for terminal module
+  setMiyaRoot(MIYA_ROOT)
+
   // MIME 映射（音频/视频等二进制媒体文件需要通过 fs.readFile 读取以兼容 asar）
   const MEDIA_MIME: Record<string, string> = {
     mp3: 'audio/mpeg',
@@ -399,6 +406,42 @@ app.whenReady().then(async () => {
   })
   ipcMain.handle('backend:getLogs', () => getBackendLogs())
 
+  // ── Terminal (Claude Code Engine) ──
+  ipcMain.handle('terminal:start', (_event, options: { model?: string }) => {
+    return new Promise<void>((resolve, reject) => {
+      try {
+        startTerminal(
+          options,
+          (data: string) => {
+            getMainWindow()?.webContents.send('terminal:data', data)
+          },
+          (code: number) => {
+            getMainWindow()?.webContents.send('terminal:exit', code)
+          },
+        )
+        resolve()
+      }
+      catch (err) {
+        reject(err instanceof Error ? err.message : String(err))
+      }
+    })
+  })
+
+  ipcMain.handle('terminal:write', (_event, data: string) => {
+    writeToTerminal(data)
+  })
+
+  ipcMain.handle('terminal:resize', (_event, cols: number, rows: number) => {
+    resizeTerminal(cols, rows)
+  })
+
+  ipcMain.handle('terminal:stop', () => {
+    stopTerminal()
+  })
+
+  ipcMain.handle('terminal:isRunning', () => isTerminalRunning())
+  ipcMain.handle('terminal:getBuffer', () => getTerminalBuffer())
+
   // Minimize to tray on close instead of quitting
   win.on('close', (event) => {
     if (!isQuitting) {
@@ -442,6 +485,7 @@ app.on('before-quit', () => {
 app.on('will-quit', () => {
   unregisterHotkeys()
   destroyTray()
+  stopTerminal()
   stopBackend()
 })
 

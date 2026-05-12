@@ -294,6 +294,7 @@ class ToolRegistry:
         self._load_core_tools()
         self._load_social_tools()
         self._load_agent_tools()
+        self._load_mcp_tools()
 
     def _load_basic_tools(self):
         """加载基础工具"""
@@ -728,6 +729,20 @@ class ToolRegistry:
             self.logger.info("Agent 工具加载完成")
         except Exception as e:
             self.logger.warning(f"加载 Agent 工具失败: {e}")
+
+    def _load_mcp_tools(self):
+        """加载 MCP 服务工具到格式塔 Agent"""
+        try:
+            from webnet.ToolNet.tools.mcp.mcp_adapter import discover_mcp_tools
+
+            tools = discover_mcp_tools()
+            for tool in tools:
+                self.register(tool)
+            self.logger.info(
+                f"[ToolRegistry] MCPNet 已加载 {len(tools)} 个工具: {[t._full_name for t in tools]}"
+            )
+        except Exception as e:
+            self.logger.warning(f"加载 MCP 工具失败（MCP 可能尚未初始化）: {e}")
 
 
 class BaseTool:

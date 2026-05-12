@@ -153,6 +153,37 @@ export class CoreApiClient extends ApiClient {
   async getToolsList(): Promise<any[]> {
     return this.instance.get('/api/tools/list')
   }
+
+  // ── MCP 工具调用 ──
+  async mcpCall(service: string, tool: string, params: Record<string, any> = {}): Promise<any> {
+    return this.instance.post('/api/mcp/call', { service, tool, ...params }, {
+      transformRequest: [(d: any) => JSON.stringify(d)],
+      transformResponse: [(d: string) => {
+        try { return JSON.parse(d) } catch { return d }
+      }],
+    })
+  }
+
+  // ── OpenClaw ──
+  async openclawStatus(): Promise<any> {
+    return this.mcpCall('openclaw', 'get_status')
+  }
+
+  async openclawSend(message: string, opts: Record<string, any> = {}): Promise<any> {
+    return this.mcpCall('openclaw', 'send_message', { message, ...opts })
+  }
+
+  async openclawStart(): Promise<any> {
+    return this.mcpCall('openclaw', 'start_gateway')
+  }
+
+  async openclawStop(): Promise<any> {
+    return this.mcpCall('openclaw', 'stop_gateway')
+  }
+
+  async openclawHistory(sessionKey: string, limit: number = 20): Promise<any> {
+    return this.mcpCall('openclaw', 'get_history', { session_key: sessionKey, limit })
+  }
 }
 
 export default new CoreApiClient(8000)

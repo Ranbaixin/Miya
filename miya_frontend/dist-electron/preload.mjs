@@ -104,6 +104,25 @@ const electronAPI = {
     get: () => electron.ipcRenderer.invoke("autoLaunch:get"),
     set: (enabled) => electron.ipcRenderer.invoke("autoLaunch:set", enabled)
   },
+  // Terminal (Claude Code Engine)
+  terminal: {
+    start: (options) => electron.ipcRenderer.invoke("terminal:start", options),
+    write: (data) => electron.ipcRenderer.invoke("terminal:write", data),
+    resize: (cols, rows) => electron.ipcRenderer.invoke("terminal:resize", cols, rows),
+    stop: () => electron.ipcRenderer.invoke("terminal:stop"),
+    isRunning: () => electron.ipcRenderer.invoke("terminal:isRunning"),
+    getBuffer: () => electron.ipcRenderer.invoke("terminal:getBuffer"),
+    onData: (callback) => {
+      const handler = (_event, data) => callback(data);
+      electron.ipcRenderer.on("terminal:data", handler);
+      return () => electron.ipcRenderer.removeListener("terminal:data", handler);
+    },
+    onExit: (callback) => {
+      const handler = (_event, code) => callback(code);
+      electron.ipcRenderer.on("terminal:exit", handler);
+      return () => electron.ipcRenderer.removeListener("terminal:exit", handler);
+    }
+  },
   // Platform info
   platform: detectPlatform()
 };

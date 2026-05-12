@@ -174,11 +174,12 @@ nul
 # API keys example
 config/api_keys.example.json
 
-# Open-ClaudeCode build artifacts
-Open-ClaudeCode/package/bun.lock
-Open-ClaudeCode/package/cli.js.map
-Open-ClaudeCode/package/sdk-tools.d.ts
-Open-ClaudeCode/package/vendor/
-Open-ClaudeCode/src/
-Open-ClaudeCode/test.png
-Open-ClaudeCode/examples/
+# Claude Code Engine (Miya)
+claude-code-engine/
+
+# Vendor
+vendor/
+
+# Runtime state
+data/activity/
+data/diting_state.json

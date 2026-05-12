@@ -1,0 +1,49 @@
+{
+  "name": "openclaw",
+  "displayName": "OpenClaw AI 电脑控制引擎",
+  "description": "通过 OpenClaw Gateway 让弥娅获得 AI 电脑控制能力——读/写文件、执行命令、控制桌面应用、浏览器自动化等",
+  "agentType": "mcp",
+  "entryPoint": {
+    "module": "mcpserver.openclaw.service",
+    "class": "OpenClawService"
+  },
+  "capabilities": {
+    "tools": [
+      {
+        "name": "send_message",
+        "description": "向 OpenClaw Agent 发送任务消息，让 AI 在电脑上执行操作",
+        "parameters": {
+          "message": "string - 要发送的任务描述",
+          "session_key": "string - 会话键（可选，为空则创建新会话）",
+          "workspace": "string - 工作目录路径（可选）",
+          "timeout": "number - 超时秒数（可选，默认 120）"
+        }
+      },
+      {
+        "name": "start_gateway",
+        "description": "启动 OpenClaw Gateway 服务",
+        "parameters": {}
+      },
+      {
+        "name": "stop_gateway",
+        "description": "停止 OpenClaw Gateway 服务",
+        "parameters": {}
+      },
+      {
+        "name": "get_status",
+        "description": "获取 OpenClaw Gateway 运行状态",
+        "parameters": {}
+      },
+      {
+        "name": "get_history",
+        "description": "获取指定会话的历史记录",
+        "parameters": {
+          "session_key": "string - 会话键",
+          "limit": "number - 返回条数（可选，默认 20）"
+        }
+      }
+    ]
+  },
+  "version": "1.0.0",
+  "enabled": true
+}

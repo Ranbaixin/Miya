@@ -695,6 +695,93 @@ class WebAPI:
         async def get_memory_stats():
             return {"success": True, "data": {}}
 
+        # ========== OpenAI 兼容 /v1/chat/completions（供 OpenClaw 等调用） ==========
+        @self.router.post("/v1/chat/completions")
+        async def openai_chat_completions(request: dict):
+            """OpenAI 兼容对话接口 - 内部代理到弥娅模型池"""
+            import time
+            import uuid
+
+            model_name = request.get("model", "")
+            messages = request.get("messages", [])
+            temperature = request.get("temperature", 0.7)
+            max_tokens = request.get("max_tokens", 2000)
+
+            if not messages:
+                raise HTTPException(status_code=400, detail="messages is required")
+
+            try:
+                from core.model_pool_manager import ModelPoolManager
+                from core.ai_client import AIMessage
+
+                pool = ModelPoolManager()
+                client = pool.create_ai_client(model_id=model_name)
+
+                if not client:
+                    client = pool.create_ai_client(task_type="simple_chat")
+
+                if not client:
+                    raise HTTPException(
+                        status_code=503, detail="No available model client"
+                    )
+
+                def _normalize_content(content) -> str:
+                    """将 OpenAI 多模态内容格式转为纯文本"""
+                    if isinstance(content, str):
+                        return content
+                    if isinstance(content, list):
+                        parts = []
+                        for block in content:
+                            if isinstance(block, dict):
+                                if block.get("type") == "text":
+                                    parts.append(block.get("text", ""))
+                                else:
+                                    parts.append(
+                                        str(block.get(block.get("type", ""), ""))
+                                    )
+                            else:
+                                parts.append(str(block))
+                        return "\n".join(parts)
+                    return str(content)
+
+                ai_messages = [
+                    AIMessage(
+                        role=m.get("role", "user"),
+                        content=_normalize_content(m.get("content", "")),
+                    )
+                    for m in messages
+                ]
+
+                client.config["temperature"] = temperature
+                client.config["max_tokens"] = max_tokens
+
+                reply = await client.chat(ai_messages, use_miya_prompt=False)
+
+                request_id = f"chatcmpl-{uuid.uuid4().hex[:24]}"
+                return {
+                    "id": request_id,
+                    "object": "chat.completion",
+                    "created": int(time.time()),
+                    "model": client.model,
+                    "choices": [
+                        {
+                            "index": 0,
+                            "message": {"role": "assistant", "content": reply},
+                            "finish_reason": "stop",
+                        }
+                    ],
+                    "usage": {
+                        "prompt_tokens": 0,
+                        "completion_tokens": 0,
+                        "total_tokens": 0,
+                    },
+                }
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"[OpenAI兼容] chat/completions 失败: {e}", exc_info=True)
+                raise HTTPException(status_code=500, detail=str(e))
+
         @self.router.get("/health")
         async def health_check():
             """健康检查"""

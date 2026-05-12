@@ -2,10 +2,11 @@ var _a, _b;
 import { existsSync, readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { readdir } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import process from "node:process";
+import process$1 from "node:process";
 import { fileURLToPath, pathToFileURL, domainToUnicode } from "node:url";
 import { app, BrowserWindow, shell, screen, globalShortcut, Menu, nativeImage, Tray, protocol, net, nativeTheme, ipcMain, systemPreferences, desktopCapturer } from "electron";
-import { spawn } from "node:child_process";
+import { spawn, execSync } from "node:child_process";
+import { spawn as spawn$1 } from "@lydell/node-pty";
 const __filename$2 = fileURLToPath(import.meta.url);
 const __dirname$2 = dirname(__filename$2);
 let mainWindow = null;
@@ -62,8 +63,8 @@ function calcExpandPosition(ballX, ballY, targetHeight) {
   return { x: expandX, y: expandY };
 }
 function createWindow() {
-  process.platform === "win32";
-  const baseDir = app.isPackaged ? process.resourcesPath : app.getAppPath();
+  process$1.platform === "win32";
+  const baseDir = app.isPackaged ? process$1.resourcesPath : app.getAppPath();
   const iconPath = join(baseDir, "public", "my.png");
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -90,8 +91,8 @@ function createWindow() {
     shell.openExternal(url);
     return { action: "deny" };
   });
-  if (process.env.VITE_DEV_SERVER_URL) {
-    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
+  if (process$1.env.VITE_DEV_SERVER_URL) {
+    mainWindow.loadURL(process$1.env.VITE_DEV_SERVER_URL);
   } else {
     mainWindow.loadURL("miya-app://dist/index.html");
   }
@@ -307,7 +308,7 @@ function getBackendLogs() {
   return backendLogLines.join("\n");
 }
 function resolveVenvPython(cwd) {
-  return process.platform === "win32" ? join(cwd, ".venv", "Scripts", "python.exe") : join(cwd, ".venv", "bin", "python");
+  return process$1.platform === "win32" ? join(cwd, ".venv", "Scripts", "python.exe") : join(cwd, ".venv", "bin", "python");
 }
 function startBackend() {
   var _a2, _b2;
@@ -315,8 +316,8 @@ function startBackend() {
   let args;
   let cwd;
   if (app.isPackaged) {
-    const backendDir = join(process.resourcesPath, "backend");
-    const ext = process.platform === "win32" ? ".exe" : "";
+    const backendDir = join(process$1.resourcesPath, "backend");
+    const ext = process$1.platform === "win32" ? ".exe" : "";
     cmd = join(backendDir, `miya-backend${ext}`);
     args = [];
     cwd = backendDir;
@@ -324,7 +325,7 @@ function startBackend() {
     cwd = join(__dirname$1, "..", "..");
     let pythonPath = resolveVenvPython(cwd);
     if (!existsSync(pythonPath)) {
-      const sysPython = process.platform === "win32" ? "D:/Python/python3.11.9/python.exe" : "python3";
+      const sysPython = process$1.platform === "win32" ? "D:/Python/python3.11.9/python.exe" : "python3";
       if (existsSync(sysPython)) {
         pythonPath = sysPython;
         console.log("[Backend] 使用系统 Python:", sysPython);
@@ -341,7 +342,7 @@ function startBackend() {
   console.log(`[Backend] Command: ${cmd} ${args.join(" ")}`);
   appendBackendLog(`[Backend] Starting from ${cwd}`);
   appendBackendLog(`[Backend] Command: ${cmd} ${args.join(" ")}`);
-  const env = { ...process.env, PYTHONUNBUFFERED: "1" };
+  const env = { ...process$1.env, PYTHONUNBUFFERED: "1" };
   const outputLines = [];
   const PROGRESS_PREFIX = "##PROGRESS##";
   const consumeStdoutChunk = createChunkForwarder("stdout", (trimmed) => {
@@ -366,7 +367,7 @@ function startBackend() {
     stdio: ["ignore", "pipe", "pipe"],
     env,
     // 创建独立进程组，关闭时用 process.kill(-pid) 杀掉所有子进程
-    detached: process.platform !== "win32"
+    detached: process$1.platform !== "win32"
   });
   (_a2 = backendProcess.stdout) == null ? void 0 : _a2.on("data", (data) => {
     const text = data.toString();
@@ -403,23 +404,23 @@ function stopBackend() {
     backendProcess = null;
     return;
   }
-  if (process.platform === "win32") {
+  if (process$1.platform === "win32") {
     spawn("taskkill", ["/pid", String(pid), "/f", "/t"]);
   } else {
     try {
-      process.kill(-pid, "SIGTERM");
+      process$1.kill(-pid, "SIGTERM");
     } catch {
       try {
-        process.kill(pid, "SIGTERM");
+        process$1.kill(pid, "SIGTERM");
       } catch {
       }
     }
     setTimeout(() => {
       try {
-        process.kill(-pid, "SIGKILL");
+        process$1.kill(-pid, "SIGKILL");
       } catch {
         try {
-          process.kill(pid, "SIGKILL");
+          process$1.kill(pid, "SIGKILL");
         } catch {
         }
       }
@@ -456,7 +457,7 @@ function unregisterHotkeys() {
   globalShortcut.unregisterAll();
 }
 function createMenu() {
-  const isMac = process.platform === "darwin";
+  const isMac = process$1.platform === "darwin";
   const template = [
     ...isMac ? [{
       label: "弥娅 AI",
@@ -515,10 +516,122 @@ function createMenu() {
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
 }
+function findNodeExe() {
+  try {
+    const result = execSync("where node", { timeout: 5e3, encoding: "utf-8" });
+    const paths = result.trim().split("\r\n");
+    for (const p of paths) {
+      if (existsSync(p)) return p;
+    }
+  } catch {
+  }
+  const fallbacks = [
+    "D:\\node.exe",
+    "C:\\Program Files\\nodejs\\node.exe",
+    process.env.NODE_EXE,
+    process.env.NODE
+  ];
+  for (const fb of fallbacks) {
+    if (fb && existsSync(fb)) return fb;
+  }
+  return "node";
+}
+const NODE_EXE = findNodeExe();
+function loadEnvVars(rootDir) {
+  const env = {};
+  const envPath = resolve(rootDir, "config", ".env");
+  if (existsSync(envPath)) {
+    const content = readFileSync(envPath, "utf-8");
+    for (const line of content.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eqIdx = trimmed.indexOf("=");
+      if (eqIdx === -1) continue;
+      const key = trimmed.slice(0, eqIdx).trim();
+      const value = trimmed.slice(eqIdx + 1).trim();
+      if (key && value) env[key] = value;
+    }
+  }
+  return env;
+}
+let ptyProcess = null;
+let miyaRoot = "";
+let terminalBuffer = "";
+function setMiyaRoot(root) {
+  miyaRoot = root;
+}
+function buildEnv(rootDir, model) {
+  const dotEnv = loadEnvVars(rootDir);
+  const apiKey = dotEnv.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEY || "";
+  const baseUrl = dotEnv.DEEPSEEK_API_BASE || "https://api.deepseek.com/v1";
+  const selectedModel = model || dotEnv.DEEPSEEK_MODEL || "deepseek-v4-flash";
+  return {
+    ...process.env,
+    CLAUDE_CODE_USE_OPENAI: "1",
+    OPENAI_API_KEY: apiKey,
+    OPENAI_BASE_URL: baseUrl,
+    OPENAI_MODEL: selectedModel,
+    FORCE_COLOR: "1",
+    TERM: "xterm-256color"
+  };
+}
+function startTerminal(options = {}, onData, onExit) {
+  if (ptyProcess) {
+    stopTerminal();
+  }
+  const rootDir = miyaRoot || process.cwd();
+  const env = buildEnv(rootDir, options.model);
+  const cliPath = resolve(rootDir, "claude-code-engine", "dist", "cli-node.js");
+  if (!existsSync(cliPath)) {
+    throw new Error(`Claude Code Engine not found: ${cliPath}`);
+  }
+  if (!existsSync(NODE_EXE)) {
+    throw new Error(`Node.js not found. Searched PATH and common locations. Try installing Node.js.`);
+  }
+  ptyProcess = spawn$1(NODE_EXE, [cliPath], {
+    name: "xterm-256color",
+    cwd: rootDir,
+    env,
+    cols: 120,
+    rows: 40
+  });
+  terminalBuffer = "";
+  ptyProcess.onData((data) => {
+    terminalBuffer += data;
+    onData(data);
+  });
+  ptyProcess.onExit(({ exitCode }) => {
+    onExit(exitCode);
+    ptyProcess = null;
+  });
+}
+function writeToTerminal(data) {
+  if (ptyProcess) {
+    ptyProcess.write(data);
+  }
+}
+function resizeTerminal(cols, rows) {
+  if (ptyProcess) {
+    ptyProcess.resize(cols, rows);
+  }
+}
+function stopTerminal() {
+  if (ptyProcess) {
+    ptyProcess.kill();
+    ptyProcess = null;
+    terminalBuffer = "";
+  }
+}
+function isTerminalRunning() {
+  return ptyProcess !== null;
+}
+function getTerminalBuffer() {
+  return terminalBuffer;
+}
 let tray = null;
 function createTray() {
-  const isWin = process.platform === "win32";
-  const baseDir = app.isPackaged ? process.resourcesPath : app.getAppPath();
+  const isWin = process$1.platform === "win32";
+  const baseDir = app.isPackaged ? process$1.resourcesPath : app.getAppPath();
   let icon;
   try {
     const pngPath = join(baseDir, "public", "my.png");
@@ -621,17 +734,18 @@ function installUpdate() {
   autoUpdater == null ? void 0 : autoUpdater.quitAndInstall();
 }
 let isQuitting = false;
-(_a = process.stdout) == null ? void 0 : _a.on("error", () => {
+(_a = process$1.stdout) == null ? void 0 : _a.on("error", () => {
 });
-(_b = process.stderr) == null ? void 0 : _b.on("error", () => {
+(_b = process$1.stderr) == null ? void 0 : _b.on("error", () => {
 });
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
 }
-const CHARACTERS_DIR = app.isPackaged ? resolve(process.resourcesPath, "characters") : resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "characters");
+const CHARACTERS_DIR = app.isPackaged ? resolve(process$1.resourcesPath, "characters") : resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "characters");
+const MIYA_ROOT = app.isPackaged ? resolve(process$1.resourcesPath, "..") : resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DEFAULT_CHARACTER = "弥娅";
-const BACKGROUNDS_DIR = app.isPackaged ? resolve(process.resourcesPath, "premium-assets", "backgrounds") : resolve(dirname(fileURLToPath(import.meta.url)), "..", "premium-assets", "backgrounds");
+const BACKGROUNDS_DIR = app.isPackaged ? resolve(process$1.resourcesPath, "premium-assets", "backgrounds") : resolve(dirname(fileURLToPath(import.meta.url)), "..", "premium-assets", "backgrounds");
 protocol.registerSchemesAsPrivileged([
   { scheme: "miya-char", privileges: { secure: true, supportFetchAPI: true, corsEnabled: true, standard: true, stream: true } },
   { scheme: "miya-bg", privileges: { secure: true, supportFetchAPI: true, corsEnabled: true, standard: true, stream: true } },
@@ -647,6 +761,7 @@ app.on("second-instance", () => {
   }
 });
 app.whenReady().then(async () => {
+  setMiyaRoot(MIYA_ROOT);
   const MEDIA_MIME = {
     mp3: "audio/mpeg",
     wav: "audio/wav",
@@ -865,7 +980,7 @@ app.whenReady().then(async () => {
     menu.popup();
   });
   ipcMain.handle("capture:getSources", async () => {
-    if (process.platform === "darwin") {
+    if (process$1.platform === "darwin") {
       const status = systemPreferences.getMediaAccessStatus("screen");
       if (status !== "granted") {
         return { permission: status };
@@ -901,7 +1016,7 @@ app.whenReady().then(async () => {
     return target.thumbnail.toDataURL();
   });
   ipcMain.handle("capture:openScreenSettings", async () => {
-    if (process.platform === "darwin") {
+    if (process$1.platform === "darwin") {
       await shell.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture");
     }
   });
@@ -915,7 +1030,7 @@ app.whenReady().then(async () => {
     }
   });
   ipcMain.handle("fs:writeFile", (_event, relPath, base64) => {
-    const base = app.isPackaged ? resolve(process.resourcesPath) : resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
+    const base = app.isPackaged ? resolve(process$1.resourcesPath) : resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
     const filePath = resolve(base, relPath);
     mkdirSync(dirname(filePath), { recursive: true });
     writeFileSync(filePath, Buffer.from(base64, "base64"));
@@ -927,6 +1042,37 @@ app.whenReady().then(async () => {
     app.setLoginItemSettings({ openAtLogin: enabled });
   });
   ipcMain.handle("backend:getLogs", () => getBackendLogs());
+  ipcMain.handle("terminal:start", (_event, options) => {
+    return new Promise((resolve2, reject) => {
+      try {
+        startTerminal(
+          options,
+          (data) => {
+            var _a2;
+            (_a2 = getMainWindow()) == null ? void 0 : _a2.webContents.send("terminal:data", data);
+          },
+          (code) => {
+            var _a2;
+            (_a2 = getMainWindow()) == null ? void 0 : _a2.webContents.send("terminal:exit", code);
+          }
+        );
+        resolve2();
+      } catch (err) {
+        reject(err instanceof Error ? err.message : String(err));
+      }
+    });
+  });
+  ipcMain.handle("terminal:write", (_event, data) => {
+    writeToTerminal(data);
+  });
+  ipcMain.handle("terminal:resize", (_event, cols, rows) => {
+    resizeTerminal(cols, rows);
+  });
+  ipcMain.handle("terminal:stop", () => {
+    stopTerminal();
+  });
+  ipcMain.handle("terminal:isRunning", () => isTerminalRunning());
+  ipcMain.handle("terminal:getBuffer", () => getTerminalBuffer());
   win.on("close", (event) => {
     if (!isQuitting) {
       event.preventDefault();
@@ -960,10 +1106,11 @@ app.on("before-quit", () => {
 app.on("will-quit", () => {
   unregisterHotkeys();
   destroyTray();
+  stopTerminal();
   stopBackend();
 });
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
+  if (process$1.platform !== "darwin") {
     app.quit();
   }
 });
