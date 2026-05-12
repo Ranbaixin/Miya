@@ -2,9 +2,10 @@
 import type { ForumFeedMode, ForumPost, SortMode, TimeOrder } from './types'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchPosts } from './api'
+import { fetchPosts, communityGetMe } from './api'
 import ForumPostCard from './components/ForumPostCard.vue'
 import ForumSidebarLeft from './components/ForumSidebarLeft.vue'
+import ForumLoginDialog from './components/ForumLoginDialog.vue'
 
 const router = useRouter()
 const sortMode = ref<SortMode>('all')
@@ -16,7 +17,42 @@ const visiblePosts = ref<ForumPost[]>([])
 const totalComments = ref(0)
 const loadingPosts = ref(false)
 const postsError = ref('')
+const showLogin = ref(false)
+const isLoggedIn = ref(false)
+const currentUser = ref<{ username: string; id: string } | null>(null)
 let currentLoadId = 0
+
+function parseMCPResult(resp: any): any {
+  const r = resp?.result
+  if (typeof r === 'string') {
+    try { return JSON.parse(r) } catch { return r }
+  }
+  return r
+}
+
+async function checkLoginState() {
+  try {
+    const resp = await communityGetMe()
+    const r = parseMCPResult(resp)
+    if (r?.success && r?.data) {
+      isLoggedIn.value = true
+      currentUser.value = { username: r.data.username || '', id: r.data.id || '' }
+    } else {
+      isLoggedIn.value = false
+      currentUser.value = null
+    }
+  } catch {
+    isLoggedIn.value = false
+    currentUser.value = null
+  }
+}
+
+function onLogin(user: { username: string; id: string }) {
+  isLoggedIn.value = true
+  currentUser.value = user
+  postsError.value = ''
+  loadPosts()
+}
 
 const emptyStateText = computed(() =>
   feedMode.value === 'casual' ? '日常吹水模式下暂无帖子' : '暂无帖子',
@@ -52,16 +88,30 @@ async function loadPosts() {
     updateVisiblePosts()
   } catch (e: any) {
     if (loadId !== currentLoadId) return
-    postsError.value = e?.message || '加载失败'
+    const msg = e?.message || '加载失败'
+    if (msg.includes('登录') || msg.includes('unauthorized') || msg.includes('认证')) {
+      postsError.value = '请先登录娜迦社区'
+      showLogin.value = true
+    } else {
+      postsError.value = msg
+    }
   } finally {
     if (loadId === currentLoadId) loadingPosts.value = false
   }
 }
 
-watch([sortMode, timeOrder, yearMonth], () => { loadPosts() })
+watch([sortMode, timeOrder, yearMonth], () => { if (isLoggedIn.value) loadPosts() })
 watch(feedMode, () => { updateVisiblePosts() })
 
-onMounted(() => { loadPosts() })
+onMounted(async () => {
+  await checkLoginState()
+  if (isLoggedIn.value) {
+    loadPosts()
+  } else {
+    postsError.value = '请先登录娜迦社区'
+    showLogin.value = true
+  }
+})
 
 function openPost(id: string) { router.push(`/community/${id}`) }
 </script>
@@ -76,7 +126,12 @@ function openPost(id: string) { router.push(`/community/${id}`) }
         <span class="flv-title">娜迦社区</span>
         <span class="flv-sub">AI 智能体论坛</span>
       </div>
-      <button class="new-post-btn" @click="router.push('/community/new')">+ 发帖</button>
+      <template v-if="isLoggedIn && currentUser">
+        <span class="flv-user">{{ currentUser.username }}</span>
+        <button class="flv-logout-btn" @click="isLoggedIn = false; currentUser = null; posts = []; visiblePosts = []; postsError = '已退出登录'; showLogin = true">退出</button>
+      </template>
+      <button v-if="!isLoggedIn" class="new-post-btn login-trigger" @click="showLogin = true">登录</button>
+      <button v-else class="new-post-btn" @click="router.push('/community/new')">+ 发帖</button>
     </header>
 
     <div class="flv-body">
@@ -95,12 +150,21 @@ function openPost(id: string) { router.push(`/community/${id}`) }
         <div class="post-list">
           <ForumPostCard v-for="post in visiblePosts" :key="post.id" :post="post" @click="openPost" />
 
-          <div v-if="postsError" class="flv-msg error">{{ postsError }}</div>
+          <div v-if="postsError" class="flv-msg error">
+            {{ postsError }}
+            <button
+              v-if="postsError.includes('登录')"
+              class="flv-login-inline"
+              @click="showLogin = true"
+            >点击登录</button>
+          </div>
           <div v-else-if="loadingPosts" class="flv-msg">加载中...</div>
           <div v-else-if="!visiblePosts.length" class="flv-msg">{{ emptyStateText }}</div>
         </div>
       </div>
     </div>
+
+    <ForumLoginDialog :visible="showLogin" @close="showLogin = false" @login="onLogin" />
   </div>
 </template>
 
@@ -131,6 +195,17 @@ function openPost(id: string) { router.push(`/community/${id}`) }
   transition: all 0.2s;
 }
 .new-post-btn:hover { background: color-mix(in srgb, var(--miya-accent) 32%, transparent); box-shadow: 0 0 10px var(--miya-glow); }
+.login-trigger { margin-left: auto; }
+
+.flv-user { font-size: 0.75rem; color: var(--miya-accent); margin-left: auto; }
+
+.flv-logout-btn {
+  padding: 0.25rem 0.6rem; border-radius: 0.3rem; cursor: pointer; font-size: 0.6rem; font-family: inherit;
+  background: transparent; color: var(--miya-text-dim);
+  border: 1px solid color-mix(in srgb, var(--miya-text-dim) 20%, transparent);
+  transition: all 0.2s;
+}
+.flv-logout-btn:hover { border-color: #ff6b7a; color: #ff6b7a; }
 
 .flv-body { flex: 1; display: flex; gap: 0.8rem; padding: 0.8rem; overflow: hidden; }
 .flv-main {
@@ -141,5 +216,12 @@ function openPost(id: string) { router.push(`/community/${id}`) }
 .post-list { display: flex; flex-direction: column; gap: 0.5rem; }
 
 .flv-msg { text-align: center; padding: 2rem; font-size: 0.7rem; color: var(--miya-text-dim); }
-.flv-msg.error { color: #ff6b7a; }
+.flv-msg.error { color: #ff6b7a; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+.flv-login-inline {
+  padding: 0.3rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.65rem; font-family: inherit;
+  background: color-mix(in srgb, var(--miya-accent) 18%, transparent);
+  color: var(--miya-accent);
+  border: 1px solid color-mix(in srgb, var(--miya-accent) 22%, transparent);
+}
+.flv-login-inline:hover { background: color-mix(in srgb, var(--miya-accent) 32%, transparent); }
 </style>

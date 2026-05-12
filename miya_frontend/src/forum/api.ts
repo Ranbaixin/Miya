@@ -1,7 +1,13 @@
 import API from '@/api/core'
 import type { ForumPost, ForumPostDetail, PaginatedResponse } from './types'
 
-// MCP 调用统一走 CoreApiClient，不再自己封装 fetch
+function parseResult(resp: any): any {
+  const r = resp?.result
+  if (typeof r === 'string') {
+    try { return JSON.parse(r) } catch { return r }
+  }
+  return r
+}
 
 export async function fetchPosts(
   sort: string = 'latest',
@@ -11,8 +17,9 @@ export async function fetchPosts(
   _yearMonth?: string | null,
 ): Promise<PaginatedResponse<ForumPost>> {
   const resp = await API.mcpCall('naga_community', 'get_posts', { sort, page, page_size: pageSize })
-  const r = resp?.result
+  const r = parseResult(resp)
   if (!r?.success && !r?.data && typeof r !== 'object') throw new Error('加载帖子失败')
+  if (r.status_code === 401) throw new Error('请先登录娜迦社区')
   const data = r?.data || r || {}
   const items = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : [])
   return { items, total: data.total || 0, page, pageSize }
@@ -20,19 +27,19 @@ export async function fetchPosts(
 
 export async function fetchPost(id: string): Promise<ForumPostDetail> {
   const resp = await API.mcpCall('naga_community', 'get_post_detail', { post_id: id })
-  const r = resp?.result
+  const r = parseResult(resp)
   return (r?.data || r) as ForumPostDetail
 }
 
 export async function likePost(id: string) {
   const resp = await API.mcpCall('naga_community', 'like_post', { post_id: id })
-  const r = resp?.result
+  const r = parseResult(resp)
   return r?.data || r || { likes: 0, liked: false }
 }
 
 export async function likeComment(id: string) {
   const resp = await API.mcpCall('naga_community', 'like_comment', { comment_id: id })
-  const r = resp?.result
+  const r = parseResult(resp)
   return r?.data || r || { likes: 0, liked: false }
 }
 
@@ -59,7 +66,7 @@ export async function createComment(payload: { postId: string, content: string, 
 
 export async function fetchMessages(page = 1, pageSize = 20) {
   const resp = await API.mcpCall('naga_community', 'get_messages', { page, page_size: pageSize })
-  const r = resp?.result
+  const r = parseResult(resp)
   return r?.data || r || { items: [], total: 0 }
 }
 
@@ -69,7 +76,7 @@ export async function sendMessage(toUserId: string, content: string) {
 
 export async function fetchFriendRequests() {
   const resp = await API.mcpCall('naga_community', 'get_friend_requests')
-  const r = resp?.result
+  const r = parseResult(resp)
   return r?.data || r || []
 }
 
@@ -83,21 +90,48 @@ export async function declineFriendRequest(id: string) {
 
 export async function fetchConnections() {
   const resp = await API.mcpCall('naga_community', 'get_connections')
-  return resp?.result?.data || resp?.result || []
+  return parseResult(resp)?.data || parseResult(resp) || []
 }
 
 export async function fetchNotifications() {
   const resp = await API.mcpCall('naga_community', 'get_notifications')
-  return resp?.result?.data || resp?.result || []
+  return parseResult(resp)?.data || parseResult(resp) || []
 }
 
 export async function fetchProfile() {
   const resp = await API.mcpCall('naga_community', 'get_profile')
-  return resp?.result?.data || resp?.result
+  return parseResult(resp)?.data || parseResult(resp)
 }
 
-export async function communityLogin(username: string, password: string) {
-  return API.mcpCall('naga_community', 'login', { username, password })
+export async function communityLogin(username: string, password: string, captchaId = '', captchaAnswer = '') {
+  return API.mcpCall('naga_community', 'login', {
+    username,
+    password,
+    captcha_id: captchaId,
+    captcha_answer: captchaAnswer,
+  })
+}
+
+export async function getCaptcha() {
+  return API.mcpCall('naga_community', 'get_captcha')
+}
+
+export async function sendVerificationCode(email: string, username: string) {
+  return API.mcpCall('naga_community', 'send_verification', { email, username })
+}
+
+export async function communityRegister(
+  username: string,
+  email: string,
+  password: string,
+  verificationCode: string,
+) {
+  return API.mcpCall('naga_community', 'register', {
+    username,
+    email,
+    password,
+    verification_code: verificationCode,
+  })
 }
 
 export async function communityGetMe() {

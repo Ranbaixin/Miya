@@ -228,16 +228,27 @@ class NagaAuth:
 
     # ===== 认证操作 =====
 
-    async def login(self, username: str, password: str) -> Dict[str, Any]:
+    async def login(
+        self,
+        username: str,
+        password: str,
+        captcha_id: str = "",
+        captcha_answer: str = "",
+    ) -> Dict[str, Any]:
         """
         登录娜迦网络。
 
         POST /api/auth/login
         """
+        json_data: Dict[str, Any] = {"username": username, "password": password}
+        if captcha_id and captcha_answer:
+            json_data["captcha_id"] = captcha_id
+            json_data["captcha_answer"] = captcha_answer
+
         result = await self._request(
             "POST",
             "/api/auth/login",
-            json_data={"username": username, "password": password},
+            json_data=json_data,
             auto_refresh=False,
         )
 
@@ -383,6 +394,13 @@ class NagaAuth:
         self._clear_session()
         logger.info("[NagaAuth] 已登出")
         return {"success": True, "data": {"message": "已登出"}}
+
+    async def get_captcha(self) -> Dict[str, Any]:
+        """获取验证码挑战"""
+        result = await self._request("GET", "/api/auth/captcha", auto_refresh=False)
+        if result.get("success"):
+            return {"success": True, "data": result["data"]}
+        return result
 
     async def close(self):
         """关闭 HTTP 客户端"""

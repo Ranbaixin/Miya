@@ -1368,6 +1368,7 @@ class MiyaAPI:
             """统一 MCP 工具调用接口"""
             try:
                 import json
+                import os
                 from core.mcp_manager import get_mcp_manager
 
                 manager = get_mcp_manager()
@@ -1379,6 +1380,32 @@ class MiyaAPI:
 
                 if not svc_name or not tool_name:
                     return {"success": False, "error": "缺少 service 或 tool 参数"}
+
+                # 确保 MCP 服务已扫描注册（修正工作目录）
+                if not manager._services:
+                    project_root = os.environ.get("MIYA_PROJECT_ROOT", "..")
+                    manager.mcp_dir = os.path.join(project_root, "mcpserver")
+                    if not os.path.isdir(manager.mcp_dir):
+                        manager.mcp_dir = os.path.abspath(
+                            os.path.join(
+                                os.path.dirname(__file__), "..", "..", "mcpserver"
+                            )
+                        )
+                    await manager.scan_and_register()
+
+                # 如果目标服务未注册，尝试单独注册
+                if svc_name not in manager._services:
+                    from pathlib import Path
+
+                    manifest_path = (
+                        Path(manager.mcp_dir) / svc_name / "agent-manifest.json"
+                    )
+                    if manifest_path.exists():
+                        import json as _json
+
+                        manifest = manager._load_manifest(manifest_path)
+                        if manifest:
+                            await manager.register_service(manifest)
 
                 # 构建额外参数（排除 service 和 tool）
                 extra_kwargs = {
@@ -1396,6 +1423,61 @@ class MiyaAPI:
                 }
             except Exception as e:
                 logger.exception(f"[MiyaAPI] MCP 调用失败")
+                return {"success": False, "error": str(e)}
+
+        @self.router.post("/api/mcp/reload")
+        async def mcp_reload(request_data: dict = {}):
+            """热重载指定 MCP 服务模块"""
+            try:
+                import sys
+                import importlib
+                from core.mcp_manager import get_mcp_manager
+
+                svc_name = str(request_data.get("service", ""))
+                if not svc_name:
+                    return {"success": False, "error": "缺少 service 参数"}
+
+                module_paths = [
+                    f"mcpserver.{svc_name}",
+                    f"mcpserver.{svc_name}.service",
+                    f"mcpserver.{svc_name}.auth",
+                    f"mcpserver.{svc_name}.forum",
+                ]
+
+                reloaded = []
+                for mod_path in module_paths:
+                    if mod_path in sys.modules:
+                        importlib.reload(sys.modules[mod_path])
+                        reloaded.append(mod_path)
+
+                if not reloaded:
+                    return {
+                        "success": True,
+                        "message": f"服务 {svc_name} 模块未加载，无需重载",
+                    }
+
+                manager = get_mcp_manager()
+                if manager and svc_name in manager._services:
+                    del manager._services[svc_name]
+                    from pathlib import Path
+
+                    manifest_path = Path("mcpserver") / svc_name / "agent-manifest.json"
+                    if manifest_path.exists():
+                        import json as _json
+
+                        manifest_data = _json.loads(
+                            manifest_path.read_text(encoding="utf-8")
+                        )
+                        manifest = manager._load_manifest(manifest_path)
+                        if manifest:
+                            await manager.register_service(manifest)
+
+                return {
+                    "success": True,
+                    "message": f"已重载 {len(reloaded)} 个模块: {reloaded}",
+                }
+            except Exception as e:
+                logger.exception(f"[MiyaAPI] MCP 重载失败")
                 return {"success": False, "error": str(e)}
 
         @self.router.get("/api/skills")
