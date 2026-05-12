@@ -54,7 +54,7 @@ class NagaAuth:
 
     @property
     def is_logged_in(self) -> bool:
-        return self._access_token is not None
+        return self._access_token is not None or self._refresh_token is not None
 
     @property
     def access_token(self) -> Optional[str]:
@@ -239,34 +239,57 @@ class NagaAuth:
         登录娜迦网络。
 
         POST /api/auth/login
+        refresh_token 优先从 Set-Cookie 提取，其次从响应体
         """
+        client = await self._get_client()
+        headers = {"Content-Type": "application/json"}
+
         json_data: Dict[str, Any] = {"username": username, "password": password}
         if captcha_id and captcha_answer:
             json_data["captcha_id"] = captcha_id
             json_data["captcha_answer"] = captcha_answer
 
-        result = await self._request(
-            "POST",
-            "/api/auth/login",
-            json_data=json_data,
-            auto_refresh=False,
-        )
+        try:
+            response = await client.post(
+                f"{self._base_url}/api/auth/login",
+                headers=headers,
+                json=json_data,
+            )
+        except Exception as e:
+            return {"success": False, "error": f"登录请求失败: {e}"}
 
-        if not result["success"]:
-            return result
+        if response.status_code >= 400:
+            error_detail = ""
+            try:
+                error_body = response.json()
+                error_detail = error_body.get("detail", response.text[:500])
+            except Exception:
+                error_detail = response.text[:500]
+            return {
+                "success": False,
+                "error": error_detail,
+                "status_code": response.status_code,
+            }
 
-        data = result["data"]
+        data = response.json()
         self._access_token = data.get("access_token", "")
         self._user_info = data.get("user", {})
 
-        # refresh_token 可能在 cookie 或响应体中
-        self._refresh_token = data.get("refresh_token", "")
+        # refresh_token 优先从 Set-Cookie 提取，其次从响应体
+        self._refresh_token = (
+            response.cookies.get("refresh_token", "")
+            or data.get("refresh_token", "")
+            or data.get("refreshToken", "")
+        )
 
         if not self._access_token:
             return {"success": False, "error": "登录响应中缺少 access_token"}
 
         self._save_session()
-        logger.info(f"[NagaAuth] 登录成功: {username}")
+        logger.info(
+            f"[NagaAuth] 登录成功: {username}, "
+            f"refresh_token={'已获取' if self._refresh_token else '未获取'}"
+        )
 
         return {
             "success": True,
