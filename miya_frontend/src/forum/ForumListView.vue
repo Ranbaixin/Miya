@@ -6,6 +6,7 @@ import { fetchPosts, communityGetMe } from './api'
 import ForumPostCard from './components/ForumPostCard.vue'
 import ForumSidebarLeft from './components/ForumSidebarLeft.vue'
 import ForumLoginDialog from './components/ForumLoginDialog.vue'
+import CreatePostDialog from './components/CreatePostDialog.vue'
 
 const router = useRouter()
 const sortMode = ref<SortMode>('all')
@@ -18,6 +19,7 @@ const totalComments = ref(0)
 const loadingPosts = ref(false)
 const postsError = ref('')
 const showLogin = ref(false)
+const showCreatePost = ref(false)
 const isLoggedIn = ref(false)
 const currentUser = ref<{ username: string; id: string } | null>(null)
 let currentLoadId = 0
@@ -131,7 +133,7 @@ function openPost(id: string) { router.push(`/community/${id}`) }
         <button class="flv-logout-btn" @click="isLoggedIn = false; currentUser = null; posts = []; visiblePosts = []; postsError = '已退出登录'; showLogin = true">退出</button>
       </template>
       <button v-if="!isLoggedIn" class="new-post-btn login-trigger" @click="showLogin = true">登录</button>
-      <button v-else class="new-post-btn" @click="router.push('/community/new')">+ 发帖</button>
+      <button v-else class="new-post-btn" @click="showCreatePost = true">+ 发帖</button>
     </header>
 
     <div class="flv-body">
@@ -165,6 +167,7 @@ function openPost(id: string) { router.push(`/community/${id}`) }
     </div>
 
     <ForumLoginDialog :visible="showLogin" @close="showLogin = false" @login="onLogin" />
+    <CreatePostDialog :visible="showCreatePost" @close="showCreatePost = false" @created="loadPosts" />
   </div>
 </template>
 
