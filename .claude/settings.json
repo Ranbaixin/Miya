@@ -1,7 +1,7 @@
 {
   "modelType": "openai",
   "env": {
-    "OPENAI_API_KEY": "sk-6a916af05d0841a18b375f1e85ee2bcd",
+    "OPENAI_API_KEY": "sk-your-deepseek-api-key",
     "OPENAI_BASE_URL": "https://api.deepseek.com/v1",
     "OPENAI_MODEL": "deepseek-v4-flash"
   },
