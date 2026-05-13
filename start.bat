@@ -1,16 +1,14 @@
 @echo off
 chcp 65001 >nul
-title MIYA v7.1
+title MIYA v8.0
 
 :: ============================================================
-::  MIYA v7.1 - Launch Center
+::  MIYA v8.0 - Launch Center
 ::  
 ::  start.bat           Show menu
 ::  start.bat 1|2|3|4   Direct launch
 ::  start.bat a         Launch all
 :: ============================================================
-
-set DEFAULT_MODEL=miya-deepseek_v3_official
 
 :: CLI direct
 if /i "%1"=="1" goto :terminal
@@ -25,7 +23,7 @@ if /i "%1"=="a" goto :all
 cls
 echo.
 echo ================================================================================
-echo                         MIYA v7.1  Launch Center
+echo                         MIYA v8.0  Launch Center
 echo ================================================================================
 echo.
 echo   [1] Terminal    Claude Code + DeepSeek V4
@@ -69,22 +67,6 @@ if not exist "claude-code-engine\dist\cli-node.js" (
     pause
     goto :menu
 )
-
-:: Load API Key
-set DEEPSEEK_API_KEY=
-for /f "tokens=2 delims==" %%a in ('findstr /r "^DEEPSEEK_API_KEY=" config\.env 2^>nul') do set DEEPSEEK_API_KEY=%%a
-
-if "%DEEPSEEK_API_KEY%"=="" (
-    echo [ERROR] DEEPSEEK_API_KEY not found in config\.env
-    pause
-    goto :menu
-)
-
-set CLAUDE_CODE_USE_OPENAI=1
-set OPENAI_API_KEY=%DEEPSEEK_API_KEY%
-set OPENAI_BASE_URL=https://api.deepseek.com/v1
-set OPENAI_MODEL=deepseek-v4-flash
-set CLAUDE_CODE_SKIP_AUTH=1
 
 echo Starting MIYA Terminal...
 start "MIYA Terminal" wt node claude-code-engine\dist\cli-node.js
@@ -213,16 +195,6 @@ if exist "frontend\ui\package.json" (
 :: Terminal (foreground)
 echo [4/4] Starting Terminal (foreground)...
 echo.
-
-for /f "tokens=2 delims==" %%a in ('findstr /r "^DEEPSEEK_API_KEY=" config\.env 2^>nul') do set DEEPSEEK_API_KEY=%%a
-
-set CLAUDE_CODE_USE_OPENAI=1
-set OPENAI_API_KEY=%DEEPSEEK_API_KEY%
-set OPENAI_BASE_URL=https://api.deepseek.com/v1
-set OPENAI_MODEL=deepseek-v4-flash
-set CLAUDE_CODE_SKIP_AUTH=1
-
-set MODEL_DISPLAY=%DEFAULT_MODEL:miya-=%
 
 start "MIYA Terminal" wt node claude-code-engine\dist\cli-node.js
 timeout /t 2 >nul

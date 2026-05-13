@@ -13,7 +13,7 @@ show_menu() {
     clear
     echo -e "${BLUE}================================================================================"
     echo "                         MIYA AI VIRTUAL AVATAR SYSTEM"
-    echo "                              Version 6.0.0"
+    echo "                              Version 8.0.0"
     echo -e "================================================================================${NC}"
     echo
     echo "MAIN MENU:"

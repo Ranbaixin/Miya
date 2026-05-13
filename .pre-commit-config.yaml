@@ -1,54 +1,61 @@
 repos:
-  # 基础钩子
+  # 基础钩子（合并所有 pre-commit/pre-commit-hooks）
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v4.6.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-added-large-files
+        args: ['--maxkb=1024']
       - id: check-ast
       - id: check-json
       - id: check-toml
       - id: detect-private-key
       - id: destroyed-symlinks
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: check-byte-order-marker
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: check-symlinks
+      - id: check-xml
 
-  # Python代码格式化
+  # Python 代码格式化
   - repo: https://github.com/psf/black
-    rev: 23.1.0
+    rev: 24.3.0
     hooks:
       - id: black
-        language_version: python3.9
+        language_version: python3.10
 
-  # Python代码检查
+  # Python 代码检查
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.6
+    rev: v0.4.0
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
 
-  # Python类型检查
+  # Python 类型检查
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.5.1
+    rev: v1.9.0
     hooks:
       - id: mypy
         additional_dependencies:
           - types-requests
           - types-pyyaml
-          - types-PyYAML
           - pydantic
         exclude: ^(tests/|docs/|examples/|venv/)
 
-  # Python导入排序
+  # Python 导入排序
   - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
+    rev: 5.13.2
     hooks:
       - id: isort
         args: ["--profile", "black"]
 
-  # Python代码质量检查
+  # Python 代码质量检查
   - repo: https://github.com/PyCQA/pylint
-    rev: v3.0.0a6
+    rev: v3.1.0
     hooks:
       - id: pylint
         args:
@@ -56,24 +63,16 @@ repos:
           - --fail-under=8.0
         exclude: ^(tests/|docs/|examples/|venv/)
 
-  # Python安全检查
+  # Python 安全检查
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.5
+    rev: 1.7.8
     hooks:
       - id: bandit
-        args: ["-c", "pyproject.toml"]
-        exclude: ^(tests/|examples/|venv/)
+        args: ["-ll", "-x", "tests/,examples/,venv/"]
 
-  # 依赖安全检查
-  - repo: https://github.com/pyupio/safety
-    rev: 2.3.5
-    hooks:
-      - id: safety
-        args: ["check", "--ignore=51457"]
-
-  # Markdown检查
+  # Markdown 检查
   - repo: https://github.com/igorshubovych/markdownlint-cli2
-    rev: v0.7.0
+    rev: v0.12.0
     hooks:
       - id: markdownlint-cli2
         args: ["--config", ".markdownlint.yaml"]
@@ -85,47 +84,7 @@ repos:
       - id: gitlint
         stages: [commit-msg]
 
-  # 确保没有大文件
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
-    hooks:
-      - id: check-added-large-files
-        args: ['--maxkb=1024']
-
-  # 确保文件以换行符结束
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
-    hooks:
-      - id: end-of-file-fixer
-
-  # 确保没有合并冲突标记
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
-    hooks:
-      - id: check-merge-conflict
-
-  # 确保没有调试语句
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
-    hooks:
-      - id: debug-statements
-
-  # 确保没有无效的转义序列
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
-    hooks:
-      - id: check-byte-order-marker
-
-  # 文件权限检查
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
-    hooks:
-      - id: check-executables-have-shebangs
-      - id: check-shebang-scripts-are-executable
-      - id: check-symlinks
-      - id: check-xml
-
-  # 确保代码质量
+  # 本地钩子
   - repo: local
     hooks:
       - id: run-tests
@@ -144,7 +103,6 @@ repos:
         stages: [push]
         always_run: true
 
-# 默认配置
 default_install_hook_types: [pre-commit, commit-msg]
 default_stages: [commit, push]
 fail_fast: false

@@ -13,9 +13,8 @@
 -r ../dependencies/ai.txt
 
 # ========== 数据库 (轻量级) ==========
-# 桌面应用推荐使用 ChromaDB，不需要 Milvus/Neo4j
 chromadb>=0.4.0,<0.6.0
-redis>=4.5.0,<5.0.0
+redis>=4.5.0,<6.0.0
 
 # ========== TTS (语音合成) ==========
 -r ../dependencies/tts.txt

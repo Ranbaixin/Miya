@@ -26,6 +26,14 @@
 # ========== 数据可视化 ==========
 -r ../dependencies/viz.txt
 
+# ========== QQ 扩展功能 ==========
+-r ../dependencies/qq_extras.txt
+
+# ========== 多平台适配器 ==========
+-r ../dependencies/platform_adapters.txt
+
+# ========== 可观测性 ==========
+-r ../dependencies/observability.txt
+
 # ========== 任务调度 ==========
-# APScheduler 定时任务
 apscheduler>=3.10.0

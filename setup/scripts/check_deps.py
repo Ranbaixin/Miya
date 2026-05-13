@@ -1,205 +1,188 @@
 #!/usr/bin/env python3
 """
 Miya 依赖检查脚本
-检查所有依赖是否已安装
+动态解析 setup/dependencies/*.txt 文件，检查所有依赖是否已安装
 """
 
+import re
 import sys
 import subprocess
-from typing import Dict, List, Tuple
+from pathlib import Path
+from typing import Dict
 
 
-# 依赖清单（更新后）
-DEPENDENCIES = {
-    # 基础依赖
-    "fastapi": {"required": True, "min_version": "0.100.0"},
-    "uvicorn": {"required": True, "min_version": "0.22.0"},
-    "pydantic": {"required": True, "min_version": "2.0.0"},
-    "aiohttp": {"required": True, "min_version": "3.8.0"},
-    "python-dotenv": {"required": True, "min_version": "1.0.0"},
-    "pyyaml": {"required": True, "min_version": "6.0"},
-    "psutil": {"required": True, "min_version": "5.9.0"},
-    "watchdog": {"required": True, "min_version": "3.0.0"},
-    "requests": {"required": True, "min_version": "2.31.0"},
-    "aiofiles": {"required": True, "min_version": "23.0.0"},  # 新增
-    "PyJWT": {"required": True, "min_version": "2.8.0"},  # 新增
-    "cryptography": {"required": True, "min_version": "41.0.0"},  # 新增
-
-    # AI 依赖
-    "openai": {"required": True, "min_version": "1.3.0"},
-    "tiktoken": {"required": True, "min_version": "0.5.0"},  # 新增
-    "anthropic": {"required": False, "min_version": "0.7.0"},
-    "sentence-transformers": {"required": False, "min_version": "2.2.0"},
-    "torch": {"required": False, "min_version": "2.0.0"},
-
-    # 数据库依赖
-    "redis": {"required": False, "min_version": "4.5.0"},
-    "chromadb": {"required": False, "min_version": "0.4.0"},
-    "pymilvus": {"required": False, "min_version": "2.3.0"},
-    "neo4j": {"required": False, "min_version": "5.0.0"},
-
-    # 文档处理（新增）
-    "PyPDF2": {"required": False, "min_version": "3.0.0"},
-    "python-docx": {"required": False, "min_version": "1.1.0"},
-
-    # 网络通信（新增）
-    "httpx": {"required": False, "min_version": "0.24.0"},
-    "websockets": {"required": False, "min_version": "12.0"},
-    "paramiko": {"required": False, "min_version": "3.0.0"},
-
-    # 数据处理
-    "numpy": {"required": True, "min_version": "1.24.0"},
-    "pandas": {"required": False, "min_version": "2.0.0"},
-    "scipy": {"required": False, "min_version": "1.10.0"},
-    "scikit-learn": {"required": False, "min_version": "1.3.0"},
-
-    # 可视化
-    "matplotlib": {"required": False, "min_version": "3.7.0"},
-    "seaborn": {"required": False, "min_version": "0.12.0"},
-
-    # TTS
-    "edge-tts": {"required": False, "min_version": "6.1.0"},
-
-    # 任务调度
-    "apscheduler": {"required": False, "min_version": "3.10.0"},  # 新增
-}
+ROOT = Path(__file__).resolve().parent.parent.parent
+DEPS_DIR = ROOT / "setup" / "dependencies"
 
 
-def get_version(package_name: str) -> str:
-    """获取包的版本"""
+def parse_requirements_file(filepath: Path) -> Dict[str, str]:
+    packages = {}
+    if not filepath.exists():
+        return packages
+    for line in filepath.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if (
+            not line
+            or line.startswith("#")
+            or line.startswith("-r")
+            or line.startswith("-e")
+        ):
+            continue
+        match = re.match(r"^([a-zA-Z0-9][\w\-.]*)(\[[^\]]*\])?\s*([><=!~].*)?", line)
+        if match:
+            name = match.group(1).strip().lower()
+            spec = match.group(3).strip() if match.group(3) else ""
+            packages[name] = spec
+    return packages
+
+
+def parse_all_dependencies() -> Dict[str, Dict[str, str]]:
+    categorized = {}
+    if not DEPS_DIR.exists():
+        print(f"ERROR: deps dir not found {DEPS_DIR}")
+        return categorized
+    for deps_file in sorted(DEPS_DIR.glob("*.txt")):
+        category = deps_file.stem
+        packages = parse_requirements_file(deps_file)
+        if packages:
+            categorized[category] = packages
+    return categorized
+
+
+def collect_unique(categorized: Dict[str, Dict[str, str]]) -> Dict[str, str]:
+    all_pkgs = {}
+    for cat_data in categorized.values():
+        for name, spec in cat_data.items():
+            if name not in all_pkgs:
+                all_pkgs[name] = spec
+    return all_pkgs
+
+
+def get_installed_version(package_name: str) -> str | None:
     try:
         result = subprocess.run(
             [sys.executable, "-m", "pip", "show", package_name],
             capture_output=True,
             text=True,
-            check=True
         )
-        output = result.stdout
-        for line in output.split('\n'):
-            if line.startswith('Version:'):
-                return line.split(':')[1].strip()
-        return None
-    except subprocess.CalledProcessError:
-        return None
+        if result.returncode != 0:
+            return None
+        for line in result.stdout.splitlines():
+            if line.startswith("Version:"):
+                return line.split(":", 1)[1].strip()
+    except Exception:
+        pass
+    return None
 
 
-def compare_versions(version: str, min_version: str) -> int:
-    """比较版本号，返回 1(>), 0(=), -1(<)"""
-    def parse_version(v):
-        return tuple(map(int, v.split('.')))
+def parse_ver(v: str) -> tuple:
+    clean = re.sub(r"[^0-9.]", "", v.strip().split("+")[0].split("-")[0])
+    parts = clean.split(".")
+    result = []
+    for p in parts:
+        try:
+            result.append(int(p))
+        except ValueError:
+            result.append(0)
+    return tuple(result) if result else (0,)
 
-    v1 = parse_version(version)
-    v2 = parse_version(min_version)
 
-    # 补齐长度
-    max_len = max(len(v1), len(v2))
-    v1 = v1 + (0,) * (max_len - len(v1))
-    v2 = v2 + (0,) * (max_len - len(v2))
+def check_constraint(installed: str, spec: str) -> bool:
+    if not spec:
+        return True
+    iv = parse_ver(installed)
+    ok = True
+    parts = [p.strip() for p in re.split(r",", spec) if p.strip()]
+    for constraint in parts:
+        m = re.match(r"([><=!~]+)\s*(\S.*)", constraint)
+        if not m:
+            continue
+        op, target = m.group(1), m.group(2).strip()
+        tv = parse_ver(target)
+        if op == ">=" and not (iv >= tv):
+            ok = False
+        elif op == ">" and not (iv > tv):
+            ok = False
+        elif op == "<=" and not (iv <= tv):
+            ok = False
+        elif op == "<" and not (iv < tv):
+            ok = False
+        elif op == "==" and not (iv == tv):
+            ok = False
+        elif op == "!=" and not (iv != tv):
+            ok = False
+        elif op == "~=":
+            if not (iv >= tv):
+                ok = False
+            if len(tv) >= 2:
+                upper = list(tv)
+                upper[-2] += 1
+                for i in range(-1, -len(upper), -1):
+                    if i == -2:
+                        continue
+                    upper[i] = 0
+                if iv >= tuple(upper):
+                    ok = False
+    return ok
 
-    if v1 > v2:
+
+def run() -> int:
+    categorized = parse_all_dependencies()
+    if not categorized:
+        print("\nERROR: no dependency config files found")
         return 1
-    elif v1 < v2:
-        return -1
-    else:
-        return 0
 
-
-def check_dependencies() -> Tuple[List[str], List[str], List[str]]:
-    """检查依赖
-
-    Returns:
-        (installed, missing, version_mismatch)
-    """
-    installed = []
-    missing = []
-    version_mismatch = []
-
-    for package, info in DEPENDENCIES.items():
-        version = get_version(package)
-
-        if version is None:
-            if info['required']:
-                missing.append(package)
-            else:
-                # 可选依赖不在检查中显示缺失
-                pass
-        else:
-            # 检查版本
-            min_version = info.get('min_version')
-            if min_version and compare_versions(version, min_version) < 0:
-                version_mismatch.append(f"{package} ({version} < {min_version})")
-            else:
-                installed.append(f"{package} {version}")
-
-    return installed, missing, version_mismatch
-
-
-def print_results(installed: List[str], missing: List[str],
-                  version_mismatch: List[str]):
-    """打印检查结果"""
+    all_packages = collect_unique(categorized)
 
     print("\n" + "=" * 60)
-    print("Miya 依赖检查结果")
+    print("Miya Dependencies Check")
+    print(f"Config dir: {DEPS_DIR}")
+    print(f"Categories: {len(categorized)}")
+    print(f"Total:      {len(all_packages)}")
     print("=" * 60)
 
-    # 已安装
-    if installed:
-        print("\n✓ 已安装的依赖:")
-        for pkg in installed:
-            print(f"  ✓ {pkg}")
+    installed_list = []
+    missing_list = []
+    mismatch_list = []
 
-    # 版本不匹配
-    if version_mismatch:
-        print("\n⚠ 版本不匹配:")
-        for pkg in version_mismatch:
-            print(f"  ⚠ {pkg}")
+    for name, spec in sorted(all_packages.items()):
+        version = get_installed_version(name)
+        if version is None:
+            missing_list.append(f"{name} {spec}".strip())
+        else:
+            if spec and not check_constraint(version, spec):
+                mismatch_list.append(f"{name}=={version} (need {spec})")
+            else:
+                installed_list.append(f"{name}=={version}")
 
-    # 缺失
-    if missing:
-        print("\n✗ 缺少的依赖:")
-        for pkg in missing:
-            print(f"  ✗ {pkg}")
+    if missing_list:
+        print("\n[MISSING]")
+        for pkg in missing_list:
+            print(f"  - {pkg}")
 
-    # 统计
+    if mismatch_list:
+        print("\n[VERSION MISMATCH]")
+        for pkg in mismatch_list:
+            print(f"  - {pkg}")
+
+    if missing_list or mismatch_list:
+        print(f"\n  Installed: {len(installed_list)}")
+
     print("\n" + "-" * 60)
-    print(f"统计: {len(installed)} 个已安装, {len(missing)} 个缺失, {len(version_mismatch)} 个版本不匹配")
+    print(
+        f"Result: {len(installed_list)} OK | {len(missing_list)} missing | {len(mismatch_list)} mismatch"
+    )
     print("-" * 60)
 
-    # 建议
-    if missing or version_mismatch:
-        print("\n建议操作:")
-
-        if missing:
-            print(f"\n  安装缺失的依赖:")
-            print(f"  pip install {' '.join(missing)}")
-
-        if version_mismatch:
-            print(f"\n  升级版本不匹配的依赖:")
-            print(f"  pip install -r setup/requirements/full.txt --upgrade")
-
+    if missing_list or mismatch_list:
+        print("\nRecommend:")
+        print(f"  pip install -r setup/requirements/full.txt")
     else:
-        print("\n✓ 所有依赖检查通过！")
+        print("\n[OK] All dependencies verified!")
 
     print("=" * 60 + "\n")
-
-    return len(missing) == 0 and len(version_mismatch) == 0
-
-
-def main():
-    """主函数"""
-    try:
-        installed, missing, version_mismatch = check_dependencies()
-        success = print_results(installed, missing, version_mismatch)
-
-        if not success:
-            sys.exit(1)
-        else:
-            sys.exit(0)
-
-    except Exception as e:
-        print(f"\n错误: {e}", file=sys.stderr)
-        sys.exit(1)
+    return 0 if not missing_list and not mismatch_list else 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(run())
