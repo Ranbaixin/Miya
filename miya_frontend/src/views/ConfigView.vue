@@ -92,6 +92,8 @@ const tabs: { key: TabKey, label: string, icon: string }[] = [
 // 外观
 const live2dEnabled = useStorage('miya-live2d-enabled', true)
 const cardScale = useStorage('miya-panel-card-scale', 1.0)
+const verseText = useStorage('miya-verse-text', '雪落无声 — 愿系铃中')
+const showStatus = useStorage('miya-show-status', true)
 const live2dX = computed({ get: () => CONFIG.value.web_live2d.model.x, set: v => CONFIG.value.web_live2d.model.x = v })
 const live2dY = computed({ get: () => CONFIG.value.web_live2d.model.y, set: v => CONFIG.value.web_live2d.model.y = v })
 const live2dSize = computed({ get: () => CONFIG.value.web_live2d.model.size, set: v => CONFIG.value.web_live2d.model.size = v })
@@ -262,6 +264,18 @@ function getRouteModel(key: string): string {
               <Slider v-model="cardScale" :min="0.6" :max="2" :step="0.05" />
               <span class="slider-val">{{ Math.round(cardScale * 100) }}%</span>
             </div>
+          </div>
+        </div>
+
+        <div class="config-section">
+          <h3>首页底栏</h3>
+          <div class="config-item">
+            <label>底部文案</label>
+            <InputText v-model="verseText" placeholder="输入一句话..." class="input-sm" />
+          </div>
+          <div class="config-item">
+            <label>显示在线状态</label>
+            <ToggleSwitch v-model="showStatus" />
           </div>
         </div>
 
