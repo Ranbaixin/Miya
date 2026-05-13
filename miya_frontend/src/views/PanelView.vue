@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { useWindowSize } from '@vueuse/core'
+import { useStorage, useWindowSize } from '@vueuse/core'
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import API from '@/api/core'
+import { CONFIG } from '@/utils/config'
 
 const router = useRouter()
-import { CONFIG } from '@/utils/config'
 
 const miyaPersona = ref('')
 const miyaBackendOnline = ref(false)
@@ -49,11 +49,14 @@ onMounted(() => window.addEventListener('mousemove', onMouseMove))
 onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
 
 // ─── Wing geometry ───────────────────────────────────────────────────
-const tipRadius   = computed(() => Math.min(260, height.value * 0.30))
-const innerRadius = computed(() => Math.min(200, height.value * 0.24))
+const cardScale = useStorage('miya-panel-card-scale', 1.0)
+// 半径随缩放自适应：卡片越大，轨道越远，减少重叠
+const gapFactor = computed(() => 0.5 + cardScale.value * 0.6) // scale 1.0→1.1, scale 2.0→1.7
+const tipRadius   = computed(() => Math.min(340, height.value * 0.38) * gapFactor.value)
+const innerRadius = computed(() => Math.min(260, height.value * 0.32) * gapFactor.value)
 const rotationRx  = computed(() => (mouse.y - 0.5) * -5)
 const rotationRy  = computed(() => (mouse.x - 0.5) * 8)
-const SCALE       = computed(() => Math.min(1.08, Math.max(0.72, height.value / 900)))
+const SCALE       = computed(() => Math.min(1.08, Math.max(0.72, height.value / 900)) * cardScale.value)
 
 const cardPositions = computed(() =>
   cards.map(c => {
@@ -209,6 +212,26 @@ function enterFloatingMode() {
     </div>
 
     <div class="orbit-verse">雪落无声 — 愿系铃中</div>
+    <!-- 卡片尺寸调节 -->
+    <div class="card-scale-bar">
+      <span class="scale-icon">◈</span>
+      <input
+        type="range"
+        :min="0.6"
+        :max="2.0"
+        :step="0.05"
+        v-model="cardScale"
+        class="scale-slider"
+        title="调节卡片大小"
+      >
+      <span class="scale-val">{{ Math.round(cardScale * 100) }}%</span>
+      <button
+        class="scale-reset"
+        :class="{ active: cardScale === 1.0 }"
+        @click="cardScale = 1.0"
+        title="恢复默认"
+      >↺</button>
+    </div>
     <div v-if="miyaBackendOnline" class="orbit-status">
       <span class="status-dot" />
       <span class="status-item">在线</span>
@@ -370,4 +393,77 @@ function enterFloatingMode() {
 .status-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(0,229,255,0.6); box-shadow: 0 0 6px rgba(0,229,255,0.3); }
 .status-sep { opacity: 0.3; }
 .status-item { opacity: 0.7; }
+
+/* ── 卡片尺寸调节条 ────────────────────────────── */
+.card-scale-bar {
+  position: absolute;
+  bottom: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  opacity: 0.25;
+  transition: opacity 0.4s;
+  z-index: 5;
+}
+.card-scale-bar:hover {
+  opacity: 0.75;
+}
+.scale-icon {
+  font-size: 0.55rem;
+  color: var(--miya-text-dim);
+}
+.scale-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 80px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(0, 229, 255, 0.12);
+  outline: none;
+  cursor: pointer;
+}
+.scale-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--miya-accent, #a78bfa);
+  box-shadow: 0 0 6px var(--miya-glow, rgba(167, 139, 250, 0.3));
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.scale-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.3);
+}
+.scale-val {
+  font-size: 0.55rem;
+  color: var(--miya-text-dim);
+  font-family: 'JetBrains Mono', monospace;
+  min-width: 2.2rem;
+}
+.scale-reset {
+  padding: 0;
+  width: 16px;
+  height: 16px;
+  border: 1px solid rgba(0, 229, 255, 0.12);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--miya-text-dim);
+  font-size: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  line-height: 1;
+}
+.scale-reset:hover,
+.scale-reset.active {
+  border-color: rgba(0, 229, 255, 0.3);
+  color: var(--miya-accent);
+  background: rgba(0, 229, 255, 0.06);
+}
 </style>
