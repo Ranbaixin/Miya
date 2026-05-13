@@ -94,8 +94,8 @@ const live2dEnabled = useStorage('miya-live2d-enabled', true)
 const cardScale = useStorage('miya-panel-card-scale', 1.0)
 const verseText = useStorage('miya-verse-text', '雪落无声 — 愿系铃中')
 const showStatus = useStorage('miya-show-status', true)
-const logoOpacity = useStorage('miya-logo-opacity', 1.0)
-const footerOpacity = useStorage('miya-footer-opacity', 1.0)
+const logoBrightness = useStorage('miya-logo-brightness', 1.0)
+const footerBrightness = useStorage('miya-footer-brightness', 1.0)
 const live2dX = computed({ get: () => CONFIG.value.web_live2d.model.x, set: v => CONFIG.value.web_live2d.model.x = v })
 const live2dY = computed({ get: () => CONFIG.value.web_live2d.model.y, set: v => CONFIG.value.web_live2d.model.y = v })
 const live2dSize = computed({ get: () => CONFIG.value.web_live2d.model.size, set: v => CONFIG.value.web_live2d.model.size = v })
@@ -273,8 +273,8 @@ function getRouteModel(key: string): string {
           <h3>Logo 辉光</h3>
           <div class="config-item">
             <div class="slider-row">
-              <Slider v-model="logoOpacity" :min="0.2" :max="1" :step="0.01" />
-              <span class="slider-val">{{ Math.round(logoOpacity * 100) }}%</span>
+              <Slider v-model="logoBrightness" :min="0.3" :max="2.5" :step="0.01" />
+              <span class="slider-val">{{ Math.round(logoBrightness * 100) }}%</span>
             </div>
           </div>
         </div>
@@ -292,8 +292,8 @@ function getRouteModel(key: string): string {
           <div class="config-item" style="margin-top:0.6rem">
             <label>底栏亮度</label>
             <div class="slider-row">
-              <Slider v-model="footerOpacity" :min="0.1" :max="1" :step="0.01" />
-              <span class="slider-val">{{ Math.round(footerOpacity * 100) }}%</span>
+              <Slider v-model="footerBrightness" :min="0.3" :max="2.5" :step="0.01" />
+              <span class="slider-val">{{ Math.round(footerBrightness * 100) }}%</span>
             </div>
           </div>
         </div>

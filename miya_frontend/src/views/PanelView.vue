@@ -12,8 +12,8 @@ const miyaBackendOnline = ref(false)
 const miyaPlatforms = ref(0)
 const verseText = useStorage('miya-verse-text', '雪落无声 — 愿系铃中')
 const showStatus = useStorage('miya-show-status', true)
-const logoOpacity = useStorage('miya-logo-opacity', 1.0)
-const footerOpacity = useStorage('miya-footer-opacity', 1.0)
+const logoBrightness = useStorage('miya-logo-brightness', 1.0)
+const footerBrightness = useStorage('miya-footer-brightness', 1.0)
 
 onMounted(async () => {
   try {
@@ -114,7 +114,7 @@ function enterFloatingMode() {
 <template>
   <div class="star-orbit">
     <!-- ── Center Logo ── -->
-    <div class="logo-center" :style="{ opacity: logoOpacity }">
+    <div class="logo-center" :style="{ filter: `brightness(${logoBrightness})` }">
       <div class="logo-ring">
         <svg viewBox="0 0 100 100" fill="none">
           <circle cx="50" cy="42" r="40" stroke="var(--miya-primary)" stroke-width="0.8" opacity="0.18" />
@@ -215,8 +215,8 @@ function enterFloatingMode() {
       </div>
     </div>
 
-    <div v-if="verseText" class="orbit-verse" :style="{ opacity: `${(footerOpacity * 0.35).toFixed(3)}` }">{{ verseText }}</div>
-    <div v-if="miyaBackendOnline && showStatus" class="orbit-status" :style="{ opacity: `${(footerOpacity * 0.5).toFixed(3)}` }">
+    <div v-if="verseText" class="orbit-verse" :style="{ filter: `brightness(${footerBrightness})` }">{{ verseText }}</div>
+    <div v-if="miyaBackendOnline && showStatus" class="orbit-status" :style="{ filter: `brightness(${footerBrightness})` }">
       <span class="status-dot" />
       <span class="status-item">在线</span>
       <span class="status-sep">·</span>
