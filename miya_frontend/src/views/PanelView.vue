@@ -12,6 +12,7 @@ const miyaBackendOnline = ref(false)
 const miyaPlatforms = ref(0)
 const verseText = useStorage('miya-verse-text', '雪落无声 — 愿系铃中')
 const showStatus = useStorage('miya-show-status', true)
+const logoOpacity = useStorage('miya-logo-opacity', 1.0)
 
 onMounted(async () => {
   try {
@@ -112,7 +113,7 @@ function enterFloatingMode() {
 <template>
   <div class="star-orbit">
     <!-- ── Center Logo ── -->
-    <div class="logo-center">
+    <div class="logo-center" :style="{ opacity: logoOpacity }">
       <div class="logo-ring">
         <svg viewBox="0 0 100 100" fill="none">
           <circle cx="50" cy="42" r="40" stroke="var(--miya-primary)" stroke-width="0.8" opacity="0.18" />

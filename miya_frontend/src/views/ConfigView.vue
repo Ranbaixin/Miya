@@ -94,6 +94,7 @@ const live2dEnabled = useStorage('miya-live2d-enabled', true)
 const cardScale = useStorage('miya-panel-card-scale', 1.0)
 const verseText = useStorage('miya-verse-text', '雪落无声 — 愿系铃中')
 const showStatus = useStorage('miya-show-status', true)
+const logoOpacity = useStorage('miya-logo-opacity', 1.0)
 const live2dX = computed({ get: () => CONFIG.value.web_live2d.model.x, set: v => CONFIG.value.web_live2d.model.x = v })
 const live2dY = computed({ get: () => CONFIG.value.web_live2d.model.y, set: v => CONFIG.value.web_live2d.model.y = v })
 const live2dSize = computed({ get: () => CONFIG.value.web_live2d.model.size, set: v => CONFIG.value.web_live2d.model.size = v })
@@ -263,6 +264,16 @@ function getRouteModel(key: string): string {
             <div class="slider-row">
               <Slider v-model="cardScale" :min="0.6" :max="2" :step="0.05" />
               <span class="slider-val">{{ Math.round(cardScale * 100) }}%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="config-section">
+          <h3>Logo 辉光</h3>
+          <div class="config-item">
+            <div class="slider-row">
+              <Slider v-model="logoOpacity" :min="0.2" :max="1" :step="0.01" />
+              <span class="slider-val">{{ Math.round(logoOpacity * 100) }}%</span>
             </div>
           </div>
         </div>
