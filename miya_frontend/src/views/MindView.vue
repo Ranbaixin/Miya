@@ -95,29 +95,30 @@ function pickNode(sx: number, sy: number) {
 }
 
 function getColor(node: StarNode): string {
-  if (node.isAnchor) return 'var(--miya-comp-mind-anchor, #ffd700)'
-  if (node.emotion && getEmotionColors()[node.emotion]) return getEmotionColors()[node.emotion]!
-  return getLevelColor(node.type) || getLevelColor(node.level) || '#aaa'
+  if (node.isAnchor) return cachedAnchorColor
+  if (node.emotion && cachedEmotionColors[node.emotion]) return cachedEmotionColors[node.emotion]!
+  return cachedLevelColors[node.type] || cachedLevelColors[node.level] || '#aaa'
 }
 
-function getLevelColor(level: string): string | undefined {
+// 缓存：只在初始化时读取一次 CSS 变量，避免 animate 每帧读取
+let cachedAnchorColor = '#ffd700'
+let cachedLevelColors: Record<string, string> = {}
+let cachedEmotionColors: Record<string, string> = {}
+
+function refreshColorCache() {
   const root = getComputedStyle(document.documentElement)
-  const map: Record<string, string> = {
+  cachedAnchorColor = root.getPropertyValue('--miya-comp-mind-anchor').trim() || '#ffd700'
+  cachedLevelColors = {
     long_term: root.getPropertyValue('--miya-comp-mind-long-term').trim() || '#00e5ff',
     short_term: root.getPropertyValue('--miya-comp-mind-short-term').trim() || '#7dd3fc',
     dialogue: root.getPropertyValue('--miya-comp-mind-dialogue').trim() || '#b44dff',
     semantic: root.getPropertyValue('--miya-comp-mind-semantic').trim() || '#ff6b9d',
     knowledge: root.getPropertyValue('--miya-comp-mind-knowledge').trim() || '#ffd700',
-    core: root.getPropertyValue('--miya-comp-mind-anchor').trim() || '#ffd700',
+    core: cachedAnchorColor,
     user: root.getPropertyValue('--miya-comp-mind-semantic').trim() || '#ff6b9d',
     system: root.getPropertyValue('--miya-comp-mind-short-term').trim() || '#7dd3fc',
   }
-  return map[level]
-}
-
-function getEmotionColors(): Record<string, string> {
-  const root = getComputedStyle(document.documentElement)
-  return {
+  cachedEmotionColors = {
     joy: root.getPropertyValue('--miya-comp-emotion-joy').trim() || '#ffd700',
     sadness: root.getPropertyValue('--miya-comp-emotion-sadness').trim() || '#7dd3fc',
     anger: root.getPropertyValue('--miya-comp-emotion-anger').trim() || '#ff4444',
@@ -399,6 +400,7 @@ onMounted(() => {
     })
   }
 
+  refreshColorCache()
   loadData()
   animId = requestAnimationFrame(animate)
 })
