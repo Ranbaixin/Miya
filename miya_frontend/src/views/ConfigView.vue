@@ -91,6 +91,7 @@ const tabs: { key: TabKey, label: string, icon: string }[] = [
 
 // 外观
 const live2dEnabled = useStorage('miya-live2d-enabled', true)
+const cardScale = useStorage('miya-panel-card-scale', 1.0)
 const live2dX = computed({ get: () => CONFIG.value.web_live2d.model.x, set: v => CONFIG.value.web_live2d.model.x = v })
 const live2dY = computed({ get: () => CONFIG.value.web_live2d.model.y, set: v => CONFIG.value.web_live2d.model.y = v })
 const live2dSize = computed({ get: () => CONFIG.value.web_live2d.model.size, set: v => CONFIG.value.web_live2d.model.size = v })
@@ -251,6 +252,16 @@ function getRouteModel(key: string): string {
           <div class="config-item" style="margin-top:0.6rem">
             <label>不透明度</label>
             <div class="slider-row"><Slider v-model="bgOpacity" :min="0" :max="1" :step="0.01" /><span class="slider-val">{{ Math.round(bgOpacity * 100) }}%</span></div>
+          </div>
+        </div>
+
+        <div class="config-section">
+          <h3>首页卡片大小</h3>
+          <div class="config-item">
+            <div class="slider-row">
+              <Slider v-model="cardScale" :min="0.6" :max="2" :step="0.05" />
+              <span class="slider-val">{{ Math.round(cardScale * 100) }}%</span>
+            </div>
           </div>
         </div>
 

@@ -211,27 +211,7 @@ function enterFloatingMode() {
       </div>
     </div>
 
-    <div class="orbit-verse">雪落无声 — 愿系铃中</div>
-    <!-- 卡片尺寸调节 -->
-    <div class="card-scale-bar">
-      <span class="scale-icon">◈</span>
-      <input
-        type="range"
-        :min="0.6"
-        :max="2.0"
-        :step="0.05"
-        v-model="cardScale"
-        class="scale-slider"
-        title="调节卡片大小"
-      >
-      <span class="scale-val">{{ Math.round(cardScale * 100) }}%</span>
-      <button
-        class="scale-reset"
-        :class="{ active: cardScale === 1.0 }"
-        @click="cardScale = 1.0"
-        title="恢复默认"
-      >↺</button>
-    </div>
+    <div class="orbit-verse">雪落无痕 — 愿系铃中</div>
     <div v-if="miyaBackendOnline" class="orbit-status">
       <span class="status-dot" />
       <span class="status-item">在线</span>
@@ -393,83 +373,4 @@ function enterFloatingMode() {
 .status-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(0,229,255,0.6); box-shadow: 0 0 6px rgba(0,229,255,0.3); }
 .status-sep { opacity: 0.3; }
 .status-item { opacity: 0.7; }
-
-/* ── 卡片尺寸调节条 ────────────────────────────── */
-.card-scale-bar {
-  position: absolute;
-  bottom: 64px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  background: rgba(8, 14, 24, 0.45);
-  backdrop-filter: blur(6px);
-  border: 1px solid color-mix(in srgb, var(--miya-accent, #a78bfa) 10%, transparent);
-  border-radius: 1rem;
-  padding: 0.3rem 0.7rem;
-  opacity: 0.7;
-  transition: opacity 0.3s, border-color 0.3s;
-  z-index: 15;
-}
-.card-scale-bar:hover {
-  opacity: 1;
-  border-color: color-mix(in srgb, var(--miya-accent, #a78bfa) 25%, transparent);
-}
-.scale-icon {
-  font-size: 0.55rem;
-  color: var(--miya-text-dim);
-}
-.scale-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100px;
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(0, 229, 255, 0.18);
-  outline: none;
-  cursor: pointer;
-}
-.scale-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--miya-accent, #a78bfa);
-  box-shadow: 0 0 6px var(--miya-glow, rgba(167, 139, 250, 0.3));
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-.scale-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.3);
-}
-.scale-val {
-  font-size: 0.55rem;
-  color: var(--miya-text-dim);
-  font-family: 'JetBrains Mono', monospace;
-  min-width: 2.2rem;
-}
-.scale-reset {
-  padding: 0;
-  width: 16px;
-  height: 16px;
-  border: 1px solid rgba(0, 229, 255, 0.12);
-  border-radius: 50%;
-  background: transparent;
-  color: var(--miya-text-dim);
-  font-size: 0.5rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  line-height: 1;
-}
-.scale-reset:hover,
-.scale-reset.active {
-  border-color: rgba(0, 229, 255, 0.3);
-  color: var(--miya-accent);
-  background: rgba(0, 229, 255, 0.06);
-}
 </style>
