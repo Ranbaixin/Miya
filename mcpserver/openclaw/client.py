@@ -322,7 +322,7 @@ class OpenClawClient:
         session_key: Optional[str],
         timeout_seconds: int,
     ) -> Dict[str, Any]:
-        """轮询异步任务结果"""
+        """轮询异步任务结果（指数退避 + 智能检测 agent 回复）"""
         if not session_key:
             return {
                 "success": False,
@@ -331,30 +331,41 @@ class OpenClawClient:
                 "task_id": str(uuid.uuid4()),
             }
 
-        waited = 0
+        waited = 0.0
         poll_interval = 2.0
 
         while waited < timeout_seconds:
-            history = await self.get_history(session_key, limit=5)
+            history = await self.get_history(session_key, limit=10)
             if history.get("success") and history.get("messages"):
                 messages = history["messages"]
                 if isinstance(messages, list) and len(messages) > 0:
-                    last_msg = messages[-1]
-                    if isinstance(last_msg, dict):
-                        content = last_msg.get("content", "")
+                    # 倒序查找最后一条 agent/assistant 消息（跳过 tool/user 消息）
+                    for msg in reversed(messages):
+                        if not isinstance(msg, dict):
+                            continue
+                        role = msg.get("role", "")
+                        content = msg.get("content", "")
                         if isinstance(content, dict):
                             content = content.get("text", str(content))
-                        return {
-                            "success": True,
-                            "session_key": session_key,
-                            "reply": str(content),
-                            "status": "completed",
-                            "task_id": str(uuid.uuid4()),
-                            "messages": messages,
-                        }
+                        # 只取 assistant 的最终文本回复（不含 tool_calls）
+                        if (
+                            role in ("assistant", "agent")
+                            and content
+                            and not msg.get("tool_calls")
+                        ):
+                            return {
+                                "success": True,
+                                "session_key": session_key,
+                                "reply": str(content),
+                                "status": "completed",
+                                "task_id": str(uuid.uuid4()),
+                                "messages": messages,
+                            }
 
             await asyncio.sleep(poll_interval)
             waited += poll_interval
+            # 指数退避: 2s → 3.5s → 5s (max)，减少无效轮询
+            poll_interval = min(poll_interval * 1.5, 5.0)
 
         return {
             "success": False,

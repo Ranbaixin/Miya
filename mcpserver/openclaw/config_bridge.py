@@ -162,6 +162,11 @@ def ensure_openclaw_config(gateway_port: int = DEFAULT_GATEWAY_PORT) -> bool:
                 "port": gateway_port,
                 "bind": "loopback",
                 "auth": {"mode": "token", "token": gateway_token},
+                "http": {
+                    "endpoints": {
+                        "chatCompletions": {"enabled": True},
+                    }
+                },
             },
             "hooks": {
                 "enabled": True,
@@ -222,6 +227,11 @@ def inject_miya_llm_config(miya_api_port: int = 8000) -> bool:
         gateway = config_data.setdefault("gateway", {})
         if not isinstance(gateway.get("mode"), str) or not gateway["mode"].strip():
             gateway["mode"] = "local"
+
+        http_cfg = gateway.setdefault("http", {})
+        endpoints = http_cfg.setdefault("endpoints", {})
+        if "chatCompletions" not in endpoints:
+            endpoints["chatCompletions"] = {"enabled": True}
 
         # === LLM Provider 注入 ===
         provider_name = _detect_provider_type(model_info["model"])

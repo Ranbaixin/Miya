@@ -1146,6 +1146,10 @@ class DecisionHub:
         elif not isinstance(content, str):
             content = str(content) if content else ""
 
+        content_lower = content.lower().strip()
+
+        # AI 自主判断是否调用电脑控制工具 — 无需硬编码关键词
+
         sender_name = context.get("sender_name", "用户")
         user_id = context.get("user_id") or context.get("sender_id") or 0
 

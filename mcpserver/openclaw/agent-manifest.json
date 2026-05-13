@@ -11,9 +11,9 @@
     "tools": [
       {
         "name": "send_message",
-        "description": "向 OpenClaw Agent 发送任务消息，让 AI 在电脑上执行操作",
+        "description": "在佳的电脑上执行实际操作。发送自然语言指令让AI agent操控佳的电脑：打开软件、启动浏览器、操作文件、执行命令、控制窗口等。你可以直接操作佳的电脑桌面。调用此工具即可让电脑执行你的指令。",
         "parameters": {
-          "message": "string - 要发送的任务描述",
+          "message": "string - 要在电脑上执行什么操作（自然语言描述，如'打开火狐浏览器'）",
           "session_key": "string - 会话键（可选，为空则创建新会话）",
           "workspace": "string - 工作目录路径（可选）",
           "timeout": "number - 超时秒数（可选，默认 120）"

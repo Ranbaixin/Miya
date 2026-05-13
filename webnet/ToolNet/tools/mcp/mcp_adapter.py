@@ -139,13 +139,21 @@ class MCPTool(BaseTool):
 
 
 def discover_mcp_tools() -> List[MCPTool]:
-    """从已注册的 MCP 服务自动发现并创建格式塔工具"""
+    """从已注册的 MCP 服务自动发现并创建格式塔工具
+
+    ToolNet 可能在 MCPManager 之前初始化，此时服务列表为空。
+    返回占位列表，工具将在 MCPManager 就绪后由 _sync_toolnet_mcp_tools 重新加载。
+    """
     tools: List[MCPTool] = []
 
     try:
         from core.mcp_manager import get_mcp_manager
 
         manager = get_mcp_manager()
+        if not manager._initialized:
+            logger.warning("[MCPNet] MCP 服务尚未初始化，将在就绪后自动重载 MCP 工具")
+            return tools
+
         for service_name, service in manager._services.items():
             manifest = service.manifest
             capabilities = manifest.capabilities
@@ -166,3 +174,28 @@ def discover_mcp_tools() -> List[MCPTool]:
         logger.warning(f"[MCPNet] 工具发现失败（MCP 可能尚未初始化）: {e}")
 
     return tools
+
+
+async def reload_mcp_tools(registry=None):
+    """MCP 就绪后重新加载 MCP 工具到 ToolNet 注册表"""
+    if registry is None:
+        from webnet.ToolNet import get_tool_registry
+
+        registry = get_tool_registry()
+
+    from core.mcp_manager import get_mcp_manager
+
+    manager = get_mcp_manager()
+    if not manager._initialized:
+        await manager.initialize()
+
+    tools = discover_mcp_tools()
+    for tool in tools:
+        # 跳过已注册的工具
+        if registry.get_tool(tool._full_name):
+            continue
+        registry.register(tool)
+
+    if tools:
+        logger.info(f"[MCPNet] MCP 工具重载完成，新增 {len(tools)} 个工具")
+    return len(tools)

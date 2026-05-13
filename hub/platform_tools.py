@@ -29,6 +29,8 @@ class PlatformToolsManager:
         "grok_search",
         # MCPNet — 全平台电脑操控
         "mcp_openclaw_send_message",
+        "mcp_openclaw_start_gateway",
+        "mcp_openclaw_stop_gateway",
         "mcp_openclaw_get_status",
         "mcp_openclaw_get_history",
         "mcp_code_executor_execute",

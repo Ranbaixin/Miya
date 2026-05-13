@@ -698,14 +698,25 @@ class WebAPI:
         # ========== OpenAI 兼容 /v1/chat/completions（供 OpenClaw 等调用） ==========
         @self.router.post("/v1/chat/completions")
         async def openai_chat_completions(request: dict):
-            """OpenAI 兼容对话接口 - 内部代理到弥娅模型池"""
+            """OpenAI 兼容对话接口 - 内部代理到弥娅模型池
+
+            透传 tools / tool_choice 参数，支持 stream 和非 stream 模式。
+            返回标准 OpenAI chat.completion 响应（含 tool_calls）。
+            由调用方（OpenClaw 等）自行执行工具。
+            """
             import time
             import uuid
+            import json
+            from starlette.responses import StreamingResponse
 
             model_name = request.get("model", "")
             messages = request.get("messages", [])
             temperature = request.get("temperature", 0.7)
             max_tokens = request.get("max_tokens", 2000)
+            tools = request.get("tools", None)
+            tool_choice = request.get("tool_choice", None)
+            stream = request.get("stream", False)
+            stream_options = request.get("stream_options", None)
 
             if not messages:
                 raise HTTPException(status_code=400, detail="messages is required")
@@ -715,18 +726,23 @@ class WebAPI:
                 from core.ai_client import AIMessage
 
                 pool = ModelPoolManager()
-                client = pool.create_ai_client(model_id=model_name)
+                client_wrapper = pool.create_ai_client(model_id=model_name)
 
-                if not client:
-                    client = pool.create_ai_client(task_type="simple_chat")
+                if not client_wrapper:
+                    client_wrapper = pool.create_ai_client(task_type="simple_chat")
 
-                if not client:
+                if not client_wrapper:
                     raise HTTPException(
                         status_code=503, detail="No available model client"
                     )
 
+                if not client_wrapper.client:
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Model client not initialized",
+                    )
+
                 def _normalize_content(content) -> str:
-                    """将 OpenAI 多模态内容格式转为纯文本"""
                     if isinstance(content, str):
                         return content
                     if isinstance(content, list):
@@ -735,10 +751,15 @@ class WebAPI:
                             if isinstance(block, dict):
                                 if block.get("type") == "text":
                                     parts.append(block.get("text", ""))
-                                else:
+                                elif block.get("type") == "image_url":
+                                    img = block.get("image_url", {})
                                     parts.append(
-                                        str(block.get(block.get("type", ""), ""))
+                                        img.get("url", "")
+                                        if isinstance(img, dict)
+                                        else str(img)
                                     )
+                                else:
+                                    parts.append(str(block))
                             else:
                                 parts.append(str(block))
                         return "\n".join(parts)
@@ -748,32 +769,133 @@ class WebAPI:
                     AIMessage(
                         role=m.get("role", "user"),
                         content=_normalize_content(m.get("content", "")),
+                        tool_calls=m.get("tool_calls"),
+                        tool_call_id=m.get("tool_call_id"),
                     )
                     for m in messages
                 ]
 
-                client.config["temperature"] = temperature
-                client.config["max_tokens"] = max_tokens
-
-                reply = await client.chat(ai_messages, use_miya_prompt=False)
+                openai_messages = client_wrapper._convert_messages_to_openai_format(
+                    ai_messages
+                )
 
                 request_id = f"chatcmpl-{uuid.uuid4().hex[:24]}"
+
+                request_params = {
+                    "model": client_wrapper.model,
+                    "messages": openai_messages,
+                    "temperature": temperature,
+                    "max_tokens": max_tokens,
+                    "stream": stream,
+                }
+
+                if stream and stream_options:
+                    request_params["stream_options"] = stream_options
+
+                if tools:
+                    request_params["tools"] = tools
+                    request_params["tool_choice"] = (
+                        client_wrapper._normalize_tool_choice(tool_choice or "auto")
+                    )
+                elif tool_choice:
+                    request_params["tool_choice"] = tool_choice
+
+                if stream:
+
+                    async def generate_sse():
+                        created = int(time.time())
+                        try:
+                            response_stream = (
+                                await client_wrapper.client.chat.completions.create(
+                                    **request_params
+                                )
+                            )
+                            async for chunk in response_stream:
+                                chunk_dict = chunk.model_dump()
+                                chunk_dict.setdefault("id", request_id)
+                                chunk_dict.setdefault("object", "chat.completion.chunk")
+                                chunk_dict.setdefault("created", created)
+                                chunk_dict.setdefault("model", client_wrapper.model)
+                                data = json.dumps(chunk_dict, ensure_ascii=False)
+                                yield f"data: {data}\n\n"
+                            yield "data: [DONE]\n\n"
+                        except Exception as e:
+                            logger.error(f"[OpenAI兼容] SSE 流失败: {e}", exc_info=True)
+                            error_chunk = json.dumps(
+                                {
+                                    "id": request_id,
+                                    "object": "chat.completion.chunk",
+                                    "created": created,
+                                    "model": client_wrapper.model,
+                                    "choices": [
+                                        {
+                                            "index": 0,
+                                            "delta": {
+                                                "role": "assistant",
+                                                "content": None,
+                                            },
+                                            "finish_reason": "error",
+                                        }
+                                    ],
+                                },
+                                ensure_ascii=False,
+                            )
+                            yield f"data: {error_chunk}\n\n"
+                            yield "data: [DONE]\n\n"
+
+                    return StreamingResponse(
+                        generate_sse(),
+                        media_type="text/event-stream",
+                        headers={
+                            "Cache-Control": "no-cache",
+                            "Connection": "keep-alive",
+                            "X-Accel-Buffering": "no",
+                        },
+                    )
+
+                # 非 stream 模式（原逻辑）
+                response = await client_wrapper.client.chat.completions.create(
+                    **request_params
+                )
+
+                choice = response.choices[0]
+                msg = choice.message
+
+                message_dict = {"role": "assistant", "content": msg.content or ""}
+
+                if msg.tool_calls:
+                    message_dict["tool_calls"] = [
+                        {
+                            "id": tc.id,
+                            "type": tc.type,
+                            "function": {
+                                "name": tc.function.name,
+                                "arguments": tc.function.arguments,
+                            },
+                        }
+                        for tc in msg.tool_calls
+                    ]
+
                 return {
                     "id": request_id,
                     "object": "chat.completion",
                     "created": int(time.time()),
-                    "model": client.model,
+                    "model": client_wrapper.model,
                     "choices": [
                         {
                             "index": 0,
-                            "message": {"role": "assistant", "content": reply},
-                            "finish_reason": "stop",
+                            "message": message_dict,
+                            "finish_reason": "tool_calls"
+                            if msg.tool_calls
+                            else (choice.finish_reason or "stop"),
                         }
                     ],
                     "usage": {
-                        "prompt_tokens": 0,
-                        "completion_tokens": 0,
-                        "total_tokens": 0,
+                        "prompt_tokens": getattr(response.usage, "prompt_tokens", 0),
+                        "completion_tokens": getattr(
+                            response.usage, "completion_tokens", 0
+                        ),
+                        "total_tokens": getattr(response.usage, "total_tokens", 0),
                     },
                 }
             except HTTPException:

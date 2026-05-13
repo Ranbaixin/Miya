@@ -25,7 +25,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const preferSource =
   process.env.OPENCLAW_GATEWAY_ENTRY_MODE === "source"
-  || process.execArgv.includes("tsx");
+  || process.execArgv.some(arg => arg.includes("tsx"));
 const explicitVendorRoot = process.env.OPENCLAW_GATEWAY_VENDOR_ROOT
   ? resolve(process.env.OPENCLAW_GATEWAY_VENDOR_ROOT.replace(/^file:\/\/\/?/i, ""))
   : null;
