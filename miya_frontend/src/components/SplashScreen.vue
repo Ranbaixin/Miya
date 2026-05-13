@@ -16,11 +16,14 @@ const emit = defineEmits<{
   titleDone: []
 }>()
 
-// ─── 标题阶段 ───────────────────────────────
+function getSplashColor(varName: string, fallback: string): string {
+  const val = getComputedStyle(document.documentElement).getPropertyValue(varName).trim()
+  return val || fallback
+}
+
 const titleOverlayVisible = ref(true)
 
 onMounted(() => {
-  // 标题图标出现时同时播放开机语音
   playWakeVoice()
 })
 
@@ -93,6 +96,7 @@ function initParticles() {
   }
 
   function animate() {
+    const particleHex = getSplashColor('--miya-comp-splash-particle', '#d4af37')
     ctx.clearRect(0, 0, w, h)
 
     for (let i = particles.length - 1; i >= 0; i--) {
@@ -118,14 +122,19 @@ function initParticles() {
       // 绘制发光粒子
       ctx.beginPath()
       ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
-      ctx.fillStyle = `rgba(212, 175, 55, ${p.alpha})`
+      ctx.fillStyle = particleHex.replace('#', '').replace(
+        /^([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/,
+        (_, r, g, b) => `rgba(${parseInt(r, 16)}, ${parseInt(g, 16)}, ${parseInt(b, 16)}, ${p.alpha})`,
+      )
       ctx.fill()
 
-      // 外发光
       if (p.size > 1.5) {
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.size * 2.5, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(212, 175, 55, ${p.alpha * 0.15})`
+        ctx.fillStyle = particleHex.replace('#', '').replace(
+          /^([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/,
+          (_, r, g, b) => `rgba(${parseInt(r, 16)}, ${parseInt(g, 16)}, ${parseInt(b, 16)}, ${p.alpha * 0.15})`,
+        )
         ctx.fill()
       }
 
@@ -183,17 +192,19 @@ const displayProgress = computed(() => Math.min(100, Math.round(props.progress))
       <!-- 阶段文字 + 百分比 -->
       <div
         class="flex justify-between w-full px-1 text-xs tracking-widest"
-        style="color: rgba(212, 175, 55, 0.7); font-family: 'Segoe UI', sans-serif;"
+        :style="{ color: `color-mix(in srgb, ${getSplashColor('--miya-comp-splash-progress', '#d4af37')} 70%, transparent)`, fontFamily: \"'Segoe UI', sans-serif\" }"
       >
         <span>{{ phase }}</span>
         <span>{{ displayProgress }}%</span>
       </div>
       <!-- 进度条轨道 -->
-      <div class="w-full h-0.5 rounded-full" style="background: rgba(212, 175, 55, 0.15);">
+      <div class="w-full h-0.5 rounded-full" :style="{ background: `color-mix(in srgb, ${getSplashColor('--miya-comp-splash-progress', '#d4af37')} 15%, transparent)` }">
         <div
           class="h-full rounded-full transition-all duration-300 ease-out"
-          style="background: linear-gradient(90deg, rgba(212, 175, 55, 0.4), rgba(212, 175, 55, 0.9));"
-          :style="{ width: `${displayProgress}%` }"
+          :style="{
+            background: `linear-gradient(90deg, color-mix(in srgb, ${getSplashColor('--miya-comp-splash-progress', '#d4af37')} 40%, transparent), color-mix(in srgb, ${getSplashColor('--miya-comp-splash-progress', '#d4af37')} 90%, transparent))`,
+            width: `${displayProgress}%`,
+          }"
         />
       </div>
       <!-- 停滞提示 -->
@@ -214,7 +225,7 @@ const displayProgress = computed(() => Math.min(100, Math.round(props.progress))
         class="absolute inset-0 flex items-end justify-center pb-28 cursor-pointer clickable"
         @click="emit('dismiss')"
       >
-        <span class="click-hint text-sm tracking-[0.3em]" style="color: rgba(212, 175, 55, 0.8);">
+        <span class="click-hint text-sm tracking-[0.3em]" :style="{ color: `color-mix(in srgb, ${getSplashColor('--miya-comp-splash-title', '#d4af37')} 80%, transparent)` }">
           点 击 唤 醒
         </span>
       </div>
@@ -233,6 +244,12 @@ const displayProgress = computed(() => Math.min(100, Math.round(props.progress))
 </template>
 
 <style scoped>
+/* ── 组件调色变量 ── */
+.frame-mask, .particle-layer {
+  --splash-particle: var(--miya-comp-splash-particle, #d4af37);
+  --splash-progress: var(--miya-comp-splash-progress, #d4af37);
+  --splash-title: var(--miya-comp-splash-title, #d4af37);
+}
 /* 光粒层：与 frame-mask 相同 clip-path，只在四周暗区显示粒子，不遮挡 L2D 窗口 */
 .particle-layer {
   position: absolute;
@@ -281,8 +298,8 @@ const displayProgress = computed(() => Math.min(100, Math.round(props.progress))
   left: 50%;
   top: 38%;
   transform: translate(-50%, -50%);
-  border: 1px solid rgba(212, 175, 55, 0.4);
-  box-shadow: 0 0 15px rgba(212, 175, 55, 0.15), inset 0 0 15px rgba(212, 175, 55, 0.05);
+  border: 1px solid color-mix(in srgb, var(--splash-title) 40%, transparent);
+  box-shadow: 0 0 15px color-mix(in srgb, var(--splash-title) 15%, transparent), inset 0 0 15px color-mix(in srgb, var(--splash-title) 5%, transparent);
   pointer-events: none;
 }
 
@@ -290,17 +307,16 @@ const displayProgress = computed(() => Math.min(100, Math.round(props.progress))
 .stall-hint {
   margin-top: 0.5rem;
   font-size: 0.65rem;
-  color: rgba(212, 175, 55, 0.45);
+  color: color-mix(in srgb, var(--splash-progress) 45%, transparent);
   letter-spacing: 0.05em;
 }
 
-/* 左下角版本号 */
 .version-label {
   position: absolute;
   bottom: 1.2rem;
   left: 1.5rem;
   font-size: 0.75rem;
-  color: rgba(212, 175, 55, 0.35);
+  color: color-mix(in srgb, var(--splash-title) 35%, transparent);
   letter-spacing: 0.08em;
   font-family: 'Segoe UI', sans-serif;
 }
@@ -312,7 +328,7 @@ const displayProgress = computed(() => Math.min(100, Math.round(props.progress))
 
 @keyframes pulse-gold {
   0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; text-shadow: 0 0 12px rgba(212, 175, 55, 0.5); }
+  50% { opacity: 1; text-shadow: 0 0 12px color-mix(in srgb, var(--splash-title) 50%, transparent); }
 }
 
 /* 内部元素淡入 */
@@ -345,7 +361,7 @@ const displayProgress = computed(() => Math.min(100, Math.round(props.progress))
 .title-img {
   width: min(60vw, 500px);
   height: auto;
-  filter: drop-shadow(0 0 30px rgba(212, 175, 55, 0.25));
+  filter: drop-shadow(0 0 30px color-mix(in srgb, var(--splash-title) 25%, transparent));
   image-rendering: -webkit-optimize-contrast;
 }
 

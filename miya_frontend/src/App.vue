@@ -8,14 +8,12 @@ import WindowResizeHandles from '@/components/WindowResizeHandles.vue'
 import { playBgm, stopBgm } from '@/composables/useAudio'
 import { useElectron } from '@/composables/useElectron'
 import { CONFIG } from '@/utils/config'
-import { useThemeColors } from '@/composables/useThemeColors'
 import { useMIYARealtime } from '@/composables/useMIYARealtime'
 import SciFiOverlay from '@/components/SciFiOverlay.vue'
 import FloatingView from '@/views/FloatingView.vue'
 
 const isElectron = !!window.electronAPI
-useThemeColors()
-const { connect: connectWS, disconnect: disconnectWS } = useMIYARealtime() // 初始化主题色 CSS 变量
+const { connect: connectWS, disconnect: disconnectWS } = useMIYARealtime()
 const { isMaximized } = useElectron()
 const isMac = window.electronAPI?.platform === 'darwin'
 

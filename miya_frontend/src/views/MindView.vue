@@ -20,15 +20,6 @@ const edgeCount = ref(0)
 const demoMode = ref(false)
 const selectedNode = ref<StarNode | null>(null)
 
-const LEVEL_COLORS: Record<string, string> = {
-  long_term: '#00e5ff', short_term: '#7dd3fc', dialogue: '#b44dff',
-  semantic: '#ff6b9d', knowledge: '#ffd700',
-  core: '#ffd700', user: '#ff6b9d', system: '#7dd3fc',
-}
-const EMOTION_COLORS: Record<string, string> = {
-  joy: '#ffd700', sadness: '#7dd3fc', anger: '#ff4444', fear: '#b44dff',
-  love: '#ff6b9d', neutral: '#aaa', surprise: '#ff8c00',
-}
 
 let nodes: StarNode[] = []
 let animId = 0
@@ -104,9 +95,37 @@ function pickNode(sx: number, sy: number) {
 }
 
 function getColor(node: StarNode): string {
-  if (node.isAnchor) return '#ffd700'
-  if (node.emotion && EMOTION_COLORS[node.emotion]) return EMOTION_COLORS[node.emotion]!
-  return LEVEL_COLORS[node.type] || LEVEL_COLORS[node.level] || '#aaa'
+  if (node.isAnchor) return 'var(--miya-comp-mind-anchor, #ffd700)'
+  if (node.emotion && getEmotionColors()[node.emotion]) return getEmotionColors()[node.emotion]!
+  return getLevelColor(node.type) || getLevelColor(node.level) || '#aaa'
+}
+
+function getLevelColor(level: string): string | undefined {
+  const root = getComputedStyle(document.documentElement)
+  const map: Record<string, string> = {
+    long_term: root.getPropertyValue('--miya-comp-mind-long-term').trim() || '#00e5ff',
+    short_term: root.getPropertyValue('--miya-comp-mind-short-term').trim() || '#7dd3fc',
+    dialogue: root.getPropertyValue('--miya-comp-mind-dialogue').trim() || '#b44dff',
+    semantic: root.getPropertyValue('--miya-comp-mind-semantic').trim() || '#ff6b9d',
+    knowledge: root.getPropertyValue('--miya-comp-mind-knowledge').trim() || '#ffd700',
+    core: root.getPropertyValue('--miya-comp-mind-anchor').trim() || '#ffd700',
+    user: root.getPropertyValue('--miya-comp-mind-semantic').trim() || '#ff6b9d',
+    system: root.getPropertyValue('--miya-comp-mind-short-term').trim() || '#7dd3fc',
+  }
+  return map[level]
+}
+
+function getEmotionColors(): Record<string, string> {
+  const root = getComputedStyle(document.documentElement)
+  return {
+    joy: root.getPropertyValue('--miya-comp-emotion-joy').trim() || '#ffd700',
+    sadness: root.getPropertyValue('--miya-comp-emotion-sadness').trim() || '#7dd3fc',
+    anger: root.getPropertyValue('--miya-comp-emotion-anger').trim() || '#ff4444',
+    fear: root.getPropertyValue('--miya-comp-emotion-fear').trim() || '#b44dff',
+    love: root.getPropertyValue('--miya-comp-emotion-love').trim() || '#ff6b9d',
+    neutral: root.getPropertyValue('--miya-comp-emotion-neutral').trim() || '#aaa',
+    surprise: root.getPropertyValue('--miya-comp-emotion-surprise').trim() || '#ff8c00',
+  }
 }
 function getName(level: string): string {
   const m: Record<string, string> = { long_term: '长期', short_term: '短期', dialogue: '对话', semantic: '语义', knowledge: '知识', core: '锚点', user: '用户锚点', cognitive: '认知', pinned: '置顶', system: '系统' }
@@ -406,11 +425,11 @@ onUnmounted(() => cancelAnimationFrame(animId))
       <button class="sr-btn" @click="autoRotate = !autoRotate" :class="{ active: autoRotate }">{{ autoRotate ? '暂停' : '旋转' }}</button>
       <button class="sr-btn" @click="loadData()" title="重新随机采样">&nbsp;↻&nbsp;</button>
       <div class="sr-legend">
-        <span class="legend-item"><i style="color:#ffd700">●</i>锚点</span>
-        <span class="legend-item"><i style="color:#00e5ff">●</i>长期</span>
-        <span class="legend-item"><i style="color:#b44dff">●</i>对话</span>
-        <span class="legend-item"><i style="color:#ff6b9d">●</i>语义</span>
-        <span class="legend-item"><i style="color:#7dd3fc">●</i>短期</span>
+        <span class="legend-item"><i style="color:var(--miya-comp-mind-anchor,#ffd700)">●</i>锚点</span>
+        <span class="legend-item"><i style="color:var(--miya-comp-mind-long-term,#00e5ff)">●</i>长期</span>
+        <span class="legend-item"><i style="color:var(--miya-comp-mind-dialogue,#b44dff)">●</i>对话</span>
+        <span class="legend-item"><i style="color:var(--miya-comp-mind-semantic,#ff6b9d)">●</i>语义</span>
+        <span class="legend-item"><i style="color:var(--miya-comp-mind-short-term,#7dd3fc)">●</i>短期</span>
       </div>
     </div>
     <div class="sr-canvas-wrap" :class="{ loading: loading }">
@@ -472,7 +491,7 @@ onUnmounted(() => cancelAnimationFrame(animId))
 .detail-header { display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.4rem; }
 .detail-star { font-size: 1rem; }
 .detail-name { font-weight: 600; font-size: 0.85rem; }
-.detail-anchor-badge { font-size: 0.5rem; color: #ffd700; border: 1px solid rgba(255,215,0,0.3); border-radius: 0.15rem; padding: 0.03rem 0.25rem; }
+.detail-anchor-badge { font-size: 0.5rem; color: var(--miya-comp-mind-anchor, #ffd700); border: 1px solid color-mix(in srgb, var(--miya-comp-mind-anchor, #ffd700) 30%, transparent); border-radius: 0.15rem; padding: 0.03rem 0.25rem; }
 .detail-meta { display: flex; flex-wrap: wrap; gap: 0.2rem; margin-bottom: 0.4rem; }
 .meta-tag { font-size: 0.55rem; padding: 0.08rem 0.3rem; border-radius: 0.15rem; background: rgba(0,229,255,0.06); color: rgba(0,229,255,0.5); }
 .detail-content { font-size: 0.72rem; color: var(--miya-text); line-height: 1.5; margin: 0 0 0.4rem; }

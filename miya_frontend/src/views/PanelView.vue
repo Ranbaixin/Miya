@@ -30,15 +30,15 @@ const { height } = useWindowSize()
 // radii: tip 羽尖 / inner 内羽 — staggered for feather look
 const cards = [
   // ═══ 左翼（扇展 150°→210°）═══
-  { id: 'community', label: '娜迦社区', desc: '发帖 · 交友 · 互动', path: '/community', angle: 150, radius: 1, color: '#ff77aa', emoji: '✧' },
-  { id: 'screen',    label: '屏幕视觉', desc: '截图 · AI 分析',       path: '/screen',    angle: 167, radius: 2, color: '#ff9944', emoji: '⊙' },
-  { id: 'terminal',  label: '终端引擎', desc: 'Claude Code · 代码',   path: '/terminal',  angle: 193, radius: 2, color: '#00e88f', emoji: '⬡' },
-  { id: 'openclaw',  label: '电脑控制', desc: 'OpenClaw · AI 操作',   path: '/openclaw',  angle: 210, radius: 1, color: '#ff5577', emoji: '⬢' },
+  { id: 'community', label: '娜迦社区', desc: '发帖 · 交友 · 互动', path: '/community', angle: 150, radius: 1, varName: '--miya-comp-panel-card-1', fallback: '#ff77aa', emoji: '✧' },
+  { id: 'screen',    label: '屏幕视觉', desc: '截图 · AI 分析',       path: '/screen',    angle: 167, radius: 2, varName: '--miya-comp-panel-card-2', fallback: '#ff9944', emoji: '⊙' },
+  { id: 'terminal',  label: '终端引擎', desc: 'Claude Code · 代码',   path: '/terminal',  angle: 193, radius: 2, varName: '--miya-comp-panel-card-3', fallback: '#00e88f', emoji: '⬡' },
+  { id: 'openclaw',  label: '电脑控制', desc: 'OpenClaw · AI 操作',   path: '/openclaw',  angle: 210, radius: 1, varName: '--miya-comp-panel-card-4', fallback: '#ff5577', emoji: '⬢' },
   // ═══ 右翼（扇展 -30°→30°）═══
-  { id: 'chat',      label: '弥娅对话', desc: '决策层 · 感知 · 协作', path: '/chat',      angle: -30, radius: 1, color: '#b44dff', emoji: '◆' },
-  { id: 'mind',      label: '记忆星河', desc: '认知引擎 · 记忆网络',  path: '/mind',      angle: -13, radius: 2, color: '#00e5ff', emoji: '◇' },
-  { id: 'config',    label: '灵魂调谐', desc: '人格 · 情绪 · 模型池', path: '/config',    angle:  13, radius: 2, color: '#d4af37', emoji: '❖' },
-  { id: 'floating',  label: '铃音守护', desc: '轻量陪伴 · 悬浮球',   icon: 'floating',  angle:  30, radius: 1, color: '#4da6ff', emoji: '◈' },
+  { id: 'chat',      label: '弥娅对话', desc: '决策层 · 感知 · 协作', path: '/chat',      angle: -30, radius: 1, varName: '--miya-comp-panel-card-5', fallback: '#b44dff', emoji: '◆' },
+  { id: 'mind',      label: '记忆星河', desc: '认知引擎 · 记忆网络',  path: '/mind',      angle: -13, radius: 2, varName: '--miya-comp-panel-card-6', fallback: '#00e5ff', emoji: '◇' },
+  { id: 'config',    label: '灵魂调谐', desc: '人格 · 情绪 · 模型池', path: '/config',    angle:  13, radius: 2, varName: '--miya-comp-panel-card-7', fallback: '#d4af37', emoji: '❖' },
+  { id: 'floating',  label: '铃音守护', desc: '轻量陪伴 · 悬浮球',   icon: 'floating',  angle:  30, radius: 1, varName: '--miya-comp-panel-card-8', fallback: '#4da6ff', emoji: '◈' },
 ]
 
 // ─── Mouse tracking ──────────────────────────────────────────────────
@@ -179,7 +179,7 @@ function enterFloatingMode() {
         class="orbit-card"
         :class="[{ 'is-hovered': hoveredCard === card.id }, `wing-${i < 4 ? 'left' : 'right'}`]"
         :style="{
-          '--card-color': card.color,
+          '--card-color': `var(${card.varName}, ${card.fallback})`,
           left: `calc(50% + ${cardPositions[i].x}px)`,
           top: `calc(50% + ${cardPositions[i].y}px)`,
           transform: cardTransform(i),

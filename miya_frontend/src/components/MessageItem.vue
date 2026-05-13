@@ -29,32 +29,50 @@ const ROLE_COLOR_VAR: Record<string, string> = {
 const reasoningExpanded = ref(true)
 const detailOpen = ref(false)
 
-// 情绪数据
-const EMOTION_COLORS: Record<string, string> = {
-  'joy': '#ffd700', '喜悦': '#ffd700', '爱': '#ff6b9d', '心动': '#ff6b9d',
-  '温暖': '#ff8c69', '安心': '#7dd3fc', '满足': '#a78bfa',
-  '挂念': '#b44dff', '思念': '#c084fc', '害羞': '#fbbfca',
-  '期待': '#facc15', '依恋': '#e879f9', '忧伤': '#38bdf8',
-  'sadness': '#38bdf8', 'anger': '#ef4444', 'fear': '#7c3aed',
-  'surprise': '#fbbf24', 'disgust': '#94a3b8', '幸福': '#ff8c69',
-  '甜蜜': '#f472b6', '温柔': '#a5b4fc', '感动': '#c4b5fd',
-  '好奇': '#67e8f9', '怀旧': '#d8b4fe', '心疼': '#fb7185',
+function buildEmotionColors(): Record<string, string> {
+  const root = getComputedStyle(document.documentElement)
+  const c = (v: string, d: string) => root.getPropertyValue(v).trim() || d
+  return {
+    'joy': c('--miya-comp-emotion-joy', '#ffd700'), '喜悦': c('--miya-comp-emotion-joy', '#ffd700'),
+    '爱': c('--miya-comp-emotion-love', '#ff6b9d'), '心动': c('--miya-comp-emotion-love', '#ff6b9d'),
+    '温暖': c('--miya-comp-emotion-warm', '#ff8c69'), '幸福': c('--miya-comp-emotion-warm', '#ff8c69'),
+    '安心': c('--miya-comp-emotion-calm', '#7dd3fc'), '满足': c('--miya-comp-emotion-calm', '#7dd3fc'),
+    '挂念': c('--miya-comp-emotion-attachment', '#b44dff'), '思念': c('--miya-comp-emotion-attachment', '#c084fc'),
+    '害羞': c('--miya-comp-emotion-shy', '#fbbfca'),
+    '期待': c('--miya-comp-emotion-anticipation', '#facc15'),
+    '依恋': c('--miya-comp-emotion-attachment', '#e879f9'),
+    '忧伤': c('--miya-comp-emotion-sadness', '#38bdf8'), 'sadness': c('--miya-comp-emotion-sadness', '#38bdf8'),
+    'anger': c('--miya-comp-emotion-anger', '#ef4444'),
+    'fear': c('--miya-comp-emotion-fear', '#7c3aed'),
+    'surprise': c('--miya-comp-emotion-surprise', '#fbbf24'),
+    'disgust': c('--miya-comp-emotion-neutral', '#94a3b8'),
+    '甜蜜': c('--miya-comp-emotion-sweet', '#f472b6'),
+    '温柔': c('--miya-comp-emotion-tender', '#a5b4fc'),
+    '感动': c('--miya-comp-emotion-moved', '#c4b5fd'),
+    '好奇': c('--miya-comp-emotion-curious', '#67e8f9'),
+    '怀旧': c('--miya-comp-emotion-nostalgic', '#d8b4fe'),
+    '心疼': c('--miya-comp-emotion-warm', '#fb7185'),
+  }
 }
 
+const EMOTION_COLORS = buildEmotionColors()
+
 const soulBars = computed(() => {
+  const ec = buildEmotionColors()
   const emos = props.soulData?.emotions
   if (!emos?.length) return []
   const total = emos.reduce((s, e) => s + e.intensity, 1) || 1
   return emos.slice(0, 5).map(e => ({
     name: e.name, intensity: e.intensity,
-    color: EMOTION_COLORS[e.name] || '#00e5ff',
+    color: ec[e.name] || '#00e5ff',
     width: Math.round((e.intensity / total) * 100),
   }))
 })
 
 const emotionList = computed(() => {
+  const ec = buildEmotionColors()
   const emos = props.soulData?.emotions
-  if (emos?.length) return emos.slice(0, 5).map(e => ({ name: e.name, pct: e.intensity, color: EMOTION_COLORS[e.name] || '#00e5ff' }))
+  if (emos?.length) return emos.slice(0, 5).map(e => ({ name: e.name, pct: e.intensity, color: ec[e.name] || '#00e5ff' }))
   return []
 })
 

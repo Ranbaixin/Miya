@@ -5,16 +5,12 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import API from '@/api/core'
 import { CONFIG } from '@/utils/config'
-import { useThemeColors } from '@/composables/useThemeColors'
 import { audioSettings, bgmFileOptions, playBgm, stopBgm } from '@/composables/useAudio'
 import { componentColors, COLOR_GROUPS } from '@/composables/useComponentColors'
 
 const router = useRouter()
-const { theme, resetTheme } = useThemeColors()
-
 type TabKey = 'appearance' | 'model' | 'soul' | 'memory' | 'system' | 'audio' | 'color'
 const activeTab = ref<TabKey>('appearance')
-const themeOpen = ref(false)
 const backendOnline = ref(false)
 
 // ── 实时数据 ──
@@ -259,21 +255,8 @@ function getRouteModel(key: string): string {
         </div>
 
         <div class="config-section">
-          <h3 class="toggle-header" @click="themeOpen = !themeOpen">{{ themeOpen ? '▼' : '▶' }} 配色主题
-            <button class="action-btn ml-a" @click.stop="resetTheme" v-if="themeOpen">恢复默认</button>
-          </h3>
-          <div v-show="themeOpen" class="theme-grid">
-            <div class="theme-item"><label>全局主色</label><input type="color" v-model="theme.accent"></div>
-            <div class="theme-item"><label>首页按钮</label><input type="color" v-model="theme.home"></div>
-            <div class="theme-item"><label>AI 消息</label><input type="color" v-model="theme.chatAi"></div>
-            <div class="theme-item"><label>用户消息</label><input type="color" v-model="theme.chatUser"></div>
-            <div class="theme-item"><label>边框光</label><input type="color" v-model="theme.border"></div>
-            <div class="theme-item"><label>背景</label><input type="color" v-model="theme.chatBg"></div>
-          </div>
-        </div>
-
-        <div class="config-section">
           <h3>HUD 色彩</h3>
+          <p class="hint">全局配色请至「调色」tab</p>
           <div class="color-modes">
             <button v-for="m in COLOR_MODES" :key="m.key" class="color-btn" :class="{ active: hudColorMode === m.key }" @click="hudColorMode = m.key">
               <span class="color-dots"><span v-for="c in m.colors" :key="c" class="dot" :style="{ background: c }" /></span>
@@ -529,14 +512,6 @@ function getRouteModel(key: string): string {
 .color-btn.active { border-color: rgba(0,229,255,0.4); background: rgba(0,229,255,0.06); color: var(--miya-accent); }
 .color-dots { display: flex; gap: 1px; }
 .dot { width: 6px; height: 6px; border-radius: 50%; }
-
-/* 配色 */
-.toggle-header { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 0.4rem; }
-.toggle-header:hover { color: var(--miya-accent); }
-.theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; margin-top: 0.5rem; }
-.theme-item { display: flex; flex-direction: column; gap: 0.15rem; }
-.theme-item label { font-size: 0.65rem; color: var(--miya-text-dim); }
-.theme-item input[type="color"] { width: 100%; height: 24px; border: 1px solid rgba(0,229,255,0.1); border-radius: 0.2rem; background: rgba(0,229,255,0.03); cursor: pointer; padding: 1px; }
 
 /* 模型/灵魂/记忆/系统信息项 */
 .model-item { display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0; border-bottom: 1px solid rgba(0,229,255,0.04); font-size: 0.75rem; }

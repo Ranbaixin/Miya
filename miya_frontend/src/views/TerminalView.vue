@@ -17,28 +17,32 @@ let unsubscribeExit: (() => void) | null = null
 let resizeObserver: ResizeObserver | null = null
 let resizeTimer: ReturnType<typeof setTimeout> | null = null
 
-const THEME = {
-  background: '#0a0a14',
-  foreground: '#d4d4e8',
-  cursor: '#a78bfa',
-  cursorAccent: '#0a0a14',
-  selectionBackground: '#a78bfa44',
-  black: '#1a1a2e',
-  red: '#f87171',
-  green: '#34d399',
-  yellow: '#fbbf24',
-  blue: '#818cf8',
-  magenta: '#c084fc',
-  cyan: '#22d3ee',
-  white: '#e2e8f0',
-  brightBlack: '#334155',
-  brightRed: '#fca5a5',
-  brightGreen: '#6ee7b7',
-  brightYellow: '#fde68a',
-  brightBlue: '#a5b4fc',
-  brightMagenta: '#d8b4fe',
-  brightCyan: '#67e8f9',
-  brightWhite: '#f8fafc',
+function buildXtermTheme() {
+  const root = getComputedStyle(document.documentElement)
+  const c = (v: string, d: string) => root.getPropertyValue(v).trim() || d
+  return {
+    background: c('--miya-comp-terminal-bg', '#0a0a14'),
+    foreground: c('--miya-comp-terminal-fg', '#d4d4e8'),
+    cursor: c('--miya-comp-terminal-cursor', '#a78bfa'),
+    cursorAccent: '#0a0a14',
+    selectionBackground: c('--miya-comp-terminal-selection', '#a78bfa44'),
+    black: c('--miya-comp-terminal-black', '#1a1a2e'),
+    red: c('--miya-comp-terminal-red', '#f87171'),
+    green: c('--miya-comp-terminal-green', '#34d399'),
+    yellow: c('--miya-comp-terminal-yellow', '#fbbf24'),
+    blue: c('--miya-comp-terminal-blue', '#818cf8'),
+    magenta: c('--miya-comp-terminal-magenta', '#c084fc'),
+    cyan: c('--miya-comp-terminal-cyan', '#22d3ee'),
+    white: c('--miya-comp-terminal-white', '#e2e8f0'),
+    brightBlack: c('--miya-comp-terminal-bright-black', '#334155'),
+    brightRed: c('--miya-comp-terminal-bright-red', '#fca5a5'),
+    brightGreen: c('--miya-comp-terminal-bright-green', '#6ee7b7'),
+    brightYellow: c('--miya-comp-terminal-bright-yellow', '#fde68a'),
+    brightBlue: c('--miya-comp-terminal-bright-blue', '#a5b4fc'),
+    brightMagenta: c('--miya-comp-terminal-bright-magenta', '#d8b4fe'),
+    brightCyan: c('--miya-comp-terminal-bright-cyan', '#67e8f9'),
+    brightWhite: c('--miya-comp-terminal-bright-white', '#f8fafc'),
+  }
 }
 
 function startResizeObserver() {
@@ -64,7 +68,7 @@ function createXterm(): boolean {
   if (term) return true
 
   term = new Terminal({
-    theme: THEME,
+    theme: buildXtermTheme(),
     fontSize: 14,
     fontFamily: "'Cascadia Code', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
     cursorBlink: true,
