@@ -1,13 +1,13 @@
 // ============================================================
-// 弥娅 日志 · LogViewerPage — 实时日志
+// 弥娅运维中心 · LogViewerPage — 实时日志 (对接后端 API)
 // ============================================================
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface LogEntry {
   id: number;
   timestamp: string;
-  level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
+  level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG' | 'CRITICAL';
   module: string;
   message: string;
   thinking?: string;
@@ -18,6 +18,7 @@ const LEVEL_COLORS: Record<string, string> = {
   WARN: 'text-starlight',
   ERROR: 'text-status-error',
   DEBUG: 'text-text-secondary',
+  CRITICAL: 'text-status-error',
 };
 
 function generateMockLog(): LogEntry {
@@ -25,11 +26,11 @@ function generateMockLog(): LogEntry {
   const levels: LogEntry['level'][] = ['INFO', 'INFO', 'INFO', 'WARN', 'ERROR'];
 
   const messages: Record<string, string[]> = {
-    MLink: ['QQ消息 -> group | 1523878699(佳)', '群: 1092980378(索多玛)', '连接成功！', '弥娅 QQ 机器人已启动'],
-    MemNet: ['[记忆] 写入短期记忆完成', '[记忆] 检索到 3 条相关记忆（MMR去重后）'],
-    Hub: ['[决策中枢] 选择响应策略', '[消息队列] 已启动模型处理: model=default'],
-    Soul: ['♥ 情绪分析 温暖(85%)', '✦ 内心独白更新完成', '♥ 关系影响(熟悉) 亲近+3'],
-    ToolNet: ['[工具] 执行: web_search', '[工具] 执行完成', '[工具] 已注册 16 个 Agent 工具'],
+    MLink: ['QQ消息 -> group | 1523878699(佳)', '群: 1092980378(索多玛)', '连接成功！'],
+    MemNet: ['[记忆] 写入短期记忆完成', '[记忆] 检索到 3 条相关记忆'],
+    Hub: ['[决策中枢] 选择响应策略', '[消息队列] 已启动模型处理'],
+    Soul: ['♥ 情绪分析 温暖(85%)', '✦ 内心独白更新完成'],
+    ToolNet: ['[工具] 执行: web_search', '[工具] 已注册 16 个 Agent 工具'],
     Cognitive: ['[认知] 关键词提取完成', '[认知] 当前话题分析完成'],
     DecisionHub: ['[决策] 消息分析完成', '[决策] 调度决策 -> Agent网络'],
     Gestalt: ['[格式塔] 工具执行完成', '[格式塔] Agent协调完成'],
@@ -45,6 +46,30 @@ function generateMockLog(): LogEntry {
   return { id: Date.now() + Math.random() * 1000, timestamp: ts, level, module, message: msg };
 }
 
+const CORE = 'http://localhost:8000';
+
+async function fetchLogs(): Promise<LogEntry[]> {
+  try {
+    const res = await fetch(`${CORE}/api/miya/logs`, {
+      headers: { 'X-Undefined-API-Key': 'changeme' },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const list = data?.logs || data?.entries || data || [];
+    if (Array.isArray(list)) {
+      return list.map((l: any, i: number) => ({
+        id: Date.now() + i,
+        timestamp: l.timestamp || l.time || l.created_at || new Date().toISOString(),
+        level: (l.level || l.severity || 'INFO').toUpperCase(),
+        module: l.module || l.source || l.name || 'System',
+        message: l.message || l.content || l.text || String(l),
+        thinking: l.thinking || l.thought || undefined,
+      }));
+    }
+  } catch { /* fallback to mock */ }
+  return [];
+}
+
 const LogViewerPage: React.FC = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [filter, setFilter] = useState('');
@@ -52,18 +77,42 @@ const LogViewerPage: React.FC = () => {
   const [autoScroll, setAutoScroll] = useState(true);
   const [paused, setPaused] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [useRealApi, setUseRealApi] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const appendLogs = useCallback((entries: LogEntry[]) => {
+    setLogs(prev => {
+      const next = [...prev, ...entries];
+      return next.length > 500 ? next.slice(-300) : next;
+    });
+  }, []);
+
+  useEffect(() => {
+    fetchLogs().then(realLogs => {
+      if (realLogs.length > 0) {
+        setUseRealApi(true);
+        appendLogs(realLogs);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     if (paused) return;
-    const interval = setInterval(() => {
-      setLogs((prev) => {
-        const next = [...prev, generateMockLog()];
-        return next.length > 500 ? next.slice(-300) : next;
-      });
-    }, 800);
-    return () => clearInterval(interval);
-  }, [paused]);
+
+    if (useRealApi) {
+      const interval = setInterval(async () => {
+        const realLogs = await fetchLogs();
+        if (realLogs.length > 0) appendLogs(realLogs);
+        else appendLogs([generateMockLog()]);
+      }, 3000);
+      return () => clearInterval(interval);
+    } else {
+      const interval = setInterval(() => {
+        appendLogs([generateMockLog()]);
+      }, 800);
+      return () => clearInterval(interval);
+    }
+  }, [paused, useRealApi, appendLogs]);
 
   useEffect(() => {
     if (autoScroll && containerRef.current) {
@@ -82,8 +131,10 @@ const LogViewerPage: React.FC = () => {
       {/* 工具栏 */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border-glass bg-void-panel/80 shrink-0">
         <div className="flex items-center gap-3">
-          <span className="text-[10px] text-text-dim uppercase tracking-wider">▷ 日志查看器</span>
-          <span className="text-[10px] text-text-dim">{filteredLogs.length} / {logs.length} 条</span>
+          <span className="text-[10px] text-text-dim uppercase tracking-wider">▷ 日志中心</span>
+          <span className="text-[10px] text-text-dim">
+            {useRealApi ? '▲ API' : '◇ Mock'} · {filteredLogs.length} / {logs.length} 条
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <input

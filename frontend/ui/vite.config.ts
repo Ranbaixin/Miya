@@ -12,6 +12,11 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
+      '/mgmt': {
+        target: 'http://localhost:9800',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/mgmt/, '/api/v1'),
+      },
     },
   },
   build: {

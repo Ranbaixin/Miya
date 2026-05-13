@@ -1,5 +1,5 @@
 // ============================================================
-// 弥娅系统类型定义 - 基于 NapcatQQ 后端日志结构
+// 弥娅运维中心 · 类型定义 — MIYA Ops Center v7.0
 // ============================================================
 
 export interface SystemInfo {
@@ -17,11 +17,19 @@ export interface SystemInfo {
   memory_usage_percent: number;
 }
 
-export interface QQConfig {
-  onebot_url: string;
-  bot_qq: string;
-  super_admin: string;
-  connected: boolean;
+export interface SystemMetrics {
+  cpu_percent: number;
+  memory_percent: number;
+  memory_used_gb: number;
+  memory_total_gb: number;
+  disk_percent: number;
+  disk_used_gb: number;
+  disk_total_gb: number;
+  network_bytes_sent: number;
+  network_bytes_recv: number;
+  uptime_seconds: number;
+  process_count: number;
+  timestamp: string;
 }
 
 export interface ModelInfo {
@@ -63,7 +71,7 @@ export interface MessageQueueStats {
 export interface MessagePipelineEvent {
   id: string;
   timestamp: string;
-  stage: 'receive' | 'enqueue' | 'dispatch' | 'analyze' | 'learning' | 'diteng' | 'perceive' | 'cognitive' | 'soul' | 'decision' | 'collab' | 'gestalt' | 'respond' | 'send';
+  stage: string;
   group?: string;
   user?: string;
   message?: string;
@@ -110,7 +118,6 @@ export interface SubsystemStatus {
 export interface DashboardData {
   identity: { name: string; version: string; uuid: string; awake_time: string };
   system: SystemInfo;
-  qq: QQConfig;
   models: ModelInfo[];
   agents: AgentInfo[];
   emotion: EmotionState;
@@ -130,12 +137,153 @@ export interface ToolDefinition {
   };
 }
 
+// ---- Management API (port 9800) ----
+
 export interface PlatformInfo {
   platform_id: string;
   name: string;
+  status: 'online' | 'offline' | 'error' | 'starting' | 'stopping';
+  type?: string;
+  uptime_seconds?: number;
+  config?: Record<string, any>;
+}
+
+export interface DaemonStatus {
+  started: boolean;
+  start_time: string;
+  uptime_seconds: number;
+  platforms: {
+    total: number;
+    online: number;
+    offline: number;
+  };
+  version?: string;
+}
+
+export interface ManagementHealth {
+  status: string;
+  timestamp: string;
+  started: boolean;
+  start_time?: string;
+  uptime_seconds?: number;
+  platforms?: { total: number; online: number; offline: number };
+}
+
+export interface AuthStats {
+  total_users: number;
+  total_roles: number;
+  total_permissions: number;
+  superadmin_count?: number;
+}
+
+export interface AuthUser {
+  user_id: string;
+  groups: string[];
+  permissions: string[];
+  is_superadmin: boolean;
+  role_level: number;
+  platform?: string;
+  username?: string;
+}
+
+export interface AuthRole {
+  id: string;
+  name: string;
+  permissions: string[];
+  level: number;
+}
+
+// ---- WebSocket Events ----
+
+export interface WsInitialState {
+  type: 'initial_state';
+  timestamp: string;
+  platforms: PlatformInfo[];
+  daemon: DaemonStatus;
+}
+
+export interface WsPlatformEvent {
+  type: 'platform_event';
+  timestamp: string;
+  platform_id: string;
+  status: string;
+  action?: string;
+  success?: boolean;
+}
+
+export interface WsActionResult {
+  type: 'action_result';
+  action: string;
+  success: boolean;
+  platform_id?: string;
+}
+
+export interface WsStatusUpdate {
+  type: 'status_update';
+  platforms: PlatformInfo[];
+  daemon: DaemonStatus;
+}
+
+export type WsMessage = WsInitialState | WsPlatformEvent | WsActionResult | WsStatusUpdate | { type: string; message?: string; [key: string]: any };
+
+// ---- Log Entry ----
+
+export interface LogEntry {
+  timestamp: string;
+  level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'CRITICAL';
+  module: string;
+  message: string;
+  traceback?: string;
+}
+
+// ---- Config -
+
+export interface ConfigFile {
+  path: string;
+  name: string;
+  size_bytes: number;
+  modified_at: string;
+  content?: string;
+  format: 'json' | 'yaml' | 'env' | 'other';
+  editable: boolean;
+}
+
+// ---- Alert / Monitoring -
+
+export interface AlertInfo {
+  alert_id: string;
+  rule_id: string;
+  metric_name: string;
+  severity: 'info' | 'warning' | 'error' | 'critical';
+  status: 'active' | 'resolved' | 'acknowledged';
+  message: string;
+  triggered_at: string;
+  resolved_at?: string;
+  details?: Record<string, any>;
+}
+
+export interface MetricSnapshot {
+  name: string;
+  count: number;
+  stats: {
+    min: number;
+    max: number;
+    avg: number;
+    median: number;
+    stddev: number;
+    latest?: number;
+  };
+}
+
+export interface AlertRule {
+  rule_id: string;
+  name: string;
+  metric_name: string;
+  condition: string;
+  threshold: number;
+  severity: string;
   enabled: boolean;
-  status: 'connected' | 'disconnected' | 'error';
-  config: Record<string, any>;
+  description: string;
 }
 
 export interface ChatMessage {

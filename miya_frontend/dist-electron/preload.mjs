@@ -1,1 +1,129 @@
-"use strict";const e=require("electron");function o(){var t;const r=[(t=navigator.userAgentData)==null?void 0:t.platform,navigator.platform,navigator.userAgent].filter(Boolean).join(" ").toLowerCase();return r.includes("mac")?"darwin":r.includes("win")?"win32":r.includes("linux")?"linux":"unknown"}const a={minimize:()=>e.ipcRenderer.send("window:minimize"),maximize:()=>e.ipcRenderer.send("window:maximize"),close:()=>e.ipcRenderer.send("window:close"),isMaximized:()=>e.ipcRenderer.invoke("window:isMaximized"),getBounds:()=>e.ipcRenderer.invoke("window:getBounds"),setBounds:n=>e.ipcRenderer.send("window:setBounds",n),quit:()=>e.ipcRenderer.send("app:quit"),showContextMenu:()=>e.ipcRenderer.send("context-menu:show"),onMaximized:n=>{const r=(t,i)=>n(i);return e.ipcRenderer.on("window:maximized",r),()=>e.ipcRenderer.removeListener("window:maximized",r)},downloadUpdate:()=>e.ipcRenderer.send("updater:download"),installUpdate:()=>e.ipcRenderer.send("updater:install"),onUpdateAvailable:n=>{const r=(t,i)=>n(i);return e.ipcRenderer.on("updater:update-available",r),()=>e.ipcRenderer.removeListener("updater:update-available",r)},onUpdateDownloaded:n=>{const r=()=>n();return e.ipcRenderer.on("updater:update-downloaded",r),()=>e.ipcRenderer.removeListener("updater:update-downloaded",r)},floating:{enter:()=>e.ipcRenderer.invoke("floating:enter"),exit:()=>e.ipcRenderer.invoke("floating:exit"),expand:n=>e.ipcRenderer.invoke("floating:expand",n),expandToFull:()=>e.ipcRenderer.invoke("floating:expandToFull"),collapse:()=>e.ipcRenderer.invoke("floating:collapse"),collapseToCompact:()=>e.ipcRenderer.invoke("floating:collapseToCompact"),getState:()=>e.ipcRenderer.invoke("floating:getState"),pin:n=>e.ipcRenderer.send("floating:pin",n),fitHeight:n=>e.ipcRenderer.send("floating:fitHeight",n),setPosition:(n,r)=>e.ipcRenderer.send("floating:setPosition",n,r),onStateChange:n=>{const r=(t,i)=>n(i);return e.ipcRenderer.on("floating:stateChanged",r),()=>e.ipcRenderer.removeListener("floating:stateChanged",r)},onWindowBlur:n=>{const r=()=>n();return e.ipcRenderer.on("floating:windowBlur",r),()=>e.ipcRenderer.removeListener("floating:windowBlur",r)}},capture:{getSources:()=>e.ipcRenderer.invoke("capture:getSources"),captureWindow:n=>e.ipcRenderer.invoke("capture:captureWindow",n),openScreenSettings:()=>e.ipcRenderer.invoke("capture:openScreenSettings")},backend:{getLogs:()=>e.ipcRenderer.invoke("backend:getLogs"),onProgress:n=>{const r=(t,i)=>n(i);return e.ipcRenderer.on("backend:progress",r),()=>e.ipcRenderer.removeListener("backend:progress",r)},onLog:n=>{const r=(t,i)=>n(i);return e.ipcRenderer.on("backend:log",r),()=>e.ipcRenderer.removeListener("backend:log",r)},onError:n=>{const r=(t,i)=>n(i);return e.ipcRenderer.on("backend:error",r),()=>e.ipcRenderer.removeListener("backend:error",r)}},backgrounds:{scan:()=>e.ipcRenderer.invoke("backgrounds:scan")},writeFile:(n,r)=>e.ipcRenderer.invoke("fs:writeFile",n,r),autoLaunch:{get:()=>e.ipcRenderer.invoke("autoLaunch:get"),set:n=>e.ipcRenderer.invoke("autoLaunch:set",n)},terminal:{start:n=>e.ipcRenderer.invoke("terminal:start",n),write:n=>e.ipcRenderer.invoke("terminal:write",n),resize:(n,r)=>e.ipcRenderer.invoke("terminal:resize",n,r),stop:()=>e.ipcRenderer.invoke("terminal:stop"),isRunning:()=>e.ipcRenderer.invoke("terminal:isRunning"),getBuffer:()=>e.ipcRenderer.invoke("terminal:getBuffer"),onData:n=>{const r=(t,i)=>n(i);return e.ipcRenderer.on("terminal:data",r),()=>e.ipcRenderer.removeListener("terminal:data",r)},onExit:n=>{const r=(t,i)=>n(i);return e.ipcRenderer.on("terminal:exit",r),()=>e.ipcRenderer.removeListener("terminal:exit",r)}},platform:o()};e.contextBridge.exposeInMainWorld("electronAPI",a);
+"use strict";
+const electron = require("electron");
+function detectPlatform() {
+  var _a;
+  const uaDataPlatform = (_a = navigator.userAgentData) == null ? void 0 : _a.platform;
+  const parts = [
+    uaDataPlatform,
+    navigator.platform,
+    navigator.userAgent
+  ].filter(Boolean).join(" ").toLowerCase();
+  if (parts.includes("mac"))
+    return "darwin";
+  if (parts.includes("win"))
+    return "win32";
+  if (parts.includes("linux"))
+    return "linux";
+  return "unknown";
+}
+const electronAPI = {
+  // Window controls
+  minimize: () => electron.ipcRenderer.send("window:minimize"),
+  maximize: () => electron.ipcRenderer.send("window:maximize"),
+  close: () => electron.ipcRenderer.send("window:close"),
+  isMaximized: () => electron.ipcRenderer.invoke("window:isMaximized"),
+  getBounds: () => electron.ipcRenderer.invoke("window:getBounds"),
+  setBounds: (bounds) => electron.ipcRenderer.send("window:setBounds", bounds),
+  quit: () => electron.ipcRenderer.send("app:quit"),
+  showContextMenu: () => electron.ipcRenderer.send("context-menu:show"),
+  // Window state events
+  onMaximized: (callback) => {
+    const handler = (_event, maximized) => callback(maximized);
+    electron.ipcRenderer.on("window:maximized", handler);
+    return () => electron.ipcRenderer.removeListener("window:maximized", handler);
+  },
+  // Updater
+  downloadUpdate: () => electron.ipcRenderer.send("updater:download"),
+  installUpdate: () => electron.ipcRenderer.send("updater:install"),
+  onUpdateAvailable: (callback) => {
+    const handler = (_event, info) => callback(info);
+    electron.ipcRenderer.on("updater:update-available", handler);
+    return () => electron.ipcRenderer.removeListener("updater:update-available", handler);
+  },
+  onUpdateDownloaded: (callback) => {
+    const handler = () => callback();
+    electron.ipcRenderer.on("updater:update-downloaded", handler);
+    return () => electron.ipcRenderer.removeListener("updater:update-downloaded", handler);
+  },
+  // 悬浮球模式控制
+  floating: {
+    enter: () => electron.ipcRenderer.invoke("floating:enter"),
+    exit: () => electron.ipcRenderer.invoke("floating:exit"),
+    expand: (toFull) => electron.ipcRenderer.invoke("floating:expand", toFull),
+    expandToFull: () => electron.ipcRenderer.invoke("floating:expandToFull"),
+    collapse: () => electron.ipcRenderer.invoke("floating:collapse"),
+    collapseToCompact: () => electron.ipcRenderer.invoke("floating:collapseToCompact"),
+    getState: () => electron.ipcRenderer.invoke("floating:getState"),
+    pin: (value) => electron.ipcRenderer.send("floating:pin", value),
+    fitHeight: (height) => electron.ipcRenderer.send("floating:fitHeight", height),
+    setPosition: (x, y) => electron.ipcRenderer.send("floating:setPosition", x, y),
+    onStateChange: (callback) => {
+      const handler = (_event, state) => callback(state);
+      electron.ipcRenderer.on("floating:stateChanged", handler);
+      return () => electron.ipcRenderer.removeListener("floating:stateChanged", handler);
+    },
+    onWindowBlur: (callback) => {
+      const handler = () => callback();
+      electron.ipcRenderer.on("floating:windowBlur", handler);
+      return () => electron.ipcRenderer.removeListener("floating:windowBlur", handler);
+    }
+  },
+  // 窗口截屏功能
+  capture: {
+    getSources: () => electron.ipcRenderer.invoke("capture:getSources"),
+    captureWindow: (sourceId) => electron.ipcRenderer.invoke("capture:captureWindow", sourceId),
+    openScreenSettings: () => electron.ipcRenderer.invoke("capture:openScreenSettings")
+  },
+  // 后端进程通信
+  backend: {
+    getLogs: () => electron.ipcRenderer.invoke("backend:getLogs"),
+    onProgress: (callback) => {
+      const handler = (_event, payload) => callback(payload);
+      electron.ipcRenderer.on("backend:progress", handler);
+      return () => electron.ipcRenderer.removeListener("backend:progress", handler);
+    },
+    onLog: (callback) => {
+      const handler = (_event, payload) => callback(payload);
+      electron.ipcRenderer.on("backend:log", handler);
+      return () => electron.ipcRenderer.removeListener("backend:log", handler);
+    },
+    onError: (callback) => {
+      const handler = (_event, payload) => callback(payload);
+      electron.ipcRenderer.on("backend:error", handler);
+      return () => electron.ipcRenderer.removeListener("backend:error", handler);
+    }
+  },
+  // 背景图片扫描
+  backgrounds: {
+    scan: () => electron.ipcRenderer.invoke("backgrounds:scan")
+  },
+  // 文件写入（用于保存背景图片，base64 编码）
+  writeFile: (relPath, base64) => electron.ipcRenderer.invoke("fs:writeFile", relPath, base64),
+  // 开机自启动
+  autoLaunch: {
+    get: () => electron.ipcRenderer.invoke("autoLaunch:get"),
+    set: (enabled) => electron.ipcRenderer.invoke("autoLaunch:set", enabled)
+  },
+  // Terminal (Claude Code Engine)
+  terminal: {
+    start: (options) => electron.ipcRenderer.invoke("terminal:start", options),
+    write: (data) => electron.ipcRenderer.invoke("terminal:write", data),
+    resize: (cols, rows) => electron.ipcRenderer.invoke("terminal:resize", cols, rows),
+    stop: () => electron.ipcRenderer.invoke("terminal:stop"),
+    isRunning: () => electron.ipcRenderer.invoke("terminal:isRunning"),
+    getBuffer: () => electron.ipcRenderer.invoke("terminal:getBuffer"),
+    onData: (callback) => {
+      const handler = (_event, data) => callback(data);
+      electron.ipcRenderer.on("terminal:data", handler);
+      return () => electron.ipcRenderer.removeListener("terminal:data", handler);
+    },
+    onExit: (callback) => {
+      const handler = (_event, code) => callback(code);
+      electron.ipcRenderer.on("terminal:exit", handler);
+      return () => electron.ipcRenderer.removeListener("terminal:exit", handler);
+    }
+  },
+  // Platform info
+  platform: detectPlatform()
+};
+electron.contextBridge.exposeInMainWorld("electronAPI", electronAPI);

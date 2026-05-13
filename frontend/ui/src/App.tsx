@@ -1,6 +1,6 @@
 // ============================================================
-// 弥娅 App · 深蓝星渊 Abyssal Star
-//   灵感: 鸣潮 共鸣者展示
+// 弥娅运维中心 · MIYA Ops Center v7.0
+//   灵感: 鸣潮 共鸣者展示 — 重构为信息监控与文件配置中心
 // ============================================================
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,22 +8,31 @@ import CosmicBackground from './components/CosmicBackground';
 import Header from './components/Header';
 import StatusBar from './components/StatusBar';
 import NavTabs, { NavTab } from './components/NavTabs';
-import DashboardPage from './pages/DashboardPage';
+import SystemOverviewPage from './pages/SystemOverviewPage';
+import PlatformPage from './pages/PlatformPage';
+import HealthPage from './pages/HealthPage';
+import ResourcePage from './pages/ResourcePage';
 import ModelPoolPage from './pages/ModelPoolPage';
 import AgentNetworkPage from './pages/AgentNetworkPage';
 import MessageQueuePage from './pages/MessageQueuePage';
+import TerminalPage from './pages/TerminalPage';
 import LogViewerPage from './pages/LogViewerPage';
-import SoulPage from './pages/SoulPage';
-import { useMiyaConnection, useEmotion, useMemory, usePersonality } from './services/miyaApi';
+import ConfigCenterPage from './pages/ConfigCenterPage';
+import PermissionsPage from './pages/PermissionsPage';
+import { useMiyaConnection, useModels, useEmotion, useMemory, usePersonality, usePlatforms, useSystemMetrics } from './services/miyaApi';
 
 const tabs: NavTab[] = [
-  { id: 'dashboard', icon: '◈', label: '共鸣核心' },
-  { id: 'models', icon: '◆', label: '模型矩阵' },
-  { id: 'agents', icon: '▣', label: 'Agent' },
-  { id: 'queue', icon: '≣', label: '消息流' },
-  { id: 'soul', icon: '♥', label: '灵魂感知' },
+  { id: 'overview', icon: '◈', label: '总览' },
+  { id: 'health', icon: '♥', label: '健康' },
+  { id: 'platforms', icon: '▣', label: '平台' },
+  { id: 'resources', icon: '◉', label: '资源' },
+  { id: 'models', icon: '◆', label: '模型' },
+  { id: 'agents', icon: '⬡', label: 'Agent' },
+  { id: 'flow', icon: '≣', label: '消息流' },
+  { id: 'terminal', icon: '>', label: '终端' },
   { id: 'logs', icon: '▷', label: '日志' },
-  { id: 'settings', icon: '☰', label: '配置' },
+  { id: 'config', icon: '⚙', label: '配置' },
+  { id: 'auth', icon: '☰', label: '权限' },
 ];
 
 const anim = {
@@ -34,19 +43,26 @@ const anim = {
 };
 
 function App() {
-  const [activePage, setActivePage] = useState('dashboard');
+  const [activePage, setActivePage] = useState('overview');
   const { connected } = useMiyaConnection();
+  const { metrics } = useSystemMetrics();
+  const { models } = useModels();
   const { emotion } = useEmotion();
   const { stats: memStats } = useMemory();
   const { personality } = usePersonality();
+  const { platforms } = usePlatforms();
   const [runtimeDuration, setRuntimeDuration] = useState(0);
-  const [subsystems] = useState({
-    mlink: true, memorynet: true, toolnet: true,
-    webnet: true, qqnet: true, tts: true,
-    scheduler: true, proactive: true,
-  });
-  const [queueSize] = useState(0);
-  const [modelCount] = useState(12);
+
+  const subsystemState = {
+    mlink: true,
+    memorynet: true,
+    toolnet: true,
+    webnet: true,
+    qqnet: (platforms || []).some((p: any) => p.status === 'online'),
+    tts: true,
+    scheduler: true,
+    proactive: true,
+  };
 
   const fmt = useCallback((s: number) => {
     const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
@@ -59,24 +75,24 @@ function App() {
   }, []);
 
   const domEmotion = emotion?.dominant_emotion || '—';
+  const queueSize = 0;
 
   const renderPage = () => {
+    const wrap = (key: string, el: React.ReactNode) => (
+      <motion.div key={key} {...anim} className="h-full">{el}</motion.div>
+    );
     switch (activePage) {
-      case 'dashboard': return <motion.div key="dashboard" {...anim} className="h-full"><DashboardPage onNavigate={setActivePage} /></motion.div>;
-      case 'models': return <motion.div key="models" {...anim} className="h-full"><ModelPoolPage /></motion.div>;
-      case 'agents': return <motion.div key="agents" {...anim} className="h-full"><AgentNetworkPage /></motion.div>;
-      case 'queue': return <motion.div key="queue" {...anim} className="h-full"><MessageQueuePage /></motion.div>;
-      case 'soul': return <motion.div key="soul" {...anim} className="h-full"><SoulPage /></motion.div>;
-      case 'logs': return <motion.div key="logs" {...anim} className="h-full"><LogViewerPage /></motion.div>;
-      case 'settings': return (
-        <motion.div key="settings" {...anim} className="flex items-center justify-center h-full">
-          <div className="glass-panel p-8 text-center max-w-sm">
-            <div className="text-aether text-3xl mb-3 font-bold">☰</div>
-            <div className="text-text-primary text-sm mb-1">系统配置</div>
-            <div className="text-text-secondary text-xs">设置模块即将开放，敬请期待</div>
-          </div>
-        </motion.div>
-      );
+      case 'overview': return wrap('overview', <SystemOverviewPage metrics={metrics} />);
+      case 'health': return wrap('health', <HealthPage />);
+      case 'platforms': return wrap('platforms', <PlatformPage />);
+      case 'resources': return wrap('resources', <ResourcePage />);
+      case 'models': return wrap('models', <ModelPoolPage />);
+      case 'agents': return wrap('agents', <AgentNetworkPage />);
+      case 'flow': return wrap('flow', <MessageQueuePage />);
+      case 'terminal': return wrap('terminal', <TerminalPage />);
+      case 'logs': return wrap('logs', <LogViewerPage />);
+      case 'config': return wrap('config', <ConfigCenterPage />);
+      case 'auth': return wrap('auth', <PermissionsPage />);
       default: return null;
     }
   };
@@ -87,7 +103,7 @@ function App() {
 
       <Header
         connected={connected}
-        modelCount={modelCount}
+        modelCount={models?.length || 0}
         queueSize={queueSize}
         currentEmotion={domEmotion}
         emotionIntensity={emotion?.intensity || 0}
@@ -95,12 +111,10 @@ function App() {
         uptime={fmt(runtimeDuration)}
       />
 
-      {/* 导航标签栏 */}
       <div className="relative z-10 border-b border-border-glass bg-void-panel/50 backdrop-blur-md">
         <NavTabs tabs={tabs} activeTab={activePage} onTabChange={setActivePage} />
       </div>
 
-      {/* 内容区域 */}
       <div className="flex-1 overflow-auto relative min-h-0">
         <AnimatePresence mode="wait">
           {renderPage()}
@@ -109,9 +123,14 @@ function App() {
 
       <StatusBar
         connected={connected}
-        runtimeDuration={runtimeDuration}
-        subsystems={subsystems}
-        memoryStats={memStats as any}
+        runtimeDuration={metrics?.uptime_seconds || runtimeDuration}
+        subsystems={subsystemState}
+        memoryStats={{
+          total: memStats?.total || 0,
+          long_term: memStats?.long_term || 0,
+          short_term: memStats?.short_term || 0,
+          emotional: memStats?.emotional || 0,
+        }}
       />
     </div>
   );
