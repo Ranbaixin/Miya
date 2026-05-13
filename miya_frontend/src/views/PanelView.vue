@@ -403,12 +403,18 @@ function enterFloatingMode() {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  opacity: 0.25;
-  transition: opacity 0.4s;
-  z-index: 5;
+  background: rgba(8, 14, 24, 0.45);
+  backdrop-filter: blur(6px);
+  border: 1px solid color-mix(in srgb, var(--miya-accent, #a78bfa) 10%, transparent);
+  border-radius: 1rem;
+  padding: 0.3rem 0.7rem;
+  opacity: 0.7;
+  transition: opacity 0.3s, border-color 0.3s;
+  z-index: 15;
 }
 .card-scale-bar:hover {
-  opacity: 0.75;
+  opacity: 1;
+  border-color: color-mix(in srgb, var(--miya-accent, #a78bfa) 25%, transparent);
 }
 .scale-icon {
   font-size: 0.55rem;
@@ -417,10 +423,10 @@ function enterFloatingMode() {
 .scale-slider {
   -webkit-appearance: none;
   appearance: none;
-  width: 80px;
-  height: 3px;
+  width: 100px;
+  height: 4px;
   border-radius: 2px;
-  background: rgba(0, 229, 255, 0.12);
+  background: rgba(0, 229, 255, 0.18);
   outline: none;
   cursor: pointer;
 }
