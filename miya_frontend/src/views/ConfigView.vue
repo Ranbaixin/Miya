@@ -95,6 +95,7 @@ const cardScale = useStorage('miya-panel-card-scale', 1.0)
 const verseText = useStorage('miya-verse-text', '雪落无声 — 愿系铃中')
 const showStatus = useStorage('miya-show-status', true)
 const logoOpacity = useStorage('miya-logo-opacity', 1.0)
+const footerOpacity = useStorage('miya-footer-opacity', 1.0)
 const live2dX = computed({ get: () => CONFIG.value.web_live2d.model.x, set: v => CONFIG.value.web_live2d.model.x = v })
 const live2dY = computed({ get: () => CONFIG.value.web_live2d.model.y, set: v => CONFIG.value.web_live2d.model.y = v })
 const live2dSize = computed({ get: () => CONFIG.value.web_live2d.model.size, set: v => CONFIG.value.web_live2d.model.size = v })
@@ -287,6 +288,13 @@ function getRouteModel(key: string): string {
           <div class="config-item">
             <label>显示在线状态</label>
             <ToggleSwitch v-model="showStatus" />
+          </div>
+          <div class="config-item" style="margin-top:0.6rem">
+            <label>底栏亮度</label>
+            <div class="slider-row">
+              <Slider v-model="footerOpacity" :min="0.1" :max="1" :step="0.01" />
+              <span class="slider-val">{{ Math.round(footerOpacity * 100) }}%</span>
+            </div>
           </div>
         </div>
 

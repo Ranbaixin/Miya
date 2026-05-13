@@ -13,6 +13,7 @@ const miyaPlatforms = ref(0)
 const verseText = useStorage('miya-verse-text', '雪落无声 — 愿系铃中')
 const showStatus = useStorage('miya-show-status', true)
 const logoOpacity = useStorage('miya-logo-opacity', 1.0)
+const footerOpacity = useStorage('miya-footer-opacity', 1.0)
 
 onMounted(async () => {
   try {
@@ -214,8 +215,8 @@ function enterFloatingMode() {
       </div>
     </div>
 
-    <div v-if="verseText" class="orbit-verse">{{ verseText }}</div>
-    <div v-if="miyaBackendOnline && showStatus" class="orbit-status">
+    <div v-if="verseText" class="orbit-verse" :style="{ opacity: `${(footerOpacity * 0.35).toFixed(3)}` }">{{ verseText }}</div>
+    <div v-if="miyaBackendOnline && showStatus" class="orbit-status" :style="{ opacity: `${(footerOpacity * 0.5).toFixed(3)}` }">
       <span class="status-dot" />
       <span class="status-item">在线</span>
       <span class="status-sep">·</span>
