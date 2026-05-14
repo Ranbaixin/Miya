@@ -183,3 +183,4 @@ vendor/
 # Runtime state
 data/activity/
 data/diting_state.json
+data/tts_audio/
