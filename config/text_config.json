@@ -265,11 +265,19 @@
             "/text",
             "/文本"
         ],
+        "local_playback": [
+            "/本地播放",
+            "/localplay"
+        ],
         "help": [
             "帮助",
             "help",
             "?",
             "？"
+        ],
+        "tts_engine": [
+            "/tts",
+            "/TTS"
         ],
         "version": [
             "版本",

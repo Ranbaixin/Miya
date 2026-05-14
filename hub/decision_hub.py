@@ -3388,14 +3388,34 @@ class DecisionHub:
         form_cmds = command_keywords.get("form", ["/形态", "/form"])
         speak_cmds = command_keywords.get("speak", ["/说话", "/speak"])
         exist_cmds = command_keywords.get("exist", ["/存在", "/exist"])
+        voice_cmds = command_keywords.get("voice", ["/语音", "/voice"])
+        text_cmds = command_keywords.get("text", ["/文本", "/text"])
+        local_playback_cmds = command_keywords.get(
+            "local_playback", ["/本地播放", "/localplay"]
+        )
+        tts_engine_cmds = command_keywords.get("tts_engine", ["/tts", "/TTS"])
 
         form_prefixes = [cmd for cmd in form_cmds if cmd.startswith("/")]
         speak_prefixes = [cmd for cmd in speak_cmds if cmd.startswith("/")]
         exist_prefixes = [cmd for cmd in exist_cmds if cmd.startswith("/")]
+        voice_prefixes = [cmd for cmd in voice_cmds if cmd.startswith("/")]
+        text_prefixes = [cmd for cmd in text_cmds if cmd.startswith("/")]
+        local_playback_prefixes = [
+            cmd for cmd in local_playback_cmds if cmd.startswith("/")
+        ]
 
         is_form_cmd = any(content_lower.startswith(cmd) for cmd in form_prefixes)
         is_speak_cmd = any(content_lower.startswith(cmd) for cmd in speak_prefixes)
         is_exist_cmd = any(content_lower.startswith(cmd) for cmd in exist_prefixes)
+        is_voice_cmd = any(content_lower.strip() == cmd for cmd in voice_cmds)
+        is_text_cmd = any(content_lower.strip() == cmd for cmd in text_cmds)
+        is_local_playback_cmd = any(
+            content_lower.strip() == cmd for cmd in local_playback_cmds
+        )
+        is_tts_engine_cmd = any(
+            content_lower.startswith(cmd + " ") or content_lower.strip() == cmd
+            for cmd in tts_engine_cmds
+        )
 
         status_cmds = command_keywords.get("status", [])
         is_status_cmd = content_lower in status_cmds
@@ -3576,6 +3596,18 @@ class DecisionHub:
                 return get_existential_response("help")
             return get_existential_response("unknown_emotion", emotion=cmd)
 
+        # 4.5. TTS 语音/文本/本地播放/引擎切换 命令
+        if is_voice_cmd or is_text_cmd or is_local_playback_cmd or is_tts_engine_cmd:
+            return await self._handle_tts_commands(
+                content,
+                content_lower,
+                is_voice_cmd,
+                is_text_cmd,
+                is_local_playback_cmd,
+                is_tts_engine_cmd,
+                tts_engine_cmds,
+            )
+
         # 5. 帮助命令
         help_cmds = command_keywords.get("help", ["帮助", "help", "?", "？"])
         if any(
@@ -3587,6 +3619,8 @@ class DecisionHub:
             cmds = _gck()
             lines = ["【弥娅帮助】", ""]
             lines.append("快捷命令：状态  形态  帮助  版本  trpg")
+            lines.append("语音命令：/语音  /文本  /本地播放")
+            lines.append("引擎切换：/tts edge|sovits|api|status")
             lines.append(
                 "记忆命令：记忆统计  记忆搜索 <词>  记忆最近  记忆标签  我的记忆"
             )
@@ -3597,6 +3631,8 @@ class DecisionHub:
             lines.append("")
             lines.append("形态切换：/形态 <形态名>  (不填则查看可用)")
             lines.append("说话模式：/说话 <casual|catching|confiding>")
+            lines.append("TTS 说明：/语音=语音回复  /文本=文字回复  /本地播放=电脑发声")
+            lines.append("引擎说明：edge=EdgeTTS免费  sovits=遐蝶音色  api=云端API")
             return "\n".join(lines)
 
         # 6. 版本命令
@@ -3667,6 +3703,134 @@ class DecisionHub:
 
         # 不是快速命令
         return None
+
+    async def _handle_tts_commands(
+        self,
+        content: str,
+        content_lower: str,
+        is_voice: bool,
+        is_text: bool,
+        is_local_playback: bool,
+        is_tts_engine: bool = False,
+        tts_engine_cmds: list = None,
+    ) -> str:
+        """处理 TTS 语音/文本/本地播放/引擎切换 命令"""
+        import json
+
+        config_path = "config/tts_config.json"
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+        except Exception:
+            config = {}
+
+        changed = False
+        messages = []
+
+        if is_voice:
+            config["qq_default_mode"] = "voice"
+            config["enabled"] = True
+            changed = True
+            engine = config.get("preferred_engine", "edge_tts")
+            engine_names = {
+                "edge_tts": "Edge TTS",
+                "gpt_sovits": "GPT-SoVITS 遐蝶",
+                "api_tts": "API 云端 TTS",
+            }
+            messages.append(f"已切换到语音模式 ({engine_names.get(engine, engine)})")
+        elif is_text:
+            config["qq_default_mode"] = "text"
+            changed = True
+            messages.append("已切换到文本模式，回复将以文字发送")
+        elif is_local_playback:
+            current = config.get("local_playback_enabled", False)
+            config["local_playback_enabled"] = not current
+            engine = config.get("preferred_engine", "edge_tts")
+            config["local_playback_engine"] = engine
+            changed = True
+            if not current:
+                messages.append(f"已开启本地电脑播放 ({engine})")
+            else:
+                messages.append("已关闭本地电脑播放")
+        elif is_tts_engine and tts_engine_cmds:
+            cmd = content_lower
+            for c in tts_engine_cmds:
+                cmd = cmd.replace(c.lower(), "")
+            cmd = cmd.strip()
+
+            engine_names = {
+                "edge": "edge_tts",
+                "sovits": "gpt_sovits",
+                "api": "api_tts",
+            }
+            if not cmd or cmd in ("status", "状态"):
+                current = config.get("preferred_engine", "edge_tts")
+                display = {
+                    "edge_tts": "Edge TTS (免费，微软晓晓)",
+                    "gpt_sovits": "GPT-SoVITS (遐蝶音色，需本地服务)",
+                    "api_tts": "API 云端 (OpenAI TTS)",
+                }
+                local_eng = config.get("local_playback_engine", current)
+                lines = [
+                    "【TTS 状态】",
+                    "",
+                    f"QQ 引擎: {display.get(current, current)}",
+                    f"本地播放引擎: {display.get(local_eng, local_eng)}",
+                    f"QQ 模式: {config.get('qq_default_mode', 'text')}",
+                    f"本地播放: {'开' if config.get('local_playback_enabled') else '关'}",
+                ]
+                return "\n".join(lines)
+
+            engine_key = engine_names.get(cmd)
+            if not engine_key:
+                return f"未知引擎: {cmd}。可用: edge / sovits / api / status"
+
+            config["preferred_engine"] = engine_key
+            changed = True
+
+            # 切换引擎时自动开启语音模式
+            config["qq_default_mode"] = "voice"
+            config["enabled"] = True
+
+            display = {
+                "edge_tts": "Edge TTS (免费)",
+                "gpt_sovits": "GPT-SoVITS 遐蝶",
+                "api_tts": "API 云端 TTS",
+            }
+            messages.append(
+                f"TTS 引擎已切换: {display.get(engine_key, engine_key)}，已自动开启语音模式"
+            )
+
+            if engine_key == "gpt_sovits":
+                messages.append("（需确保 GPT-SoVITS 已启动: http://127.0.0.1:9880）")
+            elif engine_key == "api_tts":
+                key = config.get("engines", {}).get("api_tts", {}).get("api_key", "")
+                if not key:
+                    messages.append("（⚠️ 未配置 API Key，请在 tts_config.json 中填写）")
+
+        if changed:
+            try:
+                with open(config_path, "w", encoding="utf-8") as f:
+                    json.dump(config, f, ensure_ascii=False, indent=2)
+                logger.info(f"[决策层] TTS 配置已更新: {messages[0]}")
+            except Exception as e:
+                logger.error(f"[决策层] TTS 配置保存失败: {e}")
+                return f"配置保存失败: {e}"
+
+        try:
+            if self.miya_instance:
+                daemon = getattr(self.miya_instance, "daemon", None)
+                if daemon and hasattr(daemon, "registry"):
+                    for pid, inst in daemon.registry._instances.items():
+                        if hasattr(inst, "set_tts_mode"):
+                            if is_voice:
+                                inst.set_tts_mode("voice")
+                            elif is_text:
+                                inst.set_tts_mode("text")
+        except Exception as e:
+            logger.debug(f"[决策层] 运行时通知平台失败: {e}")
+
+        return "\n".join(messages)
 
     def _append_qq_status_tag(self, response: str) -> str:
         """

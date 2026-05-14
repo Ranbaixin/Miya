@@ -167,6 +167,11 @@ class WebAPI:
             self.tools_routes = ToolRoutes(self.web_net, self.decision_hub)
             self.security_routes = SecurityRoutes(self.web_net)
 
+            # TTS 语音合成路由
+            from .tts_routes import TTSRoutes
+
+            self.tts_routes = TTSRoutes()
+
             logger.info("[WebAPI] 所有子路由初始化成功")
 
         except Exception as e:
@@ -180,6 +185,7 @@ class WebAPI:
             self.tools_routes = None
             self.security_routes = None
             self.cross_terminal_routes = None
+            self.tts_routes = None
 
     def _setup_routes(self):
         """设置 API 路由"""
@@ -211,6 +217,13 @@ class WebAPI:
 
         if self.cross_terminal_routes and self.cross_terminal_routes.get_router():
             self.router.include_router(self.cross_terminal_routes.get_router())
+
+        if (
+            hasattr(self, "tts_routes")
+            and self.tts_routes
+            and self.tts_routes.get_router()
+        ):
+            self.router.include_router(self.tts_routes.get_router())
 
         # ========== 兼容旧API路径 ==========
 

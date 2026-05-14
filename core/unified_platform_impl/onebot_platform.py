@@ -855,13 +855,27 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             pass
 
     async def _send_onebot_reply(self, original: Dict, text: str):
-        """发送 OneBot 回复（自动拆分长消息）"""
+        """发送 OneBot 回复（根据 TTS 配置自动选择文字/语音）"""
         if not self._ws or not self._connected:
             return
 
-        max_len = self._config_data.get("max_message_length", 200)
         msg_type = original.get("message_type", "private")
+        target_id = (
+            original.get("sender", {}).get("user_id")
+            if msg_type == "private"
+            else original.get("group_id")
+        )
 
+        use_voice = self._should_use_voice()
+
+        if use_voice and text.strip():
+            logger.info(f"[{self.platform_id}] TTS 语音模式回复")
+            sent = await self._send_voice_reply(msg_type, target_id, text)
+            if sent:
+                return
+
+        # 文字模式或 TTS 回退
+        max_len = self._config_data.get("max_message_length", 200)
         for chunk in self._split_message(text, max_len):
             reply_data = {
                 "action": "send_msg",
@@ -880,10 +894,204 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             try:
                 await self._ws.send_str(json.dumps(reply_data))
                 if len(chunk) < len(text):
-                    await asyncio.sleep(0.3)  # 分段间短暂间隔
+                    await asyncio.sleep(0.3)
             except Exception as e:
                 logger.error(f"[{self.platform_id}] 发送回复异常: {e}")
                 break
+
+    def _should_use_voice(self) -> bool:
+        """检查当前是否应使用语音模式"""
+        try:
+            import json
+
+            config_path = "config/tts_config.json"
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+            return (
+                config.get("enabled", False)
+                and config.get("qq_default_mode") == "voice"
+            )
+        except Exception:
+            return False
+
+    async def _send_voice_reply(self, msg_type: str, target_id: str, text: str) -> bool:
+        """发送语音回复，按 preferred_engine 路由，失败回退文字"""
+        import tempfile, os, json
+
+        config_path = "config/tts_config.json"
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+        except Exception:
+            return False
+
+        preferred = config.get("preferred_engine", "edge_tts")
+
+        try:
+            if preferred == "gpt_sovits":
+                audio_path = await self._synthesize_gpt_sovits(config, text)
+            elif preferred == "api_tts":
+                audio_path = await self._synthesize_api_tts(config, text)
+            else:
+                audio_path = await self._synthesize_edge_tts(config, text)
+        except Exception as e:
+            logger.warning(f"[{self.platform_id}] {preferred} 合成失败: {e}")
+            if preferred != "edge_tts":
+                try:
+                    audio_path = await self._synthesize_edge_tts(config, text)
+                    logger.info(f"[{self.platform_id}] 已回退到 edge-tts")
+                except Exception as e2:
+                    logger.error(f"[{self.platform_id}] edge-tts 回退也失败: {e2}")
+                    return False
+            else:
+                return False
+
+        if not audio_path:
+            return False
+
+        try:
+            file_uri = f"file:///{audio_path.replace(os.sep, '/')}"
+            reply_data = {
+                "action": "send_msg",
+                "params": {
+                    "message_type": msg_type,
+                    "message": [{"type": "record", "data": {"file": file_uri}}],
+                },
+            }
+            if msg_type == "private":
+                reply_data["params"]["user_id"] = target_id
+            elif msg_type == "group":
+                reply_data["params"]["group_id"] = target_id
+
+            await self._ws.send_str(json.dumps(reply_data))
+            logger.info(f"[{self.platform_id}] 语音消息已发送 ({preferred})")
+
+            asyncio.get_event_loop().call_later(
+                3, lambda p=audio_path: os.unlink(p) if os.path.exists(p) else None
+            )
+            return True
+        except Exception as e:
+            logger.error(f"[{self.platform_id}] 语音发送失败: {e}")
+            return False
+
+    async def _synthesize_edge_tts(self, config: dict, text: str) -> str:
+        """edge-tts 合成 → 返回临时文件路径"""
+        import tempfile
+
+        engine_conf = config.get("engines", {}).get("edge_tts", {})
+        voice = engine_conf.get("voice", "zh-CN-XiaoxiaoNeural")
+        speed = engine_conf.get("speed", 1.0)
+        rate_str = f"+{int((speed - 1) * 100)}%"
+
+        import edge_tts
+
+        communicate = edge_tts.Communicate(text, voice, rate=rate_str)
+        tmp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
+        tmp_path = tmp.name
+        tmp.close()
+        await communicate.save(tmp_path)
+        logger.info(f"[{self.platform_id}] edge-tts 合成完成: {tmp_path}")
+        return tmp_path
+
+    async def _synthesize_gpt_sovits(self, config: dict, text: str) -> str:
+        """GPT-SoVITS 合成 → 返回临时文件路径"""
+        import tempfile
+
+        sovits_conf = config.get("engines", {}).get("gpt_sovits", {})
+        api_url = sovits_conf.get("api_url", "http://127.0.0.1:9880")
+        timeout = sovits_conf.get("timeout", 30)
+
+        filtered = text
+        if sovits_conf.get("filter_brackets", True):
+            import re
+
+            filtered = re.sub(r"【.*?】", "", filtered)
+            filtered = re.sub(r"\[.*?\]", "", filtered)
+        if sovits_conf.get("filter_special_chars", True):
+            import re
+
+            filtered = re.sub(r"[\U00010000-\U0010FFFF]", "", filtered)
+
+        payload = {
+            "text": filtered,
+            "text_lang": sovits_conf.get("language", "zh"),
+            "ref_audio_path": sovits_conf.get("reference_audio", ""),
+            "prompt_text": sovits_conf.get("reference_text", ""),
+            "prompt_lang": sovits_conf.get("language", "zh"),
+            "top_k": sovits_conf.get("top_k", 15),
+            "top_p": sovits_conf.get("top_p", 1.0),
+            "temperature": sovits_conf.get("temperature", 1.0),
+            "speed_factor": sovits_conf.get("speed", 1.0),
+            "ref_free": sovits_conf.get("ref_free", False),
+        }
+
+        import aiohttp
+
+        tts_endpoint = f"{api_url.rstrip('/')}/tts"
+        async with aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=timeout)
+        ) as session:
+            async with session.post(tts_endpoint, json=payload) as resp:
+                if resp.status != 200:
+                    text_err = await resp.text()
+                    raise RuntimeError(
+                        f"GPT-SoVITS 返回 {resp.status}: {text_err[:200]}"
+                    )
+                audio_data = await resp.read()
+
+        tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+        tmp_path = tmp.name
+        tmp.close()
+        with open(tmp_path, "wb") as f:
+            f.write(audio_data)
+        logger.info(
+            f"[{self.platform_id}] GPT-SoVITS 合成完成: {tmp_path} ({len(audio_data)} bytes)"
+        )
+        return tmp_path
+
+    async def _synthesize_api_tts(self, config: dict, text: str) -> str:
+        """云端 API TTS (OpenAI 兼容) → 返回临时文件路径"""
+        import tempfile
+
+        api_conf = config.get("engines", {}).get("api_tts", {})
+        api_url = api_conf.get("api_url", "https://api.openai.com/v1/audio/speech")
+        api_key = api_conf.get("api_key", "")
+        if not api_key:
+            raise RuntimeError("API Key 未配置")
+
+        fmt = api_conf.get("format", "mp3")
+        payload = {
+            "model": "tts-1",
+            "input": text,
+            "voice": api_conf.get("voice", "alloy"),
+            "response_format": fmt,
+            "speed": api_conf.get("speed", 1.0),
+        }
+
+        import aiohttp
+
+        async with aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=30)
+        ) as session:
+            async with session.post(
+                api_url,
+                json=payload,
+                headers={"Authorization": f"Bearer {api_key}"},
+            ) as resp:
+                if resp.status != 200:
+                    text_err = await resp.text()
+                    raise RuntimeError(f"API TTS 返回 {resp.status}: {text_err[:200]}")
+                audio_data = await resp.read()
+
+        tmp = tempfile.NamedTemporaryFile(suffix=f".{fmt}", delete=False)
+        tmp_path = tmp.name
+        tmp.close()
+        with open(tmp_path, "wb") as f:
+            f.write(audio_data)
+        logger.info(
+            f"[{self.platform_id}] API TTS 合成完成: {tmp_path} ({len(audio_data)} bytes)"
+        )
+        return tmp_path
 
     # ============ OneBot API 辅助 ============
 
