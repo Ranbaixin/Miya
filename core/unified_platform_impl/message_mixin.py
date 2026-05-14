@@ -363,25 +363,11 @@ class MessageMixin:
             logger.debug(f"本地播放异常: {e}")
 
     async def _tts_play_response(self, text: str):
-        """TTS 本地播放响应 (fire-and-forget, 所有平台共享)
-        优先检查 _tts_cache 复用语音发送路径的音频
-        """
-        import hashlib
+        """TTS 本地播放响应 (fire-and-forget, 所有平台共享)"""
+        # 支持语音的平台自己处理本地播放（发送语音后直接播同一文件）
+        if self._tts_should_voice() and self._tts_platform_supports_voice():
+            return
 
-        text_hash = hashlib.md5(text.encode()).hexdigest()[:16]
-        cached = self._tts_cache.get(text_hash)
-        if cached:
-            if os.path.exists(cached):
-                logger.info(f"[{self.platform_id}] TTS 复用缓存音频 → 本地播放")
-                await self._tts_play_local(cached)
-                return
-            else:
-                logger.warning(f"[{self.platform_id}] 缓存文件已删除: {cached}")
-                self._tts_cache.pop(text_hash, None)
-
-        logger.info(
-            f"[{self.platform_id}] TTS 缓存未命中 hash={text_hash}, cache_keys={list(self._tts_cache.keys())[:5]}"
-        )
         try:
             from core.tts.engine_router import synthesize
 

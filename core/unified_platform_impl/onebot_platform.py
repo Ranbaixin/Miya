@@ -966,11 +966,9 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             await self._ws.send_str(json.dumps(reply_data))
             logger.info(f"[{self.platform_id}] 语音消息已发送 ({preferred})")
 
-            # 写入音频缓存，供 _tts_play_response 复用
-            import hashlib
-
-            text_hash = hashlib.md5(text.encode()).hexdigest()[:16]
-            self._tts_cache[text_hash] = audio_path
+            # 语音发送成功后，直接复用同一音频文件做本地播放
+            if self._should_local_playback():
+                await self._play_local(audio_path, text)
 
             def _cleanup(path):
                 if os.path.exists(path):
