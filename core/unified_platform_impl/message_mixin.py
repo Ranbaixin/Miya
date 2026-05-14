@@ -266,3 +266,87 @@ class MessageMixin:
         except Exception as e:
             logger.error(f"[{self.platform_id}] 消息处理异常: {e}", exc_info=True)
             return f"处理消息时出错了: {e}"
+
+    # ============ TTS 通用处理 ============
+
+    def _tts_should_voice(self) -> bool:
+        """是否应发送语音到平台（仅支持语音的平台）"""
+        try:
+            import json
+
+            with open("config/tts_config.json", "r", encoding="utf-8") as f:
+                c = json.load(f)
+            return c.get("enabled", False) and c.get("qq_default_mode") == "voice"
+        except Exception:
+            return False
+
+    def _tts_should_local(self) -> bool:
+        """是否应本地电脑播放"""
+        try:
+            import json
+
+            with open("config/tts_config.json", "r", encoding="utf-8") as f:
+                c = json.load(f)
+            return c.get("local_playback_enabled", False)
+        except Exception:
+            return False
+
+    def _tts_platform_supports_voice(self) -> bool:
+        """当前平台是否支持发送语音消息"""
+        return self.platform_id in ("aiocqhttp", "qqofficial")
+
+    async def _tts_process(self, text: str) -> tuple[str | None, bool]:
+        """
+        通用 TTS 处理：合成 + 可选发送语音 + 本地播放
+        返回 (audio_path, sent_as_voice)
+        平台发送端据此决定是否跳过文字发送
+        """
+        should_voice = self._tts_should_voice() and self._tts_platform_supports_voice()
+        should_local = self._tts_should_local()
+        if not should_voice and not should_local:
+            return None, False
+        if not text or not text.strip():
+            return None, False
+
+        try:
+            from core.tts.engine_router import synthesize
+
+            audio_path = await synthesize(text)
+        except Exception as e:
+            logger.debug(f"[{self.platform_id}] TTS 合成失败: {e}")
+            return None, False
+
+        if not audio_path:
+            return None, False
+
+        sent = False
+        if should_voice:
+            try:
+                sent = await self._tts_send_voice(audio_path, text)
+            except Exception as e:
+                logger.warning(f"[{self.platform_id}] TTS 语音发送失败: {e}")
+
+        if should_local:
+            await self._tts_play_local(audio_path)
+
+        return audio_path, sent
+
+    async def _tts_send_voice(self, audio_path: str, text: str) -> bool:
+        """发送语音到平台，子类可覆写"""
+        return False
+
+    async def _tts_play_local(self, audio_path: str):
+        """本地电脑播放"""
+        try:
+            import simpleaudio as sa
+            import wave
+
+            with wave.open(audio_path, "rb") as wf:
+                wave_obj = sa.WaveObject.from_wave_read(wf)
+                play_obj = wave_obj.play()
+                while play_obj.is_playing():
+                    await asyncio.sleep(0.1)
+        except ImportError:
+            pass
+        except Exception:
+            pass

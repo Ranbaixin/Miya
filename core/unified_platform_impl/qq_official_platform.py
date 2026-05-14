@@ -91,8 +91,12 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
                     )
                     resp_text = response or ""
                     if resp_text:
-                        for chunk in platform._split_message(resp_text, 500):
-                            await msg.reply(content=chunk)
+                        voice_sent = await platform._tts_process_and_send_qqofficial(
+                            resp_text, msg, None
+                        )
+                        if not voice_sent:
+                            for chunk in platform._split_message(resp_text, 500):
+                                await msg.reply(content=chunk)
                 except Exception as e:
                     logger.error(f"[qqofficial] 消息处理异常: {e}")
 
@@ -118,14 +122,18 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
                     )
                     resp_text = response or ""
                     if resp_text:
-                        for chunk in platform._split_message(resp_text, 500):
-                            await msg._api.post_group_message(
-                                group_openid=group_id,
-                                msg_type=0,
-                                msg_id=msg.id,
-                                content=chunk,
-                            )
-                        await asyncio.sleep(0.3)
+                        voice_sent = await platform._tts_process_and_send_qqofficial(
+                            resp_text, None, msg
+                        )
+                        if not voice_sent:
+                            for chunk in platform._split_message(resp_text, 500):
+                                await msg._api.post_group_message(
+                                    group_openid=group_id,
+                                    msg_type=0,
+                                    msg_id=msg.id,
+                                    content=chunk,
+                                )
+                            await asyncio.sleep(0.3)
                 except Exception as e:
                     logger.error(f"[qqofficial] 群消息处理异常: {e}")
 
@@ -167,3 +175,42 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
         if not self._bot_task:
             return False
         return not self._bot_task.done()
+
+    async def _tts_process_and_send_qqofficial(
+        self, text: str, private_msg=None, group_msg=None
+    ) -> bool:
+        """QQ 官方平台的 TTS 处理：合成 → 发语音 → 本地播，返回是否已发语音"""
+        audio_path, sent = await self._tts_process(text)
+        if not sent or not audio_path:
+            return False
+        try:
+            import os
+
+            file_path = audio_path
+            file_uri = f"file:///{audio_path.replace(os.sep, '/')}"
+            if private_msg:
+                await private_msg._api.post_c2c_file(
+                    openid=getattr(private_msg.author, "member_openid", "")
+                    or getattr(private_msg.author, "user_openid", ""),
+                    file_type=3,
+                    url=file_uri,
+                )
+            elif group_msg:
+                await group_msg._api.post_group_file(
+                    group_openid=group_msg.group_openid,
+                    file_type=3,
+                    url=file_uri,
+                )
+            logger.info(f"[qqofficial] 语音消息已发送")
+        except Exception as e:
+            logger.warning(f"[qqofficial] 语音发送失败: {e}，回退文字")
+            return False
+        import asyncio as _asyncio
+
+        _asyncio.get_event_loop().call_later(
+            30,
+            lambda p=audio_path: __import__("os").unlink(p)
+            if __import__("os").path.exists(p)
+            else None,
+        )
+        return True
