@@ -340,27 +340,37 @@ class MessageMixin:
 
     async def _tts_play_local(self, audio_path: str):
         """本地电脑播放"""
-        try:
+        import concurrent.futures
+
+        def _play_blocking():
             import simpleaudio as sa
             import wave
 
             with wave.open(audio_path, "rb") as wf:
                 wave_obj = sa.WaveObject.from_wave_read(wf)
                 play_obj = wave_obj.play()
-                while play_obj.is_playing():
-                    await asyncio.sleep(0.1)
+                play_obj.wait_done()
+
+        try:
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, _play_blocking)
         except ImportError:
-            pass
-        except Exception:
-            pass
+            logger.debug("simpleaudio 不可用，跳过本地播放")
+        except Exception as e:
+            logger.debug(f"本地播放异常: {e}")
 
     async def _tts_play_response(self, text: str):
         """TTS 本地播放响应 (fire-and-forget, 所有平台共享)"""
         try:
             from core.tts.engine_router import synthesize
 
+            logger.info(f"[{self.platform_id}] TTS 本地合成中... ({len(text)} chars)")
             audio_path = await synthesize(text)
             if audio_path:
+                logger.info(f"[{self.platform_id}] TTS 本地播放中...")
                 await self._tts_play_local(audio_path)
-        except Exception:
-            pass
+                logger.info(f"[{self.platform_id}] TTS 本地播放完成")
+            else:
+                logger.warning(f"[{self.platform_id}] TTS 合成返回空路径")
+        except Exception as e:
+            logger.warning(f"[{self.platform_id}] TTS 本地播放失败: {e}")
