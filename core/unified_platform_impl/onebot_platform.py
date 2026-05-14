@@ -870,8 +870,10 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
         if use_voice and text.strip():
             logger.info(f"[{self.platform_id}] TTS 语音模式回复")
-            sent = await self._send_voice_reply(msg_type, target_id, text)
-            if sent:
+            audio_path, result = await self._send_voice_reply(msg_type, target_id, text)
+            if result:
+                if self._should_local_playback():
+                    await self._play_local(audio_path, text)
                 return
 
         # 文字模式或 TTS 回退
@@ -914,8 +916,8 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         except Exception:
             return False
 
-    async def _send_voice_reply(self, msg_type: str, target_id: str, text: str) -> bool:
-        """发送语音回复，按 preferred_engine 路由，失败回退文字"""
+    async def _send_voice_reply(self, msg_type: str, target_id: str, text: str):
+        """发送语音回复，返回 (audio_path, success)，失败回退文字"""
         import tempfile, os, json
 
         config_path = "config/tts_config.json"
@@ -923,7 +925,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             with open(config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
         except Exception:
-            return False
+            return None, False
 
         preferred = config.get("preferred_engine", "edge_tts")
 
@@ -942,12 +944,12 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                     logger.info(f"[{self.platform_id}] 已回退到 edge-tts")
                 except Exception as e2:
                     logger.error(f"[{self.platform_id}] edge-tts 回退也失败: {e2}")
-                    return False
+                    return None, False
             else:
-                return False
+                return None, False
 
         if not audio_path:
-            return False
+            return None, False
 
         try:
             file_uri = f"file:///{audio_path.replace(os.sep, '/')}"
@@ -966,13 +968,46 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             await self._ws.send_str(json.dumps(reply_data))
             logger.info(f"[{self.platform_id}] 语音消息已发送 ({preferred})")
 
-            asyncio.get_event_loop().call_later(
-                3, lambda p=audio_path: os.unlink(p) if os.path.exists(p) else None
-            )
-            return True
+            def _cleanup(path):
+                if os.path.exists(path):
+                    os.unlink(path)
+
+            asyncio.get_event_loop().call_later(30, _cleanup, audio_path)
+            return audio_path, True
         except Exception as e:
             logger.error(f"[{self.platform_id}] 语音发送失败: {e}")
+            return None, False
+
+    def _should_local_playback(self) -> bool:
+        """检查是否应本地播放"""
+        try:
+            import json
+
+            with open("config/tts_config.json", "r", encoding="utf-8") as f:
+                config = json.load(f)
+            return config.get("local_playback_enabled", False)
+        except Exception:
             return False
+
+    async def _play_local(self, audio_path: str, text: str):
+        """本地电脑播放音频"""
+        import asyncio
+
+        try:
+            import simpleaudio as sa
+            import wave
+
+            with wave.open(audio_path, "rb") as wf:
+                wave_obj = sa.WaveObject.from_wave_read(wf)
+                play_obj = wave_obj.play()
+                logger.info(f"[{self.platform_id}] 本地播放中...")
+                while play_obj.is_playing():
+                    await asyncio.sleep(0.1)
+                logger.info(f"[{self.platform_id}] 本地播放完成")
+        except ImportError:
+            logger.debug(f"[{self.platform_id}] simpleaudio 不可用，跳过本地播放")
+        except Exception as e:
+            logger.debug(f"[{self.platform_id}] 本地播放失败: {e}")
 
     async def _synthesize_edge_tts(self, config: dict, text: str) -> str:
         """edge-tts 合成 → 返回临时文件路径"""
