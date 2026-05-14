@@ -101,16 +101,7 @@ from utils.port_utils import check_and_get_port
 from core import Personality, Ethics, Identity, Arbitrator, Entropy, PromptManager
 from hub import MemoryEmotion, MemoryEngine, Emotion, Decision, Scheduler, DecisionHub
 from mlink import MLinkCore, Message, Router
-from perceive import PerceptualRing, AttentionGate
 from webnet import NetManager, CrossNetEngine
-from detect import TimeDetector, SpaceDetector, NodeDetector, EntropyDiffusion
-from trust import TrustScore, TrustPropagation
-from evolve import Sandbox, ABTest, UserCoPlay
-from storage import (
-    RedisAsyncClient,
-    initialize_redis,
-    get_redis_client,
-)
 from config import Settings
 from core.constants import Encoding
 from hub.platform_adapters import get_adapter
@@ -163,28 +154,9 @@ class Miya:
         # 初始化M-Link
         self.mlink = MLinkCore()
 
-        # 初始化感知层
-        self.perceptual_ring = PerceptualRing()
-        self.attention_gate = AttentionGate()
-
         # 初始化子网
         self.net_manager = NetManager()
         self.cross_net_engine = CrossNetEngine(self.net_manager)
-
-        # 初始化检测层
-        self.time_detector = TimeDetector()
-        self.space_detector = SpaceDetector()
-        self.node_detector = NodeDetector()
-        self.entropy_diffusion = EntropyDiffusion()
-
-        # 初始化信任系统
-        self.trust_score = TrustScore()
-        self.trust_propagation = TrustPropagation(self.trust_score)
-
-        # 初始化演化层
-        self.sandbox = Sandbox()
-        self.ab_test = ABTest()
-        self.user_co_play = UserCoPlay()
 
         # 数据库初始化（默认关闭，需要时通过 ENABLE_DATABASES 环境变量启用）
         self._init_databases()
@@ -835,8 +807,6 @@ class Miya:
             "personality": self.personality.get_profile(),
             "emotion": self.emotion.get_emotion_state(),
             "memory_stats": self.memory_engine.get_memory_stats(),
-            "perception": self.perceptual_ring.get_global_state(),
-            "trust_stats": self.trust_score.get_trust_stats(),
             "entropy_health": self.entropy.get_health_report(),
             "platform": "terminal",
             "platform_info": self.terminal_adapter.get_platform_info(),
