@@ -103,7 +103,7 @@ class WebAPI:
         try:
             from .miya_api import MiyaAPI
 
-            miya_api = MiyaAPI(self.decision_hub)
+            miya_api = MiyaAPI(self.web_net, self.decision_hub)
             if miya_api and miya_api.router:
                 self.router.include_router(miya_api.router)
                 logger.info("[WebAPI] MiyaAPI 路由已添加")
