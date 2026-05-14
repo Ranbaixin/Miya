@@ -27,10 +27,24 @@ def _load_config():
 
 
 def _schedule_cleanup(path: str, delay: float = 30.0):
-    """30 秒后清理临时音频文件"""
+    """延迟清理临时音频文件"""
     from threading import Timer
 
-    Timer(delay, lambda p=path: os.unlink(p) if os.path.exists(p) else None).start()
+    def _clean(path):
+        try:
+            if os.path.exists(path):
+                os.unlink(path)
+        except (PermissionError, OSError):
+            import time
+
+            time.sleep(5)
+            try:
+                if os.path.exists(path):
+                    os.unlink(path)
+            except (PermissionError, OSError):
+                pass
+
+    Timer(delay, _clean, (path,)).start()
 
 
 async def synthesize(text: str, engine: str = None) -> str | None:
