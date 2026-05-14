@@ -255,6 +255,9 @@ class MessageMixin:
                 if response:
                     response = self._filter_thinking(response)
                     response = self._filter_output(response)
+                # TTS 本地播放 (fire-and-forget, 所有平台)
+                if response and self._tts_should_local():
+                    asyncio.ensure_future(self._tts_play_response(response))
                 # 副作用 (fire-and-forget)
                 asyncio.ensure_future(
                     self._after_route(content, response or "", user_id)
@@ -348,5 +351,16 @@ class MessageMixin:
                     await asyncio.sleep(0.1)
         except ImportError:
             pass
+        except Exception:
+            pass
+
+    async def _tts_play_response(self, text: str):
+        """TTS 本地播放响应 (fire-and-forget, 所有平台共享)"""
+        try:
+            from core.tts.engine_router import synthesize
+
+            audio_path = await synthesize(text)
+            if audio_path:
+                await self._tts_play_local(audio_path)
         except Exception:
             pass
