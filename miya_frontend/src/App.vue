@@ -25,7 +25,7 @@ const scale = computed(() => height.value / (10000 - CONFIG.value.web_live2d.mod
 
 const STARTUP_LIVE2D = isElectron
   ? 'miya-char://弥娅/Miya/01.model3.json'
-  : './models/miya/01.model3.json'
+  : './models/弥娅/Miya/01.model3.json'
 const live2dSource = ref(STARTUP_LIVE2D)
 
 // Live2D 开关

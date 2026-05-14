@@ -142,7 +142,7 @@ export const DEFAULT_CONFIG = {
   web_live2d: {
     ssaa: 2,
     model: {
-      source: './models/miya/01.model3.json',
+      source: './models/弥娅/Miya/01.model3.json',
       x: 0.3,
       y: 1.0,
       size: 6800,

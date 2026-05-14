@@ -742,7 +742,7 @@ const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
 }
-const CHARACTERS_DIR = app.isPackaged ? resolve(process$1.resourcesPath, "characters") : resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "characters");
+const CHARACTERS_DIR = app.isPackaged ? resolve(__dirname, "..", "dist", "models") : resolve(dirname(fileURLToPath(import.meta.url)), "..", "public", "models");
 const MIYA_ROOT = app.isPackaged ? resolve(process$1.resourcesPath, "..") : resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DEFAULT_CHARACTER = "弥娅";
 const BACKGROUNDS_DIR = app.isPackaged ? resolve(process$1.resourcesPath, "premium-assets", "backgrounds") : resolve(dirname(fileURLToPath(import.meta.url)), "..", "premium-assets", "backgrounds");
