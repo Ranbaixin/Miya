@@ -989,7 +989,39 @@ class MiyaAPI:
                         ) as _f:
                             _cfg = _json.load(_f)
                         if _cfg.get("local_playback_enabled"):
-                            asyncio.ensure_future(self._do_tts_local(response))
+
+                            async def _tts_play():
+                                try:
+                                    logger.info(
+                                        f"[TTS] 桌面端合成中 ({len(response)} chars)"
+                                    )
+                                    from core.tts.engine_router import synthesize
+
+                                    audio = await synthesize(response)
+                                    if not audio:
+                                        logger.warning("[TTS] 合成返回空")
+                                        return
+                                    import concurrent.futures
+
+                                    def _play():
+                                        import simpleaudio as sa, wave
+
+                                        with wave.open(audio, "rb") as wf:
+                                            sa.WaveObject.from_wave_read(
+                                                wf
+                                            ).play().wait_done()
+
+                                    logger.info("[TTS] 桌面端播放中")
+                                    await asyncio.get_event_loop().run_in_executor(
+                                        None, _play
+                                    )
+                                    logger.info("[TTS] 桌面端播放完成")
+                                except ImportError:
+                                    logger.warning("[TTS] 缺少依赖")
+                                except Exception as ex:
+                                    logger.warning(f"[TTS] 失败: {ex}")
+
+                            asyncio.ensure_future(_tts_play())
                     except Exception:
                         pass
 
