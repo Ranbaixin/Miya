@@ -133,7 +133,7 @@ goto :restart
 cls
 echo.
 echo ================================================================================
-echo   MIYA Web Frontend
+echo   MIYA Web Frontend (Ops Center)
 echo ================================================================================
 echo.
 
@@ -150,11 +150,19 @@ if not exist "frontend\ui\node_modules\" (
     cd ..\..
 )
 
-echo Starting web frontend...
-start "MIYA Web" cmd /c "cd frontend\ui && npm run dev"
+echo Cleaning up existing Vite instances...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr /C:":5173 " ^| findstr "LISTENING"') do (
+    taskkill /F /PID %%a >nul 2>&1
+    echo   Killed PID %%a on port 5173
+)
+
+echo Starting Ops Center on port 5173...
 echo.
-echo [OK] Web frontend launched
-timeout /t 2 >nul
+echo   ➜  http://localhost:5173
+echo.
+start "MIYA Web" cmd /c "cd frontend\ui && npm run dev"
+timeout /t 4 >nul
+echo [OK] Ops Center launched
 goto :restart
 
 :: ============================================================
@@ -184,10 +192,11 @@ if exist "miya_frontend\package.json" (
 
 :: Web (background)
 if exist "frontend\ui\package.json" (
-    echo [3/4] Starting Web frontend...
+    echo [3/4] Starting Ops Center (port 5173)...
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr /C:":5173 " ^| findstr "LISTENING"') do taskkill /F /PID %%a >nul 2>&1
     start "MIYA Web" /B cmd /c "cd frontend\ui && npm run dev"
-    timeout /t 2 >nul
-    echo [OK] Web launched
+    timeout /t 3 >nul
+    echo [OK] http://localhost:5173
 ) else (
     echo [3/4] Web frontend not found, skipped
 )
