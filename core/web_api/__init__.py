@@ -4,6 +4,8 @@
 """
 
 import logging
+import os
+import time
 from typing import Any, Optional, Dict
 
 from starlette.responses import StreamingResponse
@@ -87,19 +89,57 @@ class WebAPI:
         # 初始化子路由
         self._init_subroutes()
 
-        # 设置路由
+        # 添加 MiyaAPI 路由（真实数据，必须在前）
+        self._include_miya_api()
+
+        # 添加健康/资源/管理路由
+        self._include_extra_routers()
+
+        # 设置路由（mock/兼容层，在真实路由之后）
         self._setup_routes()
 
-        # 添加 MiyaAPI 路由
+    def _include_miya_api(self):
+        """添加 MiyaAPI 完整路由（168 路，必须优先）"""
         try:
             from .miya_api import MiyaAPI
 
-            miya_api = MiyaAPI(decision_hub)
+            miya_api = MiyaAPI(self.decision_hub)
             if miya_api and miya_api.router:
                 self.router.include_router(miya_api.router)
                 logger.info("[WebAPI] MiyaAPI 路由已添加")
         except Exception as e:
             logger.warning(f"[WebAPI] 添加 MiyaAPI 路由失败: {e}")
+
+    def _include_extra_routers(self):
+        """添加健康监控 / 资源管理 / MiyaWebUI 管理路由"""
+        try:
+            from core.health_monitor import router as health_router
+
+            self.router.include_router(health_router)
+            logger.info("[WebAPI] 健康监控路由已添加 (/health/)")
+        except Exception as e:
+            logger.warning(f"[WebAPI] 添加健康监控路由失败: {e}")
+        try:
+            from core.resource_manager import router as resource_router
+
+            self.router.include_router(resource_router)
+            logger.info("[WebAPI] 资源管理路由已添加 (/resources/)")
+        except Exception as e:
+            logger.warning(f"[WebAPI] 添加资源管理路由失败: {e}")
+        try:
+            from pathlib import Path
+            from webnet.miya_webui import (
+                get_global_webui,
+                create_management_routes,
+                create_runtime_routes,
+            )
+
+            webui = get_global_webui(Path("config"), Path("data"))
+            create_management_routes(self.router, webui)
+            create_runtime_routes(self.router, webui)
+            logger.info("[WebAPI] MiyaWebUI 管理路由已添加")
+        except Exception as e:
+            logger.warning(f"[WebAPI] 添加 MiyaWebUI 管理路由失败: {e}")
 
     def _init_subroutes(self):
         """初始化子路由模块"""
@@ -173,6 +213,107 @@ class WebAPI:
             self.router.include_router(self.cross_terminal_routes.get_router())
 
         # ========== 兼容旧API路径 ==========
+
+        @self.router.get("/api/system/info")
+        async def get_system_info():
+            """获取系统信息（psutil 实时数据）"""
+            import platform, psutil
+
+            try:
+                dp = "C:\\" if platform.system() == "Windows" else "/"
+                d = psutil.disk_usage(dp)
+                m = psutil.virtual_memory()
+                return {
+                    "cpu_usage": psutil.cpu_percent(interval=0.1),
+                    "cpu_percent": psutil.cpu_percent(interval=0.1),
+                    "memory_total_gb": round(m.total / (1024**3), 1),
+                    "memory_used_gb": round(m.used / (1024**3), 1),
+                    "memory_usage_percent": m.percent,
+                    "disk_usage_percent": d.percent,
+                    "disk_used_gb": round(d.used / (1024**3), 1),
+                    "disk_total_gb": round(d.total / (1024**3), 1),
+                    "uptime_seconds": int(
+                        time.time()
+                        - getattr(psutil, "boot_time", lambda: time.time() - 1)()
+                    )
+                    if hasattr(psutil, "boot_time")
+                    else 0,
+                    "process_count": len(psutil.pids()),
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+            except Exception as e:
+                return {"error": str(e)}
+
+        @self.router.get("/api/emotion")
+        async def get_emotion_state():
+            """获取当前情绪状态"""
+            try:
+                if (
+                    self.decision_hub
+                    and hasattr(self.decision_hub, "emotion")
+                    and self.decision_hub.emotion
+                ):
+                    s = self.decision_hub.emotion.get_emotion_state()
+                    if s:
+                        return {
+                            "dominant_emotion": s.get("dominant", "平静"),
+                            "intensity": s.get("intensity", 50),
+                            "emotions": s.get("emotions", {}),
+                        }
+            except Exception:
+                pass
+            return {"dominant_emotion": "平静", "intensity": 50, "emotions": {}}
+
+        @self.router.get("/api/miya/logs")
+        async def get_miya_logs(limit: int = 100):
+            """获取系统日志"""
+            try:
+                import glob
+
+                lfs = sorted(
+                    glob.glob("logs/*.log"), key=os.path.getmtime, reverse=True
+                )
+                lines = []
+                for lf in lfs[:3]:
+                    try:
+                        with open(lf, "r", encoding="utf-8", errors="ignore") as f:
+                            lines.extend(f.readlines()[-limit:])
+                    except:
+                        pass
+                return {
+                    "status": "success",
+                    "logs": lines[-limit:],
+                    "count": len(lines),
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+            except Exception as e:
+                return {"status": "error", "error": str(e), "logs": [], "count": 0}
+
+        @self.router.get("/api/queue/stats")
+        async def get_queue_stats():
+            """获取消息队列统计"""
+            return {
+                "size": 0,
+                "processing": False,
+                "model": "default",
+                "interval": 5,
+                "last_process_time_ms": 0,
+            }
+
+        @self.router.get("/api/config/file")
+        async def get_config_file(path: str = ""):
+            """读取配置文件内容"""
+            try:
+                fp = os.path.join(os.getcwd(), path)
+                fp = os.path.normpath(fp)
+                if not fp.startswith(
+                    os.path.normpath(os.getcwd())
+                ) or not os.path.isfile(fp):
+                    return {"error": "文件不存在"}
+                with open(fp, "r", encoding="utf-8", errors="ignore") as f:
+                    return {"path": path, "content": f.read()}
+            except Exception as e:
+                return {"error": str(e)}
 
         @self.router.get("/api/status")
         async def get_legacy_system_status():

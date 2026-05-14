@@ -24,7 +24,7 @@ const AgentCard: React.FC<{ agent: AgentInfo; index: number }> = ({ agent, index
           {agent.status === 'active' ? 'ACTIVE' : 'IDLE'}
         </span>
         <span className="attr-badge attr-resonance">
-          <span>⚙</span> {agent.tool_count} 工具
+          <span>⚙</span> {(agent as any).tools_count ?? agent.tool_count ?? 0} 工具
         </span>
       </div>
 
@@ -48,7 +48,7 @@ const AgentCard: React.FC<{ agent: AgentInfo; index: number }> = ({ agent, index
 
       <div className="mt-2 flex items-center justify-between text-[10px]">
         <span className="text-text-dim">{agent.name.replace(/_/g, ' ')}</span>
-        <span className="text-resonance-bright font-mono">Lv.{agent.tool_count}</span>
+        <span className="text-resonance-bright font-mono">Lv.{(agent as any).tools_count ?? agent.tool_count ?? 0}</span>
       </div>
     </motion.div>
   );
@@ -71,7 +71,7 @@ const AgentNetworkPage: React.FC = () => {
   }, []);
 
   const activeCount = agents.filter(a => a.status === 'active').length;
-  const totalTools = agents.reduce((s, a) => s + a.tool_count, 0);
+  const totalTools = agents.reduce((s, a) => s + ((a as any).tools_count ?? a.tool_count ?? 0), 0);
 
   const filteredTools = search
     ? tools.filter(t => t.toLowerCase().includes(search.toLowerCase()))

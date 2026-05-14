@@ -521,25 +521,23 @@ export function useHealth() {
   const [metrics, setMetrics] = useState<any>(null);
   const [checks, setChecks] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
-  const [bridgeHealth, setBridgeHealth] = useState<any>(null);
   const [botStats, setBotStats] = useState<any>(null);
 
   const refresh = useCallback(async () => {
-    const [r, m, c, h, bh, bs] = await Promise.all([
+    const [r, m, c, h, bs] = await Promise.all([
       fetchHealthReport(), fetchHealthMetrics(), fetchHealthChecks(),
-      fetchHealthHistory(30), fetchModelBridgeHealth(), fetchBotManagementStats(),
+      fetchHealthHistory(30), fetchBotManagementStats(),
     ]);
     if (r) setReport(r);
     if (m) setMetrics(m);
     if (c) setChecks(c);
     if (h) setHistory(h);
-    if (bh) setBridgeHealth(bh);
     if (bs) setBotStats(bs);
   }, []);
 
   useEffect(() => { refresh(); const t = setInterval(refresh, 10000); return () => clearInterval(t); }, [refresh]);
 
-  return { report, metrics, checks, history, bridgeHealth, botStats, refresh };
+  return { report, metrics, checks, history, botStats, refresh };
 }
 
 // ---- Resources Hook ----
@@ -562,4 +560,121 @@ export function useResources() {
   }, [refresh]);
 
   return { stats, memory, refresh, cleanup: doCleanup };
+}
+
+// ======== Memory / Scheduler / Knowledge API + Hooks ========
+
+export async function fetchMemoryList(limit = 100, query?: string) {
+  try {
+    const q = query ? `&query=${encodeURIComponent(query)}` : '';
+    const r = await fetch(`${CORE}/api/memory/list?limit=${limit}${q}`, { headers: hdrs() });
+    if (r.ok) return await r.json();
+  } catch { /* ignore */ }
+  return { success: true, data: { items: [] }, total: 0 };
+}
+
+export async function fetchMemoryGraph(userId = 'default') {
+  try {
+    const r = await fetch(`${CORE}/api/plug/alkaid/ltm/graph?user_id=${encodeURIComponent(userId)}`, { headers: hdrs() });
+    if (r.ok) return await r.json();
+  } catch { /* ignore */ }
+  return { status: 'ok', data: { nodes: [], edges: [] } };
+}
+
+export async function fetchCronJobs() {
+  try {
+    const r = await fetch(`${CORE}/api/cron/jobs`, { headers: hdrs() });
+    if (r.ok) return await r.json();
+  } catch { /* ignore */ }
+  return { success: true, data: [], total: 0 };
+}
+
+export async function fetchPlugins() {
+  try {
+    const r = await fetch(`${CORE}/api/plugin/get`, { headers: hdrs() });
+    if (r.ok) return await r.json();
+  } catch { /* ignore */ }
+  return { success: true, data: [], total: 0 };
+}
+
+export async function fetchKnowledgeBases() {
+  try {
+    const r = await fetch(`${CORE}/api/knowledge_base/list`, { headers: hdrs() });
+    if (r.ok) return await r.json();
+  } catch { /* ignore */ }
+  return { success: true, data: [], total: 0 };
+}
+
+export async function fetchProviderList() {
+  try {
+    const r = await fetch(`${CORE}/api/provider/list`, { headers: hdrs() });
+    if (r.ok) return await r.json();
+  } catch { /* ignore */ }
+  return { providers: [] };
+}
+
+export async function fetchSkills() {
+  try {
+    const r = await fetch(`${CORE}/api/skills`, { headers: hdrs() });
+    if (r.ok) return await r.json();
+  } catch { /* ignore */ }
+  return { skills: [], total: 0 };
+}
+
+export async function fetchMCPList() {
+  try {
+    const r = await fetch(`${CORE}/api/mcp/list`, { headers: hdrs() });
+    if (r.ok) return await r.json();
+  } catch { /* ignore */ }
+  return { servers: [], total: 0 };
+}
+
+export async function fetchStats() {
+  try {
+    const r = await fetch(`${CORE}/api/stat/get`, { headers: hdrs() });
+    if (r.ok) return await r.json();
+  } catch { /* ignore */ }
+  return { success: true, data: { total_conversations: 0, total_messages: 0, total_users: 0, active_providers: 0, total_providers: 0 } };
+}
+
+export function useMemorySystem() {
+  const [memoryList, setMemoryList] = useState<any>(null);
+  const [memoryGraph, setMemoryGraph] = useState<any>(null);
+  const [query, setQuery] = useState('');
+
+  const refresh = useCallback(async () => {
+    const [list, graph] = await Promise.all([fetchMemoryList(50, query || undefined), fetchMemoryGraph('default')]);
+    if (list) setMemoryList(list);
+    if (graph) setMemoryGraph(graph);
+  }, [query]);
+
+  useEffect(() => { refresh(); const t = setInterval(refresh, 30000); return () => clearInterval(t); }, [refresh]);
+  const search = useCallback((q: string) => { setQuery(q); }, []);
+  return { memoryList, memoryGraph, refresh, search, query };
+}
+
+export function useScheduler() {
+  const [cronJobs, setCronJobs] = useState<any>(null);
+  const [stats, setStats] = useState<any>(null);
+  const refresh = useCallback(async () => {
+    const [jobs, st] = await Promise.all([fetchCronJobs(), fetchStats()]);
+    if (jobs) setCronJobs(jobs);
+    if (st) setStats(st);
+  }, []);
+  useEffect(() => { refresh(); const t = setInterval(refresh, 15000); return () => clearInterval(t); }, [refresh]);
+  return { cronJobs, stats, refresh };
+}
+
+export function useKnowledge() {
+  const [kb, setKb] = useState<any>(null);
+  const [plugins, setPlugins] = useState<any>(null);
+  const [providers, setProviders] = useState<any>(null);
+  const [skills, setSkills] = useState<any>(null);
+  const [mcpServers, setMcpServers] = useState<any>(null);
+  const refresh = useCallback(async () => {
+    const [k, p, pr, s, m] = await Promise.all([fetchKnowledgeBases(), fetchPlugins(), fetchProviderList(), fetchSkills(), fetchMCPList()]);
+    if (k) setKb(k); if (p) setPlugins(p); if (pr) setProviders(pr); if (s) setSkills(s); if (m) setMcpServers(m);
+  }, []);
+  useEffect(() => { refresh(); }, [refresh]);
+  return { kb, plugins, providers, skills, mcpServers, refresh };
 }

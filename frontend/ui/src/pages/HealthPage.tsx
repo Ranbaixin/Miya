@@ -8,7 +8,7 @@ import { useHealth } from '../services/miyaApi';
 import { cn } from '../utils';
 
 const HealthPage: React.FC = () => {
-  const { report, metrics, checks, history, bridgeHealth, botStats, refresh } = useHealth();
+  const { report, metrics, checks, history, botStats, refresh } = useHealth();
   const [lastRefresh, setLastRefresh] = useState('');
 
   const doRefresh = async () => {
@@ -85,9 +85,6 @@ const HealthPage: React.FC = () => {
           )}
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[10px] text-text-dim">
-            {bridgeHealth ? <span className="text-status-active">模型桥在线</span> : <span className="text-text-dim">模型桥离线</span>}
-          </span>
           {lastRefresh && <span className="text-[9px] text-text-dim">刷新: {lastRefresh}</span>}
           <button className="text-[10px] text-aether hover:text-aether-bright" onClick={doRefresh}>↻ 刷新</button>
         </div>
@@ -165,18 +162,6 @@ const HealthPage: React.FC = () => {
               })
             )}
           </div>
-
-          {/* 模型桥统计 */}
-          {bridgeHealth && (
-            <div className="mt-3 pt-3 border-t border-border-glass">
-              <div className="text-[10px] text-text-dim mb-2">模型桥 (port 8888)</div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px]">
-                <span className="text-text-dim">请求数</span><span className="text-aether">{bridgeHealth.request_count || 0}</span>
-                <span className="text-text-dim">Token 数</span><span className="text-starlight">{bridgeHealth.total_tokens || 0}</span>
-                <span className="text-text-dim">模型数</span><span className="text-text-primary">{bridgeHealth.models_count || 0}</span>
-              </div>
-            </div>
-          )}
         </motion.div>
       </div>
 

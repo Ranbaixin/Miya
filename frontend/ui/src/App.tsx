@@ -15,6 +15,8 @@ import ResourcePage from './pages/ResourcePage';
 import ModelPoolPage from './pages/ModelPoolPage';
 import AgentNetworkPage from './pages/AgentNetworkPage';
 import MessageQueuePage from './pages/MessageQueuePage';
+import MemoryPage from './pages/MemoryPage';
+import SchedulerPage from './pages/SchedulerPage';
 import TerminalPage from './pages/TerminalPage';
 import LogViewerPage from './pages/LogViewerPage';
 import ConfigCenterPage from './pages/ConfigCenterPage';
@@ -28,7 +30,9 @@ const tabs: NavTab[] = [
   { id: 'resources', icon: '◉', label: '资源' },
   { id: 'models', icon: '◆', label: '模型' },
   { id: 'agents', icon: '⬡', label: 'Agent' },
-  { id: 'flow', icon: '≣', label: '消息流' },
+  { id: 'flow', icon: '≣', label: '消息' },
+  { id: 'memory', icon: '◎', label: '记忆' },
+  { id: 'scheduler', icon: '↻', label: '调度' },
   { id: 'terminal', icon: '>', label: '终端' },
   { id: 'logs', icon: '▷', label: '日志' },
   { id: 'config', icon: '⚙', label: '配置' },
@@ -89,6 +93,8 @@ function App() {
       case 'models': return wrap('models', <ModelPoolPage />);
       case 'agents': return wrap('agents', <AgentNetworkPage />);
       case 'flow': return wrap('flow', <MessageQueuePage />);
+      case 'memory': return wrap('memory', <MemoryPage />);
+      case 'scheduler': return wrap('scheduler', <SchedulerPage />);
       case 'terminal': return wrap('terminal', <TerminalPage />);
       case 'logs': return wrap('logs', <LogViewerPage />);
       case 'config': return wrap('config', <ConfigCenterPage />);
