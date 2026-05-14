@@ -901,6 +901,18 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 logger.error(f"[{self.platform_id}] 发送回复异常: {e}")
                 break
 
+        # 文字模式下也支持本地播放
+        if self._should_local_playback() and text.strip():
+            try:
+                config_path = "config/tts_config.json"
+                with open(config_path, "r", encoding="utf-8") as f:
+                    config = json.loads(f.read())
+                audio_path = await self._synthesize_for_local(config, text)
+                if audio_path:
+                    await self._play_local(audio_path, text)
+            except Exception as e:
+                logger.debug(f"[{self.platform_id}] 文字模式本地播放跳过: {e}")
+
     def _should_use_voice(self) -> bool:
         """检查当前是否应使用语音模式"""
         try:
@@ -988,6 +1000,27 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             return config.get("local_playback_enabled", False)
         except Exception:
             return False
+
+    async def _synthesize_for_local(self, config: dict, text: str) -> str:
+        """纯合成（不发送），返回音频路径，失败返回 None"""
+        preferred = config.get(
+            "local_playback_engine", config.get("preferred_engine", "edge_tts")
+        )
+        try:
+            if preferred == "gpt_sovits":
+                return await self._synthesize_gpt_sovits(config, text)
+            elif preferred == "api_tts":
+                return await self._synthesize_api_tts(config, text)
+            else:
+                return await self._synthesize_edge_tts(config, text)
+        except Exception as e:
+            logger.warning(
+                f"[{self.platform_id}] 本地合成 {preferred} 失败: {e}，回退 edge-tts"
+            )
+            try:
+                return await self._synthesize_edge_tts(config, text)
+            except Exception:
+                return None
 
     async def _play_local(self, audio_path: str, text: str):
         """本地电脑播放音频"""
