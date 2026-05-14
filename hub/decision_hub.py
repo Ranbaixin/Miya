@@ -3804,28 +3804,34 @@ class DecisionHub:
                 if not engine_key:
                     return f"未知引擎: {cmd}。可用: edge / sovits / api / save / status"
 
-            config["preferred_engine"] = engine_key
-            changed = True
+                config["preferred_engine"] = engine_key
+                changed = True
 
-            # 切换引擎时自动开启语音模式
-            config["qq_default_mode"] = "voice"
-            config["enabled"] = True
+                # 切换引擎时自动开启语音模式
+                config["qq_default_mode"] = "voice"
+                config["enabled"] = True
 
-            display = {
-                "edge_tts": "Edge TTS (免费)",
-                "gpt_sovits": "GPT-SoVITS 遐蝶",
-                "api_tts": "API 云端 TTS",
-            }
-            messages.append(
-                f"TTS 引擎已切换: {display.get(engine_key, engine_key)}，已自动开启语音模式"
-            )
+                display = {
+                    "edge_tts": "Edge TTS (免费)",
+                    "gpt_sovits": "GPT-SoVITS 遐蝶",
+                    "api_tts": "API 云端 TTS",
+                }
+                messages.append(
+                    f"TTS 引擎已切换: {display.get(engine_key, engine_key)}，已自动开启语音模式"
+                )
 
-            if engine_key == "gpt_sovits":
-                messages.append("（需确保 GPT-SoVITS 已启动: http://127.0.0.1:9880）")
-            elif engine_key == "api_tts":
-                key = config.get("engines", {}).get("api_tts", {}).get("api_key", "")
-                if not key:
-                    messages.append("（⚠️ 未配置 API Key，请在 tts_config.json 中填写）")
+                if engine_key == "gpt_sovits":
+                    messages.append(
+                        "（需确保 GPT-SoVITS 已启动: http://127.0.0.1:9880）"
+                    )
+                elif engine_key == "api_tts":
+                    key = (
+                        config.get("engines", {}).get("api_tts", {}).get("api_key", "")
+                    )
+                    if not key:
+                        messages.append(
+                            "（⚠️ 未配置 API Key，请在 tts_config.json 中填写）"
+                        )
 
         if changed:
             try:
