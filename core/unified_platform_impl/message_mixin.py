@@ -370,11 +370,18 @@ class MessageMixin:
 
         text_hash = hashlib.md5(text.encode()).hexdigest()[:16]
         cached = self._tts_cache.get(text_hash)
-        if cached and os.path.exists(cached):
-            logger.info(f"[{self.platform_id}] TTS 复用缓存音频 → 本地播放")
-            await self._tts_play_local(cached)
-            return
+        if cached:
+            if os.path.exists(cached):
+                logger.info(f"[{self.platform_id}] TTS 复用缓存音频 → 本地播放")
+                await self._tts_play_local(cached)
+                return
+            else:
+                logger.warning(f"[{self.platform_id}] 缓存文件已删除: {cached}")
+                self._tts_cache.pop(text_hash, None)
 
+        logger.info(
+            f"[{self.platform_id}] TTS 缓存未命中 hash={text_hash}, cache_keys={list(self._tts_cache.keys())[:5]}"
+        )
         try:
             from core.tts.engine_router import synthesize
 
