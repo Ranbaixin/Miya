@@ -36,12 +36,12 @@ if (!gotTheLock) {
   app.quit()
 }
 
-// ── 自定义协议：miya-char:// 用于加载 characters 目录下的角色资源 ──
-// 打包模式：extraResources/characters；开发模式：项目根/characters
+// ── 自定义协议：miya-char:// 用于加载 public/models 目录下的角色资源 ──
+// 打包模式：dist/models；开发模式：public/models
 // 默认角色：弥娅（无 hostname 时回退到弥娅目录）
 const CHARACTERS_DIR = app.isPackaged
-  ? resolve(process.resourcesPath, 'characters')
-  : resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', 'characters')
+  ? resolve(__dirname, '..', 'dist', 'models')
+  : resolve(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'models')
 const MIYA_ROOT = app.isPackaged
   ? resolve(process.resourcesPath, '..')
   : resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -163,7 +163,7 @@ app.whenReady().then(async () => {
     return net.fetch(pathToFileURL(basePath).toString())
   })
 
-  // miya-char://角色名/文件名 → characters/角色名/文件名（无角色名时默认使用弥娅）
+  // miya-char://角色名/文件名 → models/角色名/文件名（无角色名时默认使用弥娅）
   protocol.handle('miya-char', (request) => {
     try {
       const url = new URL(request.url)
