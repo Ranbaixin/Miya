@@ -2732,10 +2732,12 @@ class MiyaAPI:
     async def _do_tts_local(self, text: str):
         """TTS 本地播放 (fire-and-forget)"""
         try:
+            logger.info(f"[TTS] 桌面端本地合成中... ({len(text)} chars)")
             from core.tts.engine_router import synthesize
 
             audio_path = await synthesize(text)
             if not audio_path:
+                logger.warning("[TTS] 合成返回空路径")
                 return
             import concurrent.futures
 
@@ -2748,10 +2750,14 @@ class MiyaAPI:
                     play_obj = wave_obj.play()
                     play_obj.wait_done()
 
+            logger.info("[TTS] 桌面端本地播放中...")
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, _play)
+            logger.info("[TTS] 桌面端本地播放完成")
         except ImportError:
-            pass
+            logger.warning("[TTS] 缺少依赖 (simpleaudio)")
+        except Exception as e:
+            logger.warning(f"[TTS] 失败: {e}")
         except Exception:
             pass
 
