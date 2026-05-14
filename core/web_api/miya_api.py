@@ -994,18 +994,9 @@ class MiyaAPI:
                             "config",
                             "tts_config.json",
                         )
-                        print(
-                            f"\n[TTS-DEBUG] config_path={config_path}, exists={os.path.exists(config_path)}\n",
-                            flush=True,
-                        )
                         with open(config_path, "r", encoding="utf-8") as _f:
                             _cfg = _json.load(_f)
-                        local_play = _cfg.get("local_playback_enabled", False)
-                        print(
-                            f"[TTS-DEBUG] local_playback_enabled={local_play}",
-                            flush=True,
-                        )
-                        if local_play:
+                        if _cfg.get("local_playback_enabled"):
 
                             async def _tts_play():
                                 try:
@@ -1036,11 +1027,11 @@ class MiyaAPI:
                                 except ImportError:
                                     logger.warning("[TTS] 缺少依赖")
                                 except Exception as ex:
-                                    logger.warning(f"[TTS] 失败: {ex}", exc_info=True)
+                                    logger.warning(f"[TTS] 失败: {ex}")
 
                             asyncio.ensure_future(_tts_play())
                     except Exception as ex:
-                        logger.warning(f"[TTS] 配置检查失败: {ex}", exc_info=True)
+                        logger.warning(f"[TTS] 配置检查失败: {ex}")
 
                 emotion_state = None
                 if (
