@@ -6,8 +6,13 @@
 import logging
 import tempfile
 import os
+import atexit
+import hashlib
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
+_CLEANUP_QUEUE: list[str] = []
 
 
 def _load_config():
@@ -21,26 +26,62 @@ def _load_config():
         return {}
 
 
+def _schedule_cleanup(path: str, delay: float = 30.0):
+    """30 秒后清理临时音频文件"""
+    from threading import Timer
+
+    Timer(delay, lambda p=path: os.unlink(p) if os.path.exists(p) else None).start()
+
+
 async def synthesize(text: str, engine: str = None) -> str | None:
-    """合成语音 → 返回临时文件路径，失败返回 None"""
+    """合成语音 → 返回文件路径，失败返回 None"""
     config = _load_config()
     if not engine:
         engine = config.get("preferred_engine", "edge_tts")
     try:
         if engine == "gpt_sovits":
-            return await _synthesize_gpt_sovits(config, text)
+            path = await _synthesize_gpt_sovits(config, text)
         elif engine == "api_tts":
-            return await _synthesize_api_tts(config, text)
+            path = await _synthesize_api_tts(config, text)
         else:
-            return await _synthesize_edge_tts(config, text)
+            path = await _synthesize_edge_tts(config, text)
     except Exception as e:
         logger.warning(f"TTS {engine} 失败: {e}，回退 edge-tts")
         if engine != "edge_tts":
             try:
-                return await _synthesize_edge_tts(config, text)
+                path = await _synthesize_edge_tts(config, text)
             except Exception:
-                pass
+                return None
+        else:
+            return None
+
+    if not path:
         return None
+
+    if config.get("save_audio", False):
+        _archive_audio(path, text, config)
+    else:
+        _schedule_cleanup(path, 30.0)
+
+    return path
+
+
+def _archive_audio(audio_path: str, text: str, config: dict):
+    """将音频存档到 data/tts_audio/"""
+    import shutil
+
+    save_dir = config.get("save_audio_dir", "data/tts_audio")
+    os.makedirs(save_dir, exist_ok=True)
+    suffix = os.path.splitext(audio_path)[1] or ".wav"
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    text_hash = hashlib.md5(text.encode()).hexdigest()[:8]
+    filename = f"{timestamp}_{text_hash}{suffix}"
+    dest = os.path.join(save_dir, filename)
+    try:
+        shutil.copy2(audio_path, dest)
+        logger.info(f"[TTS] 音频已存档: {dest}")
+    except Exception as e:
+        logger.warning(f"[TTS] 存档失败: {e}")
 
 
 async def _synthesize_edge_tts(config: dict, text: str) -> str:

@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import logging
 from datetime import datetime
 from typing import Dict, Any, Optional
@@ -272,6 +273,8 @@ class MessageMixin:
 
     # ============ TTS 通用处理 ============
 
+    _tts_cache: Dict[str, str] = {}  # text_hash → audio_path, 短 TTL 缓存
+
     def _tts_should_voice(self) -> bool:
         """是否应发送语音到平台（仅支持语音的平台）"""
         try:
@@ -360,7 +363,18 @@ class MessageMixin:
             logger.debug(f"本地播放异常: {e}")
 
     async def _tts_play_response(self, text: str):
-        """TTS 本地播放响应 (fire-and-forget, 所有平台共享)"""
+        """TTS 本地播放响应 (fire-and-forget, 所有平台共享)
+        优先检查 _tts_cache 复用语音发送路径的音频
+        """
+        import hashlib
+
+        text_hash = hashlib.md5(text.encode()).hexdigest()[:16]
+        cached = self._tts_cache.get(text_hash)
+        if cached and os.path.exists(cached):
+            logger.info(f"[{self.platform_id}] TTS 复用缓存音频 → 本地播放")
+            await self._tts_play_local(cached)
+            return
+
         try:
             from core.tts.engine_router import synthesize
 

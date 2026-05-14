@@ -3771,6 +3771,8 @@ class DecisionHub:
                     "api_tts": "API 云端 (OpenAI TTS)",
                 }
                 local_eng = config.get("local_playback_engine", current)
+                save_audio = config.get("save_audio", False)
+                save_dir = config.get("save_audio_dir", "data/tts_audio")
                 lines = [
                     "【TTS 状态】",
                     "",
@@ -3778,12 +3780,29 @@ class DecisionHub:
                     f"本地播放引擎: {display.get(local_eng, local_eng)}",
                     f"QQ 模式: {config.get('qq_default_mode', 'text')}",
                     f"本地播放: {'开' if config.get('local_playback_enabled') else '关'}",
+                    f"音频存档: {'开' if save_audio else '关'} ({save_dir})",
                 ]
                 return "\n".join(lines)
 
-            engine_key = engine_names.get(cmd)
-            if not engine_key:
-                return f"未知引擎: {cmd}。可用: edge / sovits / api / status"
+            if cmd.startswith("save ") or cmd == "save":
+                sub = cmd.replace("save ", "").replace("save", "").strip()
+                if sub in ("on", "开"):
+                    config["save_audio"] = True
+                    changed = True
+                    messages.append("音频存档已开启 → data/tts_audio/")
+                elif sub in ("off", "关"):
+                    config["save_audio"] = False
+                    changed = True
+                    messages.append("音频存档已关闭（播放后自动清理）")
+                else:
+                    return "用法: /tts save on|off"
+
+            if messages:
+                pass  # save 命令已处理
+            else:
+                engine_key = engine_names.get(cmd)
+                if not engine_key:
+                    return f"未知引擎: {cmd}。可用: edge / sovits / api / save / status"
 
             config["preferred_engine"] = engine_key
             changed = True
