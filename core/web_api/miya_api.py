@@ -982,13 +982,29 @@ class MiyaAPI:
                 # TTS 本地播放 (fire-and-forget, 桌面/Web 端)
                 if response:
                     try:
-                        import json as _json
+                        import json as _json, os
 
-                        with open(
-                            "config/tts_config.json", "r", encoding="utf-8"
-                        ) as _f:
+                        config_path = os.path.join(
+                            os.path.dirname(
+                                os.path.dirname(
+                                    os.path.dirname(os.path.abspath(__file__))
+                                )
+                            ),
+                            "config",
+                            "tts_config.json",
+                        )
+                        print(
+                            f"\n[TTS-DEBUG] config_path={config_path}, exists={os.path.exists(config_path)}\n",
+                            flush=True,
+                        )
+                        with open(config_path, "r", encoding="utf-8") as _f:
                             _cfg = _json.load(_f)
-                        if _cfg.get("local_playback_enabled"):
+                        local_play = _cfg.get("local_playback_enabled", False)
+                        print(
+                            f"[TTS-DEBUG] local_playback_enabled={local_play}",
+                            flush=True,
+                        )
+                        if local_play:
 
                             async def _tts_play():
                                 try:
@@ -1019,11 +1035,11 @@ class MiyaAPI:
                                 except ImportError:
                                     logger.warning("[TTS] 缺少依赖")
                                 except Exception as ex:
-                                    logger.warning(f"[TTS] 失败: {ex}")
+                                    logger.warning(f"[TTS] 失败: {ex}", exc_info=True)
 
                             asyncio.ensure_future(_tts_play())
-                    except Exception:
-                        pass
+                    except Exception as ex:
+                        logger.warning(f"[TTS] 配置检查失败: {ex}", exc_info=True)
 
                 emotion_state = None
                 if (
