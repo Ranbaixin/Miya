@@ -576,6 +576,19 @@ class WebAPI:
                         if not response:
                             response = "抱歉，弥娅无法处理这个请求呢。"
 
+                        # TTS 本地播放 (fire-and-forget, 桌面/Web 端)
+                        try:
+                            import json as _json
+
+                            with open(
+                                "config/tts_config.json", "r", encoding="utf-8"
+                            ) as _f:
+                                _cfg = _json.load(_f)
+                            if _cfg.get("local_playback_enabled") and response:
+                                asyncio.ensure_future(self._do_tts_local(response))
+                        except Exception:
+                            pass
+
                         response_data = {
                             "type": "plain",
                             "data": response,
@@ -1079,6 +1092,32 @@ class WebAPI:
                 "timestamp": datetime.utcnow().isoformat(),
                 "service": "miya-web-api",
             }
+
+    async def _do_tts_local(self, text: str):
+        """TTS 本地播放 (fire-and-forget)"""
+        try:
+            from core.tts.engine_router import synthesize
+            import concurrent.futures
+
+            audio_path = await synthesize(text)
+            if not audio_path:
+                return
+
+            def _play():
+                import simpleaudio as sa
+                import wave
+
+                with wave.open(audio_path, "rb") as wf:
+                    wave_obj = sa.WaveObject.from_wave_read(wf)
+                    play_obj = wave_obj.play()
+                    play_obj.wait_done()
+
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, _play)
+        except ImportError:
+            pass
+        except Exception:
+            pass
 
     def get_router(self):
         """获取 API 路由器"""

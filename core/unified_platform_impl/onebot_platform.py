@@ -872,8 +872,6 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             logger.info(f"[{self.platform_id}] TTS 语音模式回复")
             audio_path, result = await self._send_voice_reply(msg_type, target_id, text)
             if result:
-                if self._should_local_playback():
-                    await self._play_local(audio_path, text)
                 return
 
         # 文字模式或 TTS 回退
@@ -900,18 +898,6 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             except Exception as e:
                 logger.error(f"[{self.platform_id}] 发送回复异常: {e}")
                 break
-
-        # 文字模式下也支持本地播放
-        if self._should_local_playback() and text.strip():
-            try:
-                config_path = "config/tts_config.json"
-                with open(config_path, "r", encoding="utf-8") as f:
-                    config = json.loads(f.read())
-                audio_path = await self._synthesize_for_local(config, text)
-                if audio_path:
-                    await self._play_local(audio_path, text)
-            except Exception as e:
-                logger.debug(f"[{self.platform_id}] 文字模式本地播放跳过: {e}")
 
     def _should_use_voice(self) -> bool:
         """检查当前是否应使用语音模式"""
