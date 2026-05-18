@@ -3608,6 +3608,76 @@ class DecisionHub:
                 tts_engine_cmds,
             )
 
+        # 4.6. AI 唱歌命令（唱一下/点歌/唱歌 等）
+        from core.singing.engine_router import (
+            is_sing_request,
+            extract_song_name,
+            handle_sing_request,
+        )
+
+        if is_sing_request(content):
+            logger.info(f"[决策层] 捕获唱歌命令: {content}")
+            song_name = extract_song_name(content)
+            if not song_name:
+                from core.text_loader import get_singing_text
+
+                return get_singing_text("no_song_name")
+            username = (
+                (perception or {}).get("user_name", "")
+                or (perception or {}).get("sender_name", "")
+                or "亲爱的"
+            )
+            return await handle_sing_request(song_name, username=username)
+
+        # 4.7. AI 唱歌控制命令（切歌/歌单/停止）
+        from core.text_loader import get_command_keywords, get_singing_text
+
+        kw = get_command_keywords()
+        skip_cmds = kw.get("sing_control_skip", [])
+        list_cmds = kw.get("sing_control_list", [])
+        stop_cmds = kw.get("sing_control_stop", [])
+
+        is_skip_cmd = any(content_lower.startswith(c) for c in skip_cmds)
+        is_list_cmd = any(content_lower.startswith(c) for c in list_cmds)
+        is_stop_cmd = any(content_lower.startswith(c) for c in stop_cmds)
+
+        if is_skip_cmd or is_list_cmd or is_stop_cmd:
+            logger.info(f"[决策层] 捕获唱歌控制命令: {content}")
+            from core.singing import get_singing_registry
+            from core.audio_player import get_audio_player
+
+            registry = get_singing_registry()
+            wf = registry.workflow
+            player = get_audio_player()
+            if is_skip_cmd:
+                if wf.is_singing or wf._playback_active:
+                    player.stop()
+                    wf.is_singing = False
+                    return get_singing_text("skip_ok")
+                return get_singing_text("skip_no_singing")
+            elif is_list_cmd:
+                songs = []
+                if wf.current_song:
+                    songs.append(
+                        get_singing_text(
+                            "songlist_now", song_name=wf.current_song.song_name
+                        )
+                    )
+                for s in wf.play_queue:
+                    songs.append(
+                        get_singing_text("songlist_queued", song_name=s.song_name)
+                    )
+                if not songs:
+                    return get_singing_text("songlist_empty")
+                return get_singing_text("songlist_header") + "\n" + "\n".join(songs)
+            elif is_stop_cmd:
+                if wf.is_singing or wf._playback_active or wf.play_queue:
+                    player.stop()
+                    wf.is_singing = False
+                    wf.play_queue.clear()
+                    return get_singing_text("stop_ok")
+                return get_singing_text("stop_no_singing")
+
         # 5. 帮助命令
         help_cmds = command_keywords.get("help", ["帮助", "help", "?", "？"])
         if any(
@@ -3633,6 +3703,9 @@ class DecisionHub:
             lines.append("说话模式：/说话 <casual|catching|confiding>")
             lines.append("TTS 说明：/语音=语音回复  /文本=文字回复  /本地播放=电脑发声")
             lines.append("引擎说明：edge=EdgeTTS免费  sovits=遐蝶音色  api=云端API")
+            lines.append("")
+            lines.append("AI 唱歌：唱一下 <歌名>  |  点歌 <歌名>  |  唱歌 <歌名>")
+            lines.append("        切歌  歌单  停止唱歌")
             return "\n".join(lines)
 
         # 6. 版本命令

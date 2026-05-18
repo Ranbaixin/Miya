@@ -492,6 +492,14 @@ def get_presence_response() -> str:
     return get_active_chat_response("presence_responses", "here", "在。")
 
 
+def get_singing_text(key: str, default: str = "", **kwargs) -> str:
+    """获取唱歌相关文本"""
+    text = get_text(f"singing.{key}", default)
+    if kwargs:
+        text = text.format(**kwargs)
+    return text
+
+
 class TextLoader:
     """文本加载器类"""
 

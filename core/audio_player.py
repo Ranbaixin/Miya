@@ -2,6 +2,7 @@
 音频播放器 - 使用 simpleaudio 实现
 支持异步播放、音量控制、播放状态管理
 """
+
 import asyncio
 import logging
 from pathlib import Path
@@ -11,6 +12,7 @@ import array
 
 try:
     import simpleaudio as sa
+
     SIMPLEAUDIO_AVAILABLE = True
 except ImportError:
     SIMPLEAUDIO_AVAILABLE = False
@@ -103,7 +105,7 @@ class AudioPlayer:
                 logger.debug(f"[AudioPlayer] 开始播放: {audio_path}, 音量: {volume}")
 
                 # 读取 WAV 文件
-                with wave.open(audio_path, 'rb') as wav_file:
+                with wave.open(audio_path, "rb") as wav_file:
                     # 获取音频参数
                     n_channels = wav_file.getnchannels()
                     sampwidth = wav_file.getsampwidth()
@@ -114,20 +116,39 @@ class AudioPlayer:
                     audio_data = wav_file.readframes(n_frames)
 
                     # 应用音量
-                    if volume != 1.0 and sampwidth == 2:
-                        # 16-bit 音频
-                        samples = array.array('h', audio_data)
-                        for i in range(len(samples)):
-                            samples[i] = int(samples[i] * volume)
-                        audio_data = samples.tobytes()
+                    if volume != 1.0:
+                        if sampwidth == 2:
+                            samples = array.array("h", audio_data)
+                            for i in range(len(samples)):
+                                samples[i] = int(samples[i] * volume)
+                            audio_data = samples.tobytes()
+                        elif sampwidth == 1:
+                            samples = array.array("B", audio_data)
+                            for i in range(len(samples)):
+                                samples[i] = max(
+                                    0, min(255, int((samples[i] - 128) * volume + 128))
+                                )
+                            audio_data = samples.tobytes()
+                        elif sampwidth == 3:
+                            count = len(audio_data) // 3
+                            result = bytearray(len(audio_data))
+                            for i in range(count):
+                                raw = int.from_bytes(
+                                    audio_data[i * 3 : i * 3 + 3], "little", signed=True
+                                )
+                                val = max(-8388608, min(8388607, int(raw * volume)))
+                                result[i * 3 : i * 3 + 3] = val.to_bytes(
+                                    3, "little", signed=True
+                                )
+                            audio_data = bytes(result)
+                        elif sampwidth == 4:
+                            samples = array.array("i", audio_data)
+                            for i in range(len(samples)):
+                                samples[i] = int(samples[i] * volume)
+                            audio_data = samples.tobytes()
 
                 # 播放音频
-                play_obj = sa.play_buffer(
-                    audio_data,
-                    n_channels,
-                    sampwidth,
-                    framerate
-                )
+                play_obj = sa.play_buffer(audio_data, n_channels, sampwidth, framerate)
 
                 # 保存播放对象以便停止
                 self._play_obj = play_obj

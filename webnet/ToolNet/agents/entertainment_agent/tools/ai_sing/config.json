@@ -1,0 +1,22 @@
+{
+    "type": "function",
+    "function": {
+        "name": "ai_sing",
+        "description": "让弥娅AI唱歌。当用户要求唱歌、点歌（如'唱首歌'、'唱一下青花瓷'、'点歌夜曲'、'我想听歌'）时使用此工具。弥娅会通过AI翻唱服务来学习并演唱歌曲。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "song_name": {
+                    "type": "string",
+                    "description": "歌曲名称，如'青花瓷'、'夜曲'、'晴天'等"
+                },
+                "username": {
+                    "type": "string",
+                    "description": "点歌用户的昵称",
+                    "default": "亲爱的"
+                }
+            },
+            "required": ["song_name"]
+        }
+    }
+}

@@ -448,6 +448,7 @@ class PlatformToolsManager:
             "qq_file_reader",
             "qq_image_analyzer",
             "python_interpreter",
+            "ai_sing",
             "horoscope",
             "wenchang_dijun",
             "code_explorer_agent",
@@ -581,9 +582,16 @@ class PlatformToolsManager:
         # 获取当前平台的工具
         selected_tools = self.PLATFORM_TOOL_MAP.get(platform, self.CORE_TOOLS)
 
-        # 如果是 QQ 平台，添加更多常用工具
-        if platform == "qq":
+        # 如果是 QQ 平台（含 aiocqhttp OneBot），添加更多常用工具
+        if platform in ("qq", "aiocqhttp"):
             selected_tools = self.CORE_TOOLS + self.QQ_EXTENDED_TOOLS
+            # QQ 聊天场景不需要屏幕视觉工具，移除避免 AI 混淆
+            selected_tools = [
+                t
+                for t in selected_tools
+                if t
+                not in ("mcp_screen_vision_look_screen", "mcp_screen_vision_screenshot")
+            ]
 
         # 从 tool_subnet 获取工具 schema
         try:

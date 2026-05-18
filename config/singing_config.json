@@ -1,0 +1,111 @@
+{
+  "enabled": true,
+  "preferred_engine": "builtin",
+  "output_dir": "data",
+  "playback_volume_vocal": 70,
+  "playback_volume_accompany": 70,
+  "check_play_interval": 3,
+  "engines": {
+    "builtin": {
+      "enabled": true,
+      "is_default": true,
+      "_comment": "内置唱歌引擎 — 本地全流程管线",
+      "output_dir": "data/singing",
+      "volume_vocal": 70,
+      "volume_accompany": 70,
+      "learn_timeout": 300,
+      "music_source": "auto",
+      "_music_source_options": "auto | local | netease | bilibili",
+      "source_config": {
+        "input_dir": "data/singing_input",
+        "timeout": 30,
+        "_netease_options": { "netease_api": "http://localhost:3000", "quality": "exhigh" },
+        "_bilibili_options": { "bilibili_python": "D:/AIvoice/RVC20240604Nvidia50x0/RVC20240604Nvidia50x0/runtime/python.exe" }
+      },
+      "demucs_python": "D:/AIvoice/RVC20240604Nvidia50x0/RVC20240604Nvidia50x0/runtime/python.exe",
+      "demucs_models": ["htdemucs_ft", "htdemucs", "mdx_extra"],
+      "demucs_timeout": 300,
+      "uvr5_python": "D:/AIvoice/GPT-SoVITS-v2pro-20250604-nvidia50/GPT-SoVITS-v2pro-20250604-nvidia50/runtime/python.exe",
+      "uvr5_models": [
+        { "type": "bs_roformer", "path": "D:/AIvoice/GPT-SoVITS-v2pro-20250604-nvidia50/GPT-SoVITS-v2pro-20250604-nvidia50/tools/uvr5/uvr5_weights/model_bs_roformer_ep_317_sdr_12.9755.ckpt" },
+        { "type": "vr", "path": "D:/AIvoice/GPT-SoVITS-v2pro-20250604-nvidia50/GPT-SoVITS-v2pro-20250604-nvidia50/tools/uvr5/uvr5_weights/HP5_only_main_vocal.pth" }
+      ],
+      "uvr5_device": "cuda",
+      "uvr5_timeout": 600,
+      "uvr_dir": "D:/AIvoice/DDSP-SVC3.0/UVR5/Ultimate Vocal Remover",
+      "uvr_model": "MDX-Net_Inst_Full_band",
+      "rvc_api_url": "http://127.0.0.1:7898",
+      "rvc_model": "遐蝶",
+      "rvc_f0_up_key": 0,
+      "rvc_f0_method": "harvest",
+      "rvc_index_rate": 0.7,
+      "rvc_filter_radius": 2,
+      "rvc_resample_sr": 0,
+      "rvc_rms_mix_rate": 0.5,
+      "rvc_protect": 0.3,
+      "_comment_separation": "多轮人声分离 (BS-Roformer→VR和声提取→VR去混响)。启用前需下载模型文件到 uvr5_weights/ 目录",
+      "separation_stages_enabled": false,
+      "separation_stages": [
+        {
+          "_name": "Stage0: 人声+伴奏分离",
+          "model_type": "bs_roformer",
+          "model_path": "D:/AIvoice/GPT-SoVITS-v2pro-20250604-nvidia50/GPT-SoVITS-v2pro-20250604-nvidia50/tools/uvr5/uvr5_weights/model_bs_roformer_ep_317_sdr_12.9755.ckpt"
+        },
+        {
+          "_name": "Stage1: 和声提取 (6-HP-Karaoke-UVR)",
+          "model_type": "vr",
+          "model_path": "D:/AIvoice/GPT-SoVITS-v2pro-20250604-nvidia50/GPT-SoVITS-v2pro-20250604-nvidia50/tools/uvr5/uvr5_weights/6_HP-Karaoke-UVR.pth"
+        },
+        {
+          "_name": "Stage2: 去混响 (De-Echo-Normal)",
+          "model_type": "vr",
+          "model_path": "D:/AIvoice/GPT-SoVITS-v2pro-20250604-nvidia50/GPT-SoVITS-v2pro-20250604-nvidia50/tools/uvr5/uvr5_weights/UVR-De-Echo-Normal.pth"
+        }
+      ],
+      "_comment_effects": "RVC 换声后的人声后处理效果链 (调试中，默认关闭)",
+      "vocal_effects": {
+        "enabled": false,
+        "compressor_threshold_db": 3,
+        "compressor_ratio": 3,
+        "highpass_hz": 110,
+        "gain_db": 3,
+        "reverb_room_size": 0.22,
+        "reverb_wet_level": 0.22
+      },
+      "_comment_mix": "混音时混入和声轨使歌声更丰满",
+      "mix_chord_enabled": true,
+      "mix_chord_volume": 50
+    },
+    "auto_convert_music": {
+      "enabled": false,
+      "is_default": false,
+      "api_url": "http://127.0.0.1:1717",
+      "timeout": 30,
+      "learn_timeout": 500,
+      "output_dir": "data/singing",
+      "volume_vocal": 70,
+      "volume_accompany": 70,
+      "speaker": "遐蝶",
+      "skip_convert_pattern": "(三国演义\\d+|粤剧|京剧|易经)"
+    },
+    "rvc": {
+      "enabled": false,
+      "is_default": false,
+      "_comment": "RVC 直连引擎 — 与 builtin 共享同一 RVC 后端",
+      "api_url": "http://127.0.0.1:7898",
+      "model_name": "遐蝶",
+      "timeout": 60,
+      "learn_timeout": 500,
+      "output_dir": "data/singing_rvc",
+      "volume_vocal": 70,
+      "volume_accompany": 70,
+      "f0_up_key": 0,
+      "f0_method": "rmvpe",
+      "index_rate": 0.3,
+      "filter_radius": 3,
+      "resample_sr": 0,
+      "rms_mix_rate": 0.6,
+      "protect": 0.25
+    }
+  }
+}
