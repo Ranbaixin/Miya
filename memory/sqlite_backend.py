@@ -508,7 +508,7 @@ class SQLiteBackend(MemoryBackend):
                 predicate=row["predicate"] or "",
                 obj=row["obj"] or "",
                 vector=vector,
-                access_count=row["access_count"],
+                access_count=row["access_count"] or 0,
                 last_accessed=row["last_accessed"],
                 is_archived=bool(row["is_archived"]),
                 is_pinned=bool(row["is_pinned"]),

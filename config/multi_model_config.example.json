@@ -77,11 +77,11 @@
       "quality": "excellent"
     },
     "zhipu_glm_46v_flash": {
-      "name": "glm-4.6v-flash",
-      "provider": "zhipu",
-      "base_url": "https://open.bigmodel.cn/api/paas/v4",
-      "api_key": "zhipu-api-key-here",
-      "description": "GLM-4.6V-Flash - 智谱免费多模态模型",
+      "name": "Pro/moonshotai/Kimi-K2.6",
+      "provider": "siliconflow",
+      "base_url": "https://api.siliconflow.cn/v1",
+      "api_key": "siliconflow-api-key-here",
+      "description": "Kimi K2.6 原生多模态模型 (1T MoE, 32B激活, 硅基流动)",
       "capabilities": [
         "image_description",
         "vision_understanding",

@@ -16,7 +16,7 @@ const ModelPoolPanel: React.FC = () => {
     { name: 'deepseek-chat', provider: 'DeepSeek', status: 'active', tokens: 12450 },
     { name: 'deepseek-reasoner', provider: 'DeepSeek', status: 'idle', tokens: 3200 },
     { name: 'Qwen2.5-72B', provider: 'SiliconFlow', status: 'idle', tokens: 8900 },
-    { name: 'GLM-4.6V', provider: 'SiliconFlow', status: 'idle', tokens: 2100 },
+    { name: 'Kimi-K2.6', provider: 'SiliconFlow', status: 'idle', tokens: 2100 },
     { name: 'Llama-3.1-8B', provider: 'SiliconFlow', status: 'idle', tokens: 1500 },
     { name: 'bge-large-zh', provider: 'SiliconFlow', status: 'idle', tokens: 0 },
   ];

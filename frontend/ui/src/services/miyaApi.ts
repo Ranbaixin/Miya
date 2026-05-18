@@ -71,7 +71,7 @@ export async function fetchModels() {
     { key: 'deepseek_v4_flash', name: 'DeepSeek V4 Flash', model: 'deepseek-v4-flash', endpoint: 'api.deepseek.com', status: 'active' as const, type: 'chat' as const },
     { key: 'qwen_7b', name: 'Qwen 7B', model: 'Qwen2.5-7B', endpoint: 'api.siliconflow.cn', status: 'active' as const, type: 'chat' as const },
     { key: 'qwen_72b', name: 'Qwen 72B', model: 'Qwen2.5-72B', endpoint: 'api.siliconflow.cn', status: 'active' as const, type: 'chat' as const },
-    { key: 'glm_46v', name: 'GLM-4.6V', model: 'GLM-4.6V', endpoint: 'api.siliconflow.cn', status: 'active' as const, type: 'vision' as const },
+    { key: 'kimi_k2_6', name: 'Kimi K2.6', model: 'Kimi-K2.6', endpoint: 'api.siliconflow.cn', status: 'active' as const, type: 'vision' as const },
     { key: 'glm_45v', name: 'GLM-4.5V', model: 'glm-4.5v', endpoint: 'open.bigmodel.cn', status: 'active' as const, type: 'vision' as const },
     { key: 'internlm_7b', name: 'InternLM 7B', model: 'InternLM2.5-7B', endpoint: 'api.siliconflow.cn', status: 'active' as const, type: 'chat' as const },
     { key: 'r1_distill', name: 'R1 Distill 7B', model: 'R1-Distill-Qwen-7B', endpoint: 'api.siliconflow.cn', status: 'active' as const, type: 'chat' as const },

@@ -198,7 +198,10 @@ class MultiVisionAnalyzer:
 
                 # 选择模型类型
                 model_name = model_cfg.get("name", "").lower()
-                if any(kw in model_name for kw in ["qwen", "glm", "internvl", "llava"]):
+                if any(
+                    kw in model_name
+                    for kw in ["qwen", "glm", "internvl", "llava", "kimi", "moonshot"]
+                ):
                     if "glm" in model_name:
                         v_model_type = VisionModelType.ZHIPU_VL
                     else:
@@ -263,7 +266,10 @@ class MultiVisionAnalyzer:
                 model_name = model_config.name.lower()
                 if "glm" in model_name:
                     v_model_type = VisionModelType.ZHIPU_VL
-                elif any(kw in model_name for kw in ["qwen", "internvl", "llava"]):
+                elif any(
+                    kw in model_name
+                    for kw in ["qwen", "internvl", "llava", "kimi", "moonshot"]
+                ):
                     v_model_type = VisionModelType.SILICONFLOW_VL
                 else:
                     v_model_type = VisionModelType.SIMPLE_ANALYSIS

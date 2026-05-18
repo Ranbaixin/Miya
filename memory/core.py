@@ -259,6 +259,8 @@ class MemoryItem:
 
     def update_access(self):
         """更新访问统计"""
+        if self.access_count is None:
+            self.access_count = 0
         self.access_count += 1
         self.last_accessed = datetime.now().isoformat()
 
