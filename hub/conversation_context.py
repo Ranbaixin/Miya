@@ -271,7 +271,7 @@ class ConversationContextManager:
             elapsed = time.time() - last_active
             phase = get_phase(elapsed)
             if phase != SessionPhase.HOT:
-                desc = get_phase_description(phase)
+                desc = get_phase_description(phase, last_active_time=last_active)
                 return f"[话题追踪] {desc} | 话题: {last_topic}"
 
         return f"[话题追踪] 当前话题: {last_topic}, 连续对话: {turns}轮"

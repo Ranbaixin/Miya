@@ -143,7 +143,9 @@ class ActivityAwareness:
                 if last_active > 0:
                     elapsed = time.time() - last_active
                     phase = get_phase(elapsed)
-                    conversation_status = get_phase_description(phase)
+                    conversation_status = get_phase_description(
+                        phase, last_active_time=last_active
+                    )
 
                     if phase in (SessionPhase.WARM, SessionPhase.COLD):
                         # 尝试从话题追踪获取最后话题

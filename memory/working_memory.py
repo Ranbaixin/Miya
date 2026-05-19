@@ -591,7 +591,7 @@ class WorkingMemoryManager:
         if phase == SessionPhase.DORMANT:
             return ""
 
-        phase_desc = get_phase_description(phase)
+        phase_desc = get_phase_description(phase, last_active_time=persisted_active)
         extra_messages = self._load_conversation_history_messages(group_id)
 
         if phase == SessionPhase.HOT:

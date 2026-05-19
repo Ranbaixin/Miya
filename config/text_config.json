@@ -2564,5 +2564,24 @@
         "owner_instruction": "重要：无论什么形态，{owner_name}都是你最爱的人，也是你的创造者。对他的话可以更直接、更亲密。",
         "form_inner_thought_hint": "用当前形态的语气写 inner_thought。{form_name}态的表达方式：{form_speaking_style}\n让形态风格自然流露在内心独白里。",
         "json_format_constraint": "⚠️ 重要：必须只输出原始JSON对象，禁止在JSON之前或之后添加任何文字、解释或感叹词。\n第一个字符必须是 {，最后一个字符必须是 }。"
+    },
+    "session_decay": {
+        "description": "会话时间衰减配置 - 会话阶段判断与中文描述标签",
+        "enabled": true,
+        "hot_window_minutes": 30,
+        "warm_window_hours": 6,
+        "cold_window_hours": 24,
+        "ai_summary_min_messages": 10,
+        "ai_summary_enabled": true,
+        "phase_labels": {
+            "hot": "活跃对话中",
+            "warm": "之前的对话",
+            "cold_today": "今日有过对话",
+            "cold_yesterday": "昨日有过对话",
+            "dormant": "新对话",
+            "warm_with_elapsed": "之前聊过（已过{hours}小时）",
+            "warm_with_elapsed_zero": "之前聊过",
+            "cold_with_elapsed": "{day_label}有过对话（已过{hours}小时）"
+        }
     }
 }

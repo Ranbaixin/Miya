@@ -33,6 +33,16 @@ _DEFAULT_CONFIG = {
     "cold_window_hours": 24,
     "ai_summary_min_messages": 10,
     "ai_summary_enabled": True,
+    "phase_labels": {
+        "hot": "活跃对话中",
+        "warm": "之前的对话",
+        "cold_today": "今日有过对话",
+        "cold_yesterday": "昨日有过对话",
+        "dormant": "新对话",
+        "warm_with_elapsed": "之前聊过（已过{hours}小时）",
+        "warm_with_elapsed_zero": "之前聊过",
+        "cold_with_elapsed": "{day_label}有过对话（已过{hours}小时）",
+    },
 }
 
 
@@ -76,24 +86,51 @@ def get_phase(elapsed_seconds: float) -> SessionPhase:
 
 
 def get_phase_description(
-    phase: SessionPhase, elapsed_minutes: Optional[float] = None
+    phase: SessionPhase,
+    elapsed_minutes: Optional[float] = None,
+    last_active_time: Optional[float] = None,
 ) -> str:
-    """获取会话阶段的中文描述"""
-    descriptions = {
-        SessionPhase.HOT: "活跃对话中",
-        SessionPhase.WARM: "之前的对话",
-        SessionPhase.COLD: "今日有过对话",
-        SessionPhase.DORMANT: "新对话",
-    }
-    desc = descriptions.get(phase, "新对话")
+    """获取会话阶段的中文描述（标签来自配置文件 session_decay.phase_labels）"""
+    config = _load_decay_config()
+    labels = config.get("phase_labels", _DEFAULT_CONFIG["phase_labels"])
+
+    now = datetime.now()
+    is_today = True
+    if last_active_time is not None and last_active_time > 0:
+        last_date = datetime.fromtimestamp(last_active_time)
+        is_today = last_date.date() == now.date()
+
+    default_desc = labels.get("dormant", "新对话")
 
     if elapsed_minutes is not None and phase != SessionPhase.HOT:
         if phase == SessionPhase.WARM:
             hours = int(elapsed_minutes / 60)
-            desc = f"之前聊过（已过{hours}小时）" if hours > 0 else "之前聊过"
+            if hours > 0:
+                desc = labels.get(
+                    "warm_with_elapsed", "之前聊过（已过{hours}小时）"
+                ).format(hours=hours)
+            else:
+                desc = labels.get("warm_with_elapsed_zero", "之前聊过")
         elif phase == SessionPhase.COLD:
             hours = int(elapsed_minutes / 60)
-            desc = f"今日有过对话（已过{hours}小时）"
+            day_label = "今日" if is_today else "昨日"
+            desc = labels.get(
+                "cold_with_elapsed", "{day_label}有过对话（已过{hours}小时）"
+            ).format(day_label=day_label, hours=hours)
+        else:
+            desc = default_desc
+    else:
+        if phase == SessionPhase.HOT:
+            desc = labels.get("hot", "活跃对话中")
+        elif phase == SessionPhase.WARM:
+            desc = labels.get("warm", "之前的对话")
+        elif phase == SessionPhase.COLD:
+            key = "cold_today" if is_today else "cold_yesterday"
+            desc = labels.get(key, "今日有过对话")
+        elif phase == SessionPhase.DORMANT:
+            desc = labels.get("dormant", "新对话")
+        else:
+            desc = default_desc
 
     return desc
 
