@@ -32,6 +32,22 @@ class MessageMixin:
         """过滤思考过程（DeepSeek R1 等推理模型的残留）"""
         import re
 
+        # v4.5.1: 移除英文/代码风格前缀（如 [Paste..., [Write..., etc）
+        lines = text.split("\n")
+        if lines:
+            first_line = lines[0].strip()
+            if (
+                first_line.startswith("[")
+                and not re.search(r"[\u4e00-\u9fff]", first_line)
+            ) or (
+                re.match(r"^[A-Za-z][a-z]+\s", first_line)
+                and not re.search(r"[\u4e00-\u9fff]", first_line)
+            ):
+                lines.pop(0)
+                while lines and not lines[0].strip():
+                    lines.pop(0)
+                text = "\n".join(lines).strip()
+
         patterns = [
             r"^好的，用户是在.*?\n",
             r"^首先，用户.*?\n",
@@ -114,32 +130,46 @@ class MessageMixin:
 
     @staticmethod
     def _split_message(text: str, max_len: int = 200) -> list:
-        """按句子边界拆分长消息"""
-        if len(text) <= max_len:
+        """按自然段落拆分——只有双换行(\n\n)视为分条信号，单换行保持在同一消息内"""
+        if "\n\n" not in text:
             return [text]
+
         chunks = []
-        remaining = text
+        paragraphs = text.split("\n\n")
+        for para in paragraphs:
+            para = para.strip()
+            if not para:
+                continue
+            if len(para) <= max_len:
+                chunks.append(para)
+            else:
+                chunks.extend(MessageMixin._split_long_line(para, max_len))
+
+        return chunks
+
+    @staticmethod
+    def _split_long_line(line: str, max_len: int) -> list:
+        """拆分超长单行——按标点找断点"""
+        import re
+
+        chunks = []
+        remaining = line
         while remaining:
             if len(remaining) <= max_len:
-                chunks.append(remaining)
+                chunks.append(remaining.strip())
                 break
             segment = remaining[:max_len]
-            break_points = [
-                segment.rfind("\n\n"),
-                segment.rfind("\n"),
-                segment.rfind("。"),
-                segment.rfind("！"),
-                segment.rfind("？"),
-                segment.rfind("."),
-                segment.rfind("! "),
-                segment.rfind("? "),
-                segment.rfind(" "),
-            ]
-            best = max(break_points)
-            if best > max_len // 2:
-                split_at = best + 1
+            break_points = []
+            for punct in ["。", "！", "？", "；", "，"]:
+                pb = segment.rfind(punct)
+                if pb > max_len // 3:
+                    break_points.append(pb + 1)
+            if break_points:
+                split_at = max(break_points)
             else:
-                split_at = max_len
+                # 没有任何标点，回退到空格或硬切
+                space = segment.rfind(" ")
+                split_at = space + 1 if space > max_len // 2 else max_len
             chunks.append(remaining[:split_at].strip())
             remaining = remaining[split_at:].strip()
         return chunks

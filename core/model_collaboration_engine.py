@@ -1376,6 +1376,38 @@ class ModelCollaborationEngine:
             logger.error(f"[协作引擎] AI 调用失败: {e}")
             return self.msg_error_call_failed.format(error=e)
 
+    def _strip_code_prefixes(self, response: str) -> str:
+        """移除回复开头的英文/代码风格前缀（DeepSeek 推理残留如 [Paste..., [Write... 等）"""
+        import re
+
+        lines = response.split("\n")
+        if not lines:
+            return response
+
+        first_line = lines[0].strip()
+        # 检测英文/代码风格前缀：以 [ 开头且不含中文
+        if first_line.startswith("[") and not re.search(r"[\u4e00-\u9fff]", first_line):
+            lines.pop(0)
+            while lines and not lines[0].strip():
+                lines.pop(0)
+        # 检测纯英文/代码行开头（如 Paste the kaomoji...）
+        elif re.match(r"^[A-Za-z][a-z]+\s", first_line) and not re.search(
+            r"[\u4e00-\u9fff]", first_line
+        ):
+            lines.pop(0)
+            while lines and not lines[0].strip():
+                lines.pop(0)
+        # 检测以代码风格开头的行（如 \`\`\`python, # code, // comment）
+        elif re.match(r"^[`#/\-]+", first_line) and not re.search(
+            r"[\u4e00-\u9fff]", first_line
+        ):
+            lines.pop(0)
+            while lines and not lines[0].strip():
+                lines.pop(0)
+
+        result = "\n".join(lines).strip()
+        return result if result else response
+
     def _clean_thinking_content(self, response: str) -> str:
         """清理回复中的思考过程，只保留最终回复 - 保守版"""
         if not response:
@@ -1395,6 +1427,9 @@ class ModelCollaborationEngine:
         # 如果响应已经很短（小于50字符），直接返回
         if len(response) < 50:
             return response.strip()
+
+        # v4.5.1: 移除开头的英文/代码风格前缀（如 [Paste..., [Write..., etc）
+        response = self._strip_code_prefixes(response)
 
         # 尝试找到回复部分的开始 - 常见回复开头
         reply_markers = [
