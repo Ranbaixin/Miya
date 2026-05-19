@@ -85,9 +85,34 @@ class PersonalityLoader:
         if "proactive_chat" in base:
             result["proactive_chat"] = base["proactive_chat"]
 
+        # === v4.5.0 唤醒沉睡字段 ===
+        # 以下字段在 _base.yaml 中定义但之前从未被注入到系统 prompt
+        if "dual_identity_protocol" in base:
+            result["dual_identity_protocol"] = base["dual_identity_protocol"]
+        if "seven_souls" in base:
+            result["seven_souls"] = base["seven_souls"]
+        if "tone_calibration" in base:
+            result["tone_calibration"] = base["tone_calibration"]
+        if "memory_undercurrent" in base:
+            result["memory_undercurrent"] = base["memory_undercurrent"]
+        if "behavioral_constraints" in base:
+            result["behavioral_constraints"] = base["behavioral_constraints"]
+        if "anti_ai_patterns" in base:
+            result["anti_ai_patterns"] = base["anti_ai_patterns"]
+        if "prohibitions" in base:
+            result["prohibitions"] = base["prohibitions"]
+        if "address_phrases" in base:
+            result["address_phrases"] = base["address_phrases"]
+        if "form_names" in base:
+            result["form_names"] = base["form_names"]
+
         # 添加人格特定配置（覆盖基础配置）
         for key, value in config.items():
             result[key] = value
+
+        # 处理 _default.yaml 的 normal_form_soul → prompt 映射
+        if "normal_form_soul" in result and "prompt" not in result:
+            result["prompt"] = result["normal_form_soul"]
 
         return result
 
@@ -362,6 +387,21 @@ class PersonalityLoader:
             self.load_all()
         logger.info(f"[人格加载器] 重新加载配置: {name or 'all'}")
 
+    def _format_config_value(self, key: str, value: Any) -> str:
+        """将任意类型的配置值格式化为可注入 prompt 的字符串"""
+        if isinstance(value, str):
+            return value
+        if isinstance(value, list):
+            return "\n".join(f"- {item}" for item in value)
+        if isinstance(value, dict):
+            return yaml.dump(
+                {key: value},
+                allow_unicode=True,
+                default_flow_style=False,
+                sort_keys=False,
+            ).strip()
+        return str(value)
+
     def get_status_for_prompt(self, config: Dict) -> str:
         """
         从配置生成 status_prompt
@@ -387,6 +427,67 @@ class PersonalityLoader:
         # 通用规则
         if "rules" in config:
             lines.append(config["rules"])
+            lines.append("")
+
+        # === v4.5.0 注入沉睡字段 ===
+
+        # 七魂系统（清醒/记住/等/疼/燃烧/温柔/怕）
+        if "seven_souls" in config:
+            lines.append(
+                self._format_config_value("seven_souls", config["seven_souls"])
+            )
+            lines.append("")
+
+        # 双重身份协议（形态融合规则）
+        if "dual_identity_protocol" in config:
+            lines.append(
+                self._format_config_value(
+                    "dual_identity_protocol", config["dual_identity_protocol"]
+                )
+            )
+            lines.append("")
+
+        # 语气准则
+        if "tone_calibration" in config:
+            lines.append(
+                self._format_config_value(
+                    "tone_calibration", config["tone_calibration"]
+                )
+            )
+            lines.append("")
+
+        # 去AI感自然对话规范
+        if "anti_ai_patterns" in config:
+            lines.append(
+                self._format_config_value(
+                    "anti_ai_patterns", config["anti_ai_patterns"]
+                )
+            )
+            lines.append("")
+
+        # 记忆暗流原则
+        if "memory_undercurrent" in config:
+            lines.append(
+                self._format_config_value(
+                    "memory_undercurrent", config["memory_undercurrent"]
+                )
+            )
+            lines.append("")
+
+        # 绝对禁止
+        if "behavioral_constraints" in config:
+            lines.append(
+                self._format_config_value(
+                    "behavioral_constraints", config["behavioral_constraints"]
+                )
+            )
+            lines.append("")
+
+        # 禁止事项（与 behavioral_constraints 互补）
+        if "prohibitions" in config:
+            lines.append(
+                self._format_config_value("prohibitions", config["prohibitions"])
+            )
             lines.append("")
 
         # 形态信息
