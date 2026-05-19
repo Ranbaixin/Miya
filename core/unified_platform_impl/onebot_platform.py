@@ -1153,6 +1153,50 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
     # ============ OneBot API 辅助 ============
 
+    async def send_group_message(self, group_id: int, message: str) -> bool:
+        """发送群消息"""
+        if not self._ws or not self._connected:
+            return False
+        try:
+            await self._ws.send_str(
+                json.dumps(
+                    {
+                        "action": "send_group_msg",
+                        "params": {
+                            "group_id": group_id,
+                            "message": [{"type": "text", "data": {"text": message}}],
+                        },
+                    }
+                )
+            )
+            logger.info(f"[{self.platform_id}] 群消息已发送到 {group_id}")
+            return True
+        except Exception as e:
+            logger.error(f"[{self.platform_id}] 发送群消息失败: {e}")
+            return False
+
+    async def send_private_message(self, user_id: int, message: str) -> bool:
+        """发送私聊消息"""
+        if not self._ws or not self._connected:
+            return False
+        try:
+            await self._ws.send_str(
+                json.dumps(
+                    {
+                        "action": "send_private_msg",
+                        "params": {
+                            "user_id": user_id,
+                            "message": [{"type": "text", "data": {"text": message}}],
+                        },
+                    }
+                )
+            )
+            logger.info(f"[{self.platform_id}] 私聊消息已发送给 {user_id}")
+            return True
+        except Exception as e:
+            logger.error(f"[{self.platform_id}] 发送私聊消息失败: {e}")
+            return False
+
     async def send_like(self, user_id: int, times: int = 1):
         """给用户点赞"""
         await self._call_onebot_api("send_like", {"user_id": user_id, "times": times})
@@ -1260,19 +1304,295 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         return await self._call_onebot_api("get_forward_msg", {"id": forward_id})
 
     async def send_face_message(
-        self, face_id: int, msg_type: str = "private", target_id: int = 0
+        self,
+        face_id: int = 0,
+        msg_type: str = "private",
+        target_id: int = 0,
+        target_type: str = "",
     ):
-        """发送 QQ 内置表情"""
+        """发送 QQ 内置表情（兼容两种参数签名）"""
+        # 兼容 QQOneBotClient 风格: (target_type, target_id, face_id)
+        if target_type and not face_id:
+            face_id = target_id if isinstance(target_id, int) and target_id > 0 else 0
+            target_id_val = target_id
+            msg_type_val = target_type
+        else:
+            target_id_val = target_id
+            msg_type_val = msg_type
+
         cq = self.cq_face(face_id)
         if self._ws and self._connected:
-            params = {"message_type": msg_type, "message": cq}
-            if msg_type == "private":
-                params["user_id"] = target_id
+            params = {"message_type": msg_type_val, "message": cq}
+            if msg_type_val == "private":
+                params["user_id"] = target_id_val
             else:
-                params["group_id"] = target_id
+                params["group_id"] = target_id_val
             await self._ws.send_str(
                 json.dumps({"action": "send_msg", "params": params})
             )
+            return {"status": "ok"}
+
+    async def send_image_message(
+        self,
+        target_type: str = "",
+        target_id: int = 0,
+        image_data: bytes = b"",
+        image_name: str = "",
+        msg_type: str = "",
+    ):
+        """发送图片消息（兼容两种参数签名）"""
+        import tempfile, os
+
+        if not image_data:
+            return None
+        if not target_type:
+            target_type = msg_type or "private"
+
+        # 写入临时文件并上传
+        tmp = tempfile.NamedTemporaryFile(
+            suffix=os.path.splitext(image_name)[1] or ".png", delete=False
+        )
+        tmp_path = tmp.name
+        tmp.close()
+        with open(tmp_path, "wb") as f:
+            f.write(image_data)
+
+        try:
+            file_id = await self.upload_image(tmp_path)
+            if not file_id:
+                return None
+            cq = f"[CQ:image,file={file_id}]"
+            if self._ws and self._connected:
+                params = {"message_type": target_type, "message": cq}
+                if target_type == "private":
+                    params["user_id"] = target_id
+                else:
+                    params["group_id"] = target_id
+                await self._ws.send_str(
+                    json.dumps({"action": "send_msg", "params": params})
+                )
+                return {"status": "ok"}
+            return None
+        finally:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+
+    async def send_group_image(self, group_id: int, image_path: str, caption: str = ""):
+        """发送群图片消息"""
+        file_id = await self.upload_image(image_path)
+        if not file_id:
+            return None
+        cq = self.cq_image(file_id)
+        msg = f"{caption}\n{cq}" if caption else cq
+        if self._ws and self._connected:
+            await self._ws.send_str(
+                json.dumps(
+                    {
+                        "action": "send_group_msg",
+                        "params": {
+                            "group_id": group_id,
+                            "message": [{"type": "text", "data": {"text": msg}}],
+                        },
+                    }
+                )
+            )
+            return {"status": "ok"}
+
+    async def send_private_image(
+        self, user_id: int, image_path: str, caption: str = ""
+    ):
+        """发送私聊图片消息"""
+        file_id = await self.upload_image(image_path)
+        if not file_id:
+            return None
+        cq = self.cq_image(file_id)
+        msg = f"{caption}\n{cq}" if caption else cq
+        if self._ws and self._connected:
+            await self._ws.send_str(
+                json.dumps(
+                    {
+                        "action": "send_private_msg",
+                        "params": {
+                            "user_id": user_id,
+                            "message": [{"type": "text", "data": {"text": msg}}],
+                        },
+                    }
+                )
+            )
+            return {"status": "ok"}
+
+    async def send_group_file(self, group_id: int, file_path: str, caption: str = ""):
+        """发送群文件消息"""
+        file_id = await self.upload_file(file_path)
+        if not file_id:
+            return None
+        cq = f"[CQ:file,file=file:///{file_id}]"
+        msg = f"{caption}\n{cq}" if caption else cq
+        if self._ws and self._connected:
+            await self._ws.send_str(
+                json.dumps(
+                    {
+                        "action": "send_group_msg",
+                        "params": {
+                            "group_id": group_id,
+                            "message": [{"type": "text", "data": {"text": msg}}],
+                        },
+                    }
+                )
+            )
+            return {"status": "ok"}
+
+    async def send_private_file(self, user_id: int, file_path: str, caption: str = ""):
+        """发送私聊文件消息"""
+        file_id = await self.upload_file(file_path)
+        if not file_id:
+            return None
+        cq = f"[CQ:file,file=file:///{file_id}]"
+        msg = f"{caption}\n{cq}" if caption else cq
+        if self._ws and self._connected:
+            await self._ws.send_str(
+                json.dumps(
+                    {
+                        "action": "send_private_msg",
+                        "params": {
+                            "user_id": user_id,
+                            "message": [{"type": "text", "data": {"text": msg}}],
+                        },
+                    }
+                )
+            )
+            return {"status": "ok"}
+
+    async def download_image(self, url: str) -> Optional[bytes]:
+        """从 URL 下载图片数据"""
+        try:
+            import aiohttp
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    url,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                    },
+                    timeout=aiohttp.ClientTimeout(total=30),
+                ) as resp:
+                    if resp.status == 200:
+                        return await resp.read()
+        except Exception as e:
+            logger.error(f"[{self.platform_id}] 下载图片失败: {e}")
+        return None
+
+    async def upload_file(self, file_path: str) -> Optional[str]:
+        """上传文件到 OneBot，返回 file_id"""
+        import os as _os
+
+        if not _os.path.exists(file_path):
+            logger.warning(f"[{self.platform_id}] 文件不存在: {file_path}")
+            return None
+        result = await self._call_onebot_api(
+            "upload_file",
+            {"file": f"file:///{file_path.replace(_os.sep, '/')}"},
+        )
+        if isinstance(result, dict):
+            return result.get("file_id") or result.get("file")
+        return None
+
+    async def upload_group_file(
+        self, group_id: int, file_path: str, filename: str
+    ) -> bool:
+        """上传文件到群文件"""
+        import os as _os
+
+        try:
+            await self._call_onebot_api(
+                "upload_group_file",
+                {
+                    "group_id": group_id,
+                    "file": f"file:///{file_path.replace(_os.sep, '/')}",
+                    "name": filename,
+                },
+            )
+            return True
+        except Exception as e:
+            logger.error(f"[{self.platform_id}] 上传群文件失败: {e}")
+            return False
+
+    async def upload_private_file(
+        self, user_id: int, file_path: str, filename: str
+    ) -> bool:
+        """上传文件到私聊"""
+        # OneBot v11 没有专门的私聊文件上传 API，用 send_private_file 代替
+        return bool(await self.send_private_file(user_id, file_path, filename))
+
+    async def get_group_root_files(self, group_id: int) -> dict:
+        """获取群根目录文件列表"""
+        result = await self._call_onebot_api(
+            "get_group_root_files", {"group_id": group_id}
+        )
+        if isinstance(result, dict):
+            return result
+        return {"files": [], "folders": []}
+
+    async def get_group_files(self, group_id: int, folder_id: str) -> dict:
+        """获取群文件夹内的文件列表"""
+        result = await self._call_onebot_api(
+            "get_group_files",
+            {"group_id": group_id, "folder_id": folder_id},
+        )
+        if isinstance(result, dict):
+            return result
+        return {"files": [], "folders": []}
+
+    async def get_group_file_url(self, group_id: int, file_id: str) -> Optional[str]:
+        """获取群文件下载链接"""
+        result = await self._call_onebot_api(
+            "get_group_file_url",
+            {"group_id": group_id, "file_id": file_id},
+        )
+        if isinstance(result, dict):
+            return result.get("url")
+        return None
+
+    async def download_group_file(self, url: str, save_path: str) -> bool:
+        """下载群文件到本地"""
+        try:
+            import aiohttp
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    url, timeout=aiohttp.ClientTimeout(total=300)
+                ) as response:
+                    if response.status == 200:
+                        with open(save_path, "wb") as f:
+                            async for chunk in response.content.iter_chunked(8192):
+                                f.write(chunk)
+                        return True
+        except Exception as e:
+            logger.error(f"[{self.platform_id}] 下载群文件失败: {e}")
+        return False
+
+    async def get_group_admin_list(self, group_id: int) -> list:
+        """获取群管理员列表"""
+        members = await self.get_group_member_list(group_id)
+        if not members:
+            return []
+        return [
+            m.get("user_id") for m in members if m.get("role") in ("admin", "owner")
+        ]
+
+    async def set_msg_emoji_like(self, message_id: int, emoji_id: str) -> bool:
+        """给消息设置表情表态"""
+        try:
+            await self._call_onebot_api(
+                "set_msg_emoji_like",
+                {"message_id": message_id, "emoji_id": emoji_id},
+            )
+            return True
+        except Exception as e:
+            logger.debug(f"[{self.platform_id}] 表情表态失败: {e}")
+            return False
 
     def _find_named_emoji(self, name: str) -> Optional[Path]:
         """在本地表情包仓库中按名称查找"""

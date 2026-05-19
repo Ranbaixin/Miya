@@ -42,7 +42,7 @@ class SendPokeTool(BaseTool):
             if context.qq_net and hasattr(context.qq_net, "onebot_client"):
                 client = context.qq_net.onebot_client
                 if group_id:
-                    await client.send_poke(group_id, user_id)
+                    await client.send_poke(user_id, group_id)
                     return f"戳了戳 {user_id}"
                 else:
                     return "戳一戳仅支持群聊"
