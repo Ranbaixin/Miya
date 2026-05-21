@@ -889,6 +889,10 @@ def main():
 
         # 交互循环 - 使用异步主循环
         async def main_loop():
+            # 启动主动聊天后台轮询
+            if miya.decision_hub and miya.decision_hub.proactive_chat:
+                asyncio.create_task(miya.decision_hub.start_proactive_background())
+
             while True:
                 try:
                     # 同步获取用户输入（支持中文）

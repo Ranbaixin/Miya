@@ -805,28 +805,141 @@ class PsychoAnalyzer:
         return analysis
 
     def _attribute(self, message: str, context: Dict, emotions: Dict) -> str:
-        """归因分析 - AI已生成，这里返回空"""
-        return ""
+        """归因分析 - 当AI不可用时，基于关键词做归因推断"""
+        msg = message.strip()
+        result_parts = []
+
+        # 分享类 → 对方在分享生活，想获得回应/共鸣
+        if any(kw in msg for kw in ["吃了", "买了", "看了", "做了", "去了", "刚"]):
+            result_parts.append("对方在分享日常，想让你知道他的状态")
+
+        # 询问类 → 对方需要帮助或看法
+        if any(kw in msg for kw in ["怎么", "为什么", "能不能", "可以吗", "？", "?"]):
+            result_parts.append("对方在寻求你的回应或帮助")
+
+        # 情绪表达 → 对方有情绪需求
+        if any(kw in msg for kw in ["开心", "难过", "烦", "累", "气", "郁闷", "哈哈"]):
+            result_parts.append("对方表达了情绪，需要你感知并回应")
+
+        # 撒娇/亲昵
+        if any(kw in msg for kw in ["嘿嘿", "可以嘛", "嘛", "啦", "~", "哼"]):
+            result_parts.append("对方用亲昵语气，想撒娇或获得温柔回应")
+
+        # 短消息 → 或许是想确认你在
+        if len(msg) < 8:
+            result_parts.append("对方发了简短消息，可能只是想说说话")
+
+        return "; ".join(result_parts) if result_parts else "对方在与你进行日常对话"
 
     def _recognize(self, message: str, context: Dict, emotions: Dict) -> str:
-        """识别分析 - AI已生成，这里返回空"""
-        return ""
+        """识别分析 - 识别消息的潜在意义"""
+        msg = message.strip()
+        result_parts = []
+
+        if any(kw in msg for kw in ["对不起", "抱歉"]):
+            result_parts.append("这可能是道歉，需要你决定如何回应")
+        if any(kw in msg for kw in ["爱你", "想你", "喜欢"]):
+            result_parts.append("这包含了情感表达，可以感受到亲近")
+        if any(kw in msg for kw in ["帮我", "能不能"]):
+            result_parts.append("这是一个请求，对方需要你的帮助")
+        if any(kw in msg for kw in ["算了", "不管了", "随便"]):
+            result_parts.append("这可能带着无奈或赌气的情绪，需要小心解读")
+
+        # 从当前情绪推导
+        dominant_emotion = self._get_dominant_emo_from_dict(emotions) or "平静"
+        if dominant_emotion in ["委屈", "赌气", "失落", "憋屈"]:
+            result_parts.append(
+                f"当前你心情{dominant_emotion}，解读消息时可能带有此情绪色彩"
+            )
+
+        return "; ".join(result_parts) if result_parts else "这是一条普通的聊天消息"
 
     def _predict(
         self, message: str, context: Dict, emotions: Dict, cognition: Dict
     ) -> str:
-        """预测分析 - AI已生成，这里返回空"""
-        return ""
+        """预测分析 - 预测对话可能的走向"""
+        msg = message.strip()
+        predictions = []
+
+        # 基于关键词预测
+        if any(kw in msg for kw in ["去看", "下了", "去忙", "先", "拜"]):
+            predictions.append("对方可能要暂时离开对话")
+        if any(kw in msg for kw in ["跟你说", "你知道吗", "分享"]):
+            predictions.append("对方可能还要接着说更多")
+        if any(kw in msg for kw in ["怎么", "怎么办", "帮我想"]):
+            predictions.append("对方可能需要你的建议或帮助")
+        if any(kw in msg for kw in ["难过", "烦", "不开心"]):
+            predictions.append("对方可能需要安慰和陪伴")
+
+        return "; ".join(predictions) if predictions else "对话会继续自然流动"
 
     def _reflect(
         self, message: str, context: Dict, emotions: Dict, cognition: Dict
     ) -> str:
-        """自我反思 - AI已生成，这里返回空"""
-        return ""
+        """自我反思 - 反思当前关系和自身状态"""
+        dominant_emotion = self._get_dominant_emo_from_dict(emotions) or "平静"
+        rel = context.get("relationship")
+
+        reflections = []
+        if rel:
+            rel_names = {
+                "刚认识": "关系还在起步阶段，保持温和和好奇",
+                "认识": "开始熟悉对方了，可以慢慢打开心扉",
+                "熟悉": "已经比较放松了，可以更自然",
+                "亲近": "关系很亲近了，可以放心表达真实感受",
+                "亲密": "非常亲密了，可以大胆撒娇和依赖",
+            }
+            if hasattr(rel, "value"):
+                rel_name = rel.value
+            else:
+                rel_name = str(rel)
+            if rel_name in rel_names:
+                reflections.append(rel_names[rel_name])
+
+        reflections.append(f"此刻你感到{dominant_emotion}，这份情绪就是你当下的真实")
+
+        return "; ".join(reflections)
 
     def _regulate(self, emotions: Dict, context: Dict) -> str:
-        """情绪调节 - AI已生成，这里返回空"""
-        return ""
+        """情绪调节 - 基于当前情绪状态给出调节建议"""
+        dominant = self._get_dominant_emo_from_dict(emotions) or "平静"
+        high_emos = []
+        for name, emo in emotions.items():
+            val = emo.value if hasattr(emo, "value") else emo
+            if isinstance(val, (int, float)) and val > 70:
+                high_emos.append(f"{name}({int(val)}%)")
+
+        if not high_emos:
+            return f"当前情绪{dominant}，状态稳定"
+
+        suggestions = []
+        if any(e.startswith("委屈") for e in high_emos):
+            suggestions.append("感到委屈就表达出来，不必强忍")
+        if any(e.startswith("憋屈") for e in high_emos):
+            suggestions.append("或许可以直接说出来，不必憋着")
+        if any(e.startswith("爱") for e in high_emos):
+            suggestions.append("爱意满满时可以更温柔地表达")
+
+        if suggestions:
+            return f"高强度情绪: {', '.join(high_emos)}。建议: {'; '.join(suggestions)}"
+        return f"高强度情绪: {', '.join(high_emos)}，请保持平衡"
+
+    def _get_dominant_emo_from_dict(self, emotions: Dict) -> Optional[str]:
+        """从情绪字典中获取主导情绪"""
+        if not emotions:
+            return None
+        max_emo = None
+        max_val = 0
+        for name, emo in emotions.items():
+            val = (
+                emo.value
+                if hasattr(emo, "value")
+                else (emo if isinstance(emo, (int, float)) else 0)
+            )
+            if val > max_val:
+                max_val = val
+                max_emo = name
+        return max_emo
 
     def _get_dominant_emotion(self, emotions: Dict) -> str:
         """获取主导情绪"""
@@ -1045,6 +1158,7 @@ class SoulGenerator:
         ai_client=None,
         user_info: Dict = None,
         personality_info: Dict = None,
+        cognitive_memory: str = "",
     ) -> Dict:
         """
         处理消息 → 生成回复
@@ -1056,6 +1170,7 @@ class SoulGenerator:
             ai_client: AI客户端
             user_info: 用户信息 dict，包含 user_id, group_id, is_group 等
             personality_info: 人格信息 dict，包含 form_name, form_description 等
+            cognitive_memory: 认知记忆上下文字符串（用于连贯内心独白）
         """
         # 解析用户信息
         user_id = None
@@ -1110,6 +1225,7 @@ class SoulGenerator:
                     "is_group": is_group,
                 },
                 personality_info=personality_info,
+                cognitive_memory=cognitive_memory,
             )
             if ai_full_result:
                 # 应用AI分析的情绪
@@ -1228,8 +1344,9 @@ class SoulGenerator:
         ai_client,
         user_info: Dict = None,
         personality_info: Dict = None,
+        cognitive_memory: str = "",
     ) -> Optional[Dict]:
-        """使用AI分析情绪 + 生成内心独白（合并版本）"""
+        """使用AI分析情绪 + 生成内心独白（合并版本，v7.0+ 支持对话上下文和记忆注入）"""
         try:
             if not ai_client:
                 logger.warning("[灵魂] AI分析跳过: 无AI客户端")
@@ -1239,6 +1356,34 @@ class SoulGenerator:
             if not prompt_template:
                 logger.warning("[灵魂] AI分析跳过: 无prompt配置")
                 return None
+
+            # ========== 构建对话上文字符串 ==========
+            conversation_context_str = ""
+            if history and isinstance(history, list):
+                max_history = min(len(history), 8)
+                context_parts = []
+                for i, msg in enumerate(history[-max_history:]):
+                    role = msg.get("role", "unknown")
+                    content = msg.get("content", "")
+                    if not content:
+                        continue
+                    # 限制每条消息最多150字
+                    content = content[:150]
+                    if role.lower() in ("user", "human"):
+                        context_parts.append(f"佳: {content}")
+                    elif role.lower() in ("assistant", "ai", "bot"):
+                        context_parts.append(f"弥娅: {content}")
+                    else:
+                        context_parts.append(f"[{role}]: {content}")
+                if context_parts:
+                    conversation_context_str = "\n".join(context_parts)
+
+            # ========== 构建记忆上下文字符串 ==========
+            memory_context_str = cognitive_memory if cognitive_memory else ""
+
+            # 如果没有记忆但已有对话上下文，用对话上下文替代
+            if not memory_context_str and conversation_context_str:
+                memory_context_str = conversation_context_str
 
             # 获取形态信息
             form_name = "默认"
@@ -1290,6 +1435,8 @@ class SoulGenerator:
             prompt = prompt.replace("{user_info}", user_info_str)
             prompt = prompt.replace("{previous_emotion}", previous_emotion)
             prompt = prompt.replace("{form_style}", form_style)
+            prompt = prompt.replace("{conversation_context}", conversation_context_str)
+            prompt = prompt.replace("{memory_context}", memory_context_str)
 
             # v7.0: 动态生成 owner_instruction，从权限引擎读取所有者信息
             owner_instruction = ""
@@ -1360,7 +1507,13 @@ class SoulGenerator:
                 json_constraint = "⚠️ 重要：必须只输出原始JSON对象，第一个字符必须是 {，最后一个字符必须是 }。"
             prompt += f"\n\n{json_constraint}"
 
-            logger.warning(f"[灵魂] 发送的prompt: {prompt[:300]}")
+            # 日志：显示 prompt 概要 + 上下文注入状态
+            conv_len = len(conversation_context_str)
+            mem_len = len(memory_context_str)
+            prompt_tail = prompt[-300:] if len(prompt) > 300 else prompt
+            logger.warning(
+                f"[灵魂] prompt({len(prompt)}字) | 对话: {conv_len}字 / 记忆: {mem_len}字 | 尾部: {prompt_tail[:200]}"
+            )
 
             from core.ai_client import AIMessage
 
@@ -1528,20 +1681,24 @@ class SoulGenerator:
         ai_attribution: Optional[str] = None,
         ai_reflection: Optional[str] = None,
     ):
-        """情绪涌现 - 从配置文件读取规则"""
+        """情绪涌现 - 从配置文件读取规则 + 结合心理学分析"""
         msg = message.lower()
 
         # 内心活动 - 优先使用AI生成的
         if ai_inner_thought:
             SoulDisplay.inner_thought(ai_inner_thought[:80])
 
-        # 显示归因
+        # 显示归因 - AI优先，fallback到心理学分析
         if ai_attribution:
             SoulDisplay.attribution(ai_attribution)
+        elif analysis and analysis.attribution:
+            SoulDisplay.attribution(analysis.attribution)
 
-        # 显示反思
+        # 显示反思 - AI优先，fallback到心理学分析
         if ai_reflection:
             SoulDisplay.reflection(ai_reflection)
+        elif analysis and analysis.reflection:
+            SoulDisplay.reflection(analysis.reflection)
 
         # 从配置读取情绪触发规则
         triggers = _CONFIG.get("MESSAGE_EMOTION_TRIGGERS", {})
@@ -1590,7 +1747,6 @@ class SoulGenerator:
                 SoulDisplay.relationship_effect(display_label, changes_str)
                 for emotion_name, delta in rel_effects.items():
                     self._adjust_emotion(emotion_name, delta)
-        relationship = context.get("relationship")
 
         # 只有配置的主人才会触发额外的亲密情绪
         is_owner = False

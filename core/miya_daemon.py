@@ -172,6 +172,12 @@ class MiyaDaemon:
 
             self._miya = Miya()
             logger.info("✅ Miya 核心初始化完成")
+
+            # 启动主动聊天后台轮询
+            dh = getattr(self._miya, "decision_hub", None)
+            if dh and dh.proactive_chat and dh.proactive_chat.is_enabled():
+                await dh.start_proactive_background()
+                logger.info("✅ 主动聊天后台轮询已启动")
         except Exception as e:
             logger.error(f"❌ Miya 核心初始化失败: {e}", exc_info=True)
             raise

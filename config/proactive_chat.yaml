@@ -18,6 +18,12 @@ proactive_chat:
   # 上下文触发 - 行为期望跟进
   context_trigger:
     enabled: true
+    use_ai: true   # AI 动态生成回复，以下固定回复仅作 fallback
+    system_prompt: |
+      【{persona}】
+      用户刚才说做完了【{expectation}】，现在应该跟进关心一下。
+      请以上述人设质感生成一句简短温暖的跟进问候（20字以内）。
+      如果此时不适合说话，回复 SKIP。
     # 用户行为完成后的跟进回复
     expectations:
       吃完:
@@ -67,6 +73,12 @@ proactive_chat:
   # 情绪感知配置
   emotion_perception:
     enabled: true
+    use_ai: true   # AI 动态生成回复
+    system_prompt: |
+      【{persona}】
+      用户刚才的消息表现出【{emotion}】的情绪。
+      请以对应情感表达关怀或共情（20字以内），贴合当前人设质感。
+      如果此时不适合说话，回复 SKIP。
     sensitivity: "high"
     inherit_emotions: true
     
@@ -129,6 +141,12 @@ proactive_chat:
   # 关键词触发
   keyword_trigger:
     enabled: true
+    use_ai: true   # AI 动态生成回复
+    system_prompt: |
+      【{persona}】
+      用户提到了【{keywords}】。
+      请以符合人设的语言和语气简短搭话（20字以内）。
+      如果此时不适合说话，回复 SKIP。
     keywords:
       - "在吗"
       - "干嘛"
@@ -158,6 +176,12 @@ proactive_chat:
   # 主动关怀
   check_in:
     enabled: true
+    use_ai: true   # AI 动态生成回复
+    system_prompt: |
+      【{persona}】
+      用户已经有【{idle_duration}】没有互动了。
+      请用符合人设的语气，发送一句简短温暖的关怀（20字以内），自然而不唐突。
+      如果此时不适合说话，回复 SKIP。
     check_interval: 3600
     messages:
       - "在干嘛呢？"
@@ -175,7 +199,8 @@ proactive_chat:
     max_per_hour: 3
     cooldown: 300
     system_prompt: |
-      你需要判断是否应该主动和用户聊天。
+      【{persona}】
+      判断是否应该主动和用户聊天。
       聊天信息：
       - 终端类型: {chat_type}
       - 群名称: {group_name}
@@ -187,7 +212,13 @@ proactive_chat:
 
   # 时间感知配置
   time_awareness:
-    enabled: true
+    enabled: false    # 暂时关闭时间触发
+    use_ai: true   # AI 动态生成回复
+    system_prompt: |
+      【{persona}】
+      现在是【{time_period}】时段。
+      请以符合人设的口吻发送一句简短自然的问候（20字以内）。
+      如果此时不适合说话，回复 SKIP。
     inherit_check_in: true
     time_slots:
       morning:

@@ -339,8 +339,11 @@ class ModelCollaborationEngine:
                     "is_group": (context.get("message_type") == "group"),
                 }
 
+            # 获取认知记忆上下文
+            cognitive_memory = context.get("cognitive_memory", "") if context else ""
+
             soul_result = await self.soul_generator.process(
-                message, history, None, user_info
+                message, history, None, user_info, cognitive_memory=cognitive_memory
             )
             if not soul_result:
                 return ""
@@ -804,6 +807,11 @@ class ModelCollaborationEngine:
             else "",
         )
 
+        # v7.0: 注入情绪上下文到思考阶段，让思考模型理解当前情感基调
+        emotion_ctx = context.get("emotion_context", "") if context else ""
+        if emotion_ctx:
+            thinking_prompt += f"\n\n【当前情感上下文】\n{emotion_ctx}"
+
         if platform == "terminal":
             print(
                 TerminalFormatter.chain_step(
@@ -965,11 +973,12 @@ class ModelCollaborationEngine:
         parallel_model_ids = [m.id for m in parallel_models]
         print(TerminalFormatter.parallel_step(parallel_model_ids))
 
+        # Phase 1: 仅调用思考模型（模型[0]），输出模型在 Phase 2 单独调用
         tasks = []
-        for model_config in parallel_models:
-            client = self._create_client(model_config, factory, None, context)
-            task = self._call_client(client, system_prompt, user_prompt, None)
-            tasks.append((model_config.id, task))
+        think_model = parallel_models[0]
+        client_0 = self._create_client(think_model, factory, None, context)
+        task_0 = self._call_client(client_0, system_prompt, user_prompt, None)
+        tasks.append((think_model.id, task_0))
 
         results = await asyncio.gather(*[t[1] for t in tasks], return_exceptions=True)
 
@@ -997,8 +1006,8 @@ class ModelCollaborationEngine:
 
         # 【思考-输出分离模式】
         # 第一个模型负责思考，第二个模型负责生成最终回复
-        if len(model_responses) >= 2:
-            thinking_result = model_responses[0][1]  # 模型1的思考结果
+        if model_responses:
+            thinking_result = model_responses[0][1]  # 模型[0]的思考结果
 
             # 显示思考过程到终端
             try:

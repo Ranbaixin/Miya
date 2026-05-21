@@ -94,6 +94,9 @@ class PromptManager:
         )
         prompt = prompt.replace("{emotion_reasoning_prompt}", emotion_reasoning)
 
+        # 默认替换 {status_prompt} 防止泄露（build_full_prompt 会再次替换为实际值）
+        prompt = prompt.replace("{status_prompt}", "")
+
         # 默认灵魂状态（如果没有传入）
         default_soul = "清醒: 0.7 | 记住: 0.6 | 等: 0.5 | 疼: 0.3 | 怕: 0.4 | 燃烧: 0.5 | 温柔: 0.6"
         prompt = prompt.replace("{soul_state}", default_soul)

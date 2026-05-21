@@ -273,6 +273,66 @@ class DecisionHub:
             self.proactive_chat = get_proactive_chat_system()
             self.proactive_chat.set_ai_client(self.ai_client)
             self.proactive_chat.set_personality(self.personality)
+
+            # 注册记忆上下文提供者
+            def _memory_context_provider(scope_id: str) -> str:
+                try:
+                    from memory.working_memory import get_working_memory
+
+                    wm = get_working_memory()
+                    return wm.build_prompt_context(scope_id)
+                except Exception:
+                    return ""
+
+            self.proactive_chat.set_memory_context_provider(_memory_context_provider)
+
+            async def _proactive_send_callback(
+                message: str, target_id: int, chat_type: str
+            ):
+                """主动聊天消息发送回调 — 发送 + 记入记忆"""
+                platform = "aiocqhttp" if self.onebot_client else "terminal"
+
+                if chat_type == "group":
+                    if self.onebot_client:
+                        await self.onebot_client.send_group_message(target_id, message)
+                else:
+                    if self.onebot_client:
+                        await self.onebot_client.send_private_message(
+                            target_id, message
+                        )
+                    else:
+                        print(f"\n【弥娅主动】 {message}\n")
+
+                # 记入统一记忆系统
+                try:
+                    perception = {
+                        "platform": platform,
+                        "user_id": str(target_id) if chat_type != "group" else "0",
+                        "group_id": str(target_id) if chat_type == "group" else "0",
+                        "message_type": chat_type,
+                        "response": message,
+                    }
+                    await self.memory_manager.store_unified_memory(
+                        perception, role="assistant"
+                    )
+                except Exception as e:
+                    logger.debug(f"[主动聊天] 记忆存储失败: {e}")
+
+                # 记入工作记忆
+                try:
+                    from memory.working_memory import get_working_memory
+
+                    wm = get_working_memory()
+                    scope_id = str(target_id)
+                    wm.add_message(
+                        group_id=scope_id,
+                        sender="弥娅",
+                        content=message,
+                    )
+                except Exception as e:
+                    logger.debug(f"[主动聊天] 工作记忆存储失败: {e}")
+
+            self.proactive_chat.set_send_callback(_proactive_send_callback)
             logger.info("[决策层] 主动聊天系统 v2.0 已初始化")
         except Exception as e:
             logger.warning(f"[决策层] 主动聊天系统初始化失败: {e}")
@@ -432,6 +492,13 @@ class DecisionHub:
         except Exception as e:
             logger.warning(f"[决策层] 主动聊天处理失败: {e}")
             return None
+
+    async def start_proactive_background(self):
+        """启动主动聊天后台轮询"""
+        if self.proactive_chat and self.proactive_chat.is_enabled():
+            await self.proactive_chat.start_background_loop()
+        else:
+            logger.info("[决策层] 主动聊天系统未启用，跳过后台轮询")
 
     async def _handle_smart_emoji(self, response: str, perception: dict):
         """智能表情包发送 - 根据回复内容自动选择表情包"""
@@ -1024,8 +1091,8 @@ class DecisionHub:
             content, platform, perception
         )
 
-        # 7. 主动聊天系统 v2.0 - 检查是否需要主动发言
-        if platform == "qq" and response:
+        # 7. 主动聊天系统 v2.0 - 检查是否需要主动发言（全平台支持）
+        if response:
             proactive_result = await self._handle_proactive_chat(perception, content)
 
             # 【新增】智能表情包发送 - 在主动聊天之后
@@ -1472,8 +1539,8 @@ class DecisionHub:
             conversation_context = await conv_task
 
             # ============================================================
-            # 【优化】Phase 2: Soul Generator + Cognitive Memory 并行
-            # 两者都需要 conversation_context，可以同时跑
+            # Phase 2: 先获取认知记忆，再注入灵魂发生器（保证内心独白连贯）
+            # Soul Generator 需要认知记忆上下文来生成连贯的内心独白
             # ============================================================
             async def fetch_cognitive_memory():
                 cmc = ""
@@ -1500,7 +1567,7 @@ class DecisionHub:
                     logger.warning(f"[决策层] 智能记忆检索失败: {e}")
                 return cmc
 
-            async def run_soul_generator():
+            async def run_soul_generator(cognitive_memory=""):
                 sr = None
                 try:
                     if self._soul_generator:
@@ -1540,13 +1607,13 @@ class DecisionHub:
                                 "is_group": (perception.get("message_type") == "group"),
                             },
                             personality_info=personality_info,
+                            cognitive_memory=cognitive_memory,
                         )
                 except Exception as e:
-                    logger.warning(f"[灵魂-并行] 提前分析失败: {e}")
+                    logger.warning(f"[灵魂] 提前分析失败: {e}")
                 return sr
 
             cog_task = asyncio.create_task(fetch_cognitive_memory(), name="cog")
-            soul_task = asyncio.create_task(run_soul_generator(), name="soul")
 
             # 等待其余 Phase 1 任务
             knowledge_context = await kctx_task
@@ -1590,7 +1657,9 @@ class DecisionHub:
 
             # 等待 Phase 2 任务
             cognitive_memory_context = await cog_task
-            soul_result = await soul_task
+            soul_result = await run_soul_generator(
+                cognitive_memory=cognitive_memory_context
+            )
 
             # 处理 Soul Generator 结果 (共用于两条路径)
             miya_emotion_data = None
@@ -1919,6 +1988,12 @@ class DecisionHub:
 
                             tool_ctx_for_collab["emotion_context"] = (
                                 emotion_context_for_collab
+                            )
+                            # v7.0: 注入认知记忆到协作引擎 context，供 fallback 灵魂生成器使用
+                            tool_ctx_for_collab["cognitive_memory"] = (
+                                cognitive_memory_context
+                                if cognitive_memory_context
+                                else ""
                             )
 
                         # 将认知记忆直接注入 system prompt，确保 AI 能看见

@@ -21,6 +21,8 @@ from datetime import datetime
 from typing import Any, Optional
 from dataclasses import dataclass, field
 
+from core.ai_client import AIMessage
+
 logger = logging.getLogger(__name__)
 
 
@@ -82,7 +84,8 @@ def _normalize_config(raw: dict) -> dict:
     expectations = {}
     raw_expectations = ctx_trigger.get("expectations", {})
     if raw_expectations:
-        expectations["enabled"] = True
+        expectations["enabled"] = ctx_trigger.get("enabled", True)
+        expectations["use_ai"] = ctx_trigger.get("use_ai", True)
         follow_responses = {}
         for key, responses in raw_expectations.items():
             follow_responses[key] = responses
@@ -96,6 +99,7 @@ def _normalize_config(raw: dict) -> dict:
         "enabled": emotion_perc.get(
             "enabled", default["triggers"]["emotion"]["enabled"]
         ),
+        "use_ai": emotion_perc.get("use_ai", True),
         "emotion_keywords": emotion_perc.get("emotion_keywords", {}),
         "emotion_responses": emotion_perc.get("emotion_responses", {}),
     }
@@ -104,6 +108,7 @@ def _normalize_config(raw: dict) -> dict:
     kw_trigger = raw.get("keyword_trigger", {})
     keyword_cfg = {
         "enabled": kw_trigger.get("enabled", default["triggers"]["keyword"]["enabled"]),
+        "use_ai": kw_trigger.get("use_ai", True),
         "keywords": kw_trigger.get("keywords", []),
         "responses": kw_trigger.get("responses", []),
     }
@@ -112,6 +117,7 @@ def _normalize_config(raw: dict) -> dict:
     check_in = raw.get("check_in", {})
     check_in_cfg = {
         "enabled": check_in.get("enabled", default["triggers"]["check_in"]["enabled"]),
+        "use_ai": check_in.get("use_ai", True),
         "check_interval": check_in.get("check_interval", 3600),
         "messages": check_in.get("messages", []),
     }
@@ -141,6 +147,7 @@ def _normalize_config(raw: dict) -> dict:
             }
     time_cfg = {
         "enabled": time_aware.get("enabled", default["triggers"]["time"]["enabled"]),
+        "use_ai": time_aware.get("use_ai", True),
         "check_interval": raw.get("check_interval", 60),
         "greetings": greetings,
     }
@@ -175,11 +182,26 @@ def get_default_config() -> dict:
     return {
         "enabled": True,
         "triggers": {
-            "keyword": {"enabled": True, "keywords": [], "responses": []},
-            "time": {"enabled": True, "check_interval": 60, "greetings": {}},
-            "context": {"enabled": True, "check_interval": 300, "expectations": {}},
-            "emotion": {"enabled": True},
-            "check_in": {"enabled": False},
+            "keyword": {
+                "enabled": True,
+                "use_ai": True,
+                "keywords": [],
+                "responses": [],
+            },
+            "time": {
+                "enabled": True,
+                "use_ai": True,
+                "check_interval": 60,
+                "greetings": {},
+            },
+            "context": {
+                "enabled": True,
+                "use_ai": True,
+                "check_interval": 300,
+                "expectations": {},
+            },
+            "emotion": {"enabled": True, "use_ai": True},
+            "check_in": {"enabled": False, "use_ai": True},
             "ai": {"enabled": False},
         },
         "limits": {
@@ -307,6 +329,14 @@ class ProactiveChatSystem:
         # 用户发消息后的冷却时间
         self._user_message_cooldown = self._config.get("user_message_cooldown", 5)
 
+        # 后台轮询
+        self._bg_task: Optional[asyncio.Task] = None
+        self._poll_interval: int = self._config.get("check_interval", 45)
+        self._send_callback: Optional[callable] = None
+
+        # 记忆上下文提供者
+        self._memory_context_provider: Optional[callable] = None
+
     def _check_trigger_type_cooldown(self, target_id: int, trigger_type: str) -> bool:
         """检查同类型触发是否在冷却时间内"""
         min_interval = self._trigger_type_cooldown.get(trigger_type, 60)
@@ -362,6 +392,288 @@ class ProactiveChatSystem:
 
     def set_personality(self, personality):
         self.personality = personality
+
+    def _build_persona_context(self) -> str:
+        """提取当前人设+形态的上下文，注入 AI prompt"""
+        if not self.personality:
+            return ""
+
+        try:
+            profile = self.personality.get_profile()
+            form_info = profile.get("form_info", {})
+            form_name = form_info.get("name", "常态")
+            description = form_info.get("description", "")
+            speaking = form_info.get("speaking", {})
+            style = speaking.get("style", "")
+            form_proactive = form_info.get("form_proactive", "")
+            dominant = profile.get("dominant", "")
+            core = profile.get("current_core_form", "")
+            core_info = profile.get("core_form_info") or {}
+
+            parts = [f"当前形态：{form_name}"]
+            if description:
+                parts.append(f"性格底色：{description}")
+            if style:
+                parts.append(f"说话风格：{style}")
+            if form_proactive:
+                parts.append(f"主动原则：{form_proactive}")
+            if dominant:
+                parts.append(f"核心心魂：{dominant}")
+            if core and core_info:
+                parts.append(
+                    f"{core_info.get('name', '')}显照·{core_info.get('description', '')}"
+                )
+
+            return " | ".join(parts)
+        except Exception:
+            return ""
+
+    def set_send_callback(self, callback):
+        """设置消息发送回调函数 (async func: message, target_id, chat_type -> None)"""
+        self._send_callback = callback
+
+    def set_memory_context_provider(self, provider):
+        """设置记忆上下文提供者 (func: target_id -> str)"""
+        self._memory_context_provider = provider
+
+    def _build_memory_context(self, target_id: int) -> str:
+        """从工作记忆读取当前对话上下文"""
+        if not self._memory_context_provider:
+            return ""
+        try:
+            return self._memory_context_provider(str(target_id)) or ""
+        except Exception:
+            return ""
+
+    async def _generate_ai_message(
+        self, trigger_type: str, context: dict, target_id: int = 0
+    ) -> Optional[str]:
+        """统一 AI 消息生成器
+
+        Args:
+            trigger_type: context / emotion / keyword / time / check_in
+            context: {"key": "value"} 用于填充 system_prompt 变量
+            target_id: 用于查记忆上下文
+
+        Returns:
+            AI 生成的消息文本，或 None（表示 SKIP / 失败）
+        """
+        if not self.ai_client:
+            return None
+
+        system_prompt_paths = {
+            "context": "context_trigger.system_prompt",
+            "emotion": "emotion_perception.system_prompt",
+            "keyword": "keyword_trigger.system_prompt",
+            "time": "time_awareness.system_prompt",
+            "check_in": "check_in.system_prompt",
+        }
+
+        from pathlib import Path
+        import yaml
+
+        config_path = Path(__file__).parent.parent / "config" / "proactive_chat.yaml"
+        raw_config = {}
+        if config_path.exists():
+            with open(config_path, "r", encoding="utf-8") as f:
+                raw_config = yaml.safe_load(f) or {}
+
+        prompt_template = ""
+        prompt_path = system_prompt_paths.get(trigger_type, "")
+        parts = prompt_path.split(".")
+        node = raw_config.get("proactive_chat", {})
+        for part in parts:
+            node = node.get(part, {})
+        prompt_template = node if isinstance(node, str) else ""
+
+        if not prompt_template:
+            prompt_template = self._default_ai_prompt(trigger_type)
+
+        persona = self._build_persona_context()
+        memory_context = self._build_memory_context(target_id) if target_id else ""
+
+        context_with_persona = dict(context)
+        context_with_persona["persona"] = persona
+        context_with_persona["memory"] = memory_context
+
+        try:
+            prompt = prompt_template.format(**context_with_persona)
+        except (KeyError, ValueError):
+            prompt = prompt_template
+
+        try:
+            # 构建最终 prompt：记忆上下文 + 人设 + 触发上下文
+            final_prompt = prompt
+            if memory_context:
+                final_prompt = f"【当前对话】\n{memory_context}\n\n{prompt}"
+
+            use_tools = trigger_type == "ai"
+            response = await self.ai_client.chat(
+                messages=[AIMessage(role="user", content=final_prompt)],
+                tools=[] if not use_tools else None,
+                tool_choice="none" if not use_tools else "auto",
+            )
+            message = (
+                response.strip() if isinstance(response, str) else str(response).strip()
+            )
+            if message.upper() == "SKIP" or not message:
+                return None
+            return message
+        except Exception as e:
+            logger.warning(f"[主动聊天] AI 生成失败 [{trigger_type}]: {e}")
+            return None
+            return None
+            return message
+        except Exception as e:
+            logger.warning(f"[主动聊天] AI 生成失败 [{trigger_type}]: {e}")
+            return None
+
+    def _default_ai_prompt(self, trigger_type: str) -> str:
+        """各触发类型默认 AI system prompt"""
+        prompts = {
+            "context": (
+                "【{persona}】\n"
+                "用户刚才说做完了【{expectation}】，现在应该跟进关心一下。\n"
+                "请以上述人设质感生成一句简短温暖的跟进问候（20字以内）。\n"
+                "如果此时不适合说话，回复 SKIP。"
+            ),
+            "emotion": (
+                "【{persona}】\n"
+                "用户刚才的消息表现出【{emotion}】的情绪。\n"
+                "请以对应情感表达关怀或共情（20字以内），符合当前人设质感。\n"
+                "如果此时不适合说话，回复 SKIP。"
+            ),
+            "keyword": (
+                "【{persona}】\n"
+                "用户提到了【{keywords}】。\n"
+                "请以符合人设的语言和语气简短搭话（20字以内）。\n"
+                "如果此时不适合说话，回复 SKIP。"
+            ),
+            "time": (
+                "【{persona}】\n"
+                "现在是【{time_period}】时段。\n"
+                "请以符合人设的口吻发送一句简短自然的问候（20字以内）。\n"
+                "如果此时不适合说话，回复 SKIP。"
+            ),
+            "check_in": (
+                "【{persona}】\n"
+                "用户已经有【{idle_duration}】没有互动了。\n"
+                "请用符合人设的语气，发送一句简短温暖的关怀（20字以内）。\n"
+                "如果此时不适合说话，回复 SKIP。"
+            ),
+        }
+        return prompts.get(trigger_type, "")
+
+    def _try_get_ai_message(self, trigger_type: str, context: dict) -> Optional[str]:
+        """同步包装：尝试 AI 生成，失败返回 None —— 用于需要 await 的 async 方法中"""
+        return None  # 覆盖在 async 调用中
+
+    async def _generate_and_fallback(
+        self,
+        trigger_type: str,
+        ai_context: dict,
+        fallback_messages: list,
+        target_id: int = 0,
+    ) -> Optional[str]:
+        """AI 优先 + 模板回退的消息生成
+
+        Returns:
+            生成的消息，或 None
+        """
+        use_ai = False
+        if trigger_type == "context":
+            use_ai = self._context_config.get("use_ai", True)
+        elif trigger_type == "emotion":
+            use_ai = self._emotion_config.get("use_ai", True)
+        elif trigger_type == "keyword":
+            use_ai = self._keyword_config.get("use_ai", True)
+        elif trigger_type == "time":
+            use_ai = self._time_config.get("use_ai", True)
+        elif trigger_type == "check_in":
+            use_ai = self._check_in_config.get("use_ai", True)
+
+        if use_ai and self.ai_client:
+            ai_msg = await self._generate_ai_message(
+                trigger_type, ai_context, target_id
+            )
+            if ai_msg:
+                return ai_msg
+
+        if fallback_messages:
+            return random.choice(fallback_messages)
+        return None
+
+    def get_active_targets(self) -> list[int]:
+        """获取所有活跃的聊天目标 ID 列表"""
+        return list(self._context_cache.keys())
+
+    async def start_background_loop(self):
+        """启动后台轮询循环，定期检查所有活跃上下文的触发条件"""
+        if self._bg_task and not self._bg_task.done():
+            logger.info("[主动聊天] 后台循环已在运行")
+            return
+
+        self._bg_task = asyncio.create_task(self._background_check_loop())
+        logger.info(f"[主动聊天] 后台轮询已启动 (间隔 {self._poll_interval}s)")
+
+    async def stop_background_loop(self):
+        """停止后台轮询循环"""
+        if self._bg_task:
+            self._bg_task.cancel()
+            try:
+                await self._bg_task
+            except asyncio.CancelledError:
+                pass
+            self._bg_task = None
+            logger.info("[主动聊天] 后台轮询已停止")
+
+    async def _background_check_loop(self):
+        """后台轮询循环：定期检查所有活跃上下文"""
+        while True:
+            try:
+                await asyncio.sleep(self._poll_interval)
+
+                if not self._enabled or self._is_in_quiet_hours():
+                    continue
+
+                active_targets = self.get_active_targets()
+                if not active_targets:
+                    continue
+
+                for target_id in active_targets:
+                    try:
+                        result = await self.check_and_respond(target_id)
+
+                        if result and result.should_respond and result.message:
+                            if self._send_callback:
+                                ctx = result.context
+                                chat_type = ctx.chat_type if ctx else "private"
+                                target = target_id
+                                if chat_type == "group" and ctx:
+                                    target = ctx.target_id
+
+                                try:
+                                    await self._send_callback(
+                                        result.message, target, chat_type
+                                    )
+                                    logger.info(
+                                        f"[主动聊天] [后台] [{result.trigger_type}] "
+                                        f"target={target_id} -> {result.message[:30]}"
+                                    )
+                                except Exception as e:
+                                    logger.error(f"[主动聊天] 发送回调失败: {e}")
+                    except Exception as e:
+                        logger.warning(
+                            f"[主动聊天] 后台检查 target={target_id} 失败: {e}"
+                        )
+                        continue
+
+            except asyncio.CancelledError:
+                logger.info("[主动聊天] 后台轮询循环已取消")
+                break
+            except Exception as e:
+                logger.error(f"[主动聊天] 后台轮询异常: {e}")
+                await asyncio.sleep(10)
 
     def is_enabled(self) -> bool:
         return self._enabled
@@ -621,35 +933,34 @@ class ProactiveChatSystem:
     async def _check_context_trigger(
         self, target_id: int, context: ChatContext
     ) -> Optional[ProactiveResult]:
-        """上下文触发 - 行为期望跟进"""
+        """上下文触发 - 行为期望跟进（AI 优先）"""
         expectations_config = self._context_config.get("expectations", {})
         if not expectations_config.get("enabled", True):
             return None
 
-        # 检查用户是否有未跟进的期望行为
         user_expectation = context.user_expectation or self._last_expectation.get(
             target_id
         )
-
         if not user_expectation:
             return None
 
-        # 获取期望跟进回复
         follow_responses = expectations_config.get("follow_responses", {})
-        responses = follow_responses.get(
+        fallback_msgs = follow_responses.get(
             user_expectation, follow_responses.get("default", [])
         )
 
-        if not responses:
-            return None
-
-        # 检查同类型触发冷却
         if not self._check_trigger_type_cooldown(target_id, "context"):
             return None
 
-        message = random.choice(responses)
+        message = await self._generate_and_fallback(
+            "context",
+            {"expectation": user_expectation},
+            fallback_msgs,
+            target_id,
+        )
+        if not message:
+            return None
 
-        # 检查消息内容是否重复
         if self._check_message_content_duplicate(target_id, message):
             return None
 
@@ -658,7 +969,6 @@ class ProactiveChatSystem:
             self._record_trigger_by_type(target_id, "context")
             self._record_sent_message(target_id, message)
 
-            # 跟进后清除期望状态
             if target_id in self._last_expectation:
                 del self._last_expectation[target_id]
             context.user_expectation = None
@@ -678,28 +988,29 @@ class ProactiveChatSystem:
     async def _check_emotion_trigger(
         self, target_id: int, context: ChatContext, user_message: str
     ) -> Optional[ProactiveResult]:
-        """情绪感知触发"""
+        """情绪感知触发（AI 优先）"""
         emotion = context.detected_emotion
         if not emotion:
             return None
 
         emotion_responses = self._emotion_config.get("emotion_responses", {})
-        responses = emotion_responses.get(emotion, [])
+        fallback_msgs = emotion_responses.get(emotion, [])
 
-        if not responses:
+        if random.random() > 0.3:
             return None
 
-        # 只有情绪强烈时才回复（这里简单处理，随机触发）
-        if random.random() > 0.3:  # 30%概率触发，避免太频繁
-            return None
-
-        # 检查同类型触发冷却
         if not self._check_trigger_type_cooldown(target_id, "emotion"):
             return None
 
-        message = random.choice(responses)
+        message = await self._generate_and_fallback(
+            "emotion",
+            {"emotion": emotion},
+            fallback_msgs,
+            target_id,
+        )
+        if not message:
+            return None
 
-        # 检查消息内容是否重复
         if self._check_message_content_duplicate(target_id, message):
             return None
 
@@ -708,7 +1019,6 @@ class ProactiveChatSystem:
             self._record_trigger_by_type(target_id, "emotion")
             self._record_sent_message(target_id, message)
 
-            # 清除情绪状态
             context.detected_emotion = None
 
             if self._log_triggers:
@@ -728,7 +1038,7 @@ class ProactiveChatSystem:
     async def _check_keyword_trigger(
         self, target_id: int, context: ChatContext, user_message: str
     ) -> Optional[ProactiveResult]:
-        """关键词触发"""
+        """关键词触发（AI 优先）"""
         keywords = self._keyword_config.get("keywords", [])
         matched = [kw for kw in keywords if kw in user_message]
 
@@ -740,17 +1050,22 @@ class ProactiveChatSystem:
                 f"[主动聊天] [关键词触发] target={target_id}, matched={matched}"
             )
 
-        responses = self._keyword_config.get("responses", [])
-        if responses:
-            message = random.choice(responses)
-        else:
-            message = "嗯呢，收到啦~"
+        fallback_msgs = self._keyword_config.get("responses", [])
+        if not fallback_msgs:
+            fallback_msgs = ["嗯呢，收到啦~"]
 
-        # 检查同类型触发冷却
         if not self._check_trigger_type_cooldown(target_id, "keyword"):
             return None
 
-        # 检查消息内容是否重复
+        message = await self._generate_and_fallback(
+            "keyword",
+            {"keywords": ", ".join(matched)},
+            fallback_msgs,
+            target_id,
+        )
+        if not message:
+            return None
+
         if self._check_message_content_duplicate(target_id, message):
             return None
 
@@ -770,43 +1085,42 @@ class ProactiveChatSystem:
     async def _check_time_trigger(
         self, target_id: int, context: ChatContext
     ) -> Optional[ProactiveResult]:
-        """时间触发 - 多时段问候"""
+        """时间触发 - 多时段问候（AI 优先）"""
         now = datetime.now()
         hour = now.hour
 
         greetings = self._time_config.get("greetings", {})
 
-        # 判断时段并获取消息
         messages = []
+        time_period = "深夜"
 
-        # 早上 6-12
         if 6 <= hour < 12:
             messages = greetings.get("morning", {}).get("messages", [])
-        # 中午 12-14
+            time_period = "早上"
         elif 12 <= hour < 14:
             messages = greetings.get("noon", {}).get("messages", [])
             if not messages:
                 messages = greetings.get("afternoon", {}).get("messages", [])
-        # 下午 14-18
+            time_period = "中午"
         elif 14 <= hour < 18:
             messages = greetings.get("afternoon", {}).get("messages", [])
-        # 傍晚 18-22
+            time_period = "下午"
         elif 18 <= hour < 22:
             messages = greetings.get("evening", {}).get("messages", [])
-        # 深夜 22-6
-        else:
-            messages = greetings.get("night", {}).get("messages", [])
+            time_period = "傍晚"
 
-        if not messages:
-            return None
-
-        # 检查同类型触发冷却
         if not self._check_trigger_type_cooldown(target_id, "time"):
             return None
 
-        message = random.choice(messages)
+        message = await self._generate_and_fallback(
+            "time",
+            {"time_period": time_period},
+            messages,
+            target_id,
+        )
+        if not message:
+            return None
 
-        # 检查消息内容是否重复
         if self._check_message_content_duplicate(target_id, message):
             return None
 
@@ -830,32 +1144,39 @@ class ProactiveChatSystem:
     async def _check_check_in_trigger(
         self, target_id: int, context: ChatContext
     ) -> Optional[ProactiveResult]:
-        """主动关怀触发"""
+        """主动关怀触发（AI 优先）"""
         check_in_config = self._check_in_config
         check_interval = check_in_config.get("check_interval", 3600)
 
-        # 检查上次互动时间
         last_interaction = self._user_last_interaction.get(target_id)
+        idle_seconds = 0
+        idle_duration = "一段时间"
         if last_interaction:
-            elapsed = (datetime.now() - last_interaction).total_seconds()
-            if elapsed < check_interval:
+            idle_seconds = (datetime.now() - last_interaction).total_seconds()
+            if idle_seconds < check_interval:
                 return None
+            if idle_seconds < 3600:
+                idle_duration = f"{int(idle_seconds // 60)}分钟"
+            else:
+                idle_duration = f"{int(idle_seconds // 3600)}小时"
 
-        # 检查是否应该触发关怀
-        if random.random() > 0.2:  # 20%概率触发
+        if random.random() > 0.2:
             return None
 
-        messages = check_in_config.get("messages", [])
-        if not messages:
-            return None
+        fallback_msgs = check_in_config.get("messages", [])
 
-        # 检查同类型触发冷却
         if not self._check_trigger_type_cooldown(target_id, "check_in"):
             return None
 
-        message = random.choice(messages)
+        message = await self._generate_and_fallback(
+            "check_in",
+            {"idle_duration": idle_duration},
+            fallback_msgs,
+            target_id,
+        )
+        if not message:
+            return None
 
-        # 检查消息内容是否重复
         if self._check_message_content_duplicate(target_id, message):
             return None
 
@@ -901,7 +1222,14 @@ class ProactiveChatSystem:
                 ", ".join(context.recent_topics) if context.recent_topics else "无"
             )
 
+            persona = self._build_persona_context()
+            memory_context = self._build_memory_context(target_id)
+
             prompt = f"""判断是否应该主动和用户聊天。
+【{persona}】
+对话上下文：
+{memory_context if memory_context else "（无近期对话记录）"}
+
 聊天信息：
 - 类型: {chat_type}
 - 群名称: {group_name}
@@ -909,13 +1237,12 @@ class ProactiveChatSystem:
 - 用户最后活跃: {last_active}
 - 最近话题: {recent_topics}
 
-如果需要回复，请生成一句简短温暖的话（不超过20字）。
+如果需要回复，请以符合上述人设质感生成一句简短温暖的话（不超过20字）。
 如果不需要回复，请回复"SKIP"。"""
 
             response = await self.ai_client.chat(
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=self._config.get("max_tokens", 50),
-                temperature=self._config.get("temperature", 0.7),
+                messages=[AIMessage(role="user", content=prompt)],
+                tool_choice="auto",
             )
 
             # response 直接是字符串，不需要 .get() 解析
