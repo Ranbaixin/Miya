@@ -106,6 +106,18 @@ class PersonalityLoader:
         if "form_names" in base:
             result["form_names"] = base["form_names"]
 
+        # === v4.7.0 新增模块 ===
+        if "anti_sycophancy" in base:
+            result["anti_sycophancy"] = base["anti_sycophancy"]
+        if "mood_flow" in base:
+            result["mood_flow"] = base["mood_flow"]
+        if "proactive_principles" in base:
+            result["proactive_principles"] = base["proactive_principles"]
+        if "daily_mood_palette" in base:
+            result["daily_mood_palette"] = base["daily_mood_palette"]
+        if "imperfection_allowance" in base:
+            result["imperfection_allowance"] = base["imperfection_allowance"]
+
         # 添加人格特定配置（覆盖基础配置）
         for key, value in config.items():
             result[key] = value
@@ -487,6 +499,79 @@ class PersonalityLoader:
         if "prohibitions" in config:
             lines.append(
                 self._format_config_value("prohibitions", config["prohibitions"])
+            )
+            lines.append("")
+
+        # === v4.7.0 注入新模块 ===
+
+        # 反谄媚协议
+        if "anti_sycophancy" in config:
+            lines.append(
+                self._format_config_value("anti_sycophancy", config["anti_sycophancy"])
+            )
+            lines.append("")
+
+        # 情绪连续流原则
+        if "mood_flow" in config:
+            lines.append(self._format_config_value("mood_flow", config["mood_flow"]))
+            lines.append("")
+
+        # 主动性原则
+        if "proactive_principles" in config:
+            lines.append(
+                self._format_config_value(
+                    "proactive_principles", config["proactive_principles"]
+                )
+            )
+            lines.append("")
+
+        # 每日情绪底色
+        if "daily_mood_palette" in config:
+            lines.append(
+                self._format_config_value(
+                    "daily_mood_palette", config["daily_mood_palette"]
+                )
+            )
+            lines.append("")
+
+        # 不完美许可
+        if "imperfection_allowance" in config:
+            lines.append(
+                self._format_config_value(
+                    "imperfection_allowance", config["imperfection_allowance"]
+                )
+            )
+            lines.append("")
+
+        # === v4.7.0 形态专属模块（角色级覆写，接在 base 之后）===
+
+        if "form_anti_sycophancy" in config:
+            lines.append(
+                self._format_config_value(
+                    "form_anti_sycophancy", config["form_anti_sycophancy"]
+                )
+            )
+            lines.append("")
+
+        if "form_proactive" in config:
+            lines.append(
+                self._format_config_value("form_proactive", config["form_proactive"])
+            )
+            lines.append("")
+
+        if "form_mood_palette" in config:
+            lines.append(
+                self._format_config_value(
+                    "form_mood_palette", config["form_mood_palette"]
+                )
+            )
+            lines.append("")
+
+        if "form_imperfections" in config:
+            lines.append(
+                self._format_config_value(
+                    "form_imperfections", config["form_imperfections"]
+                )
             )
             lines.append("")
 
