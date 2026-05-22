@@ -28,5 +28,4 @@ __all__ = [
     "PerceptionHandler",
     "ResponseGenerator",
     "MemoryManager",
-    "MemoryManager",
 ]

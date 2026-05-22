@@ -419,3 +419,32 @@ proactive_chat:
   # 用户刚发送消息后的冷却（秒）
   # 避免在用户刚说话后立即主动发言
   user_message_cooldown: 5
+
+  # === 场景感知主动策略 ===
+  scene_awareness:
+    enabled: true
+
+    # 平台衰减乘数 (1.0 = 全概率, 0.0 = 不触发)
+    platform_multipliers:
+      terminal: 0.9
+      webchat: 0.8
+      aiocqhttp_private: 1.0
+      aiocqhttp_group: 0.35
+      qqofficial_private: 0.9
+      qqofficial_group: 0.3
+      lark: 0.25
+      generic: 0.15
+
+    # 群聊活跃度影响
+    group_activity:
+      inactive_threshold: 300     # 5分钟无消息视为不活跃
+      active_message_window: 120   # 2分钟内的消息数判定活跃度
+      inactive_multiplier: 0.8     # 不活跃群提权
+      active_multiplier: 0.2      # 活跃群降权
+      recent_at_boost: 0.6         # 最近被@过的群大幅提权
+
+    # 混合策略
+    mixed_strategy:
+      enabled: true
+      layer1_min_probability: 0.3   # Layer1 概率低于此值直接跳过
+      layer2_ai_judge: true         # Layer2 让 AI 做最终判决

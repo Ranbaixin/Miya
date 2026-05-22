@@ -273,18 +273,54 @@ class DecisionHub:
             self.proactive_chat = get_proactive_chat_system()
             self.proactive_chat.set_ai_client(self.ai_client)
             self.proactive_chat.set_personality(self.personality)
+            self.proactive_chat.set_prompt_manager(self.prompt_manager)
 
-            # 注册记忆上下文提供者
-            def _memory_context_provider(scope_id: str) -> str:
+            # 注册深度记忆检索提供者（认知引擎 + 对话历史）
+            async def _rich_context_provider(target_id: int) -> str:
+                """为主动聊天构建完整的记忆上下文"""
                 try:
-                    from memory.working_memory import get_working_memory
+                    from memory.cognitive_engine import get_cognitive_engine
 
-                    wm = get_working_memory()
-                    return wm.build_prompt_context(scope_id)
+                    parts = []
+                    target_str = str(target_id)
+                    session_id = f"aiocqhttp_{target_str}"
+
+                    # 1. 认知记忆检索（智能语义搜索）
+                    try:
+                        ce = get_cognitive_engine()
+                        cog_text = await ce.build_context(
+                            user_input="",
+                            conversation_history=[],
+                            limit=3,
+                            user_id=target_str,
+                        )
+                        if cog_text:
+                            parts.append(cog_text)
+                    except Exception:
+                        pass
+
+                    # 2. 对话历史
+                    try:
+                        conv = await self.conversation_context_manager.get_conversation_context(
+                            session_id, current_input=""
+                        )
+                        if conv:
+                            lines = []
+                            for msg in conv[-8:]:
+                                role = msg.get("role", "user")
+                                content = str(msg.get("content", ""))[:80]
+                                name = "弥娅" if role == "assistant" else "用户"
+                                lines.append(f"{name}: {content}")
+                            if lines:
+                                parts.append("【近期对话】\n" + "\n".join(lines))
+                    except Exception:
+                        pass
+
+                    return "\n".join(parts) if parts else ""
                 except Exception:
                     return ""
 
-            self.proactive_chat.set_memory_context_provider(_memory_context_provider)
+            self.proactive_chat.set_rich_context_provider(_rich_context_provider)
 
             async def _proactive_send_callback(
                 message: str, target_id: int, chat_type: str
@@ -303,7 +339,7 @@ class DecisionHub:
                     else:
                         print(f"\n【弥娅主动】 {message}\n")
 
-                # 记入统一记忆系统
+                # 记入统一记忆系统（长时记忆，不含工作记忆避免反馈污染）
                 try:
                     perception = {
                         "platform": platform,
@@ -317,20 +353,6 @@ class DecisionHub:
                     )
                 except Exception as e:
                     logger.debug(f"[主动聊天] 记忆存储失败: {e}")
-
-                # 记入工作记忆
-                try:
-                    from memory.working_memory import get_working_memory
-
-                    wm = get_working_memory()
-                    scope_id = str(target_id)
-                    wm.add_message(
-                        group_id=scope_id,
-                        sender="弥娅",
-                        content=message,
-                    )
-                except Exception as e:
-                    logger.debug(f"[主动聊天] 工作记忆存储失败: {e}")
 
             self.proactive_chat.set_send_callback(_proactive_send_callback)
             logger.info("[决策层] 主动聊天系统 v2.0 已初始化")
@@ -445,15 +467,19 @@ class DecisionHub:
                 return None
 
             # 更新上下文
+            platform = perception.get("platform", "terminal")
             context = ChatContext(
                 chat_type=chat_type,
                 target_id=target_id,
                 group_name=group_name or None,
                 member_count=perception.get("member_count", 0),
+                platform=platform,
             )
 
-            self.proactive_chat.update_context(target_id, context)
-            self.proactive_chat.record_message(target_id, chat_type, user_message)
+            self.proactive_chat.update_context(target_id, context, platform)
+            self.proactive_chat.record_message(
+                target_id, chat_type, user_message, platform
+            )
 
             # 检查是否需要主动发言
             result: Optional[
@@ -1587,7 +1613,11 @@ class DecisionHub:
                         personality_info = {}
                         if self.personality:
                             try:
-                                form = self.personality.get_current_form()
+                                form_name = self.personality.get_form_for_chat(
+                                    str(user_id),
+                                    str(perception.get("group_id", "")),
+                                )
+                                form = self.personality.get_form_config(form_name)
                                 personality_info = {
                                     "form_name": form.get("name", "默认"),
                                     "form_description": form.get("description", ""),
@@ -3570,7 +3600,10 @@ class DecisionHub:
             cmd = cmd.strip().lower()
             if not cmd:
                 profile = self.personality.get_profile()
-                current_form = profile.get("current_form", "normal")
+                chat_form = self.personality.get_form_for_chat(
+                    str(user_id), str(group_id) if group_id else ""
+                )
+                current_form = chat_form
                 form_name = get_form_name(current_form)
                 form_info = profile.get("form_info", {})
 
@@ -3581,6 +3614,10 @@ class DecisionHub:
                         "description", desc=form_info.get("description", "")
                     ),
                 ]
+                if group_id:
+                    lines.append(get_form_display("scope", scope=f"群聊 {group_id}"))
+                else:
+                    lines.append(get_form_display("scope", scope=f"私聊"))
                 if profile.get("current_core_form"):
                     core_info = profile.get("core_form_info", {})
                     lines.append(
@@ -3601,19 +3638,26 @@ class DecisionHub:
             if self.personality._use_yaml and self.personality._loader:
                 available_forms = self.personality._loader.list_available()
                 if cmd in available_forms:
-                    success = self.personality.set_form(cmd)
+                    success = self.personality.set_form_for_chat(
+                        cmd, str(user_id), str(group_id) if group_id else ""
+                    )
+                    if success:
+                        self.personality.set_form(cmd)
                     return (
                         get_form_response("switch_success", form=cmd)
                         if success
                         else get_text("default_responses.switch_failed")
                     )
             else:
-                # 使用配置的可用形态列表
                 from core.personality_command_config import get_available_forms
 
                 available_forms = get_available_forms()
                 if cmd in available_forms:
-                    success = self.personality.set_form(cmd)
+                    success = self.personality.set_form_for_chat(
+                        cmd, str(user_id), str(group_id) if group_id else ""
+                    )
+                    if success:
+                        self.personality.set_form(cmd)
                     return (
                         get_form_response("switch_success", form=cmd)
                         if success

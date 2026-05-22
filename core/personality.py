@@ -52,6 +52,9 @@ class Personality:
         self.current_title = "你"
         self.speak_mode = "casual"
         self.vector_history = []
+        self._chat_forms: Dict[str, str] = {}
+        self._chat_speak_modes: Dict[str, str] = {}
+        self._default_form = "normal"
 
     def _load_core_config(self):
         """从配置文件加载核心配置"""
@@ -105,6 +108,49 @@ class Personality:
         if self._use_yaml and self._current_config:
             return self._current_config
         return {"name": "normal", "description": "默认人格"}
+
+    def get_form_config(self, form_name: str) -> Dict:
+        if self._use_yaml and self._loader:
+            try:
+                return self._loader.load(form_name)
+            except Exception:
+                pass
+        return {"name": "normal", "description": "默认人格"}
+
+    def get_chat_key(self, user_id: str, group_id: str = "") -> str:
+        if group_id and group_id != "0":
+            return f"group_{group_id}"
+        return f"private_{user_id}"
+
+    def set_form_for_chat(
+        self, form_name: str, user_id: str, group_id: str = ""
+    ) -> bool:
+        if not self._use_yaml or not self._loader:
+            return False
+        try:
+            self._loader.load(form_name)
+        except Exception:
+            return False
+        chat_key = self.get_chat_key(user_id, group_id)
+        self._chat_forms[chat_key] = form_name
+        return True
+
+    def get_form_for_chat(self, user_id: str = "", group_id: str = "") -> str:
+        if not user_id and not group_id:
+            return self.current_form
+        chat_key = self.get_chat_key(user_id, group_id)
+        result = self._chat_forms.get(chat_key, self.current_form)
+        return result
+
+    def clear_chat_form(self, user_id: str = "", group_id: str = "") -> bool:
+        chat_key = self.get_chat_key(user_id, group_id)
+        if chat_key in self._chat_forms:
+            del self._chat_forms[chat_key]
+            return True
+        return False
+
+    def get_all_chat_forms(self) -> Dict[str, str]:
+        return dict(self._chat_forms)
 
     def set_core_form(self, form_name: str) -> bool:
         if form_name not in self._core_forms:

@@ -174,6 +174,17 @@ def _normalize_config(raw: dict) -> dict:
         },
         "trigger_type_cooldown": raw.get("trigger_type_cooldown", {}),
         "user_message_cooldown": raw.get("user_message_cooldown", 5),
+        "scene": _normalize_scene_config(raw.get("scene_awareness", {})),
+    }
+
+
+def _normalize_scene_config(raw: dict) -> dict:
+    """归一化场景感知配置"""
+    return {
+        "enabled": raw.get("enabled", True),
+        "platform_multipliers": raw.get("platform_multipliers", {}),
+        "group_activity": raw.get("group_activity", {}),
+        "mixed_strategy": raw.get("mixed_strategy", {}),
     }
 
 
@@ -238,6 +249,26 @@ class ChatContext:
     # 用户行为状态
     user_expectation: Optional[str] = None  # 用户说"吃完"、"下班"等
     detected_emotion: Optional[str] = None  # 检测到的情绪
+    # 场景感知字段
+    platform: str = "terminal"
+    platform_name: str = ""
+    group_activity_level: float = 0.0
+    last_group_msg_time: Optional[str] = None
+    last_at_miya: Optional[str] = None
+    is_reply_to_miya: bool = False
+
+
+@dataclass
+class SceneProfile:
+    """场景画像 — 用于 Layer1 概率计算"""
+
+    platform: str
+    chat_type: str
+    is_private: bool
+    multiplier: float  # 平台衰减乘数
+    group_activity: float  # 0=死水, 1=沸腾
+    recently_engaged: bool  # 最近被@或互动
+    recommended: bool  # 综合建议是否触发
 
 
 @dataclass
@@ -311,6 +342,9 @@ class ProactiveChatSystem:
         # 追踪已发送消息的内容，避免重复
         self._sent_messages_history: dict[int, list[tuple[str, datetime]]] = {}
 
+        # 群聊消息时间戳（活跃度追踪）
+        self._group_msg_timestamps: dict[int, list[datetime]] = {}
+
         # 从配置加载触发类型冷却时间
         cooldown_config = self._config.get("trigger_type_cooldown", {})
         self._trigger_type_cooldown = (
@@ -336,6 +370,19 @@ class ProactiveChatSystem:
 
         # 记忆上下文提供者
         self._memory_context_provider: Optional[callable] = None
+
+        # 深度上下文提供者（认知记忆 + 对话历史）
+        self._rich_context_provider: Optional[callable] = None
+
+        # prompt_manager
+        self._prompt_manager = None
+
+        # 场景感知配置
+        scene = self._config.get("scene", {})
+        self._scene_enabled = scene.get("enabled", True)
+        self._platform_multipliers = scene.get("platform_multipliers", {})
+        self._group_activity_cfg = scene.get("group_activity", {})
+        self._mixed_strategy = scene.get("mixed_strategy", {})
 
     def _check_trigger_type_cooldown(self, target_id: int, trigger_type: str) -> bool:
         """检查同类型触发是否在冷却时间内"""
@@ -393,6 +440,10 @@ class ProactiveChatSystem:
     def set_personality(self, personality):
         self.personality = personality
 
+    def set_prompt_manager(self, prompt_manager):
+        """注入 prompt_manager 以构建系统 prompt"""
+        self._prompt_manager = prompt_manager
+
     def _build_persona_context(self) -> str:
         """提取当前人设+形态的上下文，注入 AI prompt"""
         if not self.personality:
@@ -436,12 +487,53 @@ class ProactiveChatSystem:
         """设置记忆上下文提供者 (func: target_id -> str)"""
         self._memory_context_provider = provider
 
+    def set_rich_context_provider(self, provider):
+        """设置深度上下文提供者 (async func: target_id -> str) — 认知记忆 + 对话历史"""
+        self._rich_context_provider = provider
+
     def _build_memory_context(self, target_id: int) -> str:
-        """从工作记忆读取当前对话上下文"""
-        if not self._memory_context_provider:
+        """从 ChatContext 构建当前对话上下文（轻量，不查持久记忆）"""
+        ctx = self._context_cache.get(target_id)
+        if not ctx:
+            return ""
+
+        parts = []
+        last_active = ctx.last_active or ""
+        if last_active:
+            try:
+                dt = datetime.fromisoformat(last_active)
+                elapsed = (datetime.now() - dt).total_seconds()
+                if elapsed < 60:
+                    parts.append(f"用户刚刚活跃过（{int(elapsed)}秒前）")
+                elif elapsed < 3600:
+                    parts.append(f"用户{int(elapsed // 60)}分钟前活跃")
+                else:
+                    parts.append(f"用户{int(elapsed // 3600)}小时前活跃")
+            except (ValueError, TypeError):
+                pass
+
+        if ctx.recent_topics:
+            parts.append(f"最近话题: {', '.join(ctx.recent_topics)}")
+
+        if ctx.chat_type == "group":
+            parts.append(f"群活跃度: {ctx.group_activity_level:.2f}")
+            if ctx.last_at_miya:
+                parts.append(f"最近@弥娅: {ctx.last_at_miya}")
+
+        if ctx.detected_emotion:
+            parts.append(f"情绪: {ctx.detected_emotion}")
+
+        return "\n".join(parts) if parts else ""
+
+    async def _build_rich_context(self, target_id: int) -> str:
+        """异步构建深度上下文（认知记忆 + 对话历史）"""
+        if not self._rich_context_provider:
             return ""
         try:
-            return self._memory_context_provider(str(target_id)) or ""
+            result = self._rich_context_provider(target_id)
+            if asyncio.iscoroutine(result):
+                result = await result
+            return str(result) if result else ""
         except Exception:
             return ""
 
@@ -522,47 +614,41 @@ class ProactiveChatSystem:
         except Exception as e:
             logger.warning(f"[主动聊天] AI 生成失败 [{trigger_type}]: {e}")
             return None
-            return None
-            return message
-        except Exception as e:
-            logger.warning(f"[主动聊天] AI 生成失败 [{trigger_type}]: {e}")
-            return None
 
     def _default_ai_prompt(self, trigger_type: str) -> str:
-        """各触发类型默认 AI system prompt"""
-        prompts = {
-            "context": (
-                "【{persona}】\n"
-                "用户刚才说做完了【{expectation}】，现在应该跟进关心一下。\n"
-                "请以上述人设质感生成一句简短温暖的跟进问候（20字以内）。\n"
-                "如果此时不适合说话，回复 SKIP。"
-            ),
-            "emotion": (
-                "【{persona}】\n"
-                "用户刚才的消息表现出【{emotion}】的情绪。\n"
-                "请以对应情感表达关怀或共情（20字以内），符合当前人设质感。\n"
-                "如果此时不适合说话，回复 SKIP。"
-            ),
-            "keyword": (
-                "【{persona}】\n"
-                "用户提到了【{keywords}】。\n"
-                "请以符合人设的语言和语气简短搭话（20字以内）。\n"
-                "如果此时不适合说话，回复 SKIP。"
-            ),
-            "time": (
-                "【{persona}】\n"
-                "现在是【{time_period}】时段。\n"
-                "请以符合人设的口吻发送一句简短自然的问候（20字以内）。\n"
-                "如果此时不适合说话，回复 SKIP。"
-            ),
-            "check_in": (
-                "【{persona}】\n"
-                "用户已经有【{idle_duration}】没有互动了。\n"
-                "请用符合人设的语气，发送一句简短温暖的关怀（20字以内）。\n"
-                "如果此时不适合说话，回复 SKIP。"
-            ),
-        }
-        return prompts.get(trigger_type, "")
+        """从 text_config.json 读取各触发类型默认 AI system prompt"""
+        try:
+            import json
+            from pathlib import Path
+
+            config_path = Path(__file__).parent.parent / "config" / "text_config.json"
+            if config_path.exists():
+                with open(config_path, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+                prompts = cfg.get("proactive_chat", {}).get("default_prompts", {})
+                return prompts.get(trigger_type, "")
+        except Exception:
+            pass
+        return ""
+
+    @staticmethod
+    def _load_text_config(key: str, default: str = "") -> str:
+        """从 text_config.json 读取文本配置"""
+        try:
+            import json
+            from pathlib import Path
+
+            config_path = Path(__file__).parent.parent / "config" / "text_config.json"
+            if config_path.exists():
+                with open(config_path, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+                node = cfg.get("proactive_chat", {})
+                for part in key.split("."):
+                    node = node.get(part, {})
+                return node if isinstance(node, str) else default
+        except Exception:
+            pass
+        return default
 
     def _try_get_ai_message(self, trigger_type: str, context: dict) -> Optional[str]:
         """同步包装：尝试 AI 生成，失败返回 None —— 用于需要 await 的 async 方法中"""
@@ -693,25 +779,49 @@ class ProactiveChatSystem:
             return self._ai_config.get("enabled", False)
         return False
 
-    def update_context(self, target_id: int, context: ChatContext):
+    def update_context(
+        self, target_id: int, context: ChatContext, platform: str = "terminal"
+    ):
+        context.platform = platform
         self._context_cache[target_id] = context
         self._user_last_interaction[target_id] = datetime.now()
 
-    def record_message(self, target_id: int, chat_type: str, content: str = ""):
+    def record_message(
+        self,
+        target_id: int,
+        chat_type: str,
+        content: str = "",
+        platform: str = "terminal",
+    ):
         now = datetime.now()
         self._user_last_interaction[target_id] = now
 
-        # 创建或更新上下文
         if target_id not in self._context_cache:
             self._context_cache[target_id] = ChatContext(
                 chat_type=chat_type,
                 target_id=target_id,
+                platform=platform,
             )
 
         ctx = self._context_cache[target_id]
         ctx.chat_type = chat_type
+        ctx.platform = platform
         ctx.last_active = now.isoformat()
         ctx.message_count_today += 1
+
+        # 群聊活跃度追踪
+        if chat_type == "group":
+            active_window = self._group_activity_cfg.get("active_message_window", 120)
+            self._group_msg_timestamps.setdefault(target_id, []).append(now)
+            # 只保留窗口内的消息
+            self._group_msg_timestamps[target_id] = [
+                t
+                for t in self._group_msg_timestamps[target_id]
+                if (now - t).total_seconds() < active_window
+            ]
+            recent_count = len(self._group_msg_timestamps[target_id])
+            ctx.group_activity_level = min(1.0, recent_count / 5.0)
+            ctx.last_group_msg_time = now.isoformat()
 
         # 提取话题关键词
         if content:
@@ -863,6 +973,69 @@ class ProactiveChatSystem:
             self._hourly_count[target_id] = []
         self._hourly_count[target_id].append(now)
 
+    def _calculate_scene_profile(self, context: ChatContext) -> float:
+        """Layer1 场景感知概率衰减 → 返回最终概率乘数 [0, 1]"""
+        if not self._scene_enabled:
+            return 1.0
+
+        ms = self._mixed_strategy
+        ga = self._group_activity_cfg
+
+        platform = context.platform or "terminal"
+        is_private = context.chat_type != "group"
+        key = f"{platform}_{'private' if is_private else 'group'}"
+        multiplier = self._platform_multipliers.get(key, 0.5)
+
+        if not is_private:
+            active_window = ga.get("active_message_window", 120)
+            inactive_threshold = ga.get("inactive_threshold", 300)
+            active_mult = ga.get("active_multiplier", 0.2)
+            inactive_mult = ga.get("inactive_multiplier", 0.8)
+            at_boost = ga.get("recent_at_boost", 0.6)
+
+            if context.group_activity_level > 0.5:
+                multiplier *= active_mult
+            else:
+                multiplier *= inactive_mult
+
+            if context.last_at_miya:
+                try:
+                    at_time = datetime.fromisoformat(context.last_at_miya)
+                    if (datetime.now() - at_time).total_seconds() < inactive_threshold:
+                        multiplier = min(1.0, multiplier + at_boost)
+                except (ValueError, TypeError):
+                    pass
+
+        min_prob = ms.get("layer1_min_probability", 0.3)
+        if multiplier < min_prob:
+            return -1.0
+
+        if random.random() > multiplier:
+            return -1.0
+
+        return multiplier
+
+    def _build_deep_context(self, context: ChatContext) -> str:
+        """Layer2 深度上下文 — 供 AI 判决"""
+        parts = []
+
+        platform = context.platform or "terminal"
+        parts.append(
+            f"平台: {platform} ({'私聊' if context.chat_type != 'group' else '群聊'})"
+        )
+
+        if context.chat_type == "group":
+            parts.append(
+                f"群活跃度: {context.group_activity_level:.2f} (0=死水, 1=沸腾)"
+            )
+            if context.last_at_miya:
+                parts.append(f"最近@弥娅: {context.last_at_miya}")
+            if context.is_reply_to_miya:
+                parts.append("上一轮对话: 用户在和弥娅互动")
+
+        parts.append(f"上次互动: {context.last_active or '未知'}")
+        return "\n".join(parts)
+
     async def check_and_respond(
         self, target_id: int, user_message: Optional[str] = None
     ) -> Optional[ProactiveResult]:
@@ -890,8 +1063,22 @@ class ProactiveChatSystem:
         if not context:
             return None
 
-        # 1. 上下文触发（行为期望跟进）- 优先级最高
+        # Layer1: 场景感知概率衰减（上下文触发不受限，其他触发器需通过）
+        scene_mult = 1.0
+        if self._scene_enabled:
+            scene_mult = self._calculate_scene_profile(context)
+
+        # 1. 上下文触发（行为期望跟进）- 最高优先级，不受场景过滤
         if self.is_trigger_enabled("context"):
+            result = await self._check_context_trigger(target_id, context)
+            if result:
+                return result
+
+        # 场景过滤：后续触发器需通过 Layer1
+        if scene_mult < 0:
+            return None
+
+            # 2. 情绪感知触发
             result = await self._check_context_trigger(target_id, context)
             if result:
                 return result
@@ -1224,11 +1411,42 @@ class ProactiveChatSystem:
 
             persona = self._build_persona_context()
             memory_context = self._build_memory_context(target_id)
+            rich_context = await self._build_rich_context(target_id)
+            scene_context = (
+                self._build_deep_context(context) if self._scene_enabled else ""
+            )
 
-            prompt = f"""判断是否应该主动和用户聊天。
-【{persona}】
-对话上下文：
-{memory_context if memory_context else "（无近期对话记录）"}
+            memory_empty = self._load_text_config(
+                "scene.memory_empty", "（无近期对话记录）"
+            )
+            scene_private = self._load_text_config("scene.scene_private", "私聊场景")
+            group_warning = (
+                self._load_text_config("scene.group_warning", "")
+                if context.chat_type == "group" and self._scene_enabled
+                else ""
+            )
+            scene_info = f"{scene_context}" if scene_context else scene_private
+
+            # 构建系统 prompt（使用真实人格 + 记忆）
+            system_prompt = ""
+            if self._prompt_manager:
+                system_prompt = self._prompt_manager.get_system_prompt() or ""
+            if self.personality:
+                status = self.personality.get_status_for_prompt()
+                if status:
+                    system_prompt = status + "\n\n" + system_prompt
+
+            user_prompt = f"""判断是否应该主动和用户聊天。
+【形态: {persona}】
+
+智能记忆检索：
+{rich_context or "（无相关记忆）"}
+
+当前对话状态：
+{memory_context or memory_empty}
+
+场景信息：
+{scene_info}
 
 聊天信息：
 - 类型: {chat_type}
@@ -1237,7 +1455,56 @@ class ProactiveChatSystem:
 - 用户最后活跃: {last_active}
 - 最近话题: {recent_topics}
 
-如果需要回复，请以符合上述人设质感生成一句简短温暖的话（不超过20字）。
+{group_warning}如果需要回复，请以符合上述人设质感生成一句简短温暖的话（不超过20字）。
+如果不需要回复，请回复"SKIP"。"""
+
+            messages = []
+            if system_prompt:
+                messages.append(AIMessage(role="system", content=system_prompt))
+            messages.append(AIMessage(role="user", content=user_prompt))
+
+            response = await self.ai_client.chat(
+                messages=messages,
+                tool_choice="auto",
+            )
+
+            persona = self._build_persona_context()
+            memory_context = self._build_memory_context(target_id)
+            rich_context = await self._build_rich_context(target_id)
+            scene_context = (
+                self._build_deep_context(context) if self._scene_enabled else ""
+            )
+
+            memory_empty = self._load_text_config(
+                "scene.memory_empty", "（无近期对话记录）"
+            )
+            scene_private = self._load_text_config("scene.scene_private", "私聊场景")
+            group_warning = (
+                self._load_text_config("scene.group_warning", "")
+                if context.chat_type == "group" and self._scene_enabled
+                else ""
+            )
+            scene_info = f"{scene_context}" if scene_context else scene_private
+
+            prompt = f"""判断是否应该主动和用户聊天。
+【{persona}】
+记忆检索：
+{rich_context or "（无相关记忆）"}
+
+对话上下文：
+{memory_context or memory_empty}
+
+场景信息：
+{scene_info}
+
+聊天信息：
+- 类型: {chat_type}
+- 群名称: {group_name}
+- 成员数: {member_count}
+- 用户最后活跃: {last_active}
+- 最近话题: {recent_topics}
+
+{group_warning}如果需要回复，请以符合上述人设质感生成一句简短温暖的话（不超过20字）。
 如果不需要回复，请回复"SKIP"。"""
 
             response = await self.ai_client.chat(

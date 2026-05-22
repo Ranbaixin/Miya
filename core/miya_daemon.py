@@ -173,7 +173,13 @@ class MiyaDaemon:
             self._miya = Miya()
             logger.info("✅ Miya 核心初始化完成")
 
-            # 启动主动聊天后台轮询
+            if self._miya.memory_net:
+                try:
+                    await self._miya.memory_net.initialize()
+                    logger.info("✅ MemoryNet 全局记忆系统初始化成功")
+                except Exception as e:
+                    logger.error(f"⚠️ MemoryNet 初始化失败: {e}")
+
             dh = getattr(self._miya, "decision_hub", None)
             if dh and dh.proactive_chat and dh.proactive_chat.is_enabled():
                 await dh.start_proactive_background()

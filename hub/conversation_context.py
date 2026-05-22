@@ -302,20 +302,17 @@ class ConversationContextManager:
         if not self.enable_conversation_context:
             return []
 
-        if not self.memory_net or not self.memory_net.conversation_history:
-            return []
+        # 【修复】即使 conversation_history 还未初始化，也记录临时上下文
+        conversation_history_ready = (
+            self.memory_net and self.memory_net.conversation_history
+        )
 
-        # 【新增】更新话题追踪
         if current_input:
             self._update_topic_tracking(session_id, current_input)
 
-        # 检测用户是否在问关于过去的问题
         needs_recall = self.check_needs_recall(current_input)
-
-        # 检测是否是深度讨论（长消息、多个话题词、问题形式）
         is_deep_discussion = self._is_deep_discussion(current_input)
 
-        # 根据情况决定加载数量
         if needs_recall:
             max_messages = 50
             logger.info(f"[对话上下文] 用户正在回忆过去，加载历史对话: {session_id}")
@@ -326,55 +323,44 @@ class ConversationContextManager:
             max_messages = 20
             logger.debug(f"[对话上下文] 正常对话，加载20条: {session_id}")
 
-        try:
-            messages = await self.memory_net.conversation_history.get_history(
-                session_id, limit=max_messages
-            )
+        context = []
+        total_tokens = 0
 
-            context = []
-            total_tokens = 0
-
-            if not messages:
-                return context
-
-            # 根据情况选择加载数量
-            if needs_recall:
-                recent_messages = (
-                    messages[-max_messages:]
-                    if len(messages) > max_messages
-                    else messages
+        if conversation_history_ready:
+            try:
+                messages = await self.memory_net.conversation_history.get_history(
+                    session_id, limit=max_messages
                 )
-            elif is_deep_discussion:
-                recent_messages = (
-                    messages[-max_messages:]
-                    if len(messages) > max_messages
-                    else messages
-                )
-            else:
-                # 正常对话加载最近20条，增加深度
-                recent_messages = messages[-20:] if len(messages) > 20 else messages
 
-            logger.debug(f"[对话上下文] 加载对话历史: {len(recent_messages)} 条")
+                if messages:
+                    recent_messages = (
+                        messages[-max_messages:]
+                        if len(messages) > max_messages
+                        else messages
+                    )
+                    logger.debug(
+                        f"[对话上下文] 加载对话历史: {len(recent_messages)} 条"
+                    )
 
-            for msg in recent_messages:
-                token_estimate = len(msg.content) // 4
-                if total_tokens + token_estimate > self.conversation_context_max_tokens:
-                    break
+                    for msg in recent_messages:
+                        token_estimate = len(msg.content) // 4
+                        if (
+                            total_tokens + token_estimate
+                            > self.conversation_context_max_tokens
+                        ):
+                            break
+                        context.append(
+                            {
+                                "role": msg.role,
+                                "content": msg.content,
+                                "timestamp": msg.timestamp,
+                            }
+                        )
+                        total_tokens += token_estimate
+            except Exception as e:
+                logger.error(f"[对话上下文] 获取对话历史失败: {e}")
 
-                context.append(
-                    {
-                        "role": msg.role,
-                        "content": msg.content,
-                        "timestamp": msg.timestamp,
-                    }
-                )
-                total_tokens += token_estimate
-
-            return context
-
-        except Exception as e:
-            logger.error(f"[对话上下文] 获取对话历史失败: {e}")
-            return []
+        return context
 
     def _is_deep_discussion(self, user_input: str) -> bool:
         """

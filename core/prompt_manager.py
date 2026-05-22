@@ -27,6 +27,7 @@ class PromptManager:
         self.memory_context_max_count = 10
         self._custom_system_prompt = None
         self.text_config = {}
+        self.sender_identity_prefix = ""
 
         # 加载配置
         self._load_config()
@@ -57,6 +58,9 @@ class PromptManager:
                     )
                     self.memory_context_max_count = prompt_cfg.get(
                         "memory_context_max_count", self.memory_context_max_count
+                    )
+                    self.sender_identity_prefix = prompt_cfg.get(
+                        "sender_identity_prefix", self.sender_identity_prefix
                     )
 
                 logger.info(f"[PromptManager] 文本配置加载成功")
@@ -94,9 +98,7 @@ class PromptManager:
         )
         prompt = prompt.replace("{emotion_reasoning_prompt}", emotion_reasoning)
 
-        # 默认替换 {status_prompt} 防止泄露（build_full_prompt 会再次替换为实际值）
-        prompt = prompt.replace("{status_prompt}", "")
-
+        # {status_prompt} 由 build_full_prompt 统一注入，不在此处提前替换
         # 默认灵魂状态（如果没有传入）
         default_soul = "清醒: 0.7 | 记住: 0.6 | 等: 0.5 | 疼: 0.3 | 怕: 0.4 | 燃烧: 0.5 | 温柔: 0.6"
         prompt = prompt.replace("{soul_state}", default_soul)
@@ -157,7 +159,18 @@ class PromptManager:
         Returns:
             生成的提示词
         """
-        prompt = self.user_prompt_template.format(user_input=user_input)
+        # 【v7.0.1】身份消歧：在用户消息之前明确发送者身份
+        # 防止模型（尤其是形态切换后）混淆「我」的指向
+        sender_prefix = ""
+        if context and context.get("sender_name") and self.sender_identity_prefix:
+            user_display = context["sender_name"]
+            if context.get("user_id"):
+                user_display = f"{user_display} (QQ: {context['user_id']})"
+            sender_prefix = self.sender_identity_prefix.replace(
+                "{sender_name}", user_display
+            )
+
+        prompt = sender_prefix + self.user_prompt_template.format(user_input=user_input)
 
         if context:
             # 添加上下文信息

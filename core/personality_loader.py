@@ -23,6 +23,7 @@ class PersonalityLoader:
         self._user_overrides_path = self.config_dir / "_user_overrides.json"
         self._user_overrides = self._load_user_overrides()
         self._base_config: Optional[Dict] = None
+        self._text_config: Optional[Dict] = None
 
     def _load_base_config(self) -> Dict:
         """加载基础人设配置"""
@@ -42,6 +43,20 @@ class PersonalityLoader:
             self._base_config = {}
 
         return self._base_config
+
+    def _load_text_config(self) -> Dict:
+        """延迟加载 text_config.json（避免循环依赖）"""
+        if self._text_config is not None:
+            return self._text_config
+
+        text_config_path = self.config_dir / ".." / "text_config.json"
+        try:
+            with open(text_config_path, "r", encoding="utf-8") as f:
+                self._text_config = json.load(f)
+        except Exception as e:
+            logger.warning(f"[人格加载器] 加载 text_config.json 失败: {e}")
+            self._text_config = {}
+        return self._text_config
 
     def _merge_with_base(self, config: Dict) -> Dict:
         """将人格配置与基础配置合并"""
@@ -431,6 +446,14 @@ class PersonalityLoader:
             lines.append(config["core_identity"])
             lines.append("")
 
+        # 人称指代消歧（从 text_config.json 读取，紧接核心身份之后）
+        pronoun_disambiguation = self._load_text_config().get(
+            "pronoun_disambiguation", ""
+        )
+        if pronoun_disambiguation:
+            lines.append(pronoun_disambiguation)
+            lines.append("")
+
         # 关于佳的信息
         if "about_jia" in config:
             lines.append(config["about_jia"])
@@ -599,6 +622,14 @@ class PersonalityLoader:
         form_name = config.get("full_name", "").lower()
         if form_name in ["镜流", "卡芙卡", "黄泉", "雷电将军"]:
             lines.append(f"[注意] 保持简短，少用语气词")
+
+        # 【v7.0.1】身份锚点 - 从配置文件读取
+        # 防止形态切换后身份混淆（尤其薇拉、镜流等队长型角色）
+        text_cfg = self._load_text_config()
+        identity_anchor = text_cfg.get("identity_anchor", "")
+        if identity_anchor:
+            lines.append("")
+            lines.append(identity_anchor)
 
         return "\n".join(lines)
 

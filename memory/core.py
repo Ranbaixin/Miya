@@ -1418,18 +1418,17 @@ class MiyaMemoryCore:
         检索记忆 - 全局检索 + 上下文加权
 
         弥娅的记忆是全局的，不按群/用户隔离。
-        group_id 和 user_id 仅用于加权排序，不过滤结果。
+        group_id 和 user_id 用于加权排序；若明确传入则同时用作过滤条件。
         """
-        # 构建查询（不设置 group_id/user_id 过滤，仅用于加权）
         if isinstance(query, str):
             q = MemoryQuery(
                 query=query,
                 level=level,
-                user_id=None,  # 不过滤，全局检索
-                session_id=None,
-                group_id=None,
+                user_id=user_id,
+                session_id=session_id,
+                group_id=group_id,
                 tags=tags,
-                limit=limit * 3,  # 多取一些，加权后截断
+                limit=limit * 3,
                 event_type=event_type,
                 location=location,
                 conversation_partner=conversation_partner,
@@ -1441,9 +1440,12 @@ class MiyaMemoryCore:
             q = query
             if level is not None:
                 q.level = level
-            q.user_id = None  # 清除过滤
-            q.session_id = None
-            q.group_id = None
+            if user_id is not None:
+                q.user_id = user_id
+            if session_id is not None:
+                q.session_id = session_id
+            if group_id is not None:
+                q.group_id = group_id
             if tags is not None:
                 q.tags = tags
             if event_type is not None:
