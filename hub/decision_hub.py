@@ -527,7 +527,10 @@ class DecisionHub:
             logger.info("[决策层] 主动聊天系统未启用，跳过后台轮询")
 
     async def _handle_smart_emoji(self, response: str, perception: dict):
-        """智能表情包发送 - 根据回复内容自动选择表情包"""
+        """智能表情包发送 - 根据回复内容自动选择表情包
+
+        通过 OneBot upload_image API 上传后发送，确保 Windows 路径兼容。
+        """
         try:
             from utils.emoji_manager import get_smart_emoji_manager
 
@@ -535,36 +538,35 @@ class DecisionHub:
             if not emoji_manager:
                 return
 
-            # 根据回复内容获取合适的表情包
             emoji_info = emoji_manager.get_emoji_by_context(response)
             if not emoji_info:
                 return
 
-            # 获取发送目标
             user_id = perception.get("user_id", 0)
             group_id = perception.get("group_id", 0)
             message_type = perception.get("message_type", "unknown")
 
-            # 发送表情包
             emoji_path = emoji_info.get("path", "")
-            if not emoji_path:
+            if not emoji_path or not Path(emoji_path).exists():
                 return
 
             if message_type == "group" and group_id:
                 if self.onebot_client:
-                    await self.onebot_client.send_group_message(
-                        group_id, f"[CQ:image,file=file:///{emoji_path}]"
+                    result = await self.onebot_client.send_group_image(
+                        group_id, emoji_path
                     )
-                    logger.info(f"[决策层] [智能表情包] 发送到群 {group_id}")
+                    if result and result.get("status") == "ok":
+                        logger.info(f"[决策层] [智能表情包] 发送到群 {group_id}")
             elif user_id:
                 if self.onebot_client:
-                    await self.onebot_client.send_private_message(
-                        user_id, f"[CQ:image,file=file:///{emoji_path}]"
+                    result = await self.onebot_client.send_private_image(
+                        user_id, emoji_path
                     )
-                    logger.info(f"[决策层] [智能表情包] 发送到用户 {user_id}")
+                    if result and result.get("status") == "ok":
+                        logger.info(f"[决策层] [智能表情包] 发送到用户 {user_id}")
 
         except Exception as e:
-            logger.debug(f"[决策层] 智能表情包发送失败: {e}")
+            logger.warning(f"[决策层] 智能表情包发送失败: {e}")
 
     def _extract_keywords_from_input(self, text: str) -> List[str]:
         """从用户输入中提取关键词用于知识图谱检索"""

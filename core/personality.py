@@ -56,6 +56,9 @@ class Personality:
         self._chat_speak_modes: Dict[str, str] = {}
         self._default_form = "normal"
 
+        self._last_form_file = Path("data/last_form.json")
+        self._restore_last_form()
+
     def _load_core_config(self):
         """从配置文件加载核心配置"""
         if not self._loader:
@@ -101,6 +104,7 @@ class Personality:
         if self._use_yaml and self._loader:
             self._current_config = self._loader.load(form_name)
             self.current_form = form_name
+            self._persist_last_form()
             return True
         return False
 
@@ -108,6 +112,37 @@ class Personality:
         if self._use_yaml and self._current_config:
             return self._current_config
         return {"name": "normal", "description": "默认人格"}
+
+    def _persist_last_form(self):
+        try:
+            import json
+
+            self._last_form_file.parent.mkdir(parents=True, exist_ok=True)
+            state = {
+                "current_form": self.current_form,
+                "chat_forms": self._chat_forms,
+            }
+            with open(self._last_form_file, "w", encoding="utf-8") as f:
+                json.dump(state, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+
+    def _restore_last_form(self):
+        try:
+            import json
+
+            if not self._last_form_file.exists():
+                return
+            with open(self._last_form_file, "r", encoding="utf-8") as f:
+                state = json.load(f)
+            self._chat_forms = state.get("chat_forms", {})
+            last_form = state.get("current_form")
+            if last_form and last_form != "normal" and self._loader:
+                available = self._loader.list_available()
+                if available and last_form in available:
+                    self.set_form(last_form)
+        except Exception:
+            pass
 
     def get_form_config(self, form_name: str) -> Dict:
         if self._use_yaml and self._loader:
