@@ -31,11 +31,13 @@ jobs:
         curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
         
-    - name: Install dependencies
+    - name: Install Python dependencies
       run: |
-        uv venv
-        uv pip install -r requirements.txt -r setup/dependencies/dev.txt
-        uv pip install -e .
+        python -m venv .venv
+        source .venv/bin/activate
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt -r setup/dependencies/dev.txt
+        pip install -e .
         
     - name: Run mypy type checking
       run: uv run mypy core/ hub/ run/ --ignore-missing-imports
@@ -72,11 +74,13 @@ jobs:
         curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
         
-    - name: Install dependencies
+    - name: Install Python dependencies
       run: |
-        uv venv
-        uv pip install -r requirements.txt -r setup/dependencies/dev.txt
-        uv pip install -e .
+        python -m venv .venv
+        source .venv/bin/activate
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt -r setup/dependencies/dev.txt
+        pip install -e .
         
     - name: Run unit tests with coverage
       run: uv run pytest tests/unit/ -v --cov=core --cov=run --cov-report=xml --cov-report=term-missing
@@ -106,11 +110,13 @@ jobs:
         curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
         
-    - name: Install dependencies
+    - name: Install Python dependencies
       run: |
-        uv venv
-        uv pip install -r requirements.txt -r setup/dependencies/dev.txt
-        uv pip install -e .
+        python -m venv .venv
+        source .venv/bin/activate
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt -r setup/dependencies/dev.txt
+        pip install -e .
         
     - name: Start services (Redis, etc.)
       run: |
@@ -145,11 +151,13 @@ jobs:
         curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
         
-    - name: Install dependencies
+    - name: Install Python dependencies
       run: |
-        uv venv
-        uv pip install -r requirements.txt -r setup/dependencies/dev.txt
-        uv pip install -e .
+        python -m venv .venv
+        source .venv/bin/activate
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt -r setup/dependencies/dev.txt
+        pip install -e .
         
     - name: Run performance benchmarks
       run: uv run pytest tests/ -v -k "performance" || echo "No performance tests configured yet"
