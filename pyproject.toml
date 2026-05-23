@@ -143,10 +143,6 @@ win32 = [
     "pywinauto>=0.6.8; sys_platform == 'win32'",
 ]
 
-full = [
-    "miya[ai,database,office,network,tts,viz,qq-extras,platform,observability,scheduler]",
-]
-
 [dependency-groups]
 dev = [
     "black>=23.12.0",

@@ -57,7 +57,7 @@ if [ "${1:-}" = "uv" ]; then
 
     case "$MODE" in
         dev)
-            uv sync --extra full --group dev
+            uv sync --all-extras --group dev
             ;;
         minimal)
             uv sync
@@ -66,10 +66,10 @@ if [ "${1:-}" = "uv" ]; then
             uv sync --extra ai
             ;;
         sync)
-            uv sync --extra full --group dev --frozen
+            uv sync --all-extras --group dev --frozen
             ;;
         *)
-            uv sync --extra full
+            uv sync --all-extras
             ;;
     esac
 

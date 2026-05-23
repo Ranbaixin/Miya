@@ -88,7 +88,7 @@ echo.
 
 if /i "%1"=="dev" (
     echo Installing full dependencies + dev tools...
-    uv sync --extra full --group dev
+    uv sync --all-extras --group dev
     goto :done
 )
 
@@ -106,13 +106,13 @@ if /i "%1"=="lightweight" (
 
 if /i "%1"=="sync" (
     echo Syncing from uv.lock...
-    uv sync --extra full --group dev --frozen
+    uv sync --all-extras --group dev --frozen
     goto :done
 )
 
 :: default uv install: full
 echo Installing full production dependencies...
-uv sync --extra full
+uv sync --all-extras
 
 :done
 echo.
