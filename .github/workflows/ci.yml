@@ -26,10 +26,12 @@ jobs:
         python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Install tools
-      run: pip install ruff black bandit
+      run: |
+        pip install "ruff>=0.14.0,<0.15.0" black bandit
+        ruff --version
 
-    - name: Run ruff linting + import sorting
-      run: ruff check .
+    - name: Run ruff linting
+      run: ruff check . --config pyproject.toml --output-format=github
 
     - name: Run black formatting check
       run: black --check core/ hub/ run/ || true
