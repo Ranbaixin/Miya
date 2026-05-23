@@ -11,6 +11,7 @@ import asyncio
 import contextlib
 import json
 import logging
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 from core.unified_platform.base import BasePlatform
@@ -59,35 +60,19 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
             import yaml
 
-            config_path = (
-                Path(__file__).parent.parent.parent / "config" / "qq_config.yaml"
-            )
+            config_path = Path(__file__).parent.parent.parent / "config" / "qq_config.yaml"
             if config_path.exists():
                 with open(config_path, "r", encoding="utf-8") as f:
                     full = yaml.safe_load(f) or {}
                     qq = full.get("qq", {})
                     return {
-                        "superadmin_qq": str(
-                            qq.get("connection", {}).get("superadmin_qq", "")
-                        ),
-                        "group_whitelist": qq.get("access_control", {}).get(
-                            "group_whitelist", []
-                        ),
-                        "group_blacklist": qq.get("access_control", {}).get(
-                            "group_blacklist", []
-                        ),
-                        "user_whitelist": qq.get("access_control", {}).get(
-                            "user_whitelist", []
-                        ),
-                        "user_blacklist": qq.get("access_control", {}).get(
-                            "user_blacklist", []
-                        ),
-                        "access_control_enabled": qq.get("access_control", {}).get(
-                            "enabled", False
-                        ),
-                        "max_message_length": qq.get("commands", {}).get(
-                            "qq_max_message_length", 200
-                        ),
+                        "superadmin_qq": str(qq.get("connection", {}).get("superadmin_qq", "")),
+                        "group_whitelist": qq.get("access_control", {}).get("group_whitelist", []),
+                        "group_blacklist": qq.get("access_control", {}).get("group_blacklist", []),
+                        "user_whitelist": qq.get("access_control", {}).get("user_whitelist", []),
+                        "user_blacklist": qq.get("access_control", {}).get("user_blacklist", []),
+                        "access_control_enabled": qq.get("access_control", {}).get("enabled", False),
+                        "max_message_length": qq.get("commands", {}).get("qq_max_message_length", 200),
                         "image_analysis_enabled": qq.get("image_recognition", {})
                         .get("ai_analysis", {})
                         .get("enabled", True),
@@ -217,9 +202,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
     async def _resolve_group_name(self, group_id: str) -> str:
         try:
-            info = await self._call_onebot_api(
-                "get_group_info", {"group_id": int(group_id)}
-            )
+            info = await self._call_onebot_api("get_group_info", {"group_id": int(group_id)})
             if isinstance(info, dict):
                 return info.get("group_name", "")
         except Exception:
@@ -247,9 +230,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                             async with session.ws_connect(self._ws_url) as ws:
                                 self._ws = ws
                                 self._connected = True
-                                logger.info(
-                                    f"[{self.platform_id}] 已连接到 {self._ws_url}"
-                                )
+                                logger.info(f"[{self.platform_id}] 已连接到 {self._ws_url}")
                                 retry_delay = 1
 
                                 async for msg in ws:
@@ -258,21 +239,15 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                                         # 处理 echo 响应
                                         echo = data.get("echo")
                                         if echo and echo in self._pending_echoes:
-                                            self._pending_echoes.pop(echo).set_result(
-                                                data
-                                            )
+                                            self._pending_echoes.pop(echo).set_result(data)
                                             continue
                                         await self._handle_onebot_message(data)
                                     elif msg.type == aiohttp.WSMsgType.ERROR:
-                                        logger.error(
-                                            f"[{self.platform_id}] WebSocket 错误"
-                                        )
+                                        logger.error(f"[{self.platform_id}] WebSocket 错误")
                                         break
 
                     except Exception as e:
-                        logger.warning(
-                            f"[{self.platform_id}] 连接断开: {e}, {retry_delay}s 后重连"
-                        )
+                        logger.warning(f"[{self.platform_id}] 连接断开: {e}, {retry_delay}s 后重连")
                         self._connected = False
                         self._ws = None
                         await asyncio.sleep(retry_delay)
@@ -314,13 +289,9 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 group_id = str(data.get("group_id", "")) if data.get("group_id") else ""
 
                 bot_qq = self.config.get("bot_qq", "") or self_id
-                is_bot_poked = str(target_id) == str(bot_qq) or str(target_id) == str(
-                    self_id
-                )
+                is_bot_poked = str(target_id) == str(bot_qq) or str(target_id) == str(self_id)
 
-                logger.info(
-                    f"[{self.platform_id}] 拍一拍: target={target_id}, bot_qq={bot_qq}, is_bot={is_bot_poked}"
-                )
+                logger.info(f"[{self.platform_id}] 拍一拍: target={target_id}, bot_qq={bot_qq}, is_bot={is_bot_poked}")
 
                 if is_bot_poked:
                     # 拍一拍冷却 (15s)
@@ -334,11 +305,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                     # 第一层：瞬间回复固定文字 + 随机表情包
                     from core.config_loader import load_text_config
 
-                    poke_text = (
-                        load_text_config()
-                        .get("poke_responses", {})
-                        .get("local_emoji", "")
-                    )
+                    poke_text = load_text_config().get("poke_responses", {}).get("local_emoji", "")
                     await self._send_onebot_poke_reply(user_id, group_id, poke_text)
 
                     # 第二层：异步走 AI 生成情感回复
@@ -402,11 +369,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         try:
             emoji_dir = Path(__file__).parent.parent.parent / "data" / "emoji"
             images = (
-                [
-                    p
-                    for ext in ("*.png", "*.jpg", "*.jpeg", "*.gif")
-                    for p in emoji_dir.rglob(ext)
-                ]
+                [p for ext in ("*.png", "*.jpg", "*.jpeg", "*.gif") for p in emoji_dir.rglob(ext)]
                 if emoji_dir.exists()
                 else []
             )
@@ -457,9 +420,10 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             import aiohttp
 
             http_url = f"http://127.0.0.1:3000/{action}"
-            async with aiohttp.ClientSession() as session, session.post(
-                http_url, json=params, timeout=aiohttp.ClientTimeout(total=3)
-            ) as resp:
+            async with (
+                aiohttp.ClientSession() as session,
+                session.post(http_url, json=params, timeout=aiohttp.ClientTimeout(total=3)) as resp,
+            ):
                 if resp.status == 200:
                     data = await resp.json()
                     if data.get("status") == "ok":
@@ -482,9 +446,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             )
             result = await asyncio.wait_for(future, timeout=5.0)
             if not result or result.get("status") != "ok":
-                logger.warning(
-                    f"[{self.platform_id}] API 失败: {action}, response={result}"
-                )
+                logger.warning(f"[{self.platform_id}] API 失败: {action}, response={result}")
                 self._pending_echoes.pop(echo, None)
                 return None
             return result.get("data")
@@ -586,9 +548,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         try:
             from core.unified_permission import get_permission_engine
 
-            is_owner = get_permission_engine().is_superadmin(
-                user_id, platform=self.platform_id
-            )
+            is_owner = get_permission_engine().is_superadmin(user_id, platform=self.platform_id)
         except Exception:
             pass
 
@@ -608,20 +568,10 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             and has_direct_images
             and (not content or content in ("[图片]", "[动画表情]", ""))
         ):
-            logger.debug(
-                f"[{self.platform_id}] 预过滤纯图片群消息: group={group_id_str}"
-            )
+            logger.debug(f"[{self.platform_id}] 预过滤纯图片群消息: group={group_id_str}")
             return
-        if (
-            msg_type == "group"
-            and not is_at_bot
-            and not is_owner
-            and face_only
-            and not content
-        ):
-            logger.debug(
-                f"[{self.platform_id}] 预过滤纯表情群消息: group={group_id_str}"
-            )
+        if msg_type == "group" and not is_at_bot and not is_owner and face_only and not content:
+            logger.debug(f"[{self.platform_id}] 预过滤纯表情群消息: group={group_id_str}")
             return
 
         # === 9. 直接图片 AI 视觉分析 ===
@@ -635,9 +585,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 image_bytes = await self._download_reference_image(img_data)
                 if not image_bytes:
                     continue
-                asyncio.ensure_future(
-                    self._auto_save_image_bytes(image_bytes, user_id, img_data)
-                )
+                asyncio.ensure_future(self._auto_save_image_bytes(image_bytes, user_id, img_data))
                 try:
                     from core.multi_vision_analyzer import get_vision_analyzer
 
@@ -680,13 +628,9 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         # === 12. 引用消息处理（文本 / 图片视觉分析） ===
         if reply_id:
             logger.info(f"[{self.platform_id}] 尝试获取引用: id={reply_id}")
-            reply_data = await self._call_onebot_api(
-                "get_msg", {"message_id": int(reply_id)}
-            )
+            reply_data = await self._call_onebot_api("get_msg", {"message_id": int(reply_id)})
             if reply_data:
-                logger.info(
-                    f"[{self.platform_id}] 引用获取成功: {str(reply_data)[:80]}"
-                )
+                logger.info(f"[{self.platform_id}] 引用获取成功: {str(reply_data)[:80]}")
                 reply_data.get("sender", {}).get("nickname", "")
                 reply_raw = reply_data.get("message", "")
                 # 调试日志
@@ -701,33 +645,23 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 reply_content = ""
                 if isinstance(reply_raw, list):
                     reply_content = "".join(
-                        s.get("data", {}).get("text", "")
-                        for s in reply_raw
-                        if s.get("type") == "text"
+                        s.get("data", {}).get("text", "") for s in reply_raw if s.get("type") == "text"
                     )
                 else:
-                    reply_content = _re.sub(
-                        r"\[CQ:[^\]]+\]", "", str(reply_raw)
-                    ).strip()
+                    reply_content = _re.sub(r"\[CQ:[^\]]+\]", "", str(reply_raw)).strip()
                 if reply_content:
                     extra["reply_to_id"] = reply_id
                     extra["reply_content"] = reply_content
                     content = f'[回复"{reply_content}"] {content}'
-                elif isinstance(reply_raw, list) and any(
-                    s.get("type") in ("image", "video") for s in reply_raw
-                ):
-                    reply_image_segs = [
-                        s for s in reply_raw if s.get("type") in ("image", "video")
-                    ]
+                elif isinstance(reply_raw, list) and any(s.get("type") in ("image", "video") for s in reply_raw):
+                    reply_image_segs = [s for s in reply_raw if s.get("type") in ("image", "video")]
                     analyzed = False
                     for seg in reply_image_segs[:2]:
                         img_data = seg.get("data", {})
                         image_bytes = await self._download_reference_image(img_data)
                         if not image_bytes:
                             continue
-                        asyncio.ensure_future(
-                            self._auto_save_image_bytes(image_bytes, user_id, img_data)
-                        )
+                        asyncio.ensure_future(self._auto_save_image_bytes(image_bytes, user_id, img_data))
                         try:
                             from core.multi_vision_analyzer import (
                                 get_vision_analyzer,
@@ -753,14 +687,10 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                                 desc = result.description or f"图片({result.format})"
                                 content = f"[回复图片: {desc[:100]}] {content}"
                                 analyzed = True
-                                logger.info(
-                                    f"[{self.platform_id}] 引用图片分析完成: {desc[:50]}..."
-                                )
+                                logger.info(f"[{self.platform_id}] 引用图片分析完成: {desc[:50]}...")
                                 break
                         except Exception as e:
-                            logger.warning(
-                                f"[{self.platform_id}] 引用图片视觉分析失败: {e}"
-                            )
+                            logger.warning(f"[{self.platform_id}] 引用图片视觉分析失败: {e}")
                     if not analyzed:
                         content = f"[回复图片] {content}"
                 elif "[CQ:image" in str(reply_raw):
@@ -768,16 +698,10 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                     cq_files = _re.findall(r"\[CQ:image,file=([^,\]]+)", str(reply_raw))
                     analyzed_str = False
                     for fid in cq_files[:2]:
-                        image_bytes = await self._download_reference_image(
-                            {"file": fid}
-                        )
+                        image_bytes = await self._download_reference_image({"file": fid})
                         if not image_bytes:
                             continue
-                        asyncio.ensure_future(
-                            self._auto_save_image_bytes(
-                                image_bytes, user_id, {"file": fid}
-                            )
-                        )
+                        asyncio.ensure_future(self._auto_save_image_bytes(image_bytes, user_id, {"file": fid}))
                         try:
                             from core.multi_vision_analyzer import (
                                 get_vision_analyzer,
@@ -803,14 +727,10 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                                 desc = result.description or f"图片({result.format})"
                                 content = f"[回复图片: {desc[:100]}] {content}"
                                 analyzed_str = True
-                                logger.info(
-                                    f"[{self.platform_id}] 引用图片(CQ)分析完成: {desc[:50]}..."
-                                )
+                                logger.info(f"[{self.platform_id}] 引用图片(CQ)分析完成: {desc[:50]}...")
                                 break
                         except Exception as e:
-                            logger.warning(
-                                f"[{self.platform_id}] 引用图片(CQ)视觉分析失败: {e}"
-                            )
+                            logger.warning(f"[{self.platform_id}] 引用图片(CQ)视觉分析失败: {e}")
                     if not analyzed_str:
                         content = f"[回复图片] {content}"
             else:
@@ -829,9 +749,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         if has_media:
             extra["has_media"] = True
 
-        logger.debug(
-            f"[{self.platform_id}] 收到消息: {content[:50]}, reply_id={reply_id}, is_at={is_at_bot}"
-        )
+        logger.debug(f"[{self.platform_id}] 收到消息: {content[:50]}, reply_id={reply_id}, is_at={is_at_bot}")
 
         # === 16. 路由到决策中心（加锁防并发） ===
         async with self._process_lock:
@@ -858,11 +776,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             return
 
         msg_type = original.get("message_type", "private")
-        target_id = (
-            original.get("sender", {}).get("user_id")
-            if msg_type == "private"
-            else original.get("group_id")
-        )
+        target_id = original.get("sender", {}).get("user_id") if msg_type == "private" else original.get("group_id")
 
         use_voice = self._should_use_voice()
 
@@ -883,9 +797,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 },
             }
             if msg_type == "private":
-                reply_data["params"]["user_id"] = original.get("sender", {}).get(
-                    "user_id"
-                )
+                reply_data["params"]["user_id"] = original.get("sender", {}).get("user_id")
             elif msg_type == "group":
                 reply_data["params"]["group_id"] = original.get("group_id")
                 reply_data["params"]["message"] = chunk
@@ -905,10 +817,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             config_path = "config/tts_config.json"
             with open(config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
-            return (
-                config.get("enabled", False)
-                and config.get("qq_default_mode") == "voice"
-            )
+            return config.get("enabled", False) and config.get("qq_default_mode") == "voice"
         except Exception:
             return False
 
@@ -992,9 +901,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
     async def _synthesize_for_local(self, config: dict, text: str) -> str:
         """纯合成（不发送），返回音频路径，失败返回 None"""
-        preferred = config.get(
-            "local_playback_engine", config.get("preferred_engine", "edge_tts")
-        )
+        preferred = config.get("local_playback_engine", config.get("preferred_engine", "edge_tts"))
         try:
             if preferred == "gpt_sovits":
                 return await self._synthesize_gpt_sovits(config, text)
@@ -1003,9 +910,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             else:
                 return await self._synthesize_edge_tts(config, text)
         except Exception as e:
-            logger.warning(
-                f"[{self.platform_id}] 本地合成 {preferred} 失败: {e}，回退 edge-tts"
-            )
+            logger.warning(f"[{self.platform_id}] 本地合成 {preferred} 失败: {e}，回退 edge-tts")
             try:
                 return await self._synthesize_edge_tts(config, text)
             except Exception:
@@ -1086,14 +991,13 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         import aiohttp
 
         tts_endpoint = f"{api_url.rstrip('/')}/tts"
-        async with aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=timeout)
-        ) as session, session.post(tts_endpoint, json=payload) as resp:
+        async with (
+            aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)) as session,
+            session.post(tts_endpoint, json=payload) as resp,
+        ):
             if resp.status != 200:
                 text_err = await resp.text()
-                raise RuntimeError(
-                    f"GPT-SoVITS 返回 {resp.status}: {text_err[:200]}"
-                )
+                raise RuntimeError(f"GPT-SoVITS 返回 {resp.status}: {text_err[:200]}")
             audio_data = await resp.read()
 
         tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
@@ -1101,9 +1005,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         tmp.close()
         with open(tmp_path, "wb") as f:
             f.write(audio_data)
-        logger.info(
-            f"[{self.platform_id}] GPT-SoVITS 合成完成: {tmp_path} ({len(audio_data)} bytes)"
-        )
+        logger.info(f"[{self.platform_id}] GPT-SoVITS 合成完成: {tmp_path} ({len(audio_data)} bytes)")
         return tmp_path
 
     async def _synthesize_api_tts(self, config: dict, text: str) -> str:
@@ -1127,13 +1029,14 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
         import aiohttp
 
-        async with aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=30)
-        ) as session, session.post(
-            api_url,
-            json=payload,
-            headers={"Authorization": f"Bearer {api_key}"},
-        ) as resp:
+        async with (
+            aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as session,
+            session.post(
+                api_url,
+                json=payload,
+                headers={"Authorization": f"Bearer {api_key}"},
+            ) as resp,
+        ):
             if resp.status != 200:
                 text_err = await resp.text()
                 raise RuntimeError(f"API TTS 返回 {resp.status}: {text_err[:200]}")
@@ -1144,9 +1047,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         tmp.close()
         with open(tmp_path, "wb") as f:
             f.write(audio_data)
-        logger.info(
-            f"[{self.platform_id}] API TTS 合成完成: {tmp_path} ({len(audio_data)} bytes)"
-        )
+        logger.info(f"[{self.platform_id}] API TTS 合成完成: {tmp_path} ({len(audio_data)} bytes)")
         return tmp_path
 
     # ============ OneBot API 辅助 ============
@@ -1202,9 +1103,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
     async def send_poke(self, user_id: int, group_id: int = 0):
         """拍一拍用户"""
         if group_id:
-            await self._call_onebot_api(
-                "group_poke", {"group_id": group_id, "user_id": user_id}
-            )
+            await self._call_onebot_api("group_poke", {"group_id": group_id, "user_id": user_id})
         else:
             await self._call_onebot_api("friend_poke", {"user_id": user_id})
 
@@ -1223,9 +1122,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             return result.get("file_id") or result.get("file")
         return None
 
-    async def send_image(
-        self, file_path: str, msg_type: str = "private", target_id: int = 0
-    ):
+    async def send_image(self, file_path: str, msg_type: str = "private", target_id: int = 0):
         """发送图片：自动上传 + 发送"""
         file_id = await self.upload_image(file_path)
         if not file_id:
@@ -1237,9 +1134,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 params["user_id"] = target_id
             else:
                 params["group_id"] = target_id
-            await self._ws.send_str(
-                json.dumps({"action": "send_msg", "params": params})
-            )
+            await self._ws.send_str(json.dumps({"action": "send_msg", "params": params}))
 
     @staticmethod
     def cq_at(qq: int) -> str:
@@ -1263,14 +1158,10 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         return result if isinstance(result, list) else None
 
     async def get_group_member_list(self, group_id: int) -> Optional[list]:
-        result = await self._call_onebot_api(
-            "get_group_member_list", {"group_id": group_id}
-        )
+        result = await self._call_onebot_api("get_group_member_list", {"group_id": group_id})
         return result if isinstance(result, list) else None
 
-    async def get_group_member_info(
-        self, group_id: int, user_id: int, no_cache: bool = False
-    ) -> Optional[dict]:
+    async def get_group_member_info(self, group_id: int, user_id: int, no_cache: bool = False) -> Optional[dict]:
         return await self._call_onebot_api(
             "get_group_member_info",
             {"group_id": group_id, "user_id": user_id, "no_cache": no_cache},
@@ -1280,16 +1171,10 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         result = await self._call_onebot_api("get_friend_list", {})
         return result if isinstance(result, list) else None
 
-    async def get_stranger_info(
-        self, user_id: int, no_cache: bool = False
-    ) -> Optional[dict]:
-        return await self._call_onebot_api(
-            "get_stranger_info", {"user_id": user_id, "no_cache": no_cache}
-        )
+    async def get_stranger_info(self, user_id: int, no_cache: bool = False) -> Optional[dict]:
+        return await self._call_onebot_api("get_stranger_info", {"user_id": user_id, "no_cache": no_cache})
 
-    async def get_group_msg_history(
-        self, group_id: int, message_seq: int = 0, count: int = 20
-    ) -> Optional[dict]:
+    async def get_group_msg_history(self, group_id: int, message_seq: int = 0, count: int = 20) -> Optional[dict]:
         return await self._call_onebot_api(
             "get_group_msg_history",
             {"group_id": group_id, "message_seq": message_seq, "count": count},
@@ -1325,9 +1210,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 params["user_id"] = target_id_val
             else:
                 params["group_id"] = target_id_val
-            await self._ws.send_str(
-                json.dumps({"action": "send_msg", "params": params})
-            )
+            await self._ws.send_str(json.dumps({"action": "send_msg", "params": params}))
             return {"status": "ok"}
 
     async def send_image_message(
@@ -1348,9 +1231,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             target_type = msg_type or "private"
 
         # 写入临时文件并上传
-        tmp = tempfile.NamedTemporaryFile(
-            suffix=os.path.splitext(image_name)[1] or ".png", delete=False
-        )
+        tmp = tempfile.NamedTemporaryFile(suffix=os.path.splitext(image_name)[1] or ".png", delete=False)
         tmp_path = tmp.name
         tmp.close()
         with open(tmp_path, "wb") as f:
@@ -1367,9 +1248,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                     params["user_id"] = target_id
                 else:
                     params["group_id"] = target_id
-                await self._ws.send_str(
-                    json.dumps({"action": "send_msg", "params": params})
-                )
+                await self._ws.send_str(json.dumps({"action": "send_msg", "params": params}))
                 return {"status": "ok"}
             return None
         finally:
@@ -1397,9 +1276,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             )
             return {"status": "ok"}
 
-    async def send_private_image(
-        self, user_id: int, image_path: str, caption: str = ""
-    ):
+    async def send_private_image(self, user_id: int, image_path: str, caption: str = ""):
         """发送私聊图片消息"""
         file_id = await self.upload_image(image_path)
         if not file_id:
@@ -1467,13 +1344,14 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         try:
             import aiohttp
 
-            async with aiohttp.ClientSession() as session, session.get(
-                url,
-                headers={
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-                },
-                timeout=aiohttp.ClientTimeout(total=30),
-            ) as resp:
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(
+                    url,
+                    headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"},
+                    timeout=aiohttp.ClientTimeout(total=30),
+                ) as resp,
+            ):
                 if resp.status == 200:
                     return await resp.read()
         except Exception as e:
@@ -1495,9 +1373,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             return result.get("file_id") or result.get("file")
         return None
 
-    async def upload_group_file(
-        self, group_id: int, file_path: str, filename: str
-    ) -> bool:
+    async def upload_group_file(self, group_id: int, file_path: str, filename: str) -> bool:
         """上传文件到群文件"""
         import os as _os
 
@@ -1515,18 +1391,14 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             logger.error(f"[{self.platform_id}] 上传群文件失败: {e}")
             return False
 
-    async def upload_private_file(
-        self, user_id: int, file_path: str, filename: str
-    ) -> bool:
+    async def upload_private_file(self, user_id: int, file_path: str, filename: str) -> bool:
         """上传文件到私聊"""
         # OneBot v11 没有专门的私聊文件上传 API，用 send_private_file 代替
         return bool(await self.send_private_file(user_id, file_path, filename))
 
     async def get_group_root_files(self, group_id: int) -> dict:
         """获取群根目录文件列表"""
-        result = await self._call_onebot_api(
-            "get_group_root_files", {"group_id": group_id}
-        )
+        result = await self._call_onebot_api("get_group_root_files", {"group_id": group_id})
         if isinstance(result, dict):
             return result
         return {"files": [], "folders": []}
@@ -1556,9 +1428,10 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         try:
             import aiohttp
 
-            async with aiohttp.ClientSession() as session, session.get(
-                url, timeout=aiohttp.ClientTimeout(total=300)
-            ) as response:
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(url, timeout=aiohttp.ClientTimeout(total=300)) as response,
+            ):
                 if response.status == 200:
                     with open(save_path, "wb") as f:
                         async for chunk in response.content.iter_chunked(8192):
@@ -1573,9 +1446,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         members = await self.get_group_member_list(group_id)
         if not members:
             return []
-        return [
-            m.get("user_id") for m in members if m.get("role") in ("admin", "owner")
-        ]
+        return [m.get("user_id") for m in members if m.get("role") in ("admin", "owner")]
 
     async def set_msg_emoji_like(self, message_id: int, emoji_id: str) -> bool:
         """给消息设置表情表态"""
@@ -1637,9 +1508,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                     try:
                         raw = _base64.b64decode(b64)
                         if len(raw) > 1024:  # 至少 1KB 才算是有效图片
-                            logger.debug(
-                                f"[{self.platform_id}] OneBot get_image 成功: {len(raw) / 1024:.1f}KB"
-                            )
+                            logger.debug(f"[{self.platform_id}] OneBot get_image 成功: {len(raw) / 1024:.1f}KB")
                             return raw
                     except Exception as e:
                         logger.debug(f"[{self.platform_id}] base64 解码失败: {e}")
@@ -1650,33 +1519,28 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 import aiohttp
 
                 headers = {
-                    "User-Agent": (
-                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-                    ),
+                    "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"),
                     "Referer": "https://qun.qq.com/",
                 }
-                async with aiohttp.ClientSession() as session, session.get(
-                    url,
-                    headers=headers,
-                    timeout=aiohttp.ClientTimeout(total=15),
-                ) as resp:
+                async with (
+                    aiohttp.ClientSession() as session,
+                    session.get(
+                        url,
+                        headers=headers,
+                        timeout=aiohttp.ClientTimeout(total=15),
+                    ) as resp,
+                ):
                     if resp.status == 200:
                         raw = await resp.read()
                         if len(raw) > 1024:
-                            logger.debug(
-                                f"[{self.platform_id}] HTTP 下载成功(url): {len(raw) / 1024:.1f}KB"
-                            )
+                            logger.debug(f"[{self.platform_id}] HTTP 下载成功(url): {len(raw) / 1024:.1f}KB")
                             return raw
                         else:
-                            logger.debug(
-                                f"[{self.platform_id}] HTTP 下载数据过小: {len(raw)}B"
-                            )
+                            logger.debug(f"[{self.platform_id}] HTTP 下载数据过小: {len(raw)}B")
             except Exception as e:
                 logger.debug(f"[{self.platform_id}] 直接下载图片失败(url): {e}")
 
-        logger.debug(
-            f"[{self.platform_id}] 图片下载失败: file={file_id[:30] if file_id else '-'}"
-        )
+        logger.debug(f"[{self.platform_id}] 图片下载失败: file={file_id[:30] if file_id else '-'}")
         return None
 
     async def _auto_save_images(self, image_segments: list, user_id: str):
@@ -1689,9 +1553,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                     from utils.auto_emoji_saver import get_auto_emoji_saver
 
                     saver = get_auto_emoji_saver()
-                    await saver.auto_save_emoji(
-                        int(user_id), image_bytes, image_info=img_data
-                    )
+                    await saver.auto_save_emoji(int(user_id), image_bytes, image_info=img_data)
                 except Exception as e:
                     logger.debug(f"[{self.platform_id}] 自动保存图片失败: {e}")
 
@@ -1715,17 +1577,13 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 except Exception as e:
                     logger.debug(f"[{self.platform_id}] 自动保存图片失败(CQ): {e}")
 
-    async def _auto_save_image_bytes(
-        self, image_bytes: bytes, user_id: str, image_info: Optional[Dict] = None
-    ):
+    async def _auto_save_image_bytes(self, image_bytes: bytes, user_id: str, image_info: Optional[Dict] = None):
         """保存已下载的图片字节到表情包仓库"""
         try:
             from utils.auto_emoji_saver import get_auto_emoji_saver
 
             saver = get_auto_emoji_saver()
-            await saver.auto_save_emoji(
-                int(user_id), image_bytes, image_info=image_info
-            )
+            await saver.auto_save_emoji(int(user_id), image_bytes, image_info=image_info)
         except Exception as e:
             logger.debug(f"[{self.platform_id}] 自动保存图片失败(bytes): {e}")
 

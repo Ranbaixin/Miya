@@ -14,7 +14,7 @@ import copy
 import logging
 import time
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from core.config_event_system import ConfigEvent
 from core.constants import Encoding
@@ -22,29 +22,36 @@ from core.constants import Encoding
 try:
     from watchdog.events import FileModifiedEvent, FileSystemEventHandler
     from watchdog.observers import Observer
+
     WATCHDOG_AVAILABLE = True
 except ImportError:
     WATCHDOG_AVAILABLE = False
+
     # 创建虚拟类定义当watchdog不可用时
     class FileSystemEventHandler:
         """虚拟文件系统事件处理器"""
+
         pass
-    
+
     class FileModifiedEvent:
         """虚拟文件修改事件"""
+
         def __init__(self, src_path):
             self.src_path = src_path
             self.is_directory = False
-    
+
     class Observer:
         """虚拟观察者"""
+
         def schedule(self, *args, **kwargs):
             pass
+
         def start(self):
             pass
+
         def stop(self):
             pass
-    
+
     logger = logging.getLogger(__name__)
     logger.warning("[配置热更新] watchdog未安装，热更新功能将被禁用")
 
@@ -53,7 +60,7 @@ logger = logging.getLogger(__name__)
 
 class ConfigFileHandler(FileSystemEventHandler):
     """配置文件变更处理器"""
-    
+
     def __init__(
         self,
         config_path: Path,
@@ -65,41 +72,42 @@ class ConfigFileHandler(FileSystemEventHandler):
         self.debounce_seconds = debounce_seconds
         self._last_modified = 0.0
         self._debounce_task: Optional[asyncio.Task[None]] = None
-    
+
     def on_modified(self, event: FileModifiedEvent) -> None:
         """文件修改事件"""
         if event.is_directory:
             return
-        
+
         try:
             event_path = Path(event.src_path).resolve()
             if event_path != self.config_path:
                 return
-            
+
             # 防抖处理
             import time
+
             now = time.time()
             if now - self._last_modified < self.debounce_seconds:
                 return
-            
+
             self._last_modified = now
-            
+
             logger.info("[配置热更新] 检测到配置文件变更: %s", self.config_path)
-            
+
             # 异步触发回调
             if self._debounce_task and not self._debounce_task.done():
                 self._debounce_task.cancel()
-            
+
             loop = asyncio.get_event_loop()
             self._debounce_task = loop.create_task(self._debounced_callback())
-            
+
         except Exception as e:
             logger.error(
                 "[配置热更新] 文件监听异常 error=%s",
                 e,
                 exc_info=True,
             )
-    
+
     async def _debounced_callback(self) -> None:
         """防抖回调"""
         await asyncio.sleep(self.debounce_seconds)
@@ -116,17 +124,18 @@ class ConfigFileHandler(FileSystemEventHandler):
 
 class HotReloadContext:
     """热更新上下文（虚拟定义）"""
+
     pass
 
 
 class ConfigHotReload:
     """配置热更新管理器
-    
+
     职责：
     - 监听配置文件变更
     - 应用配置更新
     - 识别需要重启的配置项
-    
+
     架构定位：属于config层，提供热更新能力
     """
 
@@ -150,22 +159,13 @@ class ConfigHotReload:
         self._all_subscribers: List[Callable[[ConfigEvent], None]] = []
 
         if not WATCHDOG_AVAILABLE:
-            logger.warning(
-                "[配置热更新] watchdog不可用，请安装: pip install watchdog"
-            )
-    
-    def add_reload_callback(
-        self,
-        callback: Callable[[Dict[str, Any]], None]
-    ) -> None:
+            logger.warning("[配置热更新] watchdog不可用，请安装: pip install watchdog")
+
+    def add_reload_callback(self, callback: Callable[[Dict[str, Any]], None]) -> None:
         """添加配置更新回调"""
         self._reload_callbacks.append(callback)
 
-    def subscribe_event(
-        self,
-        event_type: str,
-        callback: Callable[[ConfigEvent], None]
-    ) -> None:
+    def subscribe_event(self, event_type: str, callback: Callable[[ConfigEvent], None]) -> None:
         """订阅特定类型的事件
 
         Args:
@@ -177,10 +177,7 @@ class ConfigHotReload:
         self._event_subscribers[event_type].append(callback)
         logger.debug(f"[配置热更新] 新增订阅者: event_type={event_type}")
 
-    def subscribe_all_events(
-        self,
-        callback: Callable[[ConfigEvent], None]
-    ) -> None:
+    def subscribe_all_events(self, callback: Callable[[ConfigEvent], None]) -> None:
         """订阅所有事件
 
         Args:
@@ -189,20 +186,13 @@ class ConfigHotReload:
         self._all_subscribers.append(callback)
         logger.debug("[配置热更新] 新增全局订阅者")
 
-    def unsubscribe_event(
-        self,
-        event_type: str,
-        callback: Callable[[ConfigEvent], None]
-    ) -> None:
+    def unsubscribe_event(self, event_type: str, callback: Callable[[ConfigEvent], None]) -> None:
         """取消订阅特定类型的事件"""
         if event_type in self._event_subscribers and callback in self._event_subscribers[event_type]:
             self._event_subscribers[event_type].remove(callback)
             logger.debug(f"[配置热更新] 移除订阅者: event_type={event_type}")
 
-    def unsubscribe_all_events(
-        self,
-        callback: Callable[[ConfigEvent], None]
-    ) -> None:
+    def unsubscribe_all_events(self, callback: Callable[[ConfigEvent], None]) -> None:
         """取消订阅所有事件"""
         if callback in self._all_subscribers:
             self._all_subscribers.remove(callback)
@@ -252,38 +242,40 @@ class ConfigHotReload:
             event: 配置更新事件
         """
         try:
-            if hasattr(self.context.runtime_api, 'notify_config_change'):
-                await self.context.runtime_api.notify_config_change({
-                    'event_type': event.event_type,
-                    'timestamp': event.timestamp,
-                    'changes': event.changes,
-                    'source': event.source
-                })
+            if hasattr(self.context.runtime_api, "notify_config_change"):
+                await self.context.runtime_api.notify_config_change(
+                    {
+                        "event_type": event.event_type,
+                        "timestamp": event.timestamp,
+                        "changes": event.changes,
+                        "source": event.source,
+                    }
+                )
         except Exception as e:
             logger.debug(f"[配置热更新] WebSocket通知失败: {e}")
-    
+
     async def _on_config_changed(self) -> None:
         """配置文件变更回调"""
         logger.info("[配置热更新] 开始处理配置变更...")
-        
+
         try:
             # 加载新配置
             new_config = self._load_config()
             if not new_config:
                 logger.warning("[配置热更新] 配置加载失败")
                 return
-            
+
             # 检测变更
             changes = self._detect_changes(new_config)
             if not changes:
                 logger.info("[配置热更新] 配置无变更")
                 return
-            
+
             logger.info(
                 "[配置热更新] 检测到变更项: %s",
                 ", ".join(sorted(changes.keys())),
             )
-            
+
             # 识别需要重启的配置项
             restart_keys = changes.keys() & _RESTART_REQUIRED_KEYS
             if restart_keys:
@@ -291,10 +283,10 @@ class ConfigHotReload:
                     "[配置热更新] 以下配置项需要重启才能生效: %s",
                     ", ".join(sorted(restart_keys)),
                 )
-            
+
             # 应用更新
             await self._apply_updates(new_config, changes)
-            
+
             # 触发回调
             for callback in self._reload_callbacks:
                 try:
@@ -305,28 +297,28 @@ class ConfigHotReload:
                         e,
                         exc_info=True,
                     )
-            
+
             logger.info("[配置热更新] 配置更新完成")
-            
+
         except Exception as e:
             logger.error(
                 "[配置热更新] 处理异常 error=%s",
                 e,
                 exc_info=True,
             )
-    
+
     def _load_config(self) -> Optional[Dict[str, Any]]:
         """加载配置文件"""
         try:
             import json
-            
+
             if not self.config_path.exists():
                 logger.error("[配置热更新] 配置文件不存在: %s", self.config_path)
                 return None
-            
-            with open(self.config_path, 'r', encoding=Encoding.UTF8) as f:
+
+            with open(self.config_path, "r", encoding=Encoding.UTF8) as f:
                 return json.load(f)
-            
+
         except Exception as e:
             logger.error(
                 "[配置热更新] 配置加载异常 error=%s",
@@ -334,14 +326,14 @@ class ConfigHotReload:
                 exc_info=True,
             )
             return None
-    
+
     def _detect_changes(self, new_config: Dict[str, Any]) -> Dict[str, Any]:
         """检测配置变更
-        
+
         返回: {配置键: (旧值, 新值)}
         """
         # 保存旧配置快照
-        if not hasattr(self, '_config_snapshot'):
+        if not hasattr(self, "_config_snapshot"):
             self._config_snapshot = {}
 
         old_config = self._config_snapshot.copy()
@@ -362,7 +354,7 @@ class ConfigHotReload:
         self._config_snapshot = self._deep_copy_config(new_config)
 
         return changes
-    
+
     async def _apply_updates(
         self,
         new_config: Dict[str, Any],
@@ -427,17 +419,17 @@ class ConfigHotReload:
 
         # 触发配置更新事件
         await self._trigger_config_update_event(changes)
-    
+
     def start(self) -> bool:
         """启动配置热更新监听"""
         if not self.enabled or not WATCHDOG_AVAILABLE:
             logger.info("[配置热更新] 未启用或watchdog不可用")
             return False
-        
+
         if self._observer:
             logger.warning("[配置热更新] 监听器已在运行")
             return False
-        
+
         try:
             self._observer = Observer()
             handler = ConfigFileHandler(
@@ -445,18 +437,18 @@ class ConfigHotReload:
                 self._on_config_changed,
                 self.debounce_seconds,
             )
-            
+
             # 监听配置文件所在目录
             watch_dir = self.config_path.parent
             self._observer.schedule(handler, str(watch_dir), recursive=False)
             self._observer.start()
-            
+
             logger.info(
                 "[配置热更新] 监听已启动: %s",
                 self.config_path,
             )
             return True
-            
+
         except Exception as e:
             logger.error(
                 "[配置热更新] 启动失败 error=%s",
@@ -464,7 +456,7 @@ class ConfigHotReload:
                 exc_info=True,
             )
             return False
-    
+
     def _is_value_changed(self, old_val: Any, new_val: Any) -> bool:
         """检查值是否改变"""
         # 处理None值
@@ -634,14 +626,14 @@ class ConfigHotReload:
             if api_key:
                 # 安全地更新API密钥（注意：密钥更新可能需要重新初始化客户端）
                 try:
-                    if hasattr(self.context, 'agent_manager') and self.context.agent_manager:
+                    if hasattr(self.context, "agent_manager") and self.context.agent_manager:
                         # 更新agent管理器的API密钥
-                        if hasattr(self.context.agent_manager, 'update_api_key'):
+                        if hasattr(self.context.agent_manager, "update_api_key"):
                             self.context.agent_manager.update_api_key(api_key)
                             logger.info("[配置热更新] Agent管理器API密钥已更新")
-                    if hasattr(self.context, 'config_manager') and self.context.config_manager:
+                    if hasattr(self.context, "config_manager") and self.context.config_manager:
                         # 更新配置管理器中的密钥
-                        if hasattr(self.context.config_manager, 'api_key'):
+                        if hasattr(self.context.config_manager, "api_key"):
                             self.context.config_manager.api_key = api_key
                             logger.info("[配置热更新] 配置管理器API密钥已更新")
                 except Exception as key_error:
@@ -651,9 +643,9 @@ class ConfigHotReload:
             if model:
                 # 实现模型切换
                 try:
-                    if hasattr(self.context, 'agent_manager') and self.context.agent_manager:
+                    if hasattr(self.context, "agent_manager") and self.context.agent_manager:
                         # 更新agent管理器的模型
-                        if hasattr(self.context.agent_manager, 'model'):
+                        if hasattr(self.context.agent_manager, "model"):
                             self.context.agent_manager.model = model
                             logger.info(f"[配置热更新] AI模型已切换到: {model}")
                 except Exception as model_error:
@@ -672,19 +664,19 @@ class ConfigHotReload:
                 try:
                     # 尝试从context获取TTS引擎实例
                     tts_instance = None
-                    if hasattr(self.context, 'agent_manager') and self.context.agent_manager:
-                        if hasattr(self.context.agent_manager, 'tts_engine'):
+                    if hasattr(self.context, "agent_manager") and self.context.agent_manager:
+                        if hasattr(self.context.agent_manager, "tts_engine"):
                             tts_instance = self.context.agent_manager.tts_engine
-                    elif hasattr(self.context, 'config_manager') and self.context.config_manager:
-                        if hasattr(self.context.config_manager, 'tts_engine'):
+                    elif hasattr(self.context, "config_manager") and self.context.config_manager:
+                        if hasattr(self.context.config_manager, "tts_engine"):
                             tts_instance = self.context.config_manager.tts_engine
 
                     if tts_instance:
                         # 如果有engine_name属性，更新它
-                        if hasattr(tts_instance, 'engine_name'):
+                        if hasattr(tts_instance, "engine_name"):
                             tts_instance.engine_name = engine
                         # 如果有set_engine方法，调用它
-                        elif hasattr(tts_instance, 'set_engine'):
+                        elif hasattr(tts_instance, "set_engine"):
                             tts_instance.set_engine(engine)
                         logger.info(f"[配置热更新] TTS引擎已切换到: {engine}")
                     else:
@@ -698,19 +690,19 @@ class ConfigHotReload:
                 try:
                     # 尝试从context获取TTS引擎实例
                     tts_instance = None
-                    if hasattr(self.context, 'agent_manager') and self.context.agent_manager:
-                        if hasattr(self.context.agent_manager, 'tts_engine'):
+                    if hasattr(self.context, "agent_manager") and self.context.agent_manager:
+                        if hasattr(self.context.agent_manager, "tts_engine"):
                             tts_instance = self.context.agent_manager.tts_engine
-                    elif hasattr(self.context, 'config_manager') and self.context.config_manager:
-                        if hasattr(self.context.config_manager, 'tts_engine'):
+                    elif hasattr(self.context, "config_manager") and self.context.config_manager:
+                        if hasattr(self.context.config_manager, "tts_engine"):
                             tts_instance = self.context.config_manager.tts_engine
 
                     if tts_instance:
                         # 如果有voice属性，更新它
-                        if hasattr(tts_instance, 'voice'):
+                        if hasattr(tts_instance, "voice"):
                             tts_instance.voice = voice
                         # 如果有set_voice方法，调用它
-                        elif hasattr(tts_instance, 'set_voice'):
+                        elif hasattr(tts_instance, "set_voice"):
                             tts_instance.set_voice(voice)
                         logger.info(f"[配置热更新] TTS音色已切换到: {voice}")
                     else:
@@ -733,10 +725,10 @@ class ConfigHotReload:
                 # 安全地更新API密钥
                 try:
                     # WebAPI密钥通常用于身份验证，需要谨慎处理
-                    if hasattr(self.context.web_api, 'api_key'):
+                    if hasattr(self.context.web_api, "api_key"):
                         self.context.web_api.api_key = api_key
                         logger.info("[配置热更新] WebAPI密钥已安全更新")
-                    elif hasattr(self.context.web_api, 'set_api_key'):
+                    elif hasattr(self.context.web_api, "set_api_key"):
                         self.context.web_api.set_api_key(api_key)
                         logger.info("[配置热更新] WebAPI密钥已安全更新")
                     else:
@@ -751,26 +743,27 @@ class ConfigHotReload:
                 try:
                     # 转换为列表格式
                     if isinstance(cors_origins, str):
-                        origins_list = [origin.strip() for origin in cors_origins.split(',')]
+                        origins_list = [origin.strip() for origin in cors_origins.split(",")]
                     else:
                         origins_list = list(cors_origins)
 
                     # 尝试更新CORS配置
-                    if hasattr(self.context.web_api, 'cors_origins'):
+                    if hasattr(self.context.web_api, "cors_origins"):
                         self.context.web_api.cors_origins = origins_list
                         logger.info(f"[配置热更新] CORS源已更新: {origins_list}")
-                    elif hasattr(self.context.web_api, 'update_cors'):
+                    elif hasattr(self.context.web_api, "update_cors"):
                         self.context.web_api.update_cors(origins_list)
                         logger.info(f"[配置热更新] CORS源已更新: {origins_list}")
                     else:
                         # 尝试更新FastAPI应用的CORS中间件
-                        if hasattr(self.context.web_api, 'app'):
+                        if hasattr(self.context.web_api, "app"):
                             app = self.context.web_api.app
                             # 查找CORS中间件并更新
                             from fastapi.middleware.cors import CORSMiddleware
+
                             for middleware in app.user_middleware:
                                 if isinstance(middleware, CORSMiddleware):
-                                    middleware.kwargs['allow_origins'] = origins_list
+                                    middleware.kwargs["allow_origins"] = origins_list
                                     logger.info(f"[配置热更新] FastAPI CORS源已更新: {origins_list}")
                                     break
                             else:
@@ -790,35 +783,35 @@ class ConfigHotReload:
                         logger.warning(f"[配置热更新] 速率限制必须为正整数: {rate_limit}")
                         return
 
-                    if hasattr(self.context.web_api, 'rate_limit'):
+                    if hasattr(self.context.web_api, "rate_limit"):
                         old_limit = self.context.web_api.rate_limit
                         self.context.web_api.rate_limit = rate_limit
                         logger.info(f"[配置热更新] API速率限制已更新: {old_limit} -> {rate_limit}/分钟")
 
-                    elif hasattr(self.context.web_api, 'set_rate_limit'):
+                    elif hasattr(self.context.web_api, "set_rate_limit"):
                         self.context.web_api.set_rate_limit(rate_limit)
                         logger.info(f"[配置热更新] API速率限制已更新: {rate_limit}/分钟")
 
                     # 尝试更新限流器
-                    if hasattr(self.context.web_api, 'limiter'):
+                    if hasattr(self.context.web_api, "limiter"):
                         limiter = self.context.web_api.limiter
-                        if hasattr(limiter, 'max_requests_per_minute'):
+                        if hasattr(limiter, "max_requests_per_minute"):
                             old_limit = limiter.max_requests_per_minute
                             limiter.max_requests_per_minute = rate_limit
                             logger.info(f"[配置热更新] 限流器已更新: {old_limit} -> {rate_limit}/分钟")
-                        elif hasattr(limiter, 'reset'):
+                        elif hasattr(limiter, "reset"):
                             limiter.reset()
                             logger.info(f"[配置热更新] 限流器已重置为: {rate_limit}/分钟")
 
                     # 尝试更新FastAPI应用的限流中间件
-                    if hasattr(self.context.web_api, 'app'):
+                    if hasattr(self.context.web_api, "app"):
                         app = self.context.web_api.app
                         # 查找并更新slowapi或类似限流中间件
                         for middleware in app.user_middleware:
                             middleware_cls_name = middleware.cls.__name__
-                            if 'RateLimit' in middleware_cls_name or 'Limiter' in middleware_cls_name:
-                                if 'rate_limit' in middleware.kwargs:
-                                    middleware.kwargs['rate_limit'] = rate_limit
+                            if "RateLimit" in middleware_cls_name or "Limiter" in middleware_cls_name:
+                                if "rate_limit" in middleware.kwargs:
+                                    middleware.kwargs["rate_limit"] = rate_limit
                                     logger.info(f"[配置热更新] FastAPI限流中间件已更新: {rate_limit}/分钟")
                                     break
                         else:
@@ -848,21 +841,23 @@ class ConfigHotReload:
                         logger.warning(f"[配置热更新] 终端超时必须为正数: {timeout}")
                         return
 
-                    if hasattr(self.context.terminal_manager, 'timeout'):
+                    if hasattr(self.context.terminal_manager, "timeout"):
                         old_timeout = self.context.terminal_manager.timeout
                         self.context.terminal_manager.timeout = timeout
                         logger.info(f"[配置热更新] 终端超时已更新: {old_timeout} -> {timeout}秒")
 
-                    elif hasattr(self.context.terminal_manager, 'set_timeout'):
+                    elif hasattr(self.context.terminal_manager, "set_timeout"):
                         self.context.terminal_manager.set_timeout(timeout)
                         logger.info(f"[配置热更新] 终端超时已更新: {timeout}秒")
 
                     # 更新所有活跃终端的超时设置
-                    if hasattr(self.context.terminal_manager, 'active_terminals'):
+                    if hasattr(self.context.terminal_manager, "active_terminals"):
                         for _terminal_id, terminal_info in self.context.terminal_manager.active_terminals.items():
-                            if 'process' in terminal_info and hasattr(terminal_info['process'], 'timeout'):
-                                terminal_info['process'].timeout = timeout
-                        logger.debug(f"[配置热更新] 已更新{len(self.context.terminal_manager.active_terminals)}个活跃终端的超时")
+                            if "process" in terminal_info and hasattr(terminal_info["process"], "timeout"):
+                                terminal_info["process"].timeout = timeout
+                        logger.debug(
+                            f"[配置热更新] 已更新{len(self.context.terminal_manager.active_terminals)}个活跃终端的超时"
+                        )
 
                 except Exception as timeout_error:
                     logger.warning(f"[配置热更新] 终端超时更新失败: {timeout_error}")
@@ -877,12 +872,12 @@ class ConfigHotReload:
                         logger.warning(f"[配置热更新] 终端缓冲区大小必须为正整数: {buffer_size}")
                         return
 
-                    if hasattr(self.context.terminal_manager, 'buffer_size'):
+                    if hasattr(self.context.terminal_manager, "buffer_size"):
                         old_size = self.context.terminal_manager.buffer_size
                         self.context.terminal_manager.buffer_size = buffer_size
                         logger.info(f"[配置热更新] 终端缓冲区大小已更新: {old_size} -> {buffer_size}")
 
-                    elif hasattr(self.context.terminal_manager, 'set_buffer_size'):
+                    elif hasattr(self.context.terminal_manager, "set_buffer_size"):
                         self.context.terminal_manager.set_buffer_size(buffer_size)
                         logger.info(f"[配置热更新] 终端缓冲区大小已更新: {buffer_size}")
 
@@ -899,17 +894,18 @@ class ConfigHotReload:
                 try:
                     # 验证shell路径
                     from pathlib import Path
+
                     shell_path = Path(default_shell)
                     if not shell_path.exists():
                         logger.warning(f"[配置热更新] 默认shell不存在: {default_shell}")
                         return
 
-                    if hasattr(self.context.terminal_manager, 'default_shell'):
+                    if hasattr(self.context.terminal_manager, "default_shell"):
                         old_shell = self.context.terminal_manager.default_shell
                         self.context.terminal_manager.default_shell = default_shell
                         logger.info(f"[配置热更新] 默认shell已更新: {old_shell} -> {default_shell}")
 
-                    elif hasattr(self.context.terminal_manager, 'set_default_shell'):
+                    elif hasattr(self.context.terminal_manager, "set_default_shell"):
                         self.context.terminal_manager.set_default_shell(default_shell)
                         logger.info(f"[配置热更新] 默认shell已更新: {default_shell}")
 
@@ -947,34 +943,37 @@ class ConfigHotReload:
                     if heartbeat_interval < 5:
                         logger.warning(f"[配置热更新] IoT心跳间隔过小({heartbeat_interval}秒)，建议至少5秒")
 
-                    if hasattr(self.context.iot_manager, 'heartbeat_interval'):
+                    if hasattr(self.context.iot_manager, "heartbeat_interval"):
                         old_interval = self.context.iot_manager.heartbeat_interval
                         self.context.iot_manager.heartbeat_interval = heartbeat_interval
                         logger.info(f"[配置热更新] IoT心跳间隔已更新: {old_interval} -> {heartbeat_interval}秒")
 
                         # 如果有活跃的心跳定时器，需要重启
-                        if hasattr(self.context.iot_manager, 'heartbeat_task') and self.context.iot_manager.heartbeat_task:
+                        if (
+                            hasattr(self.context.iot_manager, "heartbeat_task")
+                            and self.context.iot_manager.heartbeat_task
+                        ):
                             try:
                                 # 取消旧的心跳任务
                                 self.context.iot_manager.heartbeat_task.cancel()
                                 logger.debug("[配置热更新] 已取消旧的心跳任务")
 
                                 # 重新启动心跳定时器
-                                if hasattr(self.context.iot_manager, 'start_heartbeat'):
+                                if hasattr(self.context.iot_manager, "start_heartbeat"):
                                     self.context.iot_manager.start_heartbeat()
                                     logger.info(f"[配置热更新] 已使用新间隔重启心跳定时器: {heartbeat_interval}秒")
                             except Exception as heartbeat_error:
                                 logger.warning(f"[配置热更新] 重启心跳定时器失败: {heartbeat_error}")
 
-                    elif hasattr(self.context.iot_manager, 'set_heartbeat_interval'):
+                    elif hasattr(self.context.iot_manager, "set_heartbeat_interval"):
                         self.context.iot_manager.set_heartbeat_interval(heartbeat_interval)
                         logger.info(f"[配置热更新] IoT心跳间隔已更新: {heartbeat_interval}秒")
 
                     # 更新所有IoT设备的心跳配置
-                    if hasattr(self.context.iot_manager, 'devices'):
+                    if hasattr(self.context.iot_manager, "devices"):
                         for _device_id, device_info in self.context.iot_manager.devices.items():
-                            if isinstance(device_info, dict) and 'heartbeat_interval' in device_info:
-                                device_info['heartbeat_interval'] = heartbeat_interval
+                            if isinstance(device_info, dict) and "heartbeat_interval" in device_info:
+                                device_info["heartbeat_interval"] = heartbeat_interval
                         logger.debug(f"[配置热更新] 已更新{len(self.context.iot_manager.devices)}个IoT设备的心跳间隔")
 
                     logger.info(f"[配置热更新] IoT心跳间隔已更新: {heartbeat_interval}秒")
@@ -994,30 +993,34 @@ class ConfigHotReload:
 
                     # 将列表格式转换为字典（如果需要）
                     if isinstance(automation_rules, list):
-                        rules_dict = {rule.get('id', f'rule_{i}'): rule for i, rule in enumerate(automation_rules)}
+                        rules_dict = {rule.get("id", f"rule_{i}"): rule for i, rule in enumerate(automation_rules)}
                     else:
                         rules_dict = automation_rules
 
                     # 备份旧规则以便回滚
                     old_rules = None
-                    if hasattr(self.context.iot_manager, 'automation_rules'):
-                        old_rules = dict(self.context.iot_manager.automation_rules) if self.context.iot_manager.automation_rules else {}
+                    if hasattr(self.context.iot_manager, "automation_rules"):
+                        old_rules = (
+                            dict(self.context.iot_manager.automation_rules)
+                            if self.context.iot_manager.automation_rules
+                            else {}
+                        )
 
                     # 更新自动化规则
-                    if hasattr(self.context.iot_manager, 'automation_rules'):
+                    if hasattr(self.context.iot_manager, "automation_rules"):
                         self.context.iot_manager.automation_rules = rules_dict
                         logger.info(f"[配置热更新] IoT自动化规则已更新: {len(rules_dict)}条")
 
-                    elif hasattr(self.context.iot_manager, 'set_automation_rules'):
+                    elif hasattr(self.context.iot_manager, "set_automation_rules"):
                         self.context.iot_manager.set_automation_rules(rules_dict)
                         logger.info(f"[配置热更新] IoT自动化规则已更新: {len(rules_dict)}条")
 
                     # 尝试重新加载和验证规则
-                    if hasattr(self.context.iot_manager, 'reload_automation_rules'):
+                    if hasattr(self.context.iot_manager, "reload_automation_rules"):
                         try:
                             # 验证规则
                             validation_result = self.context.iot_manager.validate_rules(rules_dict)
-                            if not validation_result.get('valid', True):
+                            if not validation_result.get("valid", True):
                                 # 验证失败，回滚
                                 if old_rules is not None:
                                     self.context.iot_manager.automation_rules = old_rules
@@ -1026,13 +1029,15 @@ class ConfigHotReload:
 
                             # 重新加载规则
                             reload_result = self.context.iot_manager.reload_automation_rules(rules_dict)
-                            if reload_result.get('success', False):
+                            if reload_result.get("success", False):
                                 logger.info(f"[配置热更新] IoT自动化规则已重新加载: {len(rules_dict)}条")
                             else:
                                 # 加载失败，回滚
                                 if old_rules is not None:
                                     self.context.iot_manager.automation_rules = old_rules
-                                logger.error(f"[配置热更新] 自动化规则加载失败: {reload_result.get('error', 'Unknown error')}")
+                                logger.error(
+                                    f"[配置热更新] 自动化规则加载失败: {reload_result.get('error', 'Unknown error')}"
+                                )
                                 return
 
                         except Exception as validate_error:
@@ -1064,10 +1069,7 @@ class ConfigHotReload:
                 timestamp=time.time(),
                 changes=changes,
                 source="config_hot_reload",
-                metadata={
-                    "config_file": str(self.config_path),
-                    "change_count": len(changes)
-                }
+                metadata={"config_file": str(self.config_path), "change_count": len(changes)},
             )
 
             # 发布事件到所有订阅者

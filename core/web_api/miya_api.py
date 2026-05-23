@@ -5,6 +5,7 @@
 """
 
 import asyncio
+import json
 import logging
 from datetime import datetime
 from typing import Dict
@@ -120,19 +121,12 @@ class MiyaAPI:
         async def get_personality_vectors():
             """获取人格向量"""
             try:
-                if (
-                    hasattr(self, "decision_hub")
-                    and self.decision_hub
-                    and hasattr(self.decision_hub, "personality")
-                ):
+                if hasattr(self, "decision_hub") and self.decision_hub and hasattr(self.decision_hub, "personality"):
                     profile = self.decision_hub.personality.get_profile()
                     vectors = profile.get("vectors", {})
                     return {
                         "success": True,
-                        "vectors": [
-                            {"name": k, "value": v, "min": 0, "max": 1}
-                            for k, v in vectors.items()
-                        ],
+                        "vectors": [{"name": k, "value": v, "min": 0, "max": 1} for k, v in vectors.items()],
                         "current_form": profile.get("current_form", "default"),
                         "dominant": profile.get("dominant", ""),
                     }
@@ -156,11 +150,7 @@ class MiyaAPI:
         async def get_personality_forms():
             """获取可用的人格表单"""
             try:
-                if (
-                    hasattr(self, "decision_hub")
-                    and self.decision_hub
-                    and hasattr(self.decision_hub, "personality")
-                ):
+                if hasattr(self, "decision_hub") and self.decision_hub and hasattr(self.decision_hub, "personality"):
                     forms = self.decision_hub.personality.get_available_forms()
                     return {"success": True, "forms": forms}
             except Exception as e:
@@ -174,11 +164,7 @@ class MiyaAPI:
                 body = {}
             form = body.get("form", "default")
             try:
-                if (
-                    hasattr(self, "decision_hub")
-                    and self.decision_hub
-                    and hasattr(self.decision_hub, "personality")
-                ):
+                if hasattr(self, "decision_hub") and self.decision_hub and hasattr(self.decision_hub, "personality"):
                     self.decision_hub.personality.switch_form(form)
                     return {"success": True, "message": f"已切换到形态: {form}"}
             except Exception as e:
@@ -287,9 +273,7 @@ class MiyaAPI:
                             "id": getattr(r, "id", "unknown"),
                             "content": r.content,
                             "tags": getattr(r, "tags", []),
-                            "created_at": getattr(
-                                r, "created_at", datetime.now().isoformat()
-                            ),
+                            "created_at": getattr(r, "created_at", datetime.now().isoformat()),
                         }
                     )
 
@@ -484,9 +468,7 @@ class MiyaAPI:
                 provider = request_data.get("provider", "siliconflow")
                 voice_id = request_data.get("voice_id", "azure-male-yunyang")
                 request_data.get("speed", 1.0)
-                logger.info(
-                    f"[API] 语音配置已更新: provider={provider}, voice_id={voice_id}"
-                )
+                logger.info(f"[API] 语音配置已更新: provider={provider}, voice_id={voice_id}")
                 return {"success": True, "message": "语音配置已保存"}
             except Exception as e:
                 logger.error(f"[API] 保存语音配置失败: {e}")
@@ -533,17 +515,11 @@ class MiyaAPI:
 
                 for mem in memories:
                     node_id += 1
-                    node_label = (
-                        mem.content[:20] + "..."
-                        if len(mem.content) > 20
-                        else mem.content
-                    )
+                    node_label = mem.content[:20] + "..." if len(mem.content) > 20 else mem.content
                     tags = getattr(mem, "tags", [])
                     label = tags[0] if tags else "memory"
 
-                    nodes.append(
-                        [f"node_{node_id}", {"name": node_label, "_label": label}]
-                    )
+                    nodes.append([f"node_{node_id}", {"name": node_label, "_label": label}])
 
                 return {"status": "ok", "data": {"nodes": nodes, "edges": edges}}
             except Exception as e:
@@ -780,10 +756,7 @@ class MiyaAPI:
                     model_conf.get("type", "chat")
 
                     task_type = "simple_chat"
-                    if (
-                        "complex_reasoning" in capabilities
-                        or "reasoning" in capabilities
-                    ):
+                    if "complex_reasoning" in capabilities or "reasoning" in capabilities:
                         task_type = "reasoning"
                     if "vision" in capabilities or "multimodal" in capabilities:
                         task_type = "vision"
@@ -869,11 +842,7 @@ class MiyaAPI:
             """删除会话"""
             try:
                 if hasattr(self, "_chat_sessions"):
-                    self._chat_sessions = [
-                        s
-                        for s in self._chat_sessions
-                        if s.get("session_id") != session_id
-                    ]
+                    self._chat_sessions = [s for s in self._chat_sessions if s.get("session_id") != session_id]
             except:
                 pass
             return {"success": True, "message": "会话已删除"}
@@ -910,11 +879,7 @@ class MiyaAPI:
 
             try:
                 if hasattr(self, "_chat_sessions"):
-                    self._chat_sessions = [
-                        s
-                        for s in self._chat_sessions
-                        if s.get("session_id") not in session_ids
-                    ]
+                    self._chat_sessions = [s for s in self._chat_sessions if s.get("session_id") not in session_ids]
             except:
                 pass
 
@@ -947,9 +912,7 @@ class MiyaAPI:
                 user_id = request_data.get("user_id") or session_id
                 platform = request_data.get("platform", "web")
 
-                print(
-                    f"[DEBUG chat/send] user_id={user_id}, platform={platform}, message={message[:30]}"
-                )
+                print(f"[DEBUG chat/send] user_id={user_id}, platform={platform}, message={message[:30]}")
 
                 if not self.decision_hub:
                     return {
@@ -964,9 +927,7 @@ class MiyaAPI:
                     "platform": platform,
                     "content": message,
                     "user_id": user_id,
-                    "sender_name": f"{platform}用户-{user_id[:8]}"
-                    if user_id
-                    else f"{platform}用户",
+                    "sender_name": f"{platform}用户-{user_id[:8]}" if user_id else f"{platform}用户",
                     "message_type": "private",
                 }
 
@@ -990,9 +951,7 @@ class MiyaAPI:
                     destination="decision_hub",
                 )
 
-                response = await self.decision_hub.process_perception_cross_platform(
-                    message_obj
-                )
+                response = await self.decision_hub.process_perception_cross_platform(message_obj)
 
                 if not response:
                     response = "抱歉，弥娅无法处理这个请求呢。"
@@ -1004,11 +963,7 @@ class MiyaAPI:
                         import os
 
                         config_path = os.path.join(
-                            os.path.dirname(
-                                os.path.dirname(
-                                    os.path.dirname(os.path.abspath(__file__))
-                                )
-                            ),
+                            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
                             "config",
                             "tts_config.json",
                         )
@@ -1018,9 +973,7 @@ class MiyaAPI:
 
                             async def _tts_play():
                                 try:
-                                    logger.info(
-                                        f"[TTS] 桌面端合成中 ({len(response)} chars)"
-                                    )
+                                    logger.info(f"[TTS] 桌面端合成中 ({len(response)} chars)")
                                     from core.tts.engine_router import synthesize
 
                                     audio = await synthesize(response)
@@ -1035,14 +988,10 @@ class MiyaAPI:
                                         import simpleaudio as sa
 
                                         with wave.open(audio, "rb") as wf:
-                                            sa.WaveObject.from_wave_read(
-                                                wf
-                                            ).play().wait_done()
+                                            sa.WaveObject.from_wave_read(wf).play().wait_done()
 
                                     logger.info("[TTS] 桌面端播放中")
-                                    await asyncio.get_event_loop().run_in_executor(
-                                        None, _play
-                                    )
+                                    await asyncio.get_event_loop().run_in_executor(None, _play)
                                     logger.info("[TTS] 桌面端播放完成")
                                 except ImportError:
                                     logger.warning("[TTS] 缺少依赖")
@@ -1054,19 +1003,11 @@ class MiyaAPI:
                         logger.warning(f"[TTS] 配置检查失败: {ex}")
 
                 emotion_state = None
-                if (
-                    self.decision_hub
-                    and hasattr(self.decision_hub, "emotion")
-                    and self.decision_hub.emotion
-                ):
+                if self.decision_hub and hasattr(self.decision_hub, "emotion") and self.decision_hub.emotion:
                     emotion_state = self.decision_hub.emotion.get_emotion_state()
 
                 personality_state = None
-                if (
-                    self.decision_hub
-                    and hasattr(self.decision_hub, "personality")
-                    and self.decision_hub.personality
-                ):
+                if self.decision_hub and hasattr(self.decision_hub, "personality") and self.decision_hub.personality:
                     personality_state = self.decision_hub.personality.get_profile()
 
                 emotion_result = None
@@ -1100,9 +1041,7 @@ class MiyaAPI:
                     "personality": personality_result,
                     "soul": getattr(self.decision_hub, "_last_soul_output", None),
                     "tools_used": getattr(self.decision_hub, "_last_tools_used", []),
-                    "memory_retrieved": getattr(
-                        self.decision_hub, "_last_memory_retrieved", False
-                    ),
+                    "memory_retrieved": getattr(self.decision_hub, "_last_memory_retrieved", False),
                 }
 
             except Exception as e:
@@ -1368,9 +1307,7 @@ class MiyaAPI:
                     agents.append(
                         {
                             "name": name,
-                            "description": agent_info.prompt.split("\n")[0]
-                            if agent_info.prompt
-                            else f"{name} Agent",
+                            "description": agent_info.prompt.split("\n")[0] if agent_info.prompt else f"{name} Agent",
                             "tools_count": len(agent_info.tools),
                             "tools": agent_info.get_tool_names(),
                         }
@@ -1463,9 +1400,7 @@ class MiyaAPI:
                     manager.mcp_dir = os.path.join(project_root, "mcpserver")
                     if not os.path.isdir(manager.mcp_dir):
                         manager.mcp_dir = os.path.abspath(
-                            os.path.join(
-                                os.path.dirname(__file__), "..", "..", "mcpserver"
-                            )
+                            os.path.join(os.path.dirname(__file__), "..", "..", "mcpserver")
                         )
                     await manager.scan_and_register()
 
@@ -1473,21 +1408,14 @@ class MiyaAPI:
                 if svc_name not in manager._services:
                     from pathlib import Path
 
-                    manifest_path = (
-                        Path(manager.mcp_dir) / svc_name / "agent-manifest.json"
-                    )
+                    manifest_path = Path(manager.mcp_dir) / svc_name / "agent-manifest.json"
                     if manifest_path.exists():
-
                         manifest = manager._load_manifest(manifest_path)
                         if manifest:
                             await manager.register_service(manifest)
 
                 # 构建额外参数（排除 service 和 tool）
-                extra_kwargs = {
-                    k: v
-                    for k, v in request_data.items()
-                    if k not in ("service", "tool")
-                }
+                extra_kwargs = {k: v for k, v in request_data.items() if k not in ("service", "tool")}
 
                 result = await manager.call(svc_name, tool_name, **extra_kwargs)
                 return {
@@ -1543,9 +1471,7 @@ class MiyaAPI:
                     if manifest_path.exists():
                         import json as _json
 
-                        _json.loads(
-                            manifest_path.read_text(encoding="utf-8")
-                        )
+                        _json.loads(manifest_path.read_text(encoding="utf-8"))
                         manifest = manager._load_manifest(manifest_path)
                         if manifest:
                             await manager.register_service(manifest)
@@ -1824,9 +1750,7 @@ class MiyaAPI:
                             "task_type": task.task_type,
                             "priority": task.priority,
                             "status": task.status,
-                            "execute_at": task.execute_at.isoformat()
-                            if task.execute_at
-                            else None,
+                            "execute_at": task.execute_at.isoformat() if task.execute_at else None,
                             "created_at": task.created_at.isoformat(),
                             "data": task.data,
                         }
@@ -1839,9 +1763,7 @@ class MiyaAPI:
                             "task_type": task.task_type,
                             "priority": task.priority,
                             "status": "scheduled",
-                            "execute_at": task.execute_at.isoformat()
-                            if task.execute_at
-                            else None,
+                            "execute_at": task.execute_at.isoformat() if task.execute_at else None,
                             "created_at": task.created_at.isoformat(),
                             "data": task.data,
                         }
@@ -1947,9 +1869,7 @@ class MiyaAPI:
                 if job_id in scheduler.running_tasks:
                     del scheduler.running_tasks[job_id]
 
-                scheduler.task_queue = [
-                    t for t in scheduler.task_queue if t.task_id != job_id
-                ]
+                scheduler.task_queue = [t for t in scheduler.task_queue if t.task_id != job_id]
 
                 return {
                     "success": True,
@@ -2744,9 +2664,7 @@ class MiyaAPI:
                 provider = request_data.get("provider", "")
                 temperature = request_data.get("temperature", 0.7)
 
-                logger.info(
-                    f"[MiyaAPI] 更新配置: model={model}, provider={provider}, temperature={temperature}"
-                )
+                logger.info(f"[MiyaAPI] 更新配置: model={model}, provider={provider}, temperature={temperature}")
 
                 return {
                     "success": True,
@@ -2792,10 +2710,7 @@ class MiyaAPI:
     def _get_personality_state(self) -> Dict:
         """获取人格状态"""
         try:
-            if (
-                hasattr(self.decision_hub, "personality")
-                and self.decision_hub.personality
-            ):
+            if hasattr(self.decision_hub, "personality") and self.decision_hub.personality:
                 return self.decision_hub.personality.get_profile()
         except:
             pass
@@ -2804,10 +2719,7 @@ class MiyaAPI:
     def _get_memory_stats(self) -> Dict:
         """获取记忆统计"""
         try:
-            if (
-                hasattr(self.decision_hub, "memory_engine")
-                and self.decision_hub.memory_engine
-            ):
+            if hasattr(self.decision_hub, "memory_engine") and self.decision_hub.memory_engine:
                 return self.decision_hub.memory_engine.get_memory_stats()
         except:
             pass

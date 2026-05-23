@@ -6,7 +6,7 @@
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import yaml
 from pydantic import BaseModel, Field, root_validator, validator
@@ -72,9 +72,7 @@ class TerminalConfig(BaseModel):
 
     max_terminals: int = Field(default=10, ge=1, le=50, description="最大终端数")
     default_type: TerminalType = Field(default="cmd", description="默认终端类型")
-    command_timeout: int = Field(
-        default=30, ge=1, le=300, description="命令超时时间（秒）"
-    )
+    command_timeout: int = Field(default=30, ge=1, le=300, description="命令超时时间（秒）")
     auto_cleanup: bool = Field(default=True, description="自动清理空闲终端")
     max_history: int = Field(default=100, ge=1, le=1000, description="最大历史记录数")
     working_directory: str = Field(default=".", description="工作目录")
@@ -94,30 +92,18 @@ class TerminalConfig(BaseModel):
 class MemoryConfig(BaseModel):
     """记忆配置"""
 
-    tide_ttl: int = Field(
-        default=3600, ge=60, le=86400, description="短期记忆TTL（秒）"
-    )
-    dream_compression_threshold: int = Field(
-        default=100, ge=10, le=1000, description="记忆压缩阈值"
-    )
-    semantic_vector_dim: int = Field(
-        default=768, ge=128, le=2048, description="语义向量维度"
-    )
-    max_memories: int = Field(
-        default=10000, ge=100, le=100000, description="最大记忆数"
-    )
-    persist_interval: int = Field(
-        default=300, ge=10, le=3600, description="持久化间隔（秒）"
-    )
+    tide_ttl: int = Field(default=3600, ge=60, le=86400, description="短期记忆TTL（秒）")
+    dream_compression_threshold: int = Field(default=100, ge=10, le=1000, description="记忆压缩阈值")
+    semantic_vector_dim: int = Field(default=768, ge=128, le=2048, description="语义向量维度")
+    max_memories: int = Field(default=10000, ge=100, le=100000, description="最大记忆数")
+    persist_interval: int = Field(default=300, ge=10, le=3600, description="持久化间隔（秒）")
 
 
 class EmotionConfig(BaseModel):
     """情绪配置"""
 
     decay_rate: float = Field(default=0.1, ge=0.0, le=1.0, description="情绪衰减率")
-    coloring_threshold: float = Field(
-        default=0.7, ge=0.0, le=1.0, description="染色阈值"
-    )
+    coloring_threshold: float = Field(default=0.7, ge=0.0, le=1.0, description="染色阈值")
     max_intensity: float = Field(default=1.0, ge=0.0, le=2.0, description="最大强度")
     min_intensity: float = Field(default=0.0, ge=0.0, le=0.5, description="最小强度")
 
@@ -131,9 +117,7 @@ class WebConfig(BaseModel):
     cors_origins: List[str] = Field(default=["*"], description="CORS允许的源")
     api_prefix: str = Field(default="/api", description="API前缀")
     secret_key: str = Field(default="change-me-in-production", description="密钥")
-    access_token_expire_minutes: int = Field(
-        default=30, ge=1, le=1440, description="访问令牌过期时间（分钟）"
-    )
+    access_token_expire_minutes: int = Field(default=30, ge=1, le=1440, description="访问令牌过期时间（分钟）")
 
     @validator("secret_key")
     def validate_secret_key(cls, v):
@@ -275,14 +259,10 @@ class AppConfig(BaseSettings):
         try:
             # Pydantic会自动验证，这里主要是额外的业务验证
             if self.ai.api_key == "your-api-key-here":
-                raise ConfigError(
-                    code=ErrorCode.CONFIG_INVALID, message="请设置有效的AI API密钥"
-                )
+                raise ConfigError(code=ErrorCode.CONFIG_INVALID, message="请设置有效的AI API密钥")
 
             if self.web.secret_key == "change-me-in-production" and not self.debug:
-                raise ConfigError(
-                    code=ErrorCode.CONFIG_INVALID, message="生产环境必须设置安全的密钥"
-                )
+                raise ConfigError(code=ErrorCode.CONFIG_INVALID, message="生产环境必须设置安全的密钥")
 
             return True
         except Exception as e:

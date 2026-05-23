@@ -12,6 +12,7 @@
 import asyncio
 import json
 import logging
+import os
 import platform
 import time
 from dataclasses import dataclass
@@ -113,17 +114,13 @@ class RuntimeAPIServer:
 
         # 交互端管理
         self.app.router.add_get("/api/endpoints", self.handle_list_endpoints)
-        self.app.router.add_post(
-            "/api/endpoints/{id}/start", self.handle_start_endpoint
-        )
+        self.app.router.add_post("/api/endpoints/{id}/start", self.handle_start_endpoint)
         self.app.router.add_post("/api/endpoints/{id}/stop", self.handle_stop_endpoint)
         self.app.router.add_get("/api/endpoints/{id}", self.handle_get_endpoint)
 
         # 认知记忆
         self.app.router.add_get("/api/cognitive/events", self.handle_cognitive_events)
-        self.app.router.add_get(
-            "/api/cognitive/profiles", self.handle_cognitive_profiles
-        )
+        self.app.router.add_get("/api/cognitive/profiles", self.handle_cognitive_profiles)
 
         # Agent管理
         self.app.router.add_get("/api/agents", self.handle_list_agents)
@@ -213,12 +210,8 @@ class RuntimeAPIServer:
             "python_version": platform.python_version(),
             "endpoints": {
                 "total": len(self.endpoints),
-                "running": sum(
-                    1 for ep in self.endpoints.values() if ep.status == "running"
-                ),
-                "stopped": sum(
-                    1 for ep in self.endpoints.values() if ep.status == "stopped"
-                ),
+                "running": sum(1 for ep in self.endpoints.values() if ep.status == "running"),
+                "stopped": sum(1 for ep in self.endpoints.values() if ep.status == "stopped"),
             },
             "timestamp": datetime.now().isoformat(),
         }
@@ -291,9 +284,7 @@ class RuntimeAPIServer:
             elif endpoint.type == "desktop":
                 success = await self._start_desktop_endpoint(endpoint)
             else:
-                return await self._error_response(
-                    f"不支持的端点类型: {endpoint.type}", HTTPStatus.BAD_REQUEST
-                )
+                return await self._error_response(f"不支持的端点类型: {endpoint.type}", HTTPStatus.BAD_REQUEST)
 
             if success:
                 endpoint.status = "running"
@@ -305,13 +296,9 @@ class RuntimeAPIServer:
                 return await self._error_response("启动失败", HTTPStatus.INTERNAL_ERROR)
 
         except Exception as e:
-            logger.error(
-                f"[Runtime API] 启动交互端失败 {endpoint_id}: {e}", exc_info=True
-            )
+            logger.error(f"[Runtime API] 启动交互端失败 {endpoint_id}: {e}", exc_info=True)
             endpoint.last_error = str(e)
-            return await self._error_response(
-                f"启动失败: {str(e)}", HTTPStatus.INTERNAL_ERROR
-            )
+            return await self._error_response(f"启动失败: {str(e)}", HTTPStatus.INTERNAL_ERROR)
 
     async def handle_stop_endpoint(self, request: web.Request):
         """停止交互端"""
@@ -346,13 +333,9 @@ class RuntimeAPIServer:
                 return await self._error_response("停止失败", HTTPStatus.INTERNAL_ERROR)
 
         except Exception as e:
-            logger.error(
-                f"[Runtime API] 停止交互端失败 {endpoint_id}: {e}", exc_info=True
-            )
+            logger.error(f"[Runtime API] 停止交互端失败 {endpoint_id}: {e}", exc_info=True)
             endpoint.last_error = str(e)
-            return await self._error_response(
-                f"停止失败: {str(e)}", HTTPStatus.INTERNAL_ERROR
-            )
+            return await self._error_response(f"停止失败: {str(e)}", HTTPStatus.INTERNAL_ERROR)
 
     # ========== 认知记忆 ==========
 
@@ -364,9 +347,7 @@ class RuntimeAPIServer:
         top_k = int(request.query.get("top_k", 10))
 
         if not self.cognitive_memory:
-            return await self._error_response(
-                "认知记忆系统未初始化", HTTPStatus.INTERNAL_ERROR
-            )
+            return await self._error_response("认知记忆系统未初始化", HTTPStatus.INTERNAL_ERROR)
 
         events = await self.cognitive_memory.search_cognitive_events(
             query=query,
@@ -395,9 +376,7 @@ class RuntimeAPIServer:
         group_id = request.query.get("group_id", "")
 
         if not self.cognitive_memory:
-            return await self._error_response(
-                "认知记忆系统未初始化", HTTPStatus.INTERNAL_ERROR
-            )
+            return await self._error_response("认知记忆系统未初始化", HTTPStatus.INTERNAL_ERROR)
 
         result = {}
 
@@ -418,9 +397,7 @@ class RuntimeAPIServer:
     async def handle_list_agents(self, request: web.Request):
         """获取所有Agent"""
         if not self.skills_registry:
-            return await self._error_response(
-                "Skills注册表未初始化", HTTPStatus.INTERNAL_ERROR
-            )
+            return await self._error_response("Skills注册表未初始化", HTTPStatus.INTERNAL_ERROR)
 
         agents = self.skills_registry.get_items()
 
@@ -440,15 +417,11 @@ class RuntimeAPIServer:
     async def handle_agent_stats(self, request: web.Request):
         """获取Agent统计"""
         if not self.skills_registry:
-            return await self._error_response(
-                "Skills注册表未初始化", HTTPStatus.INTERNAL_ERROR
-            )
+            return await self._error_response("Skills注册表未初始化", HTTPStatus.INTERNAL_ERROR)
 
         stats = self.skills_registry.get_stats()
 
-        return await self._json_response(
-            {"agents": {name: stat.to_dict() for name, stat in stats.items()}}
-        )
+        return await self._json_response({"agents": {name: stat.to_dict() for name, stat in stats.items()}})
 
     # ========== 配置管理 ==========
 
@@ -466,9 +439,7 @@ class RuntimeAPIServer:
 
             # 验证配置
             if not isinstance(new_config, dict):
-                return await self._error_response(
-                    "配置格式错误", HTTPStatus.BAD_REQUEST
-                )
+                return await self._error_response("配置格式错误", HTTPStatus.BAD_REQUEST)
 
             # 检测变更
             changes = self._detect_config_changes(new_config)
@@ -484,9 +455,7 @@ class RuntimeAPIServer:
             return await self._error_response("无效的JSON格式", HTTPStatus.BAD_REQUEST)
         except Exception as e:
             logger.error(f"[Runtime API] 更新配置失败: {e}", exc_info=True)
-            return await self._error_response(
-                f"更新失败: {str(e)}", HTTPStatus.INTERNAL_ERROR
-            )
+            return await self._error_response(f"更新失败: {str(e)}", HTTPStatus.INTERNAL_ERROR)
 
     # ========== 统计数据 ==========
 
@@ -514,30 +483,20 @@ class RuntimeAPIServer:
             platform = data.get("platform", "web")
 
             if not message:
-                return await self._json_response(
-                    {"response": "❌ 缺少消息内容"}, status=400
-                )
+                return await self._json_response({"response": "❌ 缺少消息内容"}, status=400)
 
             # 如果有决策中心，使用决策中心处理
             if self.decision_hub:
-                response = await self._process_with_decision_hub(
-                    message, session_id, platform, from_terminal
-                )
+                response = await self._process_with_decision_hub(message, session_id, platform, from_terminal)
             else:
                 # 回退到简单响应
-                response = self._process_without_decision_hub(
-                    message, session_id, from_terminal
-                )
+                response = self._process_without_decision_hub(message, session_id, from_terminal)
 
-            return await self._json_response(
-                {"response": response, "session_id": session_id}
-            )
+            return await self._json_response({"response": response, "session_id": session_id})
 
         except Exception as e:
             logger.error(f"处理聊天请求失败: {e}", exc_info=True)
-            return await self._json_response(
-                {"response": f"❌ 处理失败: {str(e)}"}, status=500
-            )
+            return await self._json_response({"response": f"❌ 处理失败: {str(e)}"}, status=500)
 
     # ========== 健康检查 ==========
 
@@ -598,9 +557,7 @@ class RuntimeAPIServer:
                 "started_at": datetime.utcnow().isoformat(),
             }
 
-            logger.info(
-                f"[Runtime API] Web端点启动成功: {endpoint.id} -> http://{host}:{port}"
-            )
+            logger.info(f"[Runtime API] Web端点启动成功: {endpoint.id} -> http://{host}:{port}")
             return True
 
         except Exception as e:
@@ -657,9 +614,7 @@ class RuntimeAPIServer:
                 "started_at": datetime.utcnow().isoformat(),
             }
 
-            logger.info(
-                f"[Runtime API] 终端端点启动成功: {endpoint.id} -> PID {process.pid}"
-            )
+            logger.info(f"[Runtime API] 终端端点启动成功: {endpoint.id} -> PID {process.pid}")
             return True
 
         except Exception as e:
@@ -702,9 +657,7 @@ class RuntimeAPIServer:
                 # Windows系统
                 cmd = ["start", str(app_file)] + app_args
                 # Windows下start需要在shell中执行
-                process = await asyncio.create_subprocess_shell(
-                    " ".join(cmd), cwd=working_dir
-                )
+                process = await asyncio.create_subprocess_shell(" ".join(cmd), cwd=working_dir)
             elif platform.system() == "Darwin":  # macOS
                 # macOS系统
                 cmd = ["open", str(app_file)] + app_args
@@ -715,9 +668,7 @@ class RuntimeAPIServer:
                 # 给文件添加执行权限
                 import stat
 
-                app_file.chmod(
-                    app_file.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
-                )
+                app_file.chmod(app_file.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
                 process = await asyncio.create_subprocess_exec(*cmd, cwd=working_dir)
 
             # 保存进程引用
@@ -784,9 +735,7 @@ class RuntimeAPIServer:
 
         for key, value in self._config.items():
             # 检查是否是敏感配置
-            is_sensitive = any(
-                sensitive_key in key.lower() for sensitive_key in sensitive_keys
-            )
+            is_sensitive = any(sensitive_key in key.lower() for sensitive_key in sensitive_keys)
 
             if is_sensitive:
                 # 部分隐藏敏感值
@@ -823,9 +772,7 @@ class RuntimeAPIServer:
                 "rss_mb": process.memory_info().rss / 1024 / 1024,  # 物理内存
                 "vms_mb": process.memory_info().vms / 1024 / 1024,  # 虚拟内存
                 "percent": process.memory_percent(),  # 内存使用百分比
-                "available_mb": psutil.virtual_memory().available
-                / 1024
-                / 1024,  # 可用内存
+                "available_mb": psutil.virtual_memory().available / 1024 / 1024,  # 可用内存
             }
         except Exception:
             return {"error": "无法获取内存统计"}
@@ -878,9 +825,7 @@ class RuntimeAPIServer:
             logger.error(f"[Runtime API] 决策中心处理失败: {e}", exc_info=True)
             return f"处理失败: {str(e)}"
 
-    def _process_without_decision_hub(
-        self, message: str, session_id: str, from_terminal: Optional[str]
-    ) -> str:
+    def _process_without_decision_hub(self, message: str, session_id: str, from_terminal: Optional[str]) -> str:
         """无决策中心时的处理"""
         if from_terminal:
             return f"✅ 终端[{from_terminal}]已连接。弥娅主系统正在处理请求..."

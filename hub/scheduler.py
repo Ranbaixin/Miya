@@ -7,6 +7,7 @@ import asyncio
 import contextlib
 import heapq
 import logging
+import sys
 import threading
 from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, Optional
@@ -113,9 +114,7 @@ class Scheduler:
                     if next_task.execute_at <= now:
                         # 任务时间到了，执行
                         heapq.heappop(self.task_queue)
-                        logger.info(
-                            f"执行定时任务: {next_task.task_id}, 类型: {next_task.task_type}"
-                        )
+                        logger.info(f"执行定时任务: {next_task.task_id}, 类型: {next_task.task_type}")
                         print(
                             f"[SCHEDULER] Executing task {next_task.task_id}",
                             file=sys.stderr,
@@ -138,13 +137,9 @@ class Scheduler:
             # 构建工具上下文
             tool_context = {
                 "onebot_client": self.onebot_client,
-                "send_like_callback": getattr(self.onebot_client, "send_like", None)
-                if self.onebot_client
-                else None,
+                "send_like_callback": getattr(self.onebot_client, "send_like", None) if self.onebot_client else None,
                 "user_id": task.data.get("target_id"),
-                "group_id": task.data.get("target_id")
-                if task.data.get("target_type") == "group"
-                else None,
+                "group_id": task.data.get("target_id") if task.data.get("target_type") == "group" else None,
                 "message_type": task.data.get("target_type", "private"),
                 "sender_name": "scheduled_task",
             }
@@ -157,9 +152,7 @@ class Scheduler:
                 target_id = data.get("target_id")
                 message = data.get("message", "")
 
-                logger.info(
-                    f"执行提醒任务: 目标={target_type}_{target_id}, 消息={message}"
-                )
+                logger.info(f"执行提醒任务: 目标={target_type}_{target_id}, 消息={message}")
 
                 # 终端模式或没有 onebot_client 时，记录日志提醒
                 if not self.onebot_client:
@@ -174,14 +167,10 @@ class Scheduler:
                     # 使用 onebot_client 发送消息
                     try:
                         if target_type == "group":
-                            await self.onebot_client.send_group_message(
-                                target_id, message
-                            )
+                            await self.onebot_client.send_group_message(target_id, message)
                             logger.info(f"提醒消息已发送到群 {target_id}")
                         else:
-                            await self.onebot_client.send_private_message(
-                                target_id, message
-                            )
+                            await self.onebot_client.send_private_message(target_id, message)
                             logger.info(f"提醒消息已发送到用户 {target_id}")
                     except Exception as e:
                         logger.error(f"发送提醒消息失败: {e}", exc_info=True)
@@ -193,22 +182,16 @@ class Scheduler:
                 target_id = data.get("target_id")
                 message = data.get("message", "")
 
-                logger.info(
-                    f"发送定时消息: 目标={target_type}_{target_id}, 消息={message}"
-                )
+                logger.info(f"发送定时消息: 目标={target_type}_{target_id}, 消息={message}")
 
                 # 直接使用 onebot_client 发送消息
                 if self.onebot_client:
                     try:
                         if target_type == "group":
-                            await self.onebot_client.send_group_message(
-                                target_id, message
-                            )
+                            await self.onebot_client.send_group_message(target_id, message)
                             logger.info(f"定时消息已发送到群 {target_id}")
                         else:
-                            await self.onebot_client.send_private_message(
-                                target_id, message
-                            )
+                            await self.onebot_client.send_private_message(target_id, message)
                             logger.info(f"定时消息已发送到用户 {target_id}")
                     except Exception as e:
                         logger.error(f"发送定时消息失败: {e}", exc_info=True)
@@ -234,21 +217,15 @@ class Scheduler:
                             "target_user_id": target_id,
                             "times": data.get("times", 1),
                         }
-                        result = await adapter.execute_tool(
-                            "qq_like", args, tool_context
-                        )
+                        result = await adapter.execute_tool("qq_like", args, tool_context)
                         logger.info(f"点赞动作已执行: {result}")
 
                     elif action_type == "send_poke":
                         args = {
                             "target_user_id": target_id,
-                            "group_id": target_id
-                            if task.data.get("target_type") == "group"
-                            else None,
+                            "group_id": target_id if task.data.get("target_type") == "group" else None,
                         }
-                        result = await adapter.execute_tool(
-                            "send_poke", args, tool_context
-                        )
+                        result = await adapter.execute_tool("send_poke", args, tool_context)
                         logger.info(f"拍一拍动作已执行: {result}")
 
             # 标记任务完成
@@ -262,9 +239,7 @@ class Scheduler:
         """添加任务到调度队列"""
         heapq.heappush(self.task_queue, task)
         task.scheduled_at = datetime.now()
-        logger.info(
-            f"任务已添加到调度队列: {task.task_id}, 执行时间: {task.execute_at}"
-        )
+        logger.info(f"任务已添加到调度队列: {task.task_id}, 执行时间: {task.execute_at}")
 
     def get_next_task(self) -> Optional[Task]:
         """获取下一个待执行任务"""
@@ -336,11 +311,7 @@ class Scheduler:
         """清理旧任务"""
         cutoff = datetime.now() - timedelta(hours=older_than_hours)
 
-        to_remove = [
-            tid
-            for tid, task in self.completed_tasks.items()
-            if task.completed_at < cutoff
-        ]
+        to_remove = [tid for tid, task in self.completed_tasks.items() if task.completed_at < cutoff]
 
         for tid in to_remove:
             del self.completed_tasks[tid]

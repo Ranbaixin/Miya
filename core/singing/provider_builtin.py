@@ -12,6 +12,8 @@ import os
 import shutil
 from typing import Any, Dict, List, Optional
 
+import numpy as np
+
 from .base import LearnStatus, LearnTask, SingingEngine, SongInfo
 from .music_source import MusicSource
 from .separator import VocalSeparator
@@ -74,9 +76,7 @@ class BuiltinSingingEngine(SingingEngine):
             self.volume_accompany = config.get("volume_accompany", 70)
             self.learn_timeout = config.get("learn_timeout", 300)
 
-            self.rvc_api_url = config.get(
-                "rvc_api_url", "http://127.0.0.1:7898"
-            ).rstrip("/")
+            self.rvc_api_url = config.get("rvc_api_url", "http://127.0.0.1:7898").rstrip("/")
             self.rvc_model = config.get("rvc_model", "遐蝶")
             self.rvc_f0_up_key = config.get("rvc_f0_up_key", 0)
             self.rvc_f0_method = config.get("rvc_f0_method", "rmvpe")
@@ -86,9 +86,7 @@ class BuiltinSingingEngine(SingingEngine):
             self.rvc_rms_mix_rate = config.get("rvc_rms_mix_rate", 0.6)
             self.rvc_protect = config.get("rvc_protect", 0.25)
 
-            self.separation_stages_enabled = config.get(
-                "separation_stages_enabled", False
-            )
+            self.separation_stages_enabled = config.get("separation_stages_enabled", False)
             self.separation_stages = config.get("separation_stages", [])
 
             eff = config.get("vocal_effects", {})
@@ -140,9 +138,7 @@ class BuiltinSingingEngine(SingingEngine):
 
             if self.separation_stages_enabled and self.separation_stages:
                 self.separator = None
-                logger.info(
-                    f"Builtin: 多轮分离模式 ({len(self.separation_stages)} stages)"
-                )
+                logger.info(f"Builtin: 多轮分离模式 ({len(self.separation_stages)} stages)")
             else:
                 uvr5_cfg = {
                     k: config.get(k)
@@ -160,9 +156,7 @@ class BuiltinSingingEngine(SingingEngine):
                         "demucs_python",
                         r"D:\AIvoice\RVC20240604Nvidia50x0\RVC20240604Nvidia50x0\runtime\python.exe",
                     ),
-                    "demucs_models": config.get(
-                        "demucs_models", ["htdemucs_ft", "htdemucs"]
-                    ),
+                    "demucs_models": config.get("demucs_models", ["htdemucs_ft", "htdemucs"]),
                     "demucs_timeout": config.get("demucs_timeout", 300),
                 }
 
@@ -214,9 +208,7 @@ class BuiltinSingingEngine(SingingEngine):
     async def get_available_songs(self) -> List[str]:
         return self._available_songs
 
-    async def download_song_audio(
-        self, song_name: str, output_dir: str
-    ) -> Optional[str]:
+    async def download_song_audio(self, song_name: str, output_dir: str) -> Optional[str]:
         """下载歌曲音频（给 workflow 用）"""
         if not self.music_source:
             return None
@@ -245,8 +237,7 @@ class BuiltinSingingEngine(SingingEngine):
         try:
             _sp.run(
                 [
-                    shutil.which("ffmpeg")
-                    or r"D:\AIvoice\RVC20240604Nvidia50x0\RVC20240604Nvidia50x0\ffmpeg.exe",
+                    shutil.which("ffmpeg") or r"D:\AIvoice\RVC20240604Nvidia50x0\RVC20240604Nvidia50x0\ffmpeg.exe",
                     "-y",
                     "-i",
                     src_abs,
@@ -299,9 +290,7 @@ class BuiltinSingingEngine(SingingEngine):
             return None
 
         if result.returncode != 0:
-            logger.warning(
-                f"[UVR5 stage] rc={result.returncode} stderr={result.stderr[-500:]}"
-            )
+            logger.warning(f"[UVR5 stage] rc={result.returncode} stderr={result.stderr[-500:]}")
             return None
 
         vocal_out = os.path.join(out_abs, "Vocals.wav")
@@ -314,9 +303,7 @@ class BuiltinSingingEngine(SingingEngine):
         logger.warning(f"[UVR5 stage] no output: {model_type}")
         return None
 
-    async def _multi_stage_separate(
-        self, audio_path: str, output_dir: str
-    ) -> Optional[dict]:
+    async def _multi_stage_separate(self, audio_path: str, output_dir: str) -> Optional[dict]:
         """多轮人声分离流水线：
         Stage 0: BS-Roformer → Vocals + Instrumental(backing)
         Stage 1: VR 和声提取 → Clean Vocals + Chord(harmony)
@@ -331,19 +318,14 @@ class BuiltinSingingEngine(SingingEngine):
             stage_type = stage.get("model_type", "bs_roformer")
             stage_path = stage.get("model_path", "")
 
-            result = await self._run_uvr5_stage(
-                current_input, stage_dir, stage_type, stage_path
-            )
+            result = await self._run_uvr5_stage(current_input, stage_dir, stage_type, stage_path)
             if result is None:
                 logger.error(f"[多轮分离] Stage {idx} ({stage_type}) 失败")
                 return None
 
             stages_output.append(result)
             current_input = result["vocal_path"]
-            logger.info(
-                f"[多轮分离] Stage {idx} ({stage_type}) 完成: "
-                f"vocal={os.path.getsize(result['vocal_path'])}B"
-            )
+            logger.info(f"[多轮分离] Stage {idx} ({stage_type}) 完成: vocal={os.path.getsize(result['vocal_path'])}B")
 
         final_idx = len(stages_output) - 1
 
@@ -357,9 +339,7 @@ class BuiltinSingingEngine(SingingEngine):
         if final_idx >= 1:
             chord_path = os.path.join(output_dir, "Chord.wav")
             shutil.move(stages_output[final_idx - 1]["inst_path"], chord_path)
-            logger.info(
-                f"[多轮分离] 和声轨: Chord.wav ({os.path.getsize(chord_path)}B)"
-            )
+            logger.info(f"[多轮分离] 和声轨: Chord.wav ({os.path.getsize(chord_path)}B)")
 
         echo_path = None
         if final_idx >= 2:
@@ -446,9 +426,7 @@ class BuiltinSingingEngine(SingingEngine):
             if data.ndim == 1:
                 data = data.reshape(-1, 1)
 
-            _numpy_compressor(
-                data, self.effects_compressor_threshold, self.effects_compressor_ratio
-            )
+            _numpy_compressor(data, self.effects_compressor_threshold, self.effects_compressor_ratio)
 
             try:
                 from scipy.signal import butter, sosfilt
@@ -466,9 +444,7 @@ class BuiltinSingingEngine(SingingEngine):
             data = data * gain_linear
 
             if self.effects_reverb_wet > 0:
-                data = _numpy_reverb(
-                    data, sr, self.effects_reverb_room, self.effects_reverb_wet
-                )
+                data = _numpy_reverb(data, sr, self.effects_reverb_room, self.effects_reverb_wet)
 
             peak = np.max(np.abs(data))
             if peak > 1.0:
@@ -517,17 +493,13 @@ class BuiltinSingingEngine(SingingEngine):
             if peak > target_peak:
                 gain = target_peak / peak
                 data = np.clip(data * gain, -1.0, 1.0)
-                logger.info(
-                    f"[归一化] 衰减 peak {peak:.4f} → {target_peak:.4f} (x{gain:.2f})"
-                )
+                logger.info(f"[归一化] 衰减 peak {peak:.4f} → {target_peak:.4f} (x{gain:.2f})")
             elif peak > target_peak * 0.9:
                 logger.info(f"[归一化] 已够响亮 peak={peak:.4f}")
             else:
                 gain = target_peak / peak
                 data = np.clip(data * gain, -1.0, 1.0)
-                logger.info(
-                    f"[归一化] 提升 peak {peak:.4f} → {target_peak:.4f} (x{gain:.1f})"
-                )
+                logger.info(f"[归一化] 提升 peak {peak:.4f} → {target_peak:.4f} (x{gain:.1f})")
 
             sf.write(out_path, data, sr, subtype="PCM_16")
             return out_path
@@ -535,9 +507,7 @@ class BuiltinSingingEngine(SingingEngine):
             logger.warning(f"[归一化] 失败: {e}")
             return vocal_path
 
-    def _check_vocal_quality(
-        self, vocal_path: str, source_path: str, inst_path: Optional[str]
-    ) -> Optional[str]:
+    def _check_vocal_quality(self, vocal_path: str, source_path: str, inst_path: Optional[str]) -> Optional[str]:
         """检测人声分离质量，太弱时用原始音频替代"""
         import numpy as np
 
@@ -596,18 +566,14 @@ class BuiltinSingingEngine(SingingEngine):
 
         model_ok = False
         try:
-            resp = _rvc_post(
-                "/set_model", data={"model_name": self.rvc_model}, timeout=10
-            )
+            resp = _rvc_post("/set_model", data={"model_name": self.rvc_model}, timeout=10)
             if resp.status_code == 200:
                 result = resp.json() if resp.text else {}
                 loaded = result.get("model", result.get("status", ""))
                 logger.info(f"[RVC] set_model: {self.rvc_model} → response={loaded}")
                 model_ok = True
             else:
-                logger.warning(
-                    f"[RVC] set_model HTTP {resp.status_code}: {resp.text[:200]}"
-                )
+                logger.warning(f"[RVC] set_model HTTP {resp.status_code}: {resp.text[:200]}")
         except Exception as e:
             logger.warning(f"[RVC] set_model failed: {e}")
 
@@ -635,9 +601,7 @@ class BuiltinSingingEngine(SingingEngine):
                 }
                 resp = await asyncio.get_event_loop().run_in_executor(
                     None,
-                    lambda: _rvc_post(
-                        "/vc", data=rvc_data, files=rvc_files, timeout=300
-                    ),
+                    lambda: _rvc_post("/vc", data=rvc_data, files=rvc_files, timeout=300),
                 )
             resp.raise_for_status()
             with open(output_path, "wb") as f:
@@ -697,9 +661,7 @@ class BuiltinSingingEngine(SingingEngine):
             mask_below = mag <= threshold
 
             gain = np.ones_like(mag)
-            gain[mask_below] = np.clip(
-                mag[mask_below] / (threshold[mask_below] + 1e-8), 0.0, 1.0
-            )
+            gain[mask_below] = np.clip(mag[mask_below] / (threshold[mask_below] + 1e-8), 0.0, 1.0)
             gain = np.clip(gain, 0.05, 1.0)
 
             Zxx_clean = Zxx * gain
@@ -710,10 +672,7 @@ class BuiltinSingingEngine(SingingEngine):
             rms_before = np.sqrt(np.mean(channel**2))
             rms_after = np.sqrt(np.mean(cleaned**2))
             reduction = 1 - rms_after / rms_before if rms_before > 0 else 0.0
-            logger.info(
-                f"[净化] RMS {rms_before:.4f} → {rms_after:.4f} "
-                f"(reduction={reduction:.1%})"
-            )
+            logger.info(f"[净化] RMS {rms_before:.4f} → {rms_after:.4f} (reduction={reduction:.1%})")
 
             sf.write(out_path, cleaned, sr, subtype="PCM_16")
             return out_path
@@ -780,9 +739,7 @@ class BuiltinSingingEngine(SingingEngine):
         path = os.path.join(output_dir, f"Vocals_{self.rvc_model}.wav")
         return path if os.path.exists(path) else None
 
-    async def download_accompany(
-        self, song_name: str, output_dir: str
-    ) -> Optional[str]:
+    async def download_accompany(self, song_name: str, output_dir: str) -> Optional[str]:
         path = os.path.join(output_dir, "Instrumental.wav")
         return path if os.path.exists(path) else None
 
@@ -792,9 +749,7 @@ class BuiltinSingingEngine(SingingEngine):
     async def download_mix(self, song_name: str, output_dir: str) -> Optional[str]:
         return None
 
-    async def process_full_pipeline(
-        self, song_name: str, output_dir: str
-    ) -> Optional[dict]:
+    async def process_full_pipeline(self, song_name: str, output_dir: str) -> Optional[dict]:
         """完整唱歌管线：下载 → 多轮分离 → 归一化 → 换声 → 效果 → 返回路径
 
         Returns dict with vocal_path, accompany_path, chord_path, output_dir or None
@@ -813,27 +768,20 @@ class BuiltinSingingEngine(SingingEngine):
             sep_result = await self._multi_stage_separate(audio_path, output_dir)
             if sep_result is None:
                 logger.warning("[Builtin] 多轮分离失败，回退到传统分离")
-                vocal_path, inst_path = await self.separate_vocals(
-                    audio_path, output_dir
-                )
+                vocal_path, inst_path = await self.separate_vocals(audio_path, output_dir)
                 chord_path = None
             else:
                 vocal_path = sep_result["vocal_path"]
                 inst_path = sep_result["accompany_path"]
                 chord_path = sep_result.get("chord_path")
-                logger.info(
-                    f"[Builtin] 多轮分离完成: vocal={vocal_path}, "
-                    f"inst={inst_path}, chord={chord_path}"
-                )
+                logger.info(f"[Builtin] 多轮分离完成: vocal={vocal_path}, inst={inst_path}, chord={chord_path}")
         else:
             vocal_path, inst_path = await self.separate_vocals(audio_path, output_dir)
             chord_path = None
 
             if not vocal_path and self._demucs_separator:
                 logger.info("[Builtin] UVR5 分离失败，回退 Demucs...")
-                vocal_path, inst_path = await self._demucs_separator.separate(
-                    audio_path, output_dir
-                )
+                vocal_path, inst_path = await self._demucs_separator.separate(audio_path, output_dir)
 
             if not vocal_path:
                 from .separator import _ffmpeg_fallback
@@ -906,9 +854,7 @@ def _numpy_compressor(data: "np.ndarray", threshold_db: float, ratio: float):
         data[mask] = sign * (threshold_linear + attenuated)
 
 
-def _numpy_reverb(
-    data: "np.ndarray", sr: int, room_size: float, wet_level: float
-) -> "np.ndarray":
+def _numpy_reverb(data: "np.ndarray", sr: int, room_size: float, wet_level: float) -> "np.ndarray":
     """简易卷积混响 — 指数衰减噪声脉冲响应 (FFT 加速)"""
     import numpy as np
 

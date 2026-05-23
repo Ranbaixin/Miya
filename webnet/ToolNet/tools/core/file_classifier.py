@@ -6,6 +6,7 @@
 import hashlib
 import logging
 import shutil
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -20,70 +21,83 @@ class FileClassifier:
         self.classification_rules = {
             # 文档类
             "文档": {
-                "extensions": ['.pdf', '.doc', '.docx', '.txt', '.rtf', '.odt', '.md'],
-                "keywords": ['文档', '报告', '论文', '资料', 'manual', 'guide'],
-                "folder": "📄 文档"
+                "extensions": [".pdf", ".doc", ".docx", ".txt", ".rtf", ".odt", ".md"],
+                "keywords": ["文档", "报告", "论文", "资料", "manual", "guide"],
+                "folder": "📄 文档",
             },
             # 图片类
             "图片": {
-                "extensions": ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp', '.ico'],
-                "keywords": ['截图', '图片', '照片', 'image', 'screenshot'],
-                "folder": "🖼️ 图片"
+                "extensions": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".svg", ".webp", ".ico"],
+                "keywords": ["截图", "图片", "照片", "image", "screenshot"],
+                "folder": "🖼️ 图片",
             },
             # 视频类
             "视频": {
-                "extensions": ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm'],
-                "keywords": ['视频', 'movie', 'film'],
-                "folder": "🎬 视频"
+                "extensions": [".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm"],
+                "keywords": ["视频", "movie", "film"],
+                "folder": "🎬 视频",
             },
             # 音频类
             "音频": {
-                "extensions": ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.wma'],
-                "keywords": ['音频', '音乐', 'audio', 'music', 'sound'],
-                "folder": "🎵 音频"
+                "extensions": [".mp3", ".wav", ".flac", ".aac", ".ogg", ".wma"],
+                "keywords": ["音频", "音乐", "audio", "music", "sound"],
+                "folder": "🎵 音频",
             },
             # 压缩包类
             "压缩包": {
-                "extensions": ['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2'],
-                "keywords": ['压缩', 'archive', 'package'],
-                "folder": "📦 压缩包"
+                "extensions": [".zip", ".rar", ".7z", ".tar", ".gz", ".bz2"],
+                "keywords": ["压缩", "archive", "package"],
+                "folder": "📦 压缩包",
             },
             # 办公软件类
             "办公软件": {
-                "extensions": ['.xlsx', '.xls', '.csv', '.ppt', '.pptx', '.pps', '.ppsx'],
-                "keywords": ['表格', '演示', 'excel', 'powerpoint', 'slides'],
-                "folder": "📊 办公"
+                "extensions": [".xlsx", ".xls", ".csv", ".ppt", ".pptx", ".pps", ".ppsx"],
+                "keywords": ["表格", "演示", "excel", "powerpoint", "slides"],
+                "folder": "📊 办公",
             },
             # 代码类
             "代码": {
-                "extensions": ['.py', '.js', '.ts', '.java', '.cpp', '.c', '.h', '.html', '.css', '.json', '.xml', '.sql'],
-                "keywords": ['代码', 'source', '项目', 'project'],
-                "folder": "💻 代码"
+                "extensions": [
+                    ".py",
+                    ".js",
+                    ".ts",
+                    ".java",
+                    ".cpp",
+                    ".c",
+                    ".h",
+                    ".html",
+                    ".css",
+                    ".json",
+                    ".xml",
+                    ".sql",
+                ],
+                "keywords": ["代码", "source", "项目", "project"],
+                "folder": "💻 代码",
             },
             # 可执行文件类
             "程序": {
-                "extensions": ['.exe', '.msi', '.app', '.dmg', '.deb', '.rpm'],
-                "keywords": ['安装', 'setup', 'install', 'program'],
-                "folder": "⚙️ 程序"
+                "extensions": [".exe", ".msi", ".app", ".dmg", ".deb", ".rpm"],
+                "keywords": ["安装", "setup", "install", "program"],
+                "folder": "⚙️ 程序",
             },
             # 电子书类
             "电子书": {
-                "extensions": ['.epub', '.mobi', '.azw', '.azw3', '.djvu'],
-                "keywords": ['书籍', '电子书', 'ebook', 'novel'],
-                "folder": "📚 电子书"
+                "extensions": [".epub", ".mobi", ".azw", ".azw3", ".djvu"],
+                "keywords": ["书籍", "电子书", "ebook", "novel"],
+                "folder": "📚 电子书",
             },
             # 字体类
             "字体": {
-                "extensions": ['.ttf', '.otf', '.woff', '.woff2', '.eot'],
-                "keywords": ['字体', 'font'],
-                "folder": "🔤 字体"
+                "extensions": [".ttf", ".otf", ".woff", ".woff2", ".eot"],
+                "keywords": ["字体", "font"],
+                "folder": "🔤 字体",
             },
             # 安装包类
             "安装包": {
-                "extensions": ['.apk', '.ipa', '.deb', '.rpm'],
-                "keywords": ['安装包', 'app'],
-                "folder": "📱 应用"
-            }
+                "extensions": [".apk", ".ipa", ".deb", ".rpm"],
+                "keywords": ["安装包", "app"],
+                "folder": "📱 应用",
+            },
         }
 
     def classify_file(self, file_path: str) -> Dict[str, Any]:
@@ -103,38 +117,18 @@ class FileClassifier:
         # 优先级1: 扩展名匹配
         for category, rule in self.classification_rules.items():
             if file_ext in rule["extensions"]:
-                return {
-                    "文件": file_path,
-                    "分类": category,
-                    "目标文件夹": rule["folder"],
-                    "匹配方式": "扩展名"
-                }
+                return {"文件": file_path, "分类": category, "目标文件夹": rule["folder"], "匹配方式": "扩展名"}
 
         # 优先级2: 文件名关键词匹配
         for category, rule in self.classification_rules.items():
             for keyword in rule["keywords"]:
                 if keyword in file_name:
-                    return {
-                        "文件": file_path,
-                        "分类": category,
-                        "目标文件夹": rule["folder"],
-                        "匹配方式": "关键词"
-                    }
+                    return {"文件": file_path, "分类": category, "目标文件夹": rule["folder"], "匹配方式": "关键词"}
 
         # 默认分类
-        return {
-            "文件": file_path,
-            "分类": "其他",
-            "目标文件夹": "📁 其他",
-            "匹配方式": "默认"
-        }
+        return {"文件": file_path, "分类": "其他", "目标文件夹": "📁 其他", "匹配方式": "默认"}
 
-    def organize_directory(
-        self,
-        source_dir: str,
-        target_dir: str,
-        mode: str = "move"
-    ) -> Dict[str, Any]:
+    def organize_directory(self, source_dir: str, target_dir: str, mode: str = "move") -> Dict[str, Any]:
         """
         整理目录
 
@@ -157,20 +151,14 @@ class FileClassifier:
 
         # 扫描文件
         all_files = []
-        for item in source_path.rglob('*'):
+        for item in source_path.rglob("*"):
             if item.is_file():
                 all_files.append(item)
 
         logger.info(f"扫描到 {len(all_files)} 个文件")
 
         # 分类并处理文件
-        results = {
-            "总文件数": len(all_files),
-            "已处理": 0,
-            "分类统计": {},
-            "文件列表": [],
-            "错误": []
-        }
+        results = {"总文件数": len(all_files), "已处理": 0, "分类统计": {}, "文件列表": [], "错误": []}
 
         for file_path in all_files:
             try:
@@ -202,11 +190,7 @@ class FileClassifier:
                     logger.info(f"复制: {file_path.name} → {target_folder}/{relative_path.parent}")
 
                 results["已处理"] += 1
-                results["文件列表"].append({
-                    "源文件": str(file_path),
-                    "目标位置": str(destination),
-                    "分类": category
-                })
+                results["文件列表"].append({"源文件": str(file_path), "目标位置": str(destination), "分类": category})
 
             except Exception as e:
                 error_msg = f"处理文件失败 {file_path.name}: {e}"
@@ -215,11 +199,7 @@ class FileClassifier:
 
         return results
 
-    def generate_report(
-        self,
-        organization_results: Dict[str, Any],
-        report_path: str
-    ) -> bool:
+    def generate_report(self, organization_results: Dict[str, Any], report_path: str) -> bool:
         """
         生成整理报告
 
@@ -242,7 +222,7 @@ class FileClassifier:
         # 生成报告
         report = f"""# 文件整理报告
 
-生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+生成时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
 ## 📊 统计摘要
 
@@ -288,7 +268,7 @@ class FileClassifier:
         # 保存报告
         try:
             Path(report_path).parent.mkdir(parents=True, exist_ok=True)
-            with open(report_path, 'w', encoding='utf-8') as f:
+            with open(report_path, "w", encoding="utf-8") as f:
                 f.write(report)
 
             logger.info(f"整理报告已保存: {report_path}")
@@ -298,11 +278,7 @@ class FileClassifier:
             logger.error(f"生成报告失败: {e}")
             return False
 
-    def find_duplicates(
-        self,
-        directory: str,
-        method: str = "hash"
-    ) -> List[Dict[str, Any]]:
+    def find_duplicates(self, directory: str, method: str = "hash") -> List[Dict[str, Any]]:
         """
         查找重复文件
 
@@ -318,7 +294,7 @@ class FileClassifier:
             return []
 
         file_info = []
-        for file_path in dir_path.rglob('*'):
+        for file_path in dir_path.rglob("*"):
             if file_path.is_file():
                 file_info.append(file_path)
 
@@ -335,11 +311,9 @@ class FileClassifier:
                     file_hash = self._calculate_file_hash(file_path)
 
                     if file_hash in hash_map:
-                        duplicates.append({
-                            "原始文件": str(hash_map[file_hash]),
-                            "重复文件": str(file_path),
-                            "哈希值": file_hash
-                        })
+                        duplicates.append(
+                            {"原始文件": str(hash_map[file_hash]), "重复文件": str(file_path), "哈希值": file_hash}
+                        )
                     else:
                         hash_map[file_hash] = file_path
 
@@ -354,11 +328,9 @@ class FileClassifier:
                 name = file_path.stem.lower()
 
                 if name in name_map:
-                    duplicates.append({
-                        "原始文件": str(name_map[name]),
-                        "重复文件": str(file_path),
-                        "文件名": file_path.name
-                    })
+                    duplicates.append(
+                        {"原始文件": str(name_map[name]), "重复文件": str(file_path), "文件名": file_path.name}
+                    )
                 else:
                     name_map[name] = file_path
 
@@ -370,11 +342,13 @@ class FileClassifier:
                 size = file_path.stat().st_size
 
                 if size in size_map:
-                    duplicates.append({
-                        "原始文件": str(size_map[size]),
-                        "重复文件": str(file_path),
-                        "文件大小": f"{size/1024/1024:.2f}MB"
-                    })
+                    duplicates.append(
+                        {
+                            "原始文件": str(size_map[size]),
+                            "重复文件": str(file_path),
+                            "文件大小": f"{size / 1024 / 1024:.2f}MB",
+                        }
+                    )
                 else:
                     size_map[size] = file_path
 
@@ -385,8 +359,8 @@ class FileClassifier:
         """计算文件哈希值"""
         hash_md5 = hashlib.md5()
 
-        with open(file_path, 'rb') as f:
-            for chunk in iter(lambda: f.read(4096), b''):
+        with open(file_path, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
                 hash_md5.update(chunk)
 
         return hash_md5.hexdigest()
@@ -408,10 +382,10 @@ class FileClassifier:
         cleaned = []
 
         # 从下往上查找空文件夹
-        for folder in sorted(dir_path.rglob('*'), reverse=True):
+        for folder in sorted(dir_path.rglob("*"), reverse=True):
             if folder.is_dir():
                 # 检查是否为空
-                contents = list(folder.glob('*'))
+                contents = list(folder.glob("*"))
                 if not contents:
                     # 删除空文件夹
                     folder.rmdir()
@@ -422,11 +396,7 @@ class FileClassifier:
         return cleaned
 
 
-def classify_files_command(
-    source_dir: str,
-    target_dir: str,
-    operations: List[str]
-) -> Dict[str, Any]:
+def classify_files_command(source_dir: str, target_dir: str, operations: List[str]) -> Dict[str, Any]:
     """
     文件分类的统一接口
 
@@ -439,10 +409,7 @@ def classify_files_command(
         处理结果
     """
     classifier = FileClassifier()
-    results = {
-        "操作": [],
-        "结果": {}
-    }
+    results = {"操作": [], "结果": {}}
 
     for op in operations:
         if op == "organize":

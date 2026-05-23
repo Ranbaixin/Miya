@@ -2,12 +2,14 @@
 模式学习器
 第四阶段核心模块 - 从历史数据中学习模式
 """
+
 import json
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -15,22 +17,24 @@ logger = logging.getLogger(__name__)
 
 class PatternType(Enum):
     """模式类型"""
-    FIX_PATTERN = "fix_pattern"           # 修复模式
-    ERROR_PATTERN = "error_pattern"       # 错误模式
-    SUCCESS_PATTERN = "success_pattern"   # 成功模式
-    USER_PATTERN = "user_pattern"         # 用户模式
+
+    FIX_PATTERN = "fix_pattern"  # 修复模式
+    ERROR_PATTERN = "error_pattern"  # 错误模式
+    SUCCESS_PATTERN = "success_pattern"  # 成功模式
+    USER_PATTERN = "user_pattern"  # 用户模式
 
 
 @dataclass
 class Pattern:
     """模式"""
+
     id: str
     type: PatternType
-    pattern_key: str           # 模式键
-    features: Dict[str, Any]   # 特征
-    success_rate: float        # 成功率
-    total_occurrences: int    # 总出现次数
-    confidence: float         # 置信度
+    pattern_key: str  # 模式键
+    features: Dict[str, Any]  # 特征
+    success_rate: float  # 成功率
+    total_occurrences: int  # 总出现次数
+    confidence: float  # 置信度
     last_seen: datetime
     created_at: datetime
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -38,35 +42,36 @@ class Pattern:
     def to_dict(self) -> Dict:
         """转换为字典"""
         return {
-            'id': self.id,
-            'type': self.type.value,
-            'pattern_key': self.pattern_key,
-            'features': self.features,
-            'success_rate': self.success_rate,
-            'total_occurrences': self.total_occurrences,
-            'confidence': self.confidence,
-            'last_seen': self.last_seen.isoformat(),
-            'created_at': self.created_at.isoformat(),
-            'metadata': self.metadata,
+            "id": self.id,
+            "type": self.type.value,
+            "pattern_key": self.pattern_key,
+            "features": self.features,
+            "success_rate": self.success_rate,
+            "total_occurrences": self.total_occurrences,
+            "confidence": self.confidence,
+            "last_seen": self.last_seen.isoformat(),
+            "created_at": self.created_at.isoformat(),
+            "metadata": self.metadata,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict) -> 'Pattern':
+    def from_dict(cls, data: Dict) -> "Pattern":
         """从字典创建"""
         data = data.copy()
-        data['type'] = PatternType(data['type'])
-        data['last_seen'] = datetime.fromisoformat(data['last_seen'])
-        data['created_at'] = datetime.fromisoformat(data['created_at'])
+        data["type"] = PatternType(data["type"])
+        data["last_seen"] = datetime.fromisoformat(data["last_seen"])
+        data["created_at"] = datetime.fromisoformat(data["created_at"])
         return cls(**data)
 
 
 @dataclass
 class PatternMatch:
     """模式匹配结果"""
+
     pattern: Pattern
-    similarity: float         # 相似度
-    confidence: float         # 置信度
-    recommendation: str       # 建议
+    similarity: float  # 相似度
+    confidence: float  # 置信度
+    recommendation: str  # 建议
 
 
 class PatternLearner:
@@ -85,26 +90,20 @@ class PatternLearner:
         self.by_key: Dict[str, Pattern] = {}
 
         # 学习参数
-        self.min_occurrences = 3        # 最少出现次数
-        self.min_confidence = 0.7       # 最小置信度
-        self.confidence_decay = 0.95    # 置信度衰减
+        self.min_occurrences = 3  # 最少出现次数
+        self.min_confidence = 0.7  # 最小置信度
+        self.confidence_decay = 0.95  # 置信度衰减
 
         # 统计
         self.stats = {
-            'total_patterns': 0,
-            'high_confidence_patterns': 0,
-            'matches_found': 0,
-            'learning_cycles': 0,
+            "total_patterns": 0,
+            "high_confidence_patterns": 0,
+            "matches_found": 0,
+            "learning_cycles": 0,
         }
 
     def learn_from_fix(
-        self,
-        problem_type: str,
-        severity: str,
-        file_path: str,
-        fix_action: str,
-        success: bool,
-        execution_time: float
+        self, problem_type: str, severity: str, file_path: str, fix_action: str, success: bool, execution_time: float
     ) -> Optional[Pattern]:
         """
         从修复中学习模式
@@ -122,19 +121,18 @@ class PatternLearner:
         """
         # 生成模式键
         from pathlib import Path
+
         pattern_key = self._generate_pattern_key(
-            problem_type,
-            severity,
-            Path(file_path).suffix if file_path else 'unknown'
+            problem_type, severity, Path(file_path).suffix if file_path else "unknown"
         )
 
         # 提取特征
         features = {
-            'problem_type': problem_type,
-            'severity': severity,
-            'file_extension': Path(file_path).suffix if file_path else 'unknown',
-            'fix_action_type': self._classify_fix_action(fix_action),
-            'file_pattern': self._extract_file_pattern(file_path),
+            "problem_type": problem_type,
+            "severity": severity,
+            "file_extension": Path(file_path).suffix if file_path else "unknown",
+            "fix_action_type": self._classify_fix_action(fix_action),
+            "file_pattern": self._extract_file_pattern(file_path),
         }
 
         # 更新或创建模式
@@ -156,22 +154,23 @@ class PatternLearner:
         """分类修复动作"""
         action_lower = action.lower()
 
-        if any(word in action_lower for word in ['delete', 'remove', 'rm']):
-            return 'delete'
-        elif any(word in action_lower for word in ['add', 'create', 'insert', 'new']):
-            return 'add'
-        elif any(word in action_lower for word in ['modify', 'change', 'update', 'edit']):
-            return 'modify'
-        elif any(word in action_lower for word in ['replace', 'substitute']):
-            return 'replace'
-        elif any(word in action_lower for word in ['move', 'rename', 'copy']):
-            return 'move'
+        if any(word in action_lower for word in ["delete", "remove", "rm"]):
+            return "delete"
+        elif any(word in action_lower for word in ["add", "create", "insert", "new"]):
+            return "add"
+        elif any(word in action_lower for word in ["modify", "change", "update", "edit"]):
+            return "modify"
+        elif any(word in action_lower for word in ["replace", "substitute"]):
+            return "replace"
+        elif any(word in action_lower for word in ["move", "rename", "copy"]):
+            return "move"
         else:
-            return 'unknown'
+            return "unknown"
 
     def _extract_file_pattern(self, file_path: str) -> str:
         """提取文件模式"""
         from pathlib import Path
+
         path = Path(file_path)
 
         # 获取目录结构
@@ -186,7 +185,7 @@ class PatternLearner:
         pattern_key: str,
         features: Dict[str, Any],
         success: bool,
-        execution_time: float
+        execution_time: float,
     ) -> Pattern:
         """
         更新或创建模式
@@ -213,10 +212,7 @@ class PatternLearner:
             # 更新成功率（加权平均）
             new_rate = 1.0 if success else 0.0
             old_weight = 0.8
-            pattern.success_rate = (
-                pattern.success_rate * old_weight +
-                new_rate * (1 - old_weight)
-            )
+            pattern.success_rate = pattern.success_rate * old_weight + new_rate * (1 - old_weight)
 
             # 更新置信度
             pattern.confidence = min(1.0, pattern.confidence * 1.05)
@@ -225,19 +221,16 @@ class PatternLearner:
             pattern.last_seen = datetime.now()
 
             # 更新元数据
-            if 'avg_execution_time' not in pattern.metadata:
-                pattern.metadata['avg_execution_time'] = execution_time
+            if "avg_execution_time" not in pattern.metadata:
+                pattern.metadata["avg_execution_time"] = execution_time
             else:
-                pattern.metadata['avg_execution_time'] = (
-                    pattern.metadata['avg_execution_time'] * 0.9 +
-                    execution_time * 0.1
+                pattern.metadata["avg_execution_time"] = (
+                    pattern.metadata["avg_execution_time"] * 0.9 + execution_time * 0.1
                 )
 
         else:
             # 创建新模式
-            pattern_id = hashlib.md5(
-                f"{pattern_key}_{datetime.now().isoformat()}".encode()
-            ).hexdigest()[:16]
+            pattern_id = hashlib.md5(f"{pattern_key}_{datetime.now().isoformat()}".encode()).hexdigest()[:16]
 
             pattern = Pattern(
                 id=pattern_id,
@@ -250,7 +243,7 @@ class PatternLearner:
                 last_seen=datetime.now(),
                 created_at=datetime.now(),
                 metadata={
-                    'avg_execution_time': execution_time,
+                    "avg_execution_time": execution_time,
                 },
             )
 
@@ -259,16 +252,11 @@ class PatternLearner:
             self.by_type[pattern_type].append(pattern)
             self.by_key[pattern_key] = pattern
 
-            self.stats['total_patterns'] += 1
+            self.stats["total_patterns"] += 1
 
         return pattern
 
-    def find_matching_patterns(
-        self,
-        problem_type: str,
-        severity: str,
-        file_path: str
-    ) -> List[PatternMatch]:
+    def find_matching_patterns(self, problem_type: str, severity: str, file_path: str) -> List[PatternMatch]:
         """
         查找匹配的模式
 
@@ -299,27 +287,23 @@ class PatternLearner:
             )
 
             if similarity > 0.5:  # 相似度阈值
-                matches.append(PatternMatch(
-                    pattern=pattern,
-                    similarity=similarity,
-                    confidence=pattern.confidence,
-                    recommendation=self._generate_recommendation(pattern),
-                ))
+                matches.append(
+                    PatternMatch(
+                        pattern=pattern,
+                        similarity=similarity,
+                        confidence=pattern.confidence,
+                        recommendation=self._generate_recommendation(pattern),
+                    )
+                )
 
-                self.stats['matches_found'] += 1
+                self.stats["matches_found"] += 1
 
         # 按相似度排序
         matches.sort(key=lambda m: m.similarity, reverse=True)
 
         return matches
 
-    def _calculate_similarity(
-        self,
-        problem_type: str,
-        severity: str,
-        file_path: str,
-        pattern: Pattern
-    ) -> float:
+    def _calculate_similarity(self, problem_type: str, severity: str, file_path: str, pattern: Pattern) -> float:
         """
         计算相似度
 
@@ -340,30 +324,30 @@ class PatternLearner:
         features = pattern.features
 
         # 问题类型匹配
-        if features.get('problem_type') == problem_type:
+        if features.get("problem_type") == problem_type:
             score += 1.0
 
         # 严重程度匹配
-        if features.get('severity') == severity:
+        if features.get("severity") == severity:
             score += 0.5
-        elif self._severity_compatible(features.get('severity'), severity):
+        elif self._severity_compatible(features.get("severity"), severity):
             score += 0.3
 
         # 文件扩展名匹配
-        file_ext = Path(file_path).suffix if file_path else 'unknown'
-        if features.get('file_extension') == file_ext:
+        file_ext = Path(file_path).suffix if file_path else "unknown"
+        if features.get("file_extension") == file_ext:
             score += 1.0
 
         # 文件模式匹配
         file_pattern = self._extract_file_pattern(file_path)
-        if file_pattern in features.get('file_pattern', ''):
+        if file_pattern in features.get("file_pattern", ""):
             score += 0.5
 
         return min(1.0, score / max_score)
 
     def _severity_compatible(self, severity1: str, severity2: str) -> bool:
         """判断严重程度是否兼容"""
-        severity_order = ['info', 'low', 'medium', 'high', 'critical']
+        severity_order = ["info", "low", "medium", "high", "critical"]
 
         if severity1 not in severity_order or severity2 not in severity_order:
             return False
@@ -384,10 +368,7 @@ class PatternLearner:
             return f"成功率较低（{pattern.success_rate:.1%}），谨慎使用"
 
     def get_best_patterns(
-        self,
-        pattern_type: Optional[PatternType] = None,
-        min_confidence: Optional[float] = None,
-        limit: int = 10
+        self, pattern_type: Optional[PatternType] = None, min_confidence: Optional[float] = None, limit: int = 10
     ) -> List[Pattern]:
         """
         获取最佳模式
@@ -409,11 +390,7 @@ class PatternLearner:
             patterns = [p for p in patterns if p.confidence >= min_confidence]
 
         # 按置信度和成功率排序
-        patterns = sorted(
-            patterns,
-            key=lambda p: (p.confidence, p.success_rate),
-            reverse=True
-        )
+        patterns = sorted(patterns, key=lambda p: (p.confidence, p.success_rate), reverse=True)
 
         return list(patterns)[:limit]
 
@@ -424,28 +401,25 @@ class PatternLearner:
         Returns:
             分析结果
         """
-        self.stats['learning_cycles'] += 1
+        self.stats["learning_cycles"] += 1
 
         # 高置信度模式
         high_conf = [p for p in self.patterns.values() if p.confidence >= self.min_confidence]
-        self.stats['high_confidence_patterns'] = len(high_conf)
+        self.stats["high_confidence_patterns"] = len(high_conf)
 
         # 按类型统计
-        by_type = {
-            pt.value: len([p for p in self.patterns.values() if p.type == pt])
-            for pt in PatternType
-        }
+        by_type = {pt.value: len([p for p in self.patterns.values() if p.type == pt]) for pt in PatternType}
 
         # 成功率分布
         success_rates = [p.success_rate for p in self.patterns.values()]
 
         return {
-            'total_patterns': len(self.patterns),
-            'high_confidence_patterns': len(high_conf),
-            'by_type': by_type,
-            'avg_success_rate': sum(success_rates) / len(success_rates) if success_rates else 0.0,
-            'max_success_rate': max(success_rates) if success_rates else 0.0,
-            'min_success_rate': min(success_rates) if success_rates else 0.0,
+            "total_patterns": len(self.patterns),
+            "high_confidence_patterns": len(high_conf),
+            "by_type": by_type,
+            "avg_success_rate": sum(success_rates) / len(success_rates) if success_rates else 0.0,
+            "max_success_rate": max(success_rates) if success_rates else 0.0,
+            "min_success_rate": min(success_rates) if success_rates else 0.0,
         }
 
     def forget_old_patterns(self, days: int = 30):
@@ -457,10 +431,7 @@ class PatternLearner:
         """
         cutoff = datetime.now() - timedelta(days=days)
 
-        to_forget = [
-            pid for pid, pattern in self.patterns.items()
-            if pattern.last_seen < cutoff
-        ]
+        to_forget = [pid for pid, pattern in self.patterns.items() if pattern.last_seen < cutoff]
 
         for pid in to_forget:
             pattern = self.patterns[pid]
@@ -475,11 +446,11 @@ class PatternLearner:
         """保存模式"""
         try:
             data = {
-                'patterns': [p.to_dict() for p in self.patterns.values()],
-                'stats': self.stats,
+                "patterns": [p.to_dict() for p in self.patterns.values()],
+                "stats": self.stats,
             }
 
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
 
             self.logger.info(f"模式已保存: {file_path}")
@@ -494,7 +465,7 @@ class PatternLearner:
             if not path.exists():
                 return
 
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
             # 恢复模式
@@ -502,14 +473,14 @@ class PatternLearner:
             self.by_type = defaultdict(list)
             self.by_key = {}
 
-            for p_data in data.get('patterns', []):
+            for p_data in data.get("patterns", []):
                 pattern = Pattern.from_dict(p_data)
                 self.patterns[pattern.id] = pattern
                 self.by_type[pattern.type].append(pattern)
                 self.by_key[pattern.pattern_key] = pattern
 
             # 恢复统计
-            self.stats.update(data.get('stats', {}))
+            self.stats.update(data.get("stats", {}))
 
             self.logger.info(f"模式已加载: {file_path}")
 

@@ -3,6 +3,7 @@
 为 Web 端提供 HTTP 接口，支持模块化架构
 """
 
+import asyncio
 import logging
 import os
 import time
@@ -219,11 +220,7 @@ class WebAPI:
         if self.cross_terminal_routes and self.cross_terminal_routes.get_router():
             self.router.include_router(self.cross_terminal_routes.get_router())
 
-        if (
-            hasattr(self, "tts_routes")
-            and self.tts_routes
-            and self.tts_routes.get_router()
-        ):
+        if hasattr(self, "tts_routes") and self.tts_routes and self.tts_routes.get_router():
             self.router.include_router(self.tts_routes.get_router())
 
         # ========== 兼容旧API路径 ==========
@@ -248,10 +245,7 @@ class WebAPI:
                     "disk_usage_percent": d.percent,
                     "disk_used_gb": round(d.used / (1024**3), 1),
                     "disk_total_gb": round(d.total / (1024**3), 1),
-                    "uptime_seconds": int(
-                        time.time()
-                        - getattr(psutil, "boot_time", lambda: time.time() - 1)()
-                    )
+                    "uptime_seconds": int(time.time() - getattr(psutil, "boot_time", lambda: time.time() - 1)())
                     if hasattr(psutil, "boot_time")
                     else 0,
                     "process_count": len(psutil.pids()),
@@ -264,11 +258,7 @@ class WebAPI:
         async def get_emotion_state():
             """获取当前情绪状态"""
             try:
-                if (
-                    self.decision_hub
-                    and hasattr(self.decision_hub, "emotion")
-                    and self.decision_hub.emotion
-                ):
+                if self.decision_hub and hasattr(self.decision_hub, "emotion") and self.decision_hub.emotion:
                     s = self.decision_hub.emotion.get_emotion_state()
                     if s:
                         return {
@@ -286,9 +276,7 @@ class WebAPI:
             try:
                 import glob
 
-                lfs = sorted(
-                    glob.glob("logs/*.log"), key=os.path.getmtime, reverse=True
-                )
+                lfs = sorted(glob.glob("logs/*.log"), key=os.path.getmtime, reverse=True)
                 lines = []
                 for lf in lfs[:3]:
                     try:
@@ -322,9 +310,7 @@ class WebAPI:
             try:
                 fp = os.path.join(os.getcwd(), path)
                 fp = os.path.normpath(fp)
-                if not fp.startswith(
-                    os.path.normpath(os.getcwd())
-                ) or not os.path.isfile(fp):
+                if not fp.startswith(os.path.normpath(os.getcwd())) or not os.path.isfile(fp):
                     return {"error": "文件不存在"}
                 with open(fp, "r", encoding="utf-8", errors="ignore") as f:
                     return {"path": path, "content": f.read()}
@@ -351,9 +337,7 @@ class WebAPI:
                         "memory_stats": status.get("memory_stats", {}),
                         "stats": status.get("stats", {}),
                         "platform_info": platform_info,
-                        "system_capabilities": platform_info.get(
-                            "system_capabilities", {}
-                        ),
+                        "system_capabilities": platform_info.get("system_capabilities", {}),
                         "available_tools": platform_info.get("available_tools", []),
                         "capabilities": platform_info.get("capabilities", {}),
                         "timestamp": datetime.utcnow().isoformat(),
@@ -430,33 +414,17 @@ class WebAPI:
                     destination="decision_hub",
                 )
 
-                (
-                    self.decision_hub.emotion.get_emotion_state()
-                    if self.decision_hub.emotion
-                    else None
-                )
-                (
-                    self.decision_hub.personality.get_profile()
-                    if self.decision_hub.personality
-                    else None
-                )
+                (self.decision_hub.emotion.get_emotion_state() if self.decision_hub.emotion else None)
+                (self.decision_hub.personality.get_profile() if self.decision_hub.personality else None)
 
-                response = await self.decision_hub.process_perception_cross_platform(
-                    message
-                )
+                response = await self.decision_hub.process_perception_cross_platform(message)
 
                 if not response:
                     response = "抱歉，我无法处理您的请求。"
 
-                emotion_after = (
-                    self.decision_hub.emotion.get_emotion_state()
-                    if self.decision_hub.emotion
-                    else None
-                )
+                emotion_after = self.decision_hub.emotion.get_emotion_state() if self.decision_hub.emotion else None
                 personality_after = (
-                    self.decision_hub.personality.get_profile()
-                    if self.decision_hub.personality
-                    else None
+                    self.decision_hub.personality.get_profile() if self.decision_hub.personality else None
                 )
 
                 emotion_result = None
@@ -488,9 +456,7 @@ class WebAPI:
                     "emotion": emotion_result,
                     "personality": personality_result,
                     "tools_used": getattr(self.decision_hub, "_last_tools_used", []),
-                    "memory_retrieved": getattr(
-                        self.decision_hub, "_last_memory_retrieved", False
-                    ),
+                    "memory_retrieved": getattr(self.decision_hub, "_last_memory_retrieved", False),
                 }
             except Exception as e:
                 logger.error(f"[WebAPI] Web聊天处理失败: {e}", exc_info=True)
@@ -526,9 +492,7 @@ class WebAPI:
 
                         perms_file = Path("config/permissions.json")
                         if perms_file.exists():
-                            perms_data = _json.loads(
-                                perms_file.read_text(encoding="utf-8")
-                            )
+                            perms_data = _json.loads(perms_file.read_text(encoding="utf-8"))
                             for u in perms_data.get("users", []):
                                 if u.get("usg_id") == lookup_id:
                                     linked_to = u.get("linked_to")
@@ -553,9 +517,7 @@ class WebAPI:
                         from core.unified_permission import get_permission_engine
 
                         engine = get_permission_engine()
-                        if engine and engine.is_superadmin(
-                            str(lookup_id), platform=platform
-                        ):
+                        if engine and engine.is_superadmin(str(lookup_id), platform=platform):
                             perception["is_owner"] = True
                             perception["canonical_user_id"] = str(lookup_id)
                     except Exception:
@@ -570,11 +532,7 @@ class WebAPI:
                     yield f"data: {json.dumps({'type': 'session_id', 'data': None, 'session_id': session_id}, ensure_ascii=False)}\n\n"
 
                     try:
-                        response = (
-                            await self.decision_hub.process_perception_cross_platform(
-                                message
-                            )
-                        )
+                        response = await self.decision_hub.process_perception_cross_platform(message)
 
                         if not response:
                             response = "抱歉，弥娅无法处理这个请求呢。"
@@ -583,9 +541,7 @@ class WebAPI:
                         try:
                             import json as _json
 
-                            with open(
-                                "config/tts_config.json", "r", encoding="utf-8"
-                            ) as _f:
+                            with open("config/tts_config.json", "r", encoding="utf-8") as _f:
                                 _cfg = _json.load(_f)
                             if _cfg.get("local_playback_enabled") and response:
                                 asyncio.ensure_future(self._do_tts_local(response))
@@ -661,9 +617,7 @@ class WebAPI:
                             "id": p.get("id"),
                             "name": p.get("name", p.get("id")),
                             "enable": p.get("id") in enabled,
-                            "status": "running"
-                            if p.get("id") in enabled
-                            else "stopped",
+                            "status": "running" if p.get("id") in enabled else "stopped",
                             "error_count": 0,
                         }
                         for p in platforms
@@ -927,9 +881,7 @@ class WebAPI:
                     client_wrapper = pool.create_ai_client(task_type="simple_chat")
 
                 if not client_wrapper:
-                    raise HTTPException(
-                        status_code=503, detail="No available model client"
-                    )
+                    raise HTTPException(status_code=503, detail="No available model client")
 
                 if not client_wrapper.client:
                     raise HTTPException(
@@ -948,11 +900,7 @@ class WebAPI:
                                     parts.append(block.get("text", ""))
                                 elif block.get("type") == "image_url":
                                     img = block.get("image_url", {})
-                                    parts.append(
-                                        img.get("url", "")
-                                        if isinstance(img, dict)
-                                        else str(img)
-                                    )
+                                    parts.append(img.get("url", "") if isinstance(img, dict) else str(img))
                                 else:
                                     parts.append(str(block))
                             else:
@@ -970,9 +918,7 @@ class WebAPI:
                     for m in messages
                 ]
 
-                openai_messages = client_wrapper._convert_messages_to_openai_format(
-                    ai_messages
-                )
+                openai_messages = client_wrapper._convert_messages_to_openai_format(ai_messages)
 
                 request_id = f"chatcmpl-{uuid.uuid4().hex[:24]}"
 
@@ -989,9 +935,7 @@ class WebAPI:
 
                 if tools:
                     request_params["tools"] = tools
-                    request_params["tool_choice"] = (
-                        client_wrapper._normalize_tool_choice(tool_choice or "auto")
-                    )
+                    request_params["tool_choice"] = client_wrapper._normalize_tool_choice(tool_choice or "auto")
                 elif tool_choice:
                     request_params["tool_choice"] = tool_choice
 
@@ -1000,11 +944,7 @@ class WebAPI:
                     async def generate_sse():
                         created = int(time.time())
                         try:
-                            response_stream = (
-                                await client_wrapper.client.chat.completions.create(
-                                    **request_params
-                                )
-                            )
+                            response_stream = await client_wrapper.client.chat.completions.create(**request_params)
                             async for chunk in response_stream:
                                 chunk_dict = chunk.model_dump()
                                 chunk_dict.setdefault("id", request_id)
@@ -1049,9 +989,7 @@ class WebAPI:
                     )
 
                 # 非 stream 模式（原逻辑）
-                response = await client_wrapper.client.chat.completions.create(
-                    **request_params
-                )
+                response = await client_wrapper.client.chat.completions.create(**request_params)
 
                 choice = response.choices[0]
                 msg = choice.message
@@ -1080,16 +1018,12 @@ class WebAPI:
                         {
                             "index": 0,
                             "message": message_dict,
-                            "finish_reason": "tool_calls"
-                            if msg.tool_calls
-                            else (choice.finish_reason or "stop"),
+                            "finish_reason": "tool_calls" if msg.tool_calls else (choice.finish_reason or "stop"),
                         }
                     ],
                     "usage": {
                         "prompt_tokens": getattr(response.usage, "prompt_tokens", 0),
-                        "completion_tokens": getattr(
-                            response.usage, "completion_tokens", 0
-                        ),
+                        "completion_tokens": getattr(response.usage, "completion_tokens", 0),
                         "total_tokens": getattr(response.usage, "total_tokens", 0),
                     },
                 }
@@ -1173,9 +1107,7 @@ __all__ = [
 
 
 # 向后兼容：创建函数式接口
-def create_web_api(
-    web_net: Any, decision_hub: Any, github_store: Any = None
-) -> Optional[WebAPI]:
+def create_web_api(web_net: Any, decision_hub: Any, github_store: Any = None) -> Optional[WebAPI]:
     """创建 Web API 实例（向后兼容）
 
     Args:

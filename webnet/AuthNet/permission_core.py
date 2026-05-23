@@ -12,6 +12,7 @@
 
 import json
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -21,12 +22,7 @@ logger = logging.getLogger(__name__)
 class PermissionCore:
     """权限核心管理器"""
 
-    def __init__(
-        self,
-        enable_audit: bool = True,
-        enable_cache: bool = True,
-        use_unified_config: bool = True
-    ):
+    def __init__(self, enable_audit: bool = True, enable_cache: bool = True, use_unified_config: bool = True):
         """
         初始化权限核心
 
@@ -41,6 +37,7 @@ class PermissionCore:
         if use_unified_config:
             try:
                 from .unified_permission_manager import UnifiedPermissionManager
+
                 self._unified_manager = UnifiedPermissionManager()
                 logger.info("使用统一权限配置文件模式")
             except Exception as e:
@@ -61,19 +58,19 @@ class PermissionCore:
         # 权限缓存
         self.enable_cache = enable_cache
         self._cache = None
-    
+
     def load_users(self) -> Dict[str, Any]:
         """加载用户数据"""
         if self.users_file.exists():
-            return json.loads(self.users_file.read_text(encoding='utf-8', errors='replace'))
+            return json.loads(self.users_file.read_text(encoding="utf-8", errors="replace"))
         return {"users": []}
 
     def load_groups(self) -> Dict[str, Any]:
         """加载权限组数据"""
         if self.groups_file.exists():
-            return json.loads(self.groups_file.read_text(encoding='utf-8', errors='replace'))
+            return json.loads(self.groups_file.read_text(encoding="utf-8", errors="replace"))
         return {"groups": {}}
-    
+
     def check_permission(
         self,
         user_id: str,
@@ -81,7 +78,7 @@ class PermissionCore:
         context: Optional[Dict[str, Any]] = None,
         list_mode: bool = False,
         log_audit: bool = True,
-        use_cache: bool = True
+        use_cache: bool = True,
     ) -> Union[str, bool]:
         """
         检查权限
@@ -106,7 +103,7 @@ class PermissionCore:
                 context=context,
                 list_mode=list_mode,
                 log_audit=log_audit,
-                use_cache=use_cache
+                use_cache=use_cache,
             )
 
         # 【传统模式】检查缓存
@@ -128,26 +125,27 @@ class PermissionCore:
             if u.get("user_id") == user_id:
                 user = u
                 break
-        
+
         if not user:
             # 用户不存在，根据平台自动分配权限组
             # 桌面端用户自动获得 User 权限组
             default_groups = ["Default"]
-            
+
             # 桌面端用户自动获得 User 权限组
-            if user_id.startswith("desktop_") or (context and context.get("platform") == "desktop") or user_id.startswith("terminal_") or (context and context.get("platform") == "terminal"):
+            if (
+                user_id.startswith("desktop_")
+                or (context and context.get("platform") == "desktop")
+                or user_id.startswith("terminal_")
+                or (context and context.get("platform") == "terminal")
+            ):
                 default_groups = ["User"]
-            
-            user = {
-                "user_id": user_id,
-                "permission_groups": default_groups,
-                "permissions": []
-            }
-        
+
+            user = {"user_id": user_id, "permission_groups": default_groups, "permissions": []}
+
         # 收集用户权限组
         user_groups = user.get("permission_groups", [])
         perm_groups.extend(user_groups)
-        
+
         # 收集用户直接权限
         user_perms = user.get("permissions", [])
         if isinstance(user_perms, str):
@@ -155,7 +153,7 @@ class PermissionCore:
             perm_list.append(user_perms)
         elif isinstance(user_perms, list):
             perm_list.extend(user_perms)
-        
+
         # 从权限组收集权限
         groups = groups_data.get("groups", {})
         for group_name in perm_groups:
@@ -165,7 +163,7 @@ class PermissionCore:
                 perm_list.extend(group_perms)
             elif isinstance(group_perms, str):
                 perm_list.append(group_perms)
-        
+
         # 如果是list_mode，返回所有权限
         if list_mode:
             return f"权限组: {set(perm_groups)}, 拥有权限: {set(perm_list)}"
@@ -180,7 +178,7 @@ class PermissionCore:
                     user_id=user_id,
                     permission=permission,
                     result=result,
-                    platform=context.get('platform') if context else None
+                    platform=context.get("platform") if context else None,
                 )
             except Exception:
                 pass  # 审计日志失败不应影响主流程
@@ -196,6 +194,7 @@ class PermissionCore:
         if self._audit_logger is None:
             try:
                 from .audit import get_audit_logger
+
                 self._audit_logger = get_audit_logger()
             except Exception:
                 pass
@@ -206,6 +205,7 @@ class PermissionCore:
         if self._cache is None:
             try:
                 from .cache import get_permission_cache
+
                 self._cache = get_permission_cache()
             except Exception:
                 pass
@@ -243,7 +243,7 @@ class PermissionCore:
     def _has_permission(self, perm_list: List[str], permission: str) -> bool:
         """
         检查权限列表中是否有指定权限
-        
+
         权限规则（优先级从高到低）：
         1. 超级管理员 ("*") - 最高优先级
         2. 精确拒绝 (例如: -tool.web_search)
@@ -254,51 +254,51 @@ class PermissionCore:
         # 1. 超级管理员
         if "*" in perm_list:
             return True
-        
+
         # 2. 精确拒绝
         if f"-{permission}" in perm_list:
             return False
-        
+
         # 3. 精确允许
         if permission in perm_list:
             return True
-        
+
         # 4. 父级权限处理
         if "." in permission:
             parts = permission.split(".")
             parent_module = parts[0]
-            
+
             # 4.1 父级显式拒绝
             if f"-{parent_module}" in perm_list or f"-{parent_module}.*" in perm_list:
                 return False
-            
+
             # 4.2 父级通配符允许
             if f"{parent_module}.*" in perm_list or parent_module in perm_list:
                 return True
-        
+
         # 5. 默认拒绝
         return False
-    
+
     def grant_permission(self, user_id: str, permission: str) -> bool:
         """
         授予权限
-        
+
         Args:
             user_id: 用户ID
             permission: 权限节点
-        
+
         Returns:
             是否成功
         """
         users_data = self.load_users()
-        
+
         # 查找或创建用户
         user = None
         for u in users_data.get("users", []):
             if u.get("user_id") == user_id:
                 user = u
                 break
-        
+
         if not user:
             user = {
                 "user_id": user_id,
@@ -306,100 +306,94 @@ class PermissionCore:
                 "platform": "unknown",
                 "permission_groups": ["Default"],
                 "permissions": [],
-                "created_at": datetime.now().isoformat()
+                "created_at": datetime.now().isoformat(),
             }
             users_data["users"].append(user)
-        
+
         # 确保permissions是列表
         if "permissions" not in user:
             user["permissions"] = []
         elif isinstance(user["permissions"], str):
             # 如果是字符串，转为列表
             user["permissions"] = [user["permissions"]] if user["permissions"] else []
-        
+
         # 添加权限
         if isinstance(user["permissions"], list) and permission not in user["permissions"]:
             user["permissions"].append(permission)
-        
+
         # 保存
-        self.users_file.write_text(
-            json.dumps(users_data, indent=2, ensure_ascii=False),
-            encoding='utf-8'
-        )
-        
+        self.users_file.write_text(json.dumps(users_data, indent=2, ensure_ascii=False), encoding="utf-8")
+
         return True
-    
+
     def revoke_permission(self, user_id: str, permission: str) -> bool:
         """
         撤销权限
-        
+
         Args:
             user_id: 用户ID
             permission: 权限节点
-        
+
         Returns:
             是否成功
         """
         users_data = self.load_users()
-        
+
         # 查找用户
         user = None
         for u in users_data.get("users", []):
             if u.get("user_id") == user_id:
                 user = u
                 break
-        
+
         if not user:
             return False
-        
+
         # 移除权限
         user_perms = user.get("permissions", [])
         if isinstance(user_perms, list) and permission in user_perms:
             user_perms.remove(permission)
             user["permissions"] = user_perms
-        
+
         # 保存
-        self.users_file.write_text(
-            json.dumps(users_data, indent=2, ensure_ascii=False),
-            encoding='utf-8'
-        )
-        
+        self.users_file.write_text(json.dumps(users_data, indent=2, ensure_ascii=False), encoding="utf-8")
+
         return True
-    
+
     def list_user_permissions(self, user_id: str) -> Dict[str, Any]:
         """
         列出用户权限详情
-        
+
         Args:
             user_id: 用户ID
-        
+
         Returns:
             用户权限详情
         """
         users_data = self.load_users()
         groups_data = self.load_groups()
-        
+
         # 查找用户
         user = None
         for u in users_data.get("users", []):
             if u.get("user_id") == user_id:
                 user = u
                 break
-        
+
         if not user:
             return {"error": "用户不存在"}
-        
+
         # 计算权限
         perm_list = []
         perm_groups = user.get("permission_groups", [])
-        
+
         # 用户直接权限
         user_perms = user.get("permissions", [])
         if isinstance(user_perms, list):
             perm_list.extend(user_perms)
         elif isinstance(user_perms, str):
             perm_list.append(user_perms)
-        
+
         # 权限组权限
         groups = groups_data.get("groups", {})
         for group_name in perm_groups:
@@ -409,7 +403,7 @@ class PermissionCore:
                 perm_list.extend(group_perms)
             elif isinstance(group_perms, str):
                 perm_list.append(group_perms)
-        
+
         return {
             "user_id": user_id,
             "username": user.get("username", user_id),
@@ -417,20 +411,13 @@ class PermissionCore:
             "direct_permissions": user_perms if isinstance(user_perms, list) else [user_perms],
             "effective_permissions": list(set(perm_list)),
             "platform": user.get("platform", "unknown"),
-            "created_at": user.get("created_at")
+            "created_at": user.get("created_at"),
         }
-    
+
     def save_users(self, users_data: Dict[str, Any]):
         """保存用户数据"""
-        self.users_file.write_text(
-            json.dumps(users_data, indent=2, ensure_ascii=False),
-            encoding='utf-8'
-        )
-    
+        self.users_file.write_text(json.dumps(users_data, indent=2, ensure_ascii=False), encoding="utf-8")
+
     def save_groups(self, groups_data: Dict[str, Any]):
         """保存权限组数据"""
-        self.groups_file.write_text(
-            json.dumps(groups_data, indent=2, ensure_ascii=False),
-            encoding='utf-8'
-        )
-
+        self.groups_file.write_text(json.dumps(groups_data, indent=2, ensure_ascii=False), encoding="utf-8")
