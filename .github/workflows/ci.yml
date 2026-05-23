@@ -58,6 +58,9 @@ jobs:
         curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
+    - name: Install system dependencies
+      run: sudo apt-get update -y && sudo apt-get install -y libasound2-dev
+
     - name: Install dependencies
       run: |
         uv venv
