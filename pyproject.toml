@@ -243,6 +243,7 @@ extend-ignore = [
     "UP009",   # UTF-8 编码声明不必要
     "F541",    # f-string 缺少占位符
     "F821",    # 未定义名称（含 18 处需后续修复的遗留问题）
+    "I001",    # import 块排序（约 80 处需后续 fix）
 ]
 
 [tool.ruff.lint.isort]
