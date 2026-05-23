@@ -96,26 +96,20 @@ class RealVectorCache:
             )
 
             fields = [
-                FieldSchema(
-                    name="id", dtype=DataType.INT64, is_primary=True, auto_id=True
-                ),
+                FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),
                 FieldSchema(name="text", dtype=DataType.VARCHAR, max_length=65535),
                 FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=384),
                 FieldSchema(name="metadata", dtype=DataType.JSON),
             ]
             schema = CollectionSchema(fields=fields, description="Miya memory vectors")
-            self._collection = Collection(
-                name=self.collection_name, schema=schema, using="default"
-            )
+            self._collection = Collection(name=self.collection_name, schema=schema, using="default")
 
             index_params = {
                 "index_type": "AUTOINDEX",
                 "metric_type": "COSINE",
                 "params": {},
             }
-            self._collection.create_index(
-                field_name="vector", index_params=index_params
-            )
+            self._collection.create_index(field_name="vector", index_params=index_params)
             self._collection.load()
 
         except Exception as e:
@@ -192,6 +186,8 @@ class RealVectorCache:
         return True
 
     async def close(self):
+        from pymilvus import connections
+
         """关闭连接"""
         if self._client:
             with contextlib.suppress(builtins.BaseException):

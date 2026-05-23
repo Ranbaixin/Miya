@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from core.config_event_system import ConfigEvent
-from core.constants import Encoding
+from core.constants import Encoding, NetworkTimeout
 
 try:
     from watchdog.events import FileModifiedEvent, FileSystemEventHandler
@@ -56,6 +56,20 @@ except ImportError:
     logger.warning("[配置热更新] watchdog未安装，热更新功能将被禁用")
 
 logger = logging.getLogger(__name__)
+
+
+_RESTART_REQUIRED_KEYS = {
+    "database",
+    "port",
+    "host",
+    "server",
+    "redis",
+    "neo4j",
+    "milvus",
+    "chromadb",
+    "api_keys",
+    "admin_password",
+}
 
 
 class ConfigFileHandler(FileSystemEventHandler):
