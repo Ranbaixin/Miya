@@ -26,11 +26,50 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
         BasePlatform.__init__(self, config)
         self._bot_client = None
         self._bot_task: Optional[asyncio.Task] = None
+        self._msg_seq_counter = 0
 
         self.appid = self.config.get("appid", "")
         self.secret = self.config.get("secret", "")
         self.bot_qq = self.config.get("bot_qq", "")
         self.sandbox = self.config.get("sandbox", False)
+
+    def _next_msg_seq(self) -> int:
+        self._msg_seq_counter += 1
+        return self._msg_seq_counter
+
+    async def send_private_message(self, user_id: int, message: str) -> bool:
+        """发送私聊消息（主动）"""
+        if not self._bot_client:
+            return False
+        try:
+            await self._bot_client.api.post_c2c_message(
+                openid=str(user_id),
+                msg_type=0,
+                content=message,
+                msg_seq=self._next_msg_seq(),
+            )
+            logger.info(f"[qqofficial] 主动私聊消息 -> {user_id}: {message[:30]}")
+            return True
+        except Exception as e:
+            logger.error(f"[qqofficial] 主动私聊消息失败: {e}")
+            return False
+
+    async def send_group_message(self, group_id: int, message: str) -> bool:
+        """发送群聊消息（主动）"""
+        if not self._bot_client:
+            return False
+        try:
+            await self._bot_client.api.post_group_message(
+                group_openid=str(group_id),
+                msg_type=0,
+                content=message,
+                msg_seq=self._next_msg_seq(),
+            )
+            logger.info(f"[qqofficial] 主动群聊消息 -> {group_id}: {message[:30]}")
+            return True
+        except Exception as e:
+            logger.error(f"[qqofficial] 主动群聊消息失败: {e}")
+            return False
 
     async def _do_connect(self) -> bool:
         if not self.appid or not self.secret:
@@ -69,9 +108,9 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
                 try:
                     author = msg.author
                     user_id = str(
-                        getattr(author, "id", None)
+                        getattr(author, "user_openid", None)
                         or getattr(author, "member_openid", None)
-                        or getattr(author, "user_openid", None)
+                        or getattr(author, "id", None)
                         or ""
                     )
                     user_name = (
@@ -96,7 +135,10 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
                         )
                         if not voice_sent:
                             for chunk in platform._split_message(resp_text, 500):
-                                await msg.reply(content=chunk)
+                                await msg.reply(
+                                    content=chunk,
+                                    msg_seq=platform._next_msg_seq(),
+                                )
                 except Exception as e:
                     logger.error(f"[qqofficial] 消息处理异常: {e}")
 
@@ -132,6 +174,7 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
                                     msg_type=0,
                                     msg_id=msg.id,
                                     content=chunk,
+                                    msg_seq=platform._next_msg_seq(),
                                 )
                             await asyncio.sleep(0.3)
                 except Exception as e:

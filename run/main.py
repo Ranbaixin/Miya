@@ -193,6 +193,8 @@ class Miya:
         self._init_vector_system()
 
         # 初始化 DecisionHub（跨平台统一决策）
+        from core.unified_platform.registry import get_registry as get_platform_registry
+
         self.decision_hub = DecisionHub(
             mlink=self.mlink,
             ai_client=self.ai_client,
@@ -209,6 +211,7 @@ class Miya:
             identity=self.identity,
             model_pool=getattr(self, "model_pool", None),
             miya_instance=self,
+            platform_registry=get_platform_registry(),
         )
 
         # 初始化平台适配器

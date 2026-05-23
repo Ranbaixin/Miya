@@ -737,10 +737,11 @@ class ProactiveChatSystem:
                                 target = target_id
                                 if chat_type == "group" and ctx:
                                     target = ctx.target_id
+                                platform = ctx.platform if ctx else "terminal"
 
                                 try:
                                     await self._send_callback(
-                                        result.message, target, chat_type
+                                        result.message, target, chat_type, platform
                                     )
                                     logger.info(
                                         f"[主动聊天] [后台] [{result.trigger_type}] "

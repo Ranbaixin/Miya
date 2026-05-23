@@ -118,6 +118,7 @@ class DecisionHub:
         model_pool=None,
         miya_instance=None,
         unified_memory=None,
+        platform_registry=None,
     ):
         """
         初始化决策层
@@ -155,6 +156,7 @@ class DecisionHub:
         self.identity = identity
         self.model_pool = model_pool
         self.miya_instance = miya_instance
+        self.platform_registry = platform_registry
 
         # 当前使用的模型信息（用于日志显示）
         self._last_selected_model: str = ""
@@ -323,26 +325,42 @@ class DecisionHub:
             self.proactive_chat.set_rich_context_provider(_rich_context_provider)
 
             async def _proactive_send_callback(
-                message: str, target_id: int, chat_type: str
+                message: str, target_id: int, chat_type: str, platform: str = "terminal"
             ):
-                """主动聊天消息发送回调 — 发送 + 记入记忆"""
-                platform = "aiocqhttp" if self.onebot_client else "terminal"
+                """主动聊天消息发送回调 — 跨平台分发 + 记入记忆"""
+                if not message or not target_id:
+                    return
 
-                if chat_type == "group":
-                    if self.onebot_client:
-                        await self.onebot_client.send_group_message(target_id, message)
-                else:
-                    if self.onebot_client:
-                        await self.onebot_client.send_private_message(
+                sent = False
+
+                # 1. 尝试通过 PlatformRegistry 分发（支持所有平台）
+                if self.platform_registry and platform and platform != "terminal":
+                    inst = self.platform_registry.get(platform)
+                    if inst and hasattr(inst, "is_online") and inst.is_online:
+                        if chat_type == "group" and hasattr(inst, "send_group_message"):
+                            sent = await inst.send_group_message(target_id, message)
+                        elif hasattr(inst, "send_private_message"):
+                            sent = await inst.send_private_message(target_id, message)
+
+                # 2. 回退到 OneBot（兼容）
+                if not sent and self.onebot_client:
+                    if chat_type == "group":
+                        sent = await self.onebot_client.send_group_message(
                             target_id, message
                         )
                     else:
-                        print(f"\n【弥娅主动】 {message}\n")
+                        sent = await self.onebot_client.send_private_message(
+                            target_id, message
+                        )
+
+                # 3. 最终回退：打印到控制台
+                if not sent:
+                    logger.info(f"[主动聊天] 无法发送到 {platform}: {message}")
 
                 # 记入统一记忆系统（长时记忆，不含工作记忆避免反馈污染）
                 try:
                     perception = {
-                        "platform": platform,
+                        "platform": platform or "terminal",
                         "user_id": str(target_id) if chat_type != "group" else "0",
                         "group_id": str(target_id) if chat_type == "group" else "0",
                         "message_type": chat_type,
@@ -489,27 +507,67 @@ class DecisionHub:
             )
 
             if result and result.should_respond and result.message:
-                # 发送主动消息
-                if result.context and result.context.chat_type == "group":
-                    group_id_to_send = result.context.target_id
-                    logger.info(
-                        f"[决策层] [主动聊天] 发送到群 {group_id_to_send}: {result.message}"
-                    )
-                    if self.onebot_client:
-                        await self.onebot_client.send_group_message(
+                # 确定平台（优先使用 result.context 中的平台）
+                ctx_platform = result.context.platform if result.context else None
+                platform = ctx_platform or perception.get("platform", "terminal")
+
+                # 通过平台注册表分发消息
+                sent = False
+                if self.platform_registry and platform and platform != "terminal":
+                    inst = self.platform_registry.get(platform)
+                    if inst and hasattr(inst, "is_online") and inst.is_online:
+                        if chat_type == "group" and hasattr(inst, "send_group_message"):
+                            group_id_to_send = (
+                                result.context.target_id
+                                if result.context
+                                else target_id
+                            )
+                            logger.info(
+                                f"[决策层] [主动聊天] 发送到群 {group_id_to_send} (via {platform}): {result.message}"
+                            )
+                            sent = await inst.send_group_message(
+                                group_id_to_send, result.message
+                            )
+                        elif hasattr(inst, "send_private_message"):
+                            user_id_to_send = (
+                                result.context.target_id
+                                if result.context
+                                else target_id
+                            )
+                            logger.info(
+                                f"[决策层] [主动聊天] 发送到用户 {user_id_to_send} (via {platform}): {result.message}"
+                            )
+                            sent = await inst.send_private_message(
+                                user_id_to_send, result.message
+                            )
+
+                # 回退到 OneBot（兼容）
+                if not sent and self.onebot_client:
+                    if chat_type == "group":
+                        group_id_to_send = (
+                            result.context.target_id if result.context else target_id
+                        )
+                        logger.info(
+                            f"[决策层] [主动聊天] 发送到群 {group_id_to_send}: {result.message}"
+                        )
+                        sent = await self.onebot_client.send_group_message(
                             group_id_to_send, result.message
                         )
-                else:
-                    user_id_to_send = (
-                        result.context.target_id if result.context else target_id
-                    )
-                    logger.info(
-                        f"[决策层] [主动聊天] 发送到用户 {user_id_to_send}: {result.message}"
-                    )
-                    if self.onebot_client:
-                        await self.onebot_client.send_private_message(
+                    else:
+                        user_id_to_send = (
+                            result.context.target_id if result.context else target_id
+                        )
+                        logger.info(
+                            f"[决策层] [主动聊天] 发送到用户 {user_id_to_send}: {result.message}"
+                        )
+                        sent = await self.onebot_client.send_private_message(
                             user_id_to_send, result.message
                         )
+
+                if not sent:
+                    logger.warning(
+                        f"[决策层] [主动聊天] 无法发送到平台 {platform}: {result.message}"
+                    )
 
                 return result
 
