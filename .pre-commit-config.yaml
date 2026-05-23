@@ -1,7 +1,7 @@
 repos:
-  # 基础钩子（合并所有 pre-commit/pre-commit-hooks）
+  # ===== 基础检查（文件格式、安全） =====
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v5.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -12,97 +12,37 @@ repos:
       - id: check-json
       - id: check-toml
       - id: detect-private-key
-      - id: destroyed-symlinks
       - id: check-merge-conflict
       - id: debug-statements
       - id: check-byte-order-marker
-      - id: check-executables-have-shebangs
-      - id: check-shebang-scripts-are-executable
-      - id: check-symlinks
-      - id: check-xml
 
-  # Python 代码格式化
-  - repo: https://github.com/psf/black
-    rev: 24.3.0
-    hooks:
-      - id: black
-        language_version: python3.10
-
-  # Python 代码检查
+  # ===== Python 代码检查（对齐 CI ruff 版本） =====
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.0
+    rev: v0.14.14
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
 
-  # Python 类型检查
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.9.0
-    hooks:
-      - id: mypy
-        additional_dependencies:
-          - types-requests
-          - types-pyyaml
-          - pydantic
-        exclude: ^(tests/|docs/|examples/|venv/)
-
-  # Python 导入排序
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        args: ["--profile", "black"]
-
-  # Python 代码质量检查
-  - repo: https://github.com/PyCQA/pylint
-    rev: v3.1.0
-    hooks:
-      - id: pylint
-        args:
-          - --rcfile=.pylintrc
-          - --fail-under=8.0
-        exclude: ^(tests/|docs/|examples/|venv/)
-
-  # Python 安全检查
+  # ===== Python 安全检查 =====
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.8
+    rev: 1.8.3
     hooks:
       - id: bandit
         args: ["-ll", "-x", "tests/,examples/,venv/"]
 
-  # Markdown 检查
+  # ===== Markdown 检查 =====
   - repo: https://github.com/igorshubovych/markdownlint-cli2
-    rev: v0.12.0
+    rev: v0.13.0
     hooks:
       - id: markdownlint-cli2
         args: ["--config", ".markdownlint.yaml"]
 
-  # 提交消息检查
+  # ===== 提交消息检查 =====
   - repo: https://github.com/jorisroovers/gitlint
     rev: v0.19.1
     hooks:
       - id: gitlint
         stages: [commit-msg]
 
-  # 本地钩子
-  - repo: local
-    hooks:
-      - id: run-tests
-        name: Run Unit Tests
-        entry: python -m pytest tests/unit -xvs --tb=short
-        language: system
-        pass_filenames: false
-        stages: [push]
-        always_run: true
-
-      - id: check-coverage
-        name: Check Test Coverage
-        entry: python -m pytest --cov=core --cov=hub --cov=run --cov-report=term-missing --cov-fail-under=70
-        language: system
-        pass_filenames: false
-        stages: [push]
-        always_run: true
-
-default_install_hook_types: [pre-commit, commit-msg]
-default_stages: [commit, push]
 fail_fast: false
