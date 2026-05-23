@@ -4,12 +4,12 @@ from typing import Any, cast
 
 import botpy
 import botpy.message
-from botpy import Client
-
-from astrbot import logger
 from astrbot.api.event import MessageChain
 from astrbot.api.platform import AstrBotMessage, MessageType, Platform, PlatformMetadata
 from astrbot.core.platform.astr_message_event import MessageSesion
+from botpy import Client
+
+from astrbot import logger
 from astrbot.core.utils.webhook_utils import log_webhook_info
 
 from ...register import register_platform_adapter

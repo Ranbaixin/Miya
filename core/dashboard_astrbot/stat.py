@@ -5,25 +5,25 @@ import threading
 import time
 import traceback
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import cmp_to_key
 from pathlib import Path
 
 import aiohttp
 import psutil
+from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
+from astrbot.core.db.migration.helper import check_migration_needed_v4
+from astrbot.core.db.po import ProviderStat
 from quart import request
 from sqlmodel import select
 
-from core.astrbot_compat import DEMO_MODE, logger
 from astrbot.core.config import VERSION
-from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
-from core.astrbot_compat.db import BaseDatabase
-from astrbot.core.db.migration.helper import check_migration_needed_v4
-from astrbot.core.db.po import ProviderStat
 from astrbot.core.utils.astrbot_path import get_astrbot_path
 from astrbot.core.utils.io import get_dashboard_version
 from astrbot.core.utils.storage_cleaner import StorageCleaner
 from astrbot.core.utils.version_comparator import VersionComparator
+from core.astrbot_compat import DEMO_MODE, logger
+from core.astrbot_compat.db import BaseDatabase
 
 from .route import Response, Route, RouteContext
 
@@ -196,8 +196,8 @@ class StatRoute(Route):
     @staticmethod
     def _ensure_aware_utc(value: datetime) -> datetime:
         if value.tzinfo is None:
-            return value.replace(tzinfo=timezone.utc)
-        return value.astimezone(timezone.utc)
+            return value.replace(tzinfo=UTC)
+        return value.astimezone(UTC)
 
     async def get_provider_token_stats(self):
         try:
@@ -208,7 +208,7 @@ class StatRoute(Route):
             if days not in (1, 3, 7):
                 days = 1
 
-            local_tz = datetime.now().astimezone().tzinfo or timezone.utc
+            local_tz = datetime.now().astimezone().tzinfo or UTC
             now_local = datetime.now(local_tz)
             range_start_local = (now_local - timedelta(days=days)).replace(
                 minute=0, second=0, microsecond=0
@@ -217,7 +217,7 @@ class StatRoute(Route):
                 hour=0, minute=0, second=0, microsecond=0
             )
             query_start_local = min(range_start_local, today_start_local)
-            query_start_utc = query_start_local.astimezone(timezone.utc)
+            query_start_utc = query_start_local.astimezone(UTC)
 
             async with self.db_helper.get_db() as session:
                 result = await session.execute(

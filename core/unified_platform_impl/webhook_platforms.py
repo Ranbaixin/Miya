@@ -7,15 +7,11 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
-import hmac
+import contextlib
 import json
 import logging
-import time
-from typing import Dict, Any, Optional
 
 from .webhook_base import WebhookPlatform
-from .message_mixin import MessageMixin
 
 logger = logging.getLogger("Miya.Platform.Webhooks")
 
@@ -41,14 +37,14 @@ class LarkPlatform(WebhookPlatform):
 
     async def _do_connect(self) -> bool:
         if not self._app_id or not self._app_secret:
-            logger.error(f"[lark] 缺少 app_id 或 app_secret")
+            logger.error("[lark] 缺少 app_id 或 app_secret")
             return False
         try:
-            from lark_oapi.ws import Client
-            from lark_oapi.event.dispatcher_handler import EventDispatcherHandler
             from lark_oapi.api.im.v1.model.p2_im_message_receive_v1 import (
                 P2ImMessageReceiveV1,
             )
+            from lark_oapi.event.dispatcher_handler import EventDispatcherHandler
+            from lark_oapi.ws import Client
 
             platform = self
 
@@ -88,10 +84,10 @@ class LarkPlatform(WebhookPlatform):
                 await self._ws_client._receive_message_loop()
 
             self._tasks.append(asyncio.create_task(run_lark_ws()))
-            logger.info(f"[lark] 飞书长连接已启动")
+            logger.info("[lark] 飞书长连接已启动")
             return True
         except ImportError:
-            logger.error(f"[lark] 请安装 lark-oapi")
+            logger.error("[lark] 请安装 lark-oapi")
             return False
         except Exception as e:
             logger.error(f"[lark] 连接失败: {e}", exc_info=True)
@@ -139,10 +135,8 @@ class LarkPlatform(WebhookPlatform):
 
     async def _do_disconnect(self):
         if self._ws_client:
-            try:
+            with contextlib.suppress(Exception):
                 await self._ws_client._disconnect()
-            except Exception:
-                pass
         self._ws_client = None
 
     async def _do_health_check(self) -> bool:
@@ -176,7 +170,7 @@ class KOOKPlatform(WebhookPlatform):
                 user_id = d.get("author_id", "") or author.get("id", "")
 
                 if content.strip():
-                    response = await self.route_to_decision_hub(
+                    await self.route_to_decision_hub(
                         content=content,
                         user_id=str(user_id),
                         message_type=channel_type if channel_type else "private",
@@ -221,7 +215,7 @@ class SlackPlatform(WebhookPlatform):
                 channel = event.get("channel", "")
 
                 if text.strip():
-                    response = await self.route_to_decision_hub(
+                    await self.route_to_decision_hub(
                         content=text,
                         user_id=str(user_id),
                         message_type="group",
@@ -338,7 +332,7 @@ class SatoriPlatform(WebhookPlatform):
                 content = msg.get("content", "")
                 user = body.get("user", body.get("payload", {}).get("user", {}))
                 user_id = user.get("id", "")
-                channel = body.get(
+                body.get(
                     "channel", body.get("payload", {}).get("channel", {})
                 )
 

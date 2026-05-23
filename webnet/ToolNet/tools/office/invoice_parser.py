@@ -3,12 +3,15 @@
 支持发票信息提取与报销表格生成
 """
 
-import re
-import pandas as pd
-from typing import Dict, List, Optional, Any
-from pathlib import Path
-from datetime import datetime
+import builtins
+import contextlib
 import logging
+import re
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List
+
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -80,10 +83,8 @@ class InvoiceParser:
 
             # 提取金额（数值）
             if "金额" in extracted_fields:
-                try:
+                with contextlib.suppress(builtins.BaseException):
                     extracted_fields["金额_数值"] = float(extracted_fields["金额"].replace(',', '').replace('¥', ''))
-                except:
-                    pass
 
             invoice_data["提取字段"] = extracted_fields
             logger.info(f"成功解析发票，置信度: {confidence:.2f}")

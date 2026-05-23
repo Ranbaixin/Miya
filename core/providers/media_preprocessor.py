@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 多媒体预处理模块
 
@@ -18,7 +17,7 @@ import uuid
 from io import BytesIO
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-from urllib.parse import urlparse, unquote
+from urllib.parse import unquote, urlparse
 
 import httpx
 from PIL import Image as PILImage

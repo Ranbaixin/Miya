@@ -2,10 +2,10 @@
 本地文件搜索工具 handler
 """
 
-import os
 import logging
-from typing import Dict, Any
+import os
 from pathlib import Path
+from typing import Any, Dict
 
 logger = logging.getLogger("local_file_finder")
 
@@ -54,7 +54,6 @@ async def execute(args: Dict[str, Any], context: Any) -> str:
 
 def _search_files(search_path: str, file_name: str, max_results: int) -> list:
     """搜索文件"""
-    import fnmatch
 
     results = []
     search_name = file_name.lower()

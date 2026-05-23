@@ -1,11 +1,13 @@
 import asyncio
+import contextlib
 import os
 import uuid
 
-from astrbot.core import logger
 from astrbot.core.provider.entities import ProviderType
 from astrbot.core.provider.provider import TTSProvider
 from astrbot.core.provider.register import register_provider_adapter
+
+from astrbot.core import logger
 from astrbot.core.utils.astrbot_path import get_astrbot_temp_path
 
 try:
@@ -117,10 +119,8 @@ class GenieTTSProvider(TTSProvider):
                     await audio_queue.put((text, audio_data))
 
                     # Clean up
-                    try:
+                    with contextlib.suppress(OSError):
                         os.remove(path)
-                    except OSError:
-                        pass
                 else:
                     logger.error(f"Genie TTS failed to generate audio for: {text}")
 

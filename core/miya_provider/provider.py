@@ -5,13 +5,12 @@ Miya Provider 抽象基类
 
 import abc
 import asyncio
+import logging
 import os
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Literal, Optional, Union
-
-import logging
+from typing import Literal
 
 logger = logging.getLogger(__name__)
 
@@ -227,7 +226,7 @@ class LLMProvider(AbstractProvider):
             tool_results = []
             for tool_call in response.tool_calls:
                 tool_name = tool_call.get("function", {}).get("name", "")
-                tool_args = tool_call.get("function", {}).get("arguments", {})
+                tool_call.get("function", {}).get("arguments", {})
 
                 current_messages.append(
                     {

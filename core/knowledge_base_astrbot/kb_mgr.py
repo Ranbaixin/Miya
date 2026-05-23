@@ -1,8 +1,9 @@
 from pathlib import Path
 
-from core.astrbot_compat import logger
 from astrbot.core.provider.manager import ProviderManager
+
 from astrbot.core.utils.astrbot_path import get_astrbot_knowledge_base_path
+from core.astrbot_compat import logger
 
 # from .chunking.fixed_size import FixedSizeChunker
 from .chunking.recursive import RecursiveCharacterChunker

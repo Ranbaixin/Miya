@@ -3,11 +3,9 @@
 测试 JobQueue, ProfileStorage, VectorStore, CognitiveService
 """
 
-import asyncio
 import time
 
 import pytest
-
 
 # ============================================================================
 # JobQueue 测试
@@ -40,7 +38,7 @@ async def test_jobqueue_enqueue_dequeue(job_queue):
 @pytest.mark.asyncio
 async def test_jobqueue_retry_flow(job_queue):
     """测试重试流程"""
-    job_id = await job_queue.enqueue(
+    await job_queue.enqueue(
         {
             "job_id": "retry-001",
             "text": "测试重试",

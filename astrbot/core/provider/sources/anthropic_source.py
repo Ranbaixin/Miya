@@ -9,13 +9,13 @@ from anthropic import AsyncAnthropic
 from anthropic.types import Message
 from anthropic.types.message_delta_usage import MessageDeltaUsage
 from anthropic.types.usage import Usage
-
-from astrbot import logger
 from astrbot.api.provider import Provider
 from astrbot.core.agent.message import AudioURLPart, ContentPart, ImageURLPart, TextPart
 from astrbot.core.exceptions import EmptyModelOutputError
 from astrbot.core.provider.entities import LLMResponse, TokenUsage
 from astrbot.core.provider.func_tool_manager import ToolSet
+
+from astrbot import logger
 from astrbot.core.utils.io import download_image_by_url
 from astrbot.core.utils.network_utils import (
     create_proxy_client,
@@ -280,14 +280,13 @@ class ProviderAnthropic(Provider):
             token_usage.output = usage.output_tokens
 
     async def _query(self, payloads: dict, tools: ToolSet | None) -> LLMResponse:
-        if tools:
-            if tool_list := tools.get_func_desc_anthropic_style():
-                payloads["tools"] = tool_list
-                payloads["tool_choice"] = {
-                    "type": "any"
-                    if payloads.get("tool_choice") == "required"
-                    else "auto"
-                }
+        if tools and (tool_list := tools.get_func_desc_anthropic_style()):
+            payloads["tools"] = tool_list
+            payloads["tool_choice"] = {
+                "type": "any"
+                if payloads.get("tool_choice") == "required"
+                else "auto"
+            }
 
         extra_body = self.provider_config.get("custom_extra_body", {})
 
@@ -367,14 +366,13 @@ class ProviderAnthropic(Provider):
         payloads: dict,
         tools: ToolSet | None,
     ) -> AsyncGenerator[LLMResponse, None]:
-        if tools:
-            if tool_list := tools.get_func_desc_anthropic_style():
-                payloads["tools"] = tool_list
-                payloads["tool_choice"] = {
-                    "type": "any"
-                    if payloads.get("tool_choice") == "required"
-                    else "auto"
-                }
+        if tools and (tool_list := tools.get_func_desc_anthropic_style()):
+            payloads["tools"] = tool_list
+            payloads["tool_choice"] = {
+                "type": "any"
+                if payloads.get("tool_choice") == "required"
+                else "auto"
+            }
 
         # 用于累积工具调用信息
         tool_use_buffer = {}
@@ -489,9 +487,8 @@ class ProviderAnthropic(Provider):
                         # 清理缓冲区
                         del tool_use_buffer[event.index]
 
-                elif event.type == "message_delta":
-                    if event.usage:
-                        self._update_usage(usage, event.usage)
+                elif event.type == "message_delta" and event.usage:
+                    self._update_usage(usage, event.usage)
 
         # 返回最终的完整结果
         final_response = LLMResponse(

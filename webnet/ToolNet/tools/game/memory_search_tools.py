@@ -4,10 +4,9 @@
 """
 
 import logging
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 from .memory_retriever import MemoryRetriever
-
 
 logger = logging.getLogger(__name__)
 

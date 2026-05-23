@@ -2,10 +2,10 @@
 微博热搜工具 - info_agent专用
 """
 
-from typing import Dict, Any
 import logging
+from typing import Any, Dict
+
 import httpx
-import os
 
 logger = logging.getLogger(__name__)
 

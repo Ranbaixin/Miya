@@ -9,14 +9,12 @@ MIYA Tools 工具系统
 - 知识库工具
 """
 
-import logging
 import asyncio
-import subprocess
+import logging
 import os
-import json
-from typing import Dict, Any, Optional, List, Callable
-from dataclasses import dataclass
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -171,8 +169,8 @@ class PythonTool(Tool):
             result = {"output": "", "error": None}
 
             # 创建输出捕获
-            from io import StringIO
             import sys
+            from io import StringIO
 
             old_stdout = sys.stdout
             old_stderr = sys.stderr
@@ -355,7 +353,7 @@ class ToolRegistry:
 
 def get_tools_definition() -> List[Dict]:
     """获取工具定义 (JSON Schema)"""
-    registry = ToolRegistry()
+    ToolRegistry()
     return [
         {
             "type": "function",

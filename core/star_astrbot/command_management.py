@@ -4,14 +4,15 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
-from astrbot.api import sp
-from astrbot.core import db_helper, logger
 from astrbot.core.db.po import CommandConfig
 from astrbot.core.star.filter.command import CommandFilter
 from astrbot.core.star.filter.command_group import CommandGroupFilter
 from astrbot.core.star.filter.permission import PermissionType, PermissionTypeFilter
 from astrbot.core.star.star import star_map
 from astrbot.core.star.star_handler import StarHandlerMetadata, star_handlers_registry
+
+from astrbot.api import sp
+from astrbot.core import db_helper, logger
 
 
 @dataclass
@@ -126,7 +127,7 @@ async def rename_command(
         module_path=descriptor.module_path,
         original_command=descriptor.original_command or descriptor.handler_name,
         resolved_command=new_fragment,
-        enabled=True if descriptor.enabled else False,
+        enabled=bool(descriptor.enabled),
         keep_original_alias=False,
         conflict_key=descriptor.original_command,
         resolution_strategy="manual_rename",
@@ -491,7 +492,7 @@ def _set_filter_aliases(
     current_aliases = getattr(filter_ref, "alias", set())
     if set(aliases) == current_aliases:
         return
-    setattr(filter_ref, "alias", set(aliases))
+    filter_ref.alias = set(aliases)
     if hasattr(filter_ref, "_cmpl_cmd_names"):
         filter_ref._cmpl_cmd_names = None
 

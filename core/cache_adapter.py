@@ -5,16 +5,20 @@
 保持向后兼容性，逐步迁移
 """
 import asyncio
+import builtins
+import contextlib
 import logging
-from typing import Any, Dict, Optional, Callable
 from functools import wraps
+from typing import Any, Callable, Dict, Optional
 
 from core.unified_cache import (
-    get_cache, unified_cache_get, unified_cache_set,
-    unified_cache_delete, unified_cache_clear, cached
+    cached,
+    get_cache,
+    unified_cache_clear,
+    unified_cache_delete,
+    unified_cache_get,
+    unified_cache_set,
 )
-from core.constants import CacheTTL
-
 
 logger = logging.getLogger(__name__)
 
@@ -247,10 +251,8 @@ def cached_decorator(ttl: Optional[float] = None, key_prefix: str = ""):
             result = func(*args, **kwargs)
             
             # 存入缓存
-            try:
+            with contextlib.suppress(builtins.BaseException):
                 asyncio.run(cache.set(cache_key, result, ttl))
-            except:
-                pass
             
             return result
         

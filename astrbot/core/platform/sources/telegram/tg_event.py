@@ -5,12 +5,6 @@ from collections.abc import Callable
 from typing import Any, cast
 
 import telegramify_markdown
-from telegram import ReactionTypeCustomEmoji, ReactionTypeEmoji
-from telegram.constants import ChatAction
-from telegram.error import BadRequest
-from telegram.ext import ExtBot
-
-from astrbot import logger
 from astrbot.api.event import AstrMessageEvent, MessageChain
 from astrbot.api.message_components import (
     At,
@@ -22,6 +16,12 @@ from astrbot.api.message_components import (
     Video,
 )
 from astrbot.api.platform import AstrBotMessage, MessageType, PlatformMetadata
+from telegram import ReactionTypeCustomEmoji, ReactionTypeEmoji
+from telegram.constants import ChatAction
+from telegram.error import BadRequest
+from telegram.ext import ExtBot
+
+from astrbot import logger
 from astrbot.core.utils.metrics import Metric
 
 

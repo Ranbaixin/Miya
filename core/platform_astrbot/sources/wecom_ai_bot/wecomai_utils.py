@@ -169,10 +169,9 @@ async def process_encrypted_image(
     # 1. 下载加密图片
     logger.info("开始下载加密图片: %s", image_url)
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(image_url, timeout=15) as response:
-                response.raise_for_status()
-                encrypted_data = await response.read()
+        async with aiohttp.ClientSession() as session, session.get(image_url, timeout=15) as response:
+            response.raise_for_status()
+            encrypted_data = await response.read()
         logger.info("图片下载成功，大小: %d 字节", len(encrypted_data))
     except (aiohttp.ClientError, asyncio.TimeoutError) as e:
         error_msg = f"下载图片失败: {e!s}"

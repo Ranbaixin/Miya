@@ -1,3 +1,4 @@
+import contextlib
 import os
 import socket
 import sys
@@ -51,14 +52,10 @@ class Metric:
         kwargs["v"] = VERSION
         kwargs["os"] = sys.platform
         payload = {"metrics_data": kwargs}
-        try:
+        with contextlib.suppress(Exception):
             kwargs["hn"] = socket.gethostname()
-        except Exception:
-            pass
-        try:
+        with contextlib.suppress(Exception):
             kwargs["iid"] = Metric.get_installation_id()
-        except Exception:
-            pass
         try:
             if "adapter_name" in kwargs:
                 await db_helper.insert_platform_stats(

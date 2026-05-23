@@ -4,7 +4,6 @@ import random
 from typing import Any
 
 import astrbot.api.message_components as Comp
-from astrbot.api import logger
 from astrbot.api.event import MessageChain
 from astrbot.api.platform import (
     AstrBotMessage,
@@ -13,6 +12,8 @@ from astrbot.api.platform import (
     register_platform_adapter,
 )
 from astrbot.core.platform.astr_message_event import MessageSession
+
+from astrbot.api import logger
 
 from .misskey_api import MisskeyAPI
 
@@ -396,13 +397,7 @@ class MisskeyPlatformAdapter(Platform):
 
             # 检查是否有文件组件
             has_file_components = any(
-                isinstance(comp, Comp.Image)
-                or isinstance(comp, Comp.File)
-                or hasattr(comp, "convert_to_file_path")
-                or hasattr(comp, "get_file")
-                or any(
-                    hasattr(comp, a) for a in ("file", "url", "path", "src", "source")
-                )
+                isinstance(comp, (Comp.Image, Comp.File)) or hasattr(comp, "convert_to_file_path") or hasattr(comp, "get_file") or any(hasattr(comp, a) for a in ("file", "url", "path", "src", "source"))
                 for comp in message_chain.chain
             )
 
@@ -513,14 +508,7 @@ class MisskeyPlatformAdapter(Platform):
             for comp in message_chain.chain:
                 try:
                     if (
-                        isinstance(comp, Comp.Image)
-                        or isinstance(comp, Comp.File)
-                        or hasattr(comp, "convert_to_file_path")
-                        or hasattr(comp, "get_file")
-                        or any(
-                            hasattr(comp, a)
-                            for a in ("file", "url", "path", "src", "source")
-                        )
+                        isinstance(comp, (Comp.Image, Comp.File)) or hasattr(comp, "convert_to_file_path") or hasattr(comp, "get_file") or any(hasattr(comp, a) for a in ("file", "url", "path", "src", "source"))
                     ):
                         file_components.append(comp)
                 except Exception:

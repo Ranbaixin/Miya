@@ -3,9 +3,10 @@
 ExitGame - 退出当前的跑团或酒馆模式，返回普通模式
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
+
+from webnet.EntertainmentNet.game_mode import GameModeType, get_game_mode_manager
 from webnet.ToolNet.base import BaseTool
-from webnet.EntertainmentNet.game_mode import get_game_mode_manager, GameModeType
 
 
 class ExitGame(BaseTool):
@@ -70,7 +71,7 @@ class ExitGame(BaseTool):
         mode_name = mode_names.get(exited_mode, "游戏") if exited_mode else "游戏"
 
         messages = {
-            GameModeType.TRPG: f"""🎲 **跑团模式已结束**
+            GameModeType.TRPG: """🎲 **跑团模式已结束**
 
 感谢大家的参与！本次冒险到此告一段落。
 
@@ -82,7 +83,7 @@ class ExitGame(BaseTool):
 • 随时再次启动游戏模式
 
 我是弥娅，随时待命！💙""",
-            GameModeType.TAVERN: f"""🍺 **酒馆时光结束**
+            GameModeType.TAVERN: """🍺 **酒馆时光结束**
 
 感谢你的光临，很高兴能和你度过这段时光。
 

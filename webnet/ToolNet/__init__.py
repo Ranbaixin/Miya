@@ -28,9 +28,9 @@ ToolNet/
 """
 import logging
 from typing import Any, Dict, List, Optional
-from .subnet import ToolSubnet
-from .registry import ToolRegistry
 
+from .registry import ToolRegistry
+from .subnet import ToolSubnet
 
 logger = logging.getLogger(__name__)
 

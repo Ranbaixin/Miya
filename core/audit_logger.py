@@ -17,16 +17,15 @@ Miya 审计日志模块 - 安全加强
 import asyncio
 import json
 import logging
-import os
 import re
 import threading
-from dataclasses import dataclass, field, asdict
+import uuid
+from collections import defaultdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Union
-from collections import defaultdict
-import uuid
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -384,10 +383,7 @@ class AuditLogger:
         if start_time and event.timestamp < start_time:
             return False
 
-        if end_time and event.timestamp > end_time:
-            return False
-
-        return True
+        return not (end_time and event.timestamp > end_time)
 
     def _query_from_files(
         self,

@@ -14,7 +14,6 @@ EntertainmentNet - 娱乐子网
 """
 from .subnet import EntertainmentSubnet
 
-
 __all__ = ['EntertainmentSubnet']
 
 

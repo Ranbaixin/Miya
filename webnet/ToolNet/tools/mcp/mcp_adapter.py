@@ -6,7 +6,7 @@ AI 模型在 function-calling schema 中直接看到它们，全平台均可调�
 """
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List
 
 from webnet.ToolNet.base import BaseTool, ToolContext
 

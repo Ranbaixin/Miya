@@ -562,9 +562,8 @@ class KookExtra(KookBaseReceiveDataClass):
     @classmethod
     def parse_type(cls, value):
         """优先尝试匹配枚举，失败则保留原值"""
-        if isinstance(value, str):
-            if value in {e.value for e in KookRoleExtraType}:
-                return KookRoleExtraType(value)
+        if isinstance(value, str) and value in {e.value for e in KookRoleExtraType}:
+            return KookRoleExtraType(value)
 
         return value
 

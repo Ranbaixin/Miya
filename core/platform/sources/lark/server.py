@@ -156,12 +156,11 @@ class LarkWebhookServer:
             nonce = request.headers.get("X-Lark-Request-Nonce", "")
             signature = request.headers.get("X-Lark-Signature", "")
 
-            if timestamp and nonce and signature:
-                if not self.verify_signature(
-                    timestamp, nonce, self.encrypt_key, body, signature
-                ):
-                    logger.error("[Lark Webhook] 签名验证失败")
-                    return {"error": "Invalid signature"}, 401
+            if timestamp and nonce and signature and not self.verify_signature(
+                timestamp, nonce, self.encrypt_key, body, signature
+            ):
+                logger.error("[Lark Webhook] 签名验证失败")
+                return {"error": "Invalid signature"}, 401
 
         # 检查是否是加密事件
         if "encrypt" in event_data:
@@ -175,10 +174,7 @@ class LarkWebhookServer:
         # 验证 token
         if self.verification_token:
             header = event_data.get("header", {})
-            if header:
-                token = header.get("token", "")
-            else:
-                token = event_data.get("token", "")
+            token = header.get("token", "") if header else event_data.get("token", "")
             if token != self.verification_token:
                 logger.error("[Lark Webhook] Verification Token 不匹配。")
                 return {"error": "Invalid verification token"}, 401

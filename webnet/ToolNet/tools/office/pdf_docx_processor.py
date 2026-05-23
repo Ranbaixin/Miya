@@ -3,12 +3,13 @@ PDF和Word文档处理工具 - 弥娅核心模块
 支持内容提取、文档分析
 """
 
+import logging
+import re
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 import PyPDF2
 from docx import Document
-from typing import Dict, List, Optional, Any
-from pathlib import Path
-import re
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ class PDFDocxProcessor:
             elif path.suffix.lower() == '.docx':
                 return self._load_docx(file_path)
             else:
-                logger.error(f"旧版.doc文件暂不支持，请转换为.docx")
+                logger.error("旧版.doc文件暂不支持，请转换为.docx")
                 return None
         except Exception as e:
             logger.error(f"加载文件失败: {e}")
@@ -219,7 +220,6 @@ class PDFDocxProcessor:
 
     def extract_images_from_docx(self, file_path: str, output_dir: str = "./extracted_images") -> List[str]:
         """从Word文档中提取图片"""
-        from docx.opc.constants import RELATIONSHIP_TYPE as RT
 
         doc = Document(file_path)
         image_paths = []

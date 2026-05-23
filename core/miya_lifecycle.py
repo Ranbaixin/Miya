@@ -4,10 +4,9 @@
 整合 Miya 核心 + AstrBot 架构设计
 """
 
-import asyncio
 import logging
 from asyncio import Queue
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger("Miya.CoreLifecycle")
 
@@ -65,8 +64,8 @@ class MiyaCoreLifecycle:
     async def _init_miya_core(self):
         """初始化 Miya 核心"""
         try:
-            from core.personality import Personality
             from core.identity import Identity
+            from core.personality import Personality
 
             self.miya_personality = Personality()
             self.miya_identity = Identity()

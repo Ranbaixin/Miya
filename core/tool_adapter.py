@@ -10,9 +10,9 @@
 """
 
 import logging
-from typing import Dict, Any, Optional, List
-from webnet.ToolNet.base import ToolContext
+from typing import Any, Dict, Optional
 
+from webnet.ToolNet.base import ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +123,7 @@ class ToolAdapter:
         """
         if not self.tool_registry:
             logger.warning(f"工具注册表未设置，无法执行工具: {tool_name}")
-            return f"错误：工具系统未初始化"
+            return "错误：工具系统未初始化"
 
         # 准备过滤后的上下文
         filtered_context = self._prepare_tool_context(context)
@@ -231,10 +231,7 @@ class ToolAdapter:
                 return True
         # 如果结果包含这些关键字，认为是失败的
         result_lower = result.lower()
-        for keyword in failure_keywords:
-            if keyword.lower() in result_lower and "降级" not in result:
-                return False
-        return True
+        return all(not (keyword.lower() in result_lower and "降级" not in result) for keyword in failure_keywords)
 
     async def _do_execute_tool(
         self, tool_name: str, args: Dict[str, Any], tool_context: ToolContext
@@ -281,10 +278,7 @@ class ToolAdapter:
                         and params[0] == "self"
                         and params[1] == "args"
                         and params[2] == "context"
-                    ):
-                        result = await tool.execute(args, tool_context)
-                    # 无self的新版签名: execute(args: Dict, context: ToolContext)
-                    elif (
+                    ) or (
                         len(params) == 2
                         and params[0] == "args"
                         and params[1] == "context"
@@ -295,10 +289,7 @@ class ToolAdapter:
                         len(params) >= 2
                         and params[0] == "self"
                         and params[1] in ("context", "kwargs", "tool_context")
-                    ):
-                        result = await tool.execute(tool_context, **args)
-                    # 无self的旧版签名: execute(context, **kwargs)
-                    elif len(params) >= 1 and params[0] in (
+                    ) or len(params) >= 1 and params[0] in (
                         "context",
                         "kwargs",
                         "tool_context",
@@ -308,7 +299,7 @@ class ToolAdapter:
                         # 兜底：尝试新版签名
                         result = await tool.execute(args, tool_context)
 
-                except Exception as e:
+                except Exception:
                     # 如果检测失败，尝试两种常见签名
                     try:
                         result = await tool.execute(args, tool_context)

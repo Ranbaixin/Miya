@@ -2,7 +2,8 @@
 文昌帝君灵签工具 handler
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
+
 from webnet.ToolNet.tools.entertainment.wenchang_dijun import WenchangDijun
 
 

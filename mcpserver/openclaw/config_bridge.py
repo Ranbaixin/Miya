@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 OpenClaw 配置桥接 - 注入弥娅 (MIYA) 模型池配置到 openclaw.json
 
@@ -12,7 +11,7 @@ import json
 import logging
 import secrets
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger("openclaw.config")
 

@@ -8,7 +8,7 @@ AuthNet - 鉴权子网
 - API访问控制
 """
 
-from .subnet import AuthSubnet
 from .permission_core import PermissionCore
+from .subnet import AuthSubnet
 
 __all__ = ["AuthSubnet", "PermissionCore"]

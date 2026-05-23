@@ -2,7 +2,8 @@
 QQ文件读取工具 handler
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
+
 from webnet.ToolNet.tools.qq.qq_file_reader import QQFileReaderTool
 
 

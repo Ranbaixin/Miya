@@ -5,8 +5,6 @@ from collections.abc import AsyncGenerator, Awaitable, Callable
 from typing import Any
 
 import docstring_parser
-
-from core.astrbot_compat import logger
 from astrbot.core.agent.agent import Agent
 from astrbot.core.agent.handoff import HandoffTool
 from astrbot.core.agent.hooks import BaseAgentRunHooks
@@ -14,6 +12,8 @@ from astrbot.core.agent.tool import FunctionTool
 from astrbot.core.message.message_event_result import MessageEventResult
 from astrbot.core.provider.func_tool_manager import PY_TO_JSON_TYPE, SUPPORTED_TYPES
 from astrbot.core.provider.register import llm_tools
+
+from core.astrbot_compat import logger
 
 from ..filter.command import CommandFilter
 from ..filter.command_group import CommandGroupFilter
@@ -643,9 +643,8 @@ def register_llm_tool(name: str | None = None, **kwargs):
                 "name": arg.arg_name,
                 "description": arg.description,
             }
-            if sub_type_name:
-                if type_name == "array":
-                    arg_json_schema["items"] = {"type": sub_type_name}
+            if sub_type_name and type_name == "array":
+                arg_json_schema["items"] = {"type": sub_type_name}
             args.append(arg_json_schema)
 
         if not registering_agent:

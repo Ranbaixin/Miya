@@ -10,10 +10,10 @@ from typing import Any, Literal
 from urllib.parse import parse_qs, urlencode, urlparse
 
 import aiohttp
-
-from astrbot.api import logger
 from astrbot.api.event import MessageChain
 from astrbot.api.message_components import At, File, Image, Plain, Record, Video
+
+from astrbot.api import logger
 from astrbot.core.utils.media_utils import convert_audio_format
 
 
@@ -118,25 +118,24 @@ class WecomAIBotWebhookClient:
         )
 
         timeout = aiohttp.ClientTimeout(total=self.timeout_seconds)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.post(
-                self._build_upload_url(media_type),
-                data=form,
-            ) as response:
-                text = await response.text()
-                if response.status != 200:
-                    raise WecomAIBotWebhookError(
-                        f"上传媒体失败: HTTP {response.status}, {text}"
-                    )
-                result = await response.json(content_type=None)
-                if result.get("errcode") != 0:
-                    raise WecomAIBotWebhookError(
-                        f"上传媒体失败: {result.get('errcode')} {result.get('errmsg')}"
-                    )
-                media_id = result.get("media_id", "")
-                if not media_id:
-                    raise WecomAIBotWebhookError("上传媒体失败: 返回缺少 media_id")
-                return str(media_id)
+        async with aiohttp.ClientSession(timeout=timeout) as session, session.post(
+            self._build_upload_url(media_type),
+            data=form,
+        ) as response:
+            text = await response.text()
+            if response.status != 200:
+                raise WecomAIBotWebhookError(
+                    f"上传媒体失败: HTTP {response.status}, {text}"
+                )
+            result = await response.json(content_type=None)
+            if result.get("errcode") != 0:
+                raise WecomAIBotWebhookError(
+                    f"上传媒体失败: {result.get('errcode')} {result.get('errmsg')}"
+                )
+            media_id = result.get("media_id", "")
+            if not media_id:
+                raise WecomAIBotWebhookError("上传媒体失败: 返回缺少 media_id")
+            return str(media_id)
 
     async def send_file(self, file_path: Path) -> None:
         media_id = await self.upload_media(file_path, "file")

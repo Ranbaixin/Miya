@@ -5,14 +5,11 @@ MIYA Platform Adapter (独立版本)
 """
 
 import logging
-import asyncio
-import json
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
-import aiohttp
+from typing import Any, Callable, Dict, List, Optional
+
 import httpx
 
 logger = logging.getLogger(__name__)

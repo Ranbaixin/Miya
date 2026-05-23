@@ -5,11 +5,12 @@ QQ 官方机器人平台 (从旧代码迁移)
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
-from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 from core.unified_platform.base import BasePlatform
+
 from .message_mixin import MessageMixin
 
 logger = logging.getLogger("Miya.Platform.QQOfficial")
@@ -207,10 +208,8 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
     async def _do_disconnect(self):
         if self._bot_task and not self._bot_task.done():
             self._bot_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._bot_task
-            except asyncio.CancelledError:
-                pass
         self._bot_client = None
         self._bot_task = None
 
@@ -229,7 +228,6 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
         try:
             import os
 
-            file_path = audio_path
             file_uri = f"file:///{audio_path.replace(os.sep, '/')}"
             if private_msg:
                 await private_msg._api.post_c2c_file(
@@ -244,7 +242,7 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
                     file_type=3,
                     url=file_uri,
                 )
-            logger.info(f"[qqofficial] 语音消息已发送")
+            logger.info("[qqofficial] 语音消息已发送")
         except Exception as e:
             logger.warning(f"[qqofficial] 语音发送失败: {e}，回退文字")
             return False

@@ -2,10 +2,9 @@
 QQ群文件下载工具 handler
 """
 
-import os
 import logging
-from typing import Dict, Any
 from pathlib import Path
+from typing import Any, Dict
 
 logger = logging.getLogger("group_file_downloader")
 

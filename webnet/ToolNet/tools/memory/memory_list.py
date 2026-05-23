@@ -9,12 +9,12 @@
 本工具优先使用新版 MiyaMemoryCore 记忆系统
 """
 
-from typing import Dict, Any, List, Optional
 import logging
-from pathlib import Path
 from datetime import datetime, timedelta
-from webnet.ToolNet.base import BaseTool, ToolContext
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
+from webnet.ToolNet.base import BaseTool, ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +166,7 @@ class MemoryList(BaseTool):
         start_time, end_time = _parse_time_range(time_range, {})
 
         try:
-            from memory import get_memory_core, MemoryLevel, MemorySource
+            from memory import get_memory_core
 
             core = await get_memory_core()
 

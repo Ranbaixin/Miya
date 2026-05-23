@@ -1,17 +1,18 @@
-import re
 import os
-import aiohttp
+import re
 import ssl
-import certifi
-from io import BytesIO
-from typing import List, Tuple
 from abc import ABC, abstractmethod
+from io import BytesIO
+
+import aiohttp
+import certifi
+from PIL import Image, ImageDraw, ImageFont
+
 from astrbot.core.config import VERSION
+from astrbot.core.utils.astrbot_path import get_astrbot_data_path
+from astrbot.core.utils.io import save_temp_img
 
 from . import RenderStrategy
-from PIL import ImageFont, Image, ImageDraw
-from astrbot.core.utils.io import save_temp_img
-from astrbot.core.utils.astrbot_path import get_astrbot_data_path
 
 
 class FontManager:
@@ -634,13 +635,12 @@ class ImageElement(MarkdownElement):
 
             async with aiohttp.ClientSession(
                 trust_env=True, connector=connector
-            ) as session:
-                async with session.get(self.image_url) as resp:
-                    if resp.status == 200:
-                        image_data = await resp.read()
-                        self.image = Image.open(BytesIO(image_data))
-                    else:
-                        print(f"Failed to load image: HTTP {resp.status}")
+            ) as session, session.get(self.image_url) as resp:
+                if resp.status == 200:
+                    image_data = await resp.read()
+                    self.image = Image.open(BytesIO(image_data))
+                else:
+                    print(f"Failed to load image: HTTP {resp.status}")
         except Exception as e:
             print(f"Failed to load image: {e}")
 

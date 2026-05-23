@@ -3,11 +3,10 @@ QQ交互子网 - 数据模型
 从原 qq.py 中拆分出来的数据模型定义
 """
 
-import json
 import logging
-from typing import Any, Callable, Dict, List, Optional, Set, Union
-from datetime import datetime
 from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Union
 
 logger = logging.getLogger(__name__)
 

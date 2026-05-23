@@ -246,9 +246,7 @@ async def convert_audio_format(
     args = ["ffmpeg", "-y", "-i", audio_path]
     if output_format == "amr":
         args.extend(["-ac", "1", "-ar", "8000", "-ab", "12.2k"])
-    elif output_format == "ogg":
-        args.extend(["-acodec", "libopus", "-ac", "1", "-ar", "16000"])
-    elif output_format == "opus":
+    elif output_format == "ogg" or output_format == "opus":
         args.extend(["-acodec", "libopus", "-ac", "1", "-ar", "16000"])
     args.append(output_path)
 

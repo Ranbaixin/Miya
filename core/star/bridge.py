@@ -4,10 +4,10 @@ Star Bridge - Star 插件桥接器
 将 core/star (新架构) 与主系统连接
 """
 
-import logging
 import asyncio
-from typing import Dict, List, Any, Optional
+import logging
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("miya.star.bridge")
 
@@ -88,7 +88,7 @@ class StarBridge:
     def list_stars(self) -> List[Dict]:
         """列出所有插件"""
         return [
-            {"name": name, "loaded": name in self._stars} for name in self._stars.keys()
+            {"name": name, "loaded": name in self._stars} for name in self._stars
         ]
 
 

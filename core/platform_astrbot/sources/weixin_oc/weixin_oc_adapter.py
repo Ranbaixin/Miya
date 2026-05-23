@@ -14,8 +14,6 @@ from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import quote
 
 import qrcode as qrcode_lib
-
-from astrbot import logger
 from astrbot.api.event import MessageChain
 from astrbot.api.message_components import File, Image, Plain, Record, Reply, Video
 from astrbot.api.platform import (
@@ -26,8 +24,10 @@ from astrbot.api.platform import (
     PlatformMetadata,
     register_platform_adapter,
 )
-from core.astrbot_compat import astrbot_config
 from astrbot.core.platform.astr_message_event import MessageSesion
+
+from astrbot import logger
+from core.astrbot_compat import astrbot_config
 from core.astrbot_compat.utils import get_astrbot_temp_path
 
 from .weixin_oc_client import WeixinOCClient
@@ -481,11 +481,10 @@ class WeixinOCAdapter(Platform):
             if state.owners:
                 return
             ticket = state.ticket
-            if ticket:
-                if state.cancel_task is None or state.cancel_task.done():
-                    state.cancel_task = asyncio.create_task(
-                        self._delayed_cancel_typing(user_id, ticket)
-                    )
+            if ticket and (state.cancel_task is None or state.cancel_task.done()):
+                state.cancel_task = asyncio.create_task(
+                    self._delayed_cancel_typing(user_id, ticket)
+                )
 
     async def _cleanup_typing_tasks(self) -> None:
         tasks: list[asyncio.Task] = []

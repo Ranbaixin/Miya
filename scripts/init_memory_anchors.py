@@ -78,7 +78,7 @@ async def init_memory_anchors():
         success_count = 0
         for i, anchor in enumerate(memory_anchors, 1):
             try:
-                result = await memory.add_short_term(
+                await memory.add_short_term(
                     content=anchor["fact"],
                     user_id="jia_main",
                     priority=0.95,

@@ -1,7 +1,7 @@
 """CLI Commands"""
 
-from typing import Dict, Any, Callable, List
 from dataclasses import dataclass
+from typing import Any, Callable, Dict, List
 
 
 @dataclass

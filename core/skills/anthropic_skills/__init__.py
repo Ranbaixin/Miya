@@ -154,10 +154,7 @@ class AnthropicSkillRegistry:
     ) -> str:
         """作为 function tool 的执行入口。"""
         prefix = f"skills{self.dot_delimiter}"
-        if tool_name.startswith(prefix):
-            skill_name = tool_name[len(prefix) :]
-        else:
-            skill_name = tool_name
+        skill_name = tool_name[len(prefix):] if tool_name.startswith(prefix) else tool_name
 
         logger.info(
             "[AnthropicSkills] 执行 skill tool: %s -> %s", tool_name, skill_name

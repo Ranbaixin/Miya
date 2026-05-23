@@ -4,17 +4,17 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
+from astrbot.core.knowledge_base.retrieval.tokenizer import (
+    build_fts5_or_query,
+    load_stopwords,
+    to_fts5_search_text,
+)
 from sqlalchemy import Column, Text, bindparam
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Field, MetaData, SQLModel, col, func, select, text
 
 from astrbot.core import logger
-from astrbot.core.knowledge_base.retrieval.tokenizer import (
-    build_fts5_or_query,
-    load_stopwords,
-    to_fts5_search_text,
-)
 
 FTS_TABLE_NAME = "documents_fts"
 FTS_REBUILD_BATCH_SIZE = 1000
@@ -321,7 +321,7 @@ class DocumentStorage:
             import json
 
             documents = []
-            for doc_id, text, metadata in zip(doc_ids, texts, metadatas):
+            for doc_id, text, metadata in zip(doc_ids, texts, metadatas, strict=False):
                 document = Document(
                     doc_id=doc_id,
                     text=text,
@@ -622,7 +622,7 @@ class DocumentStorage:
                 "rowid": int(doc.id),
                 "search_text": to_fts5_search_text(content, self.stopwords),
             }
-            for doc, content in zip(documents, contents)
+            for doc, content in zip(documents, contents, strict=False)
             if doc.id is not None
         ]
         if not fts_params:

@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 统一QQ配置加载器
 使用弥娅的统一配置系统，从.env文件加载QQ配置
 """
 
-import os
 import logging
-from typing import Dict, Any, Optional
+import os
 import sys
+from typing import Any, Dict, Optional
 
 # 添加项目根目录到Python路径
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -70,6 +69,7 @@ class UnifiedQQConfig:
         logger.info("[UnifiedQQConfig] 从环境变量直接加载配置")
 
         import os
+
         from dotenv import load_dotenv
 
         # 优先使用 config/.env（统一配置位置）

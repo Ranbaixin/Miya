@@ -1,12 +1,14 @@
 """
 发送文本文件工具
 """
-from typing import Dict, Any
+import builtins
+import contextlib
 import logging
 import os
 import tempfile
-from webnet.ToolNet.base import BaseTool, ToolContext
+from typing import Any, Dict
 
+from webnet.ToolNet.base import BaseTool, ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -78,10 +80,7 @@ class SendTextFileTool(BaseTool):
 
             # 解析目标会话
             if target_id is None:
-                if target_type == "group":
-                    target_id = context.group_id
-                else:
-                    target_id = context.user_id
+                target_id = context.group_id if target_type == "group" else context.user_id
 
             if target_id is None:
                 return "❌ 无法确定目标会话ID，请手动指定 target_id"
@@ -102,10 +101,8 @@ class SendTextFileTool(BaseTool):
                     )
 
                 # 删除临时文件
-                try:
+                with contextlib.suppress(builtins.BaseException):
                     os.unlink(temp_path)
-                except:
-                    pass
 
                 if success:
                     return f"✅ 已发送文件: {filename} ({len(content)} 字符)"

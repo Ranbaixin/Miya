@@ -1,5 +1,4 @@
 import discord
-
 from astrbot.api.message_components import BaseMessageComponent
 
 

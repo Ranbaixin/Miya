@@ -6,17 +6,15 @@ Discord 平台适配器
 
 import asyncio
 import logging
-from typing import Any, cast
 
 import discord
-from discord.abc import GuildChannel, Messageable
-
+from discord.abc import GuildChannel
 from miya.core.platform import (
+    MiyaMessageEvent,
     Platform,
     PlatformMetadata,
-    MiyaMessageEvent,
-    register_platform_adapter,
     PlatformStatus,
+    register_platform_adapter,
 )
 
 logger = logging.getLogger("miya.platform.discord")

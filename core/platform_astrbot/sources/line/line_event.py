@@ -5,7 +5,6 @@ import uuid
 from collections.abc import AsyncGenerator
 from pathlib import Path
 
-from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent, MessageChain
 from astrbot.api.message_components import (
     At,
@@ -16,8 +15,10 @@ from astrbot.api.message_components import (
     Record,
     Video,
 )
-from core.astrbot_compat.utils import get_astrbot_temp_path
+
+from astrbot.api import logger
 from astrbot.core.utils.media_utils import get_media_duration
+from core.astrbot_compat.utils import get_astrbot_temp_path
 
 from .line_api import LineAPIClient
 

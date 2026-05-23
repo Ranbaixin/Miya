@@ -1,3 +1,4 @@
+import contextlib
 import os
 import re
 import shutil
@@ -6,15 +7,15 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
 
-from quart import request, send_file
-
-from core.astrbot_compat import DEMO_MODE, logger
 from astrbot.core.computer.computer_client import (
     _discover_bay_credentials,
     sync_skills_to_active_sandboxes,
 )
 from astrbot.core.skills.neo_skill_sync import NeoSkillSyncManager
 from astrbot.core.skills.skill_manager import SkillManager
+from quart import request, send_file
+
+from core.astrbot_compat import DEMO_MODE, logger
 from core.astrbot_compat.utils import get_astrbot_temp_path
 
 from .route import Response, Route, RouteContext
@@ -292,10 +293,8 @@ class SkillsRoute(Route):
                     failed.append({"filename": filename, "error": str(e)})
                 finally:
                     if temp_path and os.path.exists(temp_path):
-                        try:
+                        with contextlib.suppress(Exception):
                             os.remove(temp_path)
-                        except Exception:
-                            pass
 
             if succeeded:
                 try:

@@ -6,8 +6,9 @@ Discord平台交互工具，所有弥娅实例都可以使用。
 """
 
 import logging
-from typing import Dict, Any, Optional, List
 from datetime import datetime
+from typing import Any, Dict, Optional
+
 from .social_base import SocialBase
 
 logger = logging.getLogger(__name__)

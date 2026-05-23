@@ -9,10 +9,8 @@ QQ端记忆查询快捷命令
 - /我的记忆 - 查看自己的记忆
 """
 
-import asyncio
 from typing import Optional
 
-from core.qq_command_config import get_qq_command_config
 from core.text_loader import get_text
 
 
@@ -238,7 +236,7 @@ class MemoryCommandHandler:
 
 /memory stats - View memory statistics
 /memory search [keyword] - Search memories
-/memory recent - View recent memories  
+/memory recent - View recent memories
 /memory tags - View popular tags
 /memory my - View your memories
 

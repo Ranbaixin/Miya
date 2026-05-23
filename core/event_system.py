@@ -4,12 +4,13 @@ MIYA Event 事件系统
 异步事件总线，支持消息、命令、定时任务等事件
 """
 
-import logging
 import asyncio
-from typing import Dict, List, Any, Callable, Optional
+import contextlib
+import logging
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from abc import ABC, abstractmethod
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -135,10 +136,8 @@ class EventBus:
         self._running = False
         if self._dispatcher_task:
             self._dispatcher_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._dispatcher_task
-            except asyncio.CancelledError:
-                pass
         logger.info("[EventBus] 事件总线已停止")
 
     def list_handlers(self) -> Dict[EventType, int]:
@@ -296,10 +295,7 @@ class Pipeline:
 
         for step in self.steps:
             try:
-                if asyncio.iscoroutinefunction(step):
-                    result = await step(result) or result
-                else:
-                    result = step(result) or result
+                result = await step(result) or result if asyncio.iscoroutinefunction(step) else step(result) or result
             except Exception as e:
                 logger.error(f"[Pipeline] 步骤执行失败: {e}")
 

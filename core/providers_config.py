@@ -4,7 +4,8 @@ MIYA Provider 配置
 从 model_pool_manager 获取配置
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
+
 from core.model_pool_manager import get_model_pool
 
 

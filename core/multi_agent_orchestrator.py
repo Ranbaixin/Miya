@@ -5,13 +5,13 @@
 - Agent通信
 - 结果聚合
 """
-import logging
-from typing import Dict, List, Optional, Any, Callable
-from dataclasses import dataclass, field
-from enum import Enum
-from datetime import datetime
 import asyncio
+import logging
 import uuid
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -193,7 +193,7 @@ class MultiAgentOrchestrator:
 
     async def list_agents(self) -> List[Dict]:
         """列出所有Agent"""
-        return [await self.get_agent_status(agent_id) for agent_id in self.agents.keys()]
+        return [await self.get_agent_status(agent_id) for agent_id in self.agents]
 
     # ==================== 任务分配 ====================
 
@@ -346,7 +346,7 @@ class MultiAgentOrchestrator:
         
         # 并行执行所有子任务
         tasks = [
-            execute_single(subtask_id, agent_id) 
+            execute_single(subtask_id, agent_id)
             for subtask_id, agent_id in assignments.items()
         ]
         
@@ -430,11 +430,11 @@ class MultiAgentOrchestrator:
 
     # ==================== Agent通信 ====================
 
-    async def send_message(self, sender_id: str, receiver_id: str, content: Any, 
+    async def send_message(self, sender_id: str, receiver_id: str, content: Any,
                           message_type: str = "text") -> bool:
         """发送消息"""
         if sender_id not in self.agents or receiver_id not in self.agents:
-            logger.warning(f"[MultiAgent] 发送消息失败: Agent不存在")
+            logger.warning("[MultiAgent] 发送消息失败: Agent不存在")
             return False
         
         message = AgentMessage(
@@ -461,7 +461,7 @@ class MultiAgentOrchestrator:
         except asyncio.TimeoutError:
             return None
 
-    async def broadcast_message(self, sender_id: str, content: Any, 
+    async def broadcast_message(self, sender_id: str, content: Any,
                                message_type: str = "text") -> int:
         """广播消息给所有Agent"""
         count = 0
@@ -488,7 +488,7 @@ class MultiAgentOrchestrator:
 
     async def get_task_status(self, task_id: str) -> Optional[Dict]:
         """获取任务状态"""
-        subtasks = [st for st in self.tasks.values() 
+        subtasks = [st for st in self.tasks.values()
                    if st.task_id.startswith(task_id) or st.task_id == task_id]
         if not subtasks:
             return None

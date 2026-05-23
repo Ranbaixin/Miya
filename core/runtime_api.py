@@ -16,13 +16,13 @@ import platform
 import time
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from core.constants import HTTPStatus
 
 try:
     import aiohttp
-    from aiohttp import web, ClientSession, ClientTimeout, WSMsgType
+    from aiohttp import ClientSession, ClientTimeout, WSMsgType, web
 
     AIOHTTP_AVAILABLE = True
 except ImportError:
@@ -886,7 +886,7 @@ class RuntimeAPIServer:
             return f"✅ 终端[{from_terminal}]已连接。弥娅主系统正在处理请求..."
 
         # 使用文本加载器
-        from core.text_loader import is_greeting, get_greeting
+        from core.text_loader import get_greeting, is_greeting
 
         # 简单响应
         if is_greeting(message):

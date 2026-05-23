@@ -10,12 +10,12 @@
 import json
 import logging
 import re
+from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
 
-from memory import get_memory_core, MemoryItem, MemoryQuery, MemoryLevel
-from memory.temporal_parser import parse_temporal, extract_temporal_keywords
+from memory import MemoryItem, MemoryLevel, MemoryQuery, get_memory_core
+from memory.temporal_parser import extract_temporal_keywords, parse_temporal
 
 logger = logging.getLogger("Miya.CognitiveEngine")
 
@@ -73,7 +73,6 @@ class CognitiveEngine:
             memory_core: 记忆核心实例
             embedding_client: 向量嵌入客户端（用于语义相似度计算）
         """
-        import asyncio
 
         self.memory_core = memory_core
         self._memory_core_initialized = False
@@ -169,13 +168,13 @@ class CognitiveEngine:
         keywords = []
 
         # 提取长度大于2的词
-        for topic, topic_keywords in TOPIC_KEYWORDS.items():
+        for _topic, topic_keywords in TOPIC_KEYWORDS.items():
             for keyword in topic_keywords:
                 if keyword in text:
                     keywords.append(keyword)
 
         # 添加触发词
-        for category, triggers in MEMORY_TRIGGERS.items():
+        for _category, triggers in MEMORY_TRIGGERS.items():
             for trigger in triggers:
                 if trigger in text:
                     keywords.append(trigger)
@@ -225,10 +224,7 @@ class CognitiveEngine:
                 return False
 
         # 太短的内容忽略
-        if len(text) < 4:
-            return False
-
-        return True
+        return not len(text) < 4
 
     async def _get_embedding_similarity(self, text: str, memory_content: str) -> float:
         """计算语义相似度（使用embedding）
@@ -278,7 +274,7 @@ class CognitiveEngine:
         if not vec1 or not vec2 or len(vec1) != len(vec2):
             return 0.0
 
-        dot_product = sum(a * b for a, b in zip(vec1, vec2))
+        dot_product = sum(a * b for a, b in zip(vec1, vec2, strict=False))
         magnitude1 = sum(a * a for a in vec1) ** 0.5
         magnitude2 = sum(b * b for b in vec2) ** 0.5
 
@@ -430,7 +426,7 @@ class CognitiveEngine:
         )
 
         if need_anchor_search or is_personal_query:
-            logger.info(f"[认知引擎] 检测到个人信息查询，优先搜索记忆锚点")
+            logger.info("[认知引擎] 检测到个人信息查询，优先搜索记忆锚点")
 
             # 搜索记忆锚点（从配置文件加载的标签）
             for tag in ANCHOR_TAGS:

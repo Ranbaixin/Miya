@@ -3,18 +3,16 @@
 管理已安装的 AstrBot 插件
 """
 
-import asyncio
+import importlib.util
 import json
 import logging
 import os
 import shutil
 import zipfile
-from pathlib import Path
-from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 from datetime import datetime
-import importlib.util
-import sys
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("Miya.PluginManager")
 

@@ -6,16 +6,9 @@ import uuid
 from contextlib import suppress
 from typing import cast
 
+import astrbot.api.message_components as Comp
 from apscheduler.events import EVENT_JOB_ERROR
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from telegram import BotCommand, Update
-from telegram.constants import ChatType
-from telegram.error import Forbidden, InvalidToken, NetworkError
-from telegram.ext import ApplicationBuilder, ContextTypes, ExtBot, filters
-from telegram.ext import MessageHandler as TelegramMessageHandler
-
-import astrbot.api.message_components as Comp
-from astrbot.api import logger
 from astrbot.api.event import MessageChain
 from astrbot.api.platform import (
     AstrBotMessage,
@@ -30,6 +23,13 @@ from astrbot.core.star.filter.command import CommandFilter
 from astrbot.core.star.filter.command_group import CommandGroupFilter
 from astrbot.core.star.star import star_map
 from astrbot.core.star.star_handler import star_handlers_registry
+from telegram import BotCommand, Update
+from telegram.constants import ChatType
+from telegram.error import Forbidden, InvalidToken, NetworkError
+from telegram.ext import ApplicationBuilder, ContextTypes, ExtBot, filters
+from telegram.ext import MessageHandler as TelegramMessageHandler
+
+from astrbot.api import logger
 from astrbot.core.utils.astrbot_path import get_astrbot_temp_path
 from astrbot.core.utils.io import download_file
 from astrbot.core.utils.media_utils import convert_audio_to_wav

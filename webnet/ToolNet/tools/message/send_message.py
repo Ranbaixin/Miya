@@ -3,9 +3,10 @@
 从 MessageNet 迁移到 ToolNet
 """
 
-from typing import Any, Dict, Optional
-from webnet.ToolNet.base import BaseTool
 import logging
+from typing import Any, Dict, Optional
+
+from webnet.ToolNet.base import BaseTool
 
 logger = logging.getLogger(__name__)
 

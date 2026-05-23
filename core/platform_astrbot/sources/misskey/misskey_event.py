@@ -2,10 +2,11 @@ import asyncio
 import re
 from collections.abc import AsyncGenerator
 
-from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent, MessageChain
 from astrbot.api.message_components import Plain
 from astrbot.api.platform import AstrBotMessage, PlatformMetadata
+
+from astrbot.api import logger
 
 from .misskey_utils import (
     add_at_mention_if_needed,

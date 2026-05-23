@@ -6,9 +6,10 @@
 注意：所有配置从 YAML 文件加载，详见 config/personalities/
 """
 
-from typing import Dict, List, Optional
 import json
 from pathlib import Path
+from typing import Dict, Optional
+
 from core.constants import Encoding
 
 
@@ -464,10 +465,7 @@ class Personality:
             if vec_a in vectors and vec_b in vectors:
                 val_a = vectors[vec_a]
                 val_b = vectors[vec_b]
-                if expected_corr > 0:
-                    score = 1.0 - abs(val_a - val_b) / 2
-                else:
-                    score = 1.0 - abs((val_a - 0.5) + (val_b - 0.5))
+                score = 1.0 - abs(val_a - val_b) / 2 if expected_corr > 0 else 1.0 - abs(val_a - 0.5 + (val_b - 0.5))
                 correlation_scores.append(score)
         if not correlation_scores:
             return 1.0

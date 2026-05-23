@@ -5,7 +5,7 @@ Performance Analyzer Agent - 性能分析
 
 import re
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 async def handler(args: Dict[str, Any], context: Dict[str, Any]) -> str:

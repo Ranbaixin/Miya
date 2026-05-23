@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from astrbot import logger
 from astrbot.core.message.components import Reply
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
+
+from astrbot import logger
 from astrbot.core.utils.string_utils import normalize_and_dedupe_strings
 
 from .chain_parser import OneBotPayloadParser, ReplyChainParser

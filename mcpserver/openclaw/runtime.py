@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 OpenClaw Gateway 运行时管理
 
@@ -9,24 +8,22 @@ OpenClaw Gateway 运行时管理
   3. npx 命令: `npx openclaw gateway`
 """
 
-import os
-import sys
 import asyncio
 import logging
-import shutil
-import subprocess
-import socket
+import os
 import platform
+import shutil
+import socket
+import subprocess
 from pathlib import Path
 from typing import Optional
 
 from .config_bridge import (
-    get_config_tokens,
+    DEFAULT_GATEWAY_PORT,
+    OPENCLAW_CONFIG_FILE,
+    OPENCLAW_STATE_DIR,
     ensure_openclaw_config,
     inject_miya_llm_config,
-    OPENCLAW_STATE_DIR,
-    OPENCLAW_CONFIG_FILE,
-    DEFAULT_GATEWAY_PORT,
 )
 
 logger = logging.getLogger("openclaw.runtime")
@@ -348,7 +345,7 @@ class OpenClawRuntime:
             pass
 
     async def _wait_ready(self, max_retries: int = 30, interval: float = 1.0):
-        for i in range(max_retries):
+        for _i in range(max_retries):
             if self._process and self._process.returncode is not None:
                 stderr_text = ""
                 try:

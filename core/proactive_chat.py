@@ -13,13 +13,13 @@
 """
 
 import asyncio
+import contextlib
 import hashlib
 import logging
 import random
-import re
-from datetime import datetime
-from typing import Any, Optional
 from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Optional
 
 from core.ai_client import AIMessage
 
@@ -29,8 +29,9 @@ logger = logging.getLogger(__name__)
 def load_config() -> dict:
     """从 config/proactive_chat.yaml 加载主动聊天配置"""
     try:
-        import yaml
         from pathlib import Path
+
+        import yaml
 
         config_path = Path(__file__).parent.parent / "config" / "proactive_chat.yaml"
 
@@ -562,6 +563,7 @@ class ProactiveChatSystem:
         }
 
         from pathlib import Path
+
         import yaml
 
         config_path = Path(__file__).parent.parent / "config" / "proactive_chat.yaml"
@@ -706,10 +708,8 @@ class ProactiveChatSystem:
         """停止后台轮询循环"""
         if self._bg_task:
             self._bg_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._bg_task
-            except asyncio.CancelledError:
-                pass
             self._bg_task = None
             logger.info("[主动聊天] 后台轮询已停止")
 
@@ -844,9 +844,7 @@ class ProactiveChatSystem:
             logger.info(f"[主动聊天] 检测到情绪: {emotion}")
 
         # 重置每日计数
-        if target_id not in self._daily_count:
-            self._daily_count[target_id] = {"date": now.date(), "count": 0}
-        elif self._daily_count[target_id]["date"] != now.date():
+        if target_id not in self._daily_count or self._daily_count[target_id]["date"] != now.date():
             self._daily_count[target_id] = {"date": now.date(), "count": 0}
 
     def _extract_keywords(self, text: str) -> list:
@@ -915,10 +913,9 @@ class ProactiveChatSystem:
         today = now.date()
 
         # 每日限制
-        if target_id in self._daily_count:
-            if self._daily_count[target_id]["date"] == today:
-                if self._daily_count[target_id]["count"] >= self._max_daily:
-                    return False
+        if target_id in self._daily_count and self._daily_count[target_id]["date"] == today:
+            if self._daily_count[target_id]["count"] >= self._max_daily:
+                return False
 
         # 每小时限制
         if target_id in self._hourly_count:
@@ -988,7 +985,7 @@ class ProactiveChatSystem:
         multiplier = self._platform_multipliers.get(key, 0.5)
 
         if not is_private:
-            active_window = ga.get("active_message_window", 120)
+            ga.get("active_message_window", 120)
             inactive_threshold = ga.get("inactive_threshold", 300)
             active_mult = ga.get("active_multiplier", 0.2)
             inactive_mult = ga.get("inactive_multiplier", 0.8)

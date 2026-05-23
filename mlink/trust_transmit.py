@@ -2,8 +2,8 @@
 信任传播算法
 实现信任值的传播和衰减
 """
-from typing import Dict, List
 from datetime import datetime, timedelta
+from typing import Dict, List
 
 
 class TrustTransmit:

@@ -3,10 +3,11 @@
 LoadSave - 加载指定的游戏存档
 """
 
-from typing import Dict, Any
-from webnet.ToolNet.base import BaseTool, ToolContext
-from webnet.EntertainmentNet.game_mode.game_memory_manager import get_game_memory_manager
+from typing import Any, Dict
+
 from webnet.EntertainmentNet.game_mode import get_game_mode_manager
+from webnet.EntertainmentNet.game_mode.game_memory_manager import get_game_memory_manager
+from webnet.ToolNet.base import BaseTool, ToolContext
 
 
 class LoadSave(BaseTool):
@@ -32,7 +33,7 @@ class LoadSave(BaseTool):
     async def execute(self, args: Dict[str, Any], context: ToolContext) -> str:
         from webnet.EntertainmentNet.game_mode.mode_state import GameState
         from webnet.EntertainmentNet.game_mode.state_transition_validator import (
-            StateTransitionValidator, StateTransitionError
+            StateTransitionValidator,
         )
         mode_manager = get_game_mode_manager()
         game_memory_manager = get_game_memory_manager()
@@ -86,13 +87,13 @@ class LoadSave(BaseTool):
                     except:
                         pass
 
-                result = f"✅ **存档加载成功**\n\n"
+                result = "✅ **存档加载成功**\n\n"
                 result += f"🎮 **游戏**: {game_name}\n"
                 result += f"🆔 **存档ID**: {save_data.save_id}\n"
                 result += f"📝 **存档名称**: {save_data.save_name}\n"
                 result += f"🕐 **创建时间**: {created_at}\n\n"
-                result += f"💾 游戏进度已恢复\n\n"
-                result += f"🔄 **重要**: 游戏已恢复,用户说'继续游戏'或直接开始行动即可,无需重新调用start_trpg!\n\n"
+                result += "💾 游戏进度已恢复\n\n"
+                result += "🔄 **重要**: 游戏已恢复,用户说'继续游戏'或直接开始行动即可,无需重新调用start_trpg!\n\n"
 
                 # 显示角色卡信息
                 if save_data.characters:
@@ -112,7 +113,7 @@ class LoadSave(BaseTool):
                 # 转换到 IN_PROGRESS 状态
                 mode_manager.set_game_state(chat_id, GameState.IN_PROGRESS)
 
-                self.logger.info(f"[LoadSave] 存档加载完成，游戏状态已设置为 IN_PROGRESS")
+                self.logger.info("[LoadSave] 存档加载完成，游戏状态已设置为 IN_PROGRESS")
 
                 return result
             else:

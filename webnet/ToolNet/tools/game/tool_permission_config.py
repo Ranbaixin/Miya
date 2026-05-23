@@ -3,8 +3,8 @@
 集中管理游戏工具的权限规则，实现解耦和可维护性
 """
 
-from typing import Set, Dict, List, TYPE_CHECKING
 from enum import Enum
+from typing import TYPE_CHECKING, Dict, List, Set
 
 # 避免循环导入：使用 TYPE_CHECKING
 if TYPE_CHECKING:

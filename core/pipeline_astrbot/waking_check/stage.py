@@ -1,6 +1,5 @@
 from collections.abc import AsyncGenerator, Callable
 
-from astrbot import logger
 from astrbot.core.message.components import At, AtAll, Reply
 from astrbot.core.message.message_event_result import MessageChain, MessageEventResult
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
@@ -10,6 +9,8 @@ from astrbot.core.star.filter.permission import PermissionTypeFilter
 from astrbot.core.star.session_plugin_manager import SessionPluginManager
 from astrbot.core.star.star import star_map
 from astrbot.core.star.star_handler import EventType, star_handlers_registry
+
+from astrbot import logger
 
 from ..context import PipelineContext
 from ..stage import Stage, register_stage

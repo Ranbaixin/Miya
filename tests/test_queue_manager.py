@@ -4,7 +4,6 @@
 """
 
 import asyncio
-import time
 
 import pytest
 from services.queue_manager import QueueManager, QueueRequest

@@ -4,35 +4,28 @@
 让弥娅具备完整的终端掌控能力
 """
 
-from core.terminal.base.types import (
-    ExecutionMode, CommandCategory, CommandResult,
-    ProcessInfo, RiskLevel, SafetyReport
-)
-from core.terminal.base.interfaces import (
-    ICommandParser, ISafetyChecker, IExecutor,
-    IContextManager, IMonitor
-)
+from core.terminal.base.types import CommandCategory, ExecutionMode
 from core.terminal.safety import SafetyChecker
+
 """
 智能命令执行器
 让弥娅具备完整的终端掌控能力
 """
 
 import asyncio
-import os
-import sys
-import json
+import builtins
+import contextlib
 import logging
-import subprocess
-import shlex
+import os
 import re
-import time
-from typing import Dict, List, Optional, Any, Tuple
-from pathlib import Path
-from enum import Enum
-import signal
-import psutil
+import shlex
+import sys
 import threading
+import time
+from pathlib import Path
+from typing import Any, Dict, List
+
+import psutil
 
 logger = logging.getLogger(__name__)
 
@@ -104,13 +97,13 @@ class IntelligentExecutor:
             "suggestions": self._generate_suggestions(parsed_command, result)
         }
     
-    def _select_execution_mode(self, parsed_command: Dict, 
+    def _select_execution_mode(self, parsed_command: Dict,
                               safety_report: Dict) -> ExecutionMode:
         """选择执行模式"""
         if self.execution_mode == ExecutionMode.SIMULATE:
             return ExecutionMode.SIMULATE
         
-        safety_level = safety_report.get("level", 0)
+        safety_report.get("level", 0)
         requires_confirmation = safety_report.get("requires_confirmation", False)
         
         if requires_confirmation and self.safety_level > 3:
@@ -121,7 +114,7 @@ class IntelligentExecutor:
         
         return ExecutionMode.DIRECT
     
-    async def _direct_execution(self, parsed_command: Dict, 
+    async def _direct_execution(self, parsed_command: Dict,
                                context: Dict) -> Dict[str, Any]:
         """直接执行"""
         start_time = time.time()
@@ -173,15 +166,15 @@ class IntelligentExecutor:
                 "execution_time": execution_time
             }
     
-    async def _safe_execution(self, parsed_command: Dict, 
-                             context: Dict, 
+    async def _safe_execution(self, parsed_command: Dict,
+                             context: Dict,
                              safety_report: Dict) -> Dict[str, Any]:
         """安全执行（需要确认）"""
         # 这里可以实现确认逻辑
         # 暂时使用直接执行
         return await self._direct_execution(parsed_command, context)
     
-    async def _simulate_execution(self, parsed_command: Dict, 
+    async def _simulate_execution(self, parsed_command: Dict,
                                  context: Dict) -> Dict[str, Any]:
         """模拟执行"""
         command = self._build_command(parsed_command, context)
@@ -209,7 +202,7 @@ class IntelligentExecutor:
         parts = [base_command] + flags + arguments
         return " ".join(parts)
     
-    def _generate_suggestions(self, parsed_command: Dict, 
+    def _generate_suggestions(self, parsed_command: Dict,
                              result: Dict) -> List[str]:
         """生成后续建议"""
         suggestions = []
@@ -249,8 +242,8 @@ class IntelligentExecutor:
         
         return suggestions[:3]
     
-    def _record_execution(self, user_input: str, 
-                         parsed_command: Dict, 
+    def _record_execution(self, user_input: str,
+                         parsed_command: Dict,
                          result: Dict):
         """记录执行历史"""
         entry = {
@@ -272,7 +265,7 @@ class IntelligentExecutor:
         if len(self.command_history) > 100:
             self.command_history = self.command_history[-50:]
     
-    async def execute_script(self, script_content: str, 
+    async def execute_script(self, script_content: str,
                             script_type: str = "bash") -> Dict[str, Any]:
         """执行脚本"""
         logger.info(f"执行{script_type}脚本")
@@ -300,10 +293,8 @@ class IntelligentExecutor:
             result = await self.execute_intelligent(command)
             
             # 清理临时文件
-            try:
+            with contextlib.suppress(builtins.BaseException):
                 os.remove(temp_file)
-            except:
-                pass
             
             return result
             
@@ -311,10 +302,8 @@ class IntelligentExecutor:
             logger.error(f"执行脚本失败: {e}")
             
             # 清理临时文件
-            try:
+            with contextlib.suppress(builtins.BaseException):
                 os.remove(temp_file)
-            except:
-                pass
             
             return {
                 "success": False,
@@ -427,7 +416,7 @@ class CommandParser:
     
     def _categorize_command(self, command: str) -> str:
         """分类命令"""
-        for category, info in self.command_patterns.items():
+        for _category, info in self.command_patterns.items():
             for pattern in info["patterns"]:
                 if re.match(pattern, command, re.IGNORECASE):
                     return info["category"]
@@ -498,8 +487,8 @@ class ExecutionMonitor:
     def __init__(self):
         self.monitored_processes = {}
     
-    def monitor_process(self, process_id: int, 
-                       command: Dict, 
+    def monitor_process(self, process_id: int,
+                       command: Dict,
                        session_id: str):
         """监控进程"""
         self.monitored_processes[process_id] = {

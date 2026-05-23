@@ -1,14 +1,14 @@
 import datetime
 import json
 
+from astrbot.core.config.default import DB_PATH
+from astrbot.core.db.po import ConversationV2, PlatformMessageHistory
+from astrbot.core.platform.astr_message_event import MessageSesion
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from astrbot.api import logger, sp
 from astrbot.core.config import AstrBotConfig
-from astrbot.core.config.default import DB_PATH
-from astrbot.core.db.po import ConversationV2, PlatformMessageHistory
-from astrbot.core.platform.astr_message_event import MessageSesion
 
 from .. import BaseDatabase
 from .shared_preferences_v3 import sp as sp_v3
@@ -106,8 +106,8 @@ async def migration_platform_table(
         db_path=DB_PATH.replace("data_v4.db", "data_v3.db"),
     )
     secs_from_2023_4_10_to_now = (
-        datetime.datetime.now(datetime.timezone.utc)
-        - datetime.datetime(2023, 4, 10, tzinfo=datetime.timezone.utc)
+        datetime.datetime.now(datetime.UTC)
+        - datetime.datetime(2023, 4, 10, tzinfo=datetime.UTC)
     ).total_seconds()
     offset_sec = int(secs_from_2023_4_10_to_now)
     logger.info(f"迁移旧平台数据，offset_sec: {offset_sec} 秒。")
@@ -162,7 +162,7 @@ async def migration_platform_table(
                         {
                             "timestamp": datetime.datetime.fromtimestamp(
                                 bucket_end,
-                                tz=datetime.timezone.utc,
+                                tz=datetime.UTC,
                             ),
                             "platform_id": platform_id,
                             "platform_type": platform_type,

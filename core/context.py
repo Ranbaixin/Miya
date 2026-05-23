@@ -13,15 +13,15 @@
 
 from __future__ import annotations
 
-import uuid
 import logging
+import uuid
 from contextvars import ContextVar
 from datetime import datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_request_context: ContextVar["RequestContext | None"] = ContextVar(
+_request_context: ContextVar[RequestContext | None] = ContextVar(
     "request_context", default=None
 )
 
@@ -73,11 +73,11 @@ class RequestContext:
         return dict(self._resources)
 
     @classmethod
-    def current(cls) -> "RequestContext | None":
+    def current(cls) -> RequestContext | None:
         return _request_context.get()
 
     @classmethod
-    def require(cls) -> "RequestContext":
+    def require(cls) -> RequestContext:
         ctx = cls.current()
         if ctx is None:
             raise RuntimeError(
@@ -86,7 +86,7 @@ class RequestContext:
             )
         return ctx
 
-    async def __aenter__(self) -> "RequestContext":
+    async def __aenter__(self) -> RequestContext:
         self._token = _request_context.set(self)
         logger.debug(
             "[请求上下文] 创建: request_id=%s source=%s group_id=%s user_id=%s personality=%s",

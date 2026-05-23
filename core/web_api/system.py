@@ -4,10 +4,11 @@
 """
 
 import logging
-from typing import Dict, Any, Optional
 from datetime import datetime
-import psutil
 from pathlib import Path
+from typing import Any, Optional
+
+import psutil
 
 
 def _is_process_running(process):

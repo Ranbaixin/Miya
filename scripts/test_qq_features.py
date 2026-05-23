@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 QQ功能测试脚本
 测试QQ端的所有新功能
 """
 
 import asyncio
+import logging
 import os
 import sys
-import logging
 from pathlib import Path
 
 # 添加项目根目录到Python路径
@@ -81,7 +80,7 @@ async def test_tool_registration():
         # 检查工具文件是否存在
         qq_tools = [
             ('qq_image', 'QQImageTool'),
-            ('qq_file', 'QQFileTool'), 
+            ('qq_file', 'QQFileTool'),
             ('qq_emoji', 'QQEmojiTool'),
             ('qq_file_reader', 'QQFileReaderTool'),
             ('qq_image_analyzer', 'QQImageAnalyzerTool'),
@@ -148,9 +147,9 @@ async def test_image_handler():
         
         # 测试方法存在性
         required_methods = [
-            'handle_image_message', 
-            '_extract_image_info', 
-            '_download_image', 
+            'handle_image_message',
+            '_extract_image_info',
+            '_download_image',
             '_analyze_image',
             'configure'
         ]
@@ -351,7 +350,7 @@ async def test_dependencies():
         try:
             __import__(import_name)
             logger.info(f"  ✓ {package_name}")
-        except ImportError as e:
+        except ImportError:
             # 尝试使用pip检查
             try:
                 import subprocess

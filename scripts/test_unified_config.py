@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 统一配置系统测试脚本
 测试QQ配置是否已正确集成到统一的.env配置系统中
 """
 
+import logging
 import os
 import sys
-import logging
 from pathlib import Path
 
 # 添加项目根目录到Python路径
@@ -178,7 +177,7 @@ def test_unified_config_loader():
             logger.error(f"配置验证失败: {errors}")
             return False
         
-        logger.info(f"统一配置加载成功:")
+        logger.info("统一配置加载成功:")
         logger.info(f"  - OneBot地址: {config.get('onebot_ws_url')}")
         logger.info(f"  - Bot QQ: {config.get('bot_qq')}")
         logger.info(f"  - OCR启用: {config.get('image_recognition', {}).get('ocr_enabled')}")
@@ -219,7 +218,7 @@ def test_core_integration():
             logger.error("QQNet的onebot_ws_url为空")
             return False
         
-        logger.info(f"QQNet配置加载成功:")
+        logger.info("QQNet配置加载成功:")
         logger.info(f"  - WebSocket地址: {qq_net.onebot_ws_url}")
         logger.info(f"  - Bot QQ: {qq_net.bot_qq}")
         logger.info(f"  - 重连间隔: {qq_net.reconnect_interval}s")

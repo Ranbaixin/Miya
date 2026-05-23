@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 娜迦网络社区 MCP 服务 - 弥娅的社区社交引擎
 
@@ -14,7 +13,7 @@
 """
 
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
 from .auth import get_auth
 from .forum import get_forum

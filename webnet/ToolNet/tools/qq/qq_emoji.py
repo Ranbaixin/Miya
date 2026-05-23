@@ -5,13 +5,11 @@ QQ表情包工具 v2.0
 智能模式：根据用户消息语义自动判断是否发送表情包
 """
 
-import json
-import os
 import logging
+import os
 import random
-from typing import Dict, Any, Optional, List, Tuple
-from pathlib import Path
 from datetime import datetime
+from typing import Any, Dict, Optional, Tuple
 
 from webnet.ToolNet.base import BaseTool, ToolContext
 
@@ -487,15 +485,15 @@ class QQEmojiTool(BaseTool):
 
     async def _send_emoji(self, args: Dict[str, Any], context: ToolContext) -> str:
         """发送表情包"""
-        target_type = args.get("target_type", "group")
-        target_id = args.get("target_id", self._get_default_target_id(context))
-        emoji_name = args.get("emoji_name", "")
-        emoji_id = args.get("emoji_id", 0)
+        args.get("target_type", "group")
+        args.get("target_id", self._get_default_target_id(context))
+        args.get("emoji_name", "")
+        args.get("emoji_id", 0)
         emoji_path = args.get("emoji_path", "")
         emoji_type = args.get(
             "emoji_type", "standard"
         )  # standard: QQ内置, image: 图片表情
-        count = args.get("count", 1)
+        args.get("count", 1)
 
         # 获取QQ客户端
         qq_client = getattr(context, "onebot_client", None)
@@ -665,10 +663,7 @@ class QQEmojiTool(BaseTool):
 
             for item in image_search_results:
                 category_name = item.get("category", "未知")
-                if "stickers" in category_name:
-                    emoji_type = "贴纸"
-                else:
-                    emoji_type = "图片表情"
+                emoji_type = "贴纸" if "stickers" in category_name else "图片表情"
 
                 image_results.append(
                     (emoji_type, item["name"], "", "image", item["path"])
@@ -699,7 +694,7 @@ class QQEmojiTool(BaseTool):
         if image_results:
             result_lines.append("\n🖼️ **图片表情包/贴纸:**")
             start_idx = len(qq_results) + 1
-            for i, (emoji_type, name, _, _, path) in enumerate(
+            for i, (emoji_type, name, _, _, _path) in enumerate(
                 image_results[:5], start_idx
             ):
                 result_lines.append(f"{i}. {emoji_type}: {name}")
@@ -951,12 +946,12 @@ class QQEmojiTool(BaseTool):
         keyword = keyword.lower()
 
         # 先尝试精确匹配
-        for name in self.STANDARD_EMOJIS.keys():
+        for name in self.STANDARD_EMOJIS:
             if keyword == name.lower():
                 return name
 
         # 尝试包含匹配
-        for name in self.STANDARD_EMOJIS.keys():
+        for name in self.STANDARD_EMOJIS:
             if keyword in name.lower():
                 return name
 
@@ -1065,9 +1060,9 @@ class QQEmojiTool(BaseTool):
                     suggested_tags = ", ".join(analysis["suggested_tags"][:3])
                     return f"[智能表情] 基于'{suggested_tags}'发送了表情包"
                 else:
-                    return f"❌ 发送失败"
+                    return "❌ 发送失败"
             else:
-                return f"❌ 表情包文件不存在"
+                return "❌ 表情包文件不存在"
 
         except ImportError:
             logger.warning("表情包管理器导入失败，使用随机表情")
@@ -1107,7 +1102,7 @@ class QQEmojiTool(BaseTool):
                 sentiment_str = ", ".join([f"{k}({v:.1%})" for k, v in sentiments[:3]])
                 result_lines.append(f"\n💭 情感倾向: {sentiment_str}")
             else:
-                result_lines.append(f"\n💭 情感倾向: 无明显情感")
+                result_lines.append("\n💭 情感倾向: 无明显情感")
 
             if analysis["context_type"]:
                 result_lines.append(
@@ -1130,7 +1125,7 @@ class QQEmojiTool(BaseTool):
 
             search_results = emoji_manager.smart_search(message, limit=3)
             if search_results:
-                result_lines.append(f"\n🔍 匹配的表情包:")
+                result_lines.append("\n🔍 匹配的表情包:")
                 for i, emoji in enumerate(search_results[:3], 1):
                     tags = emoji_manager.emoji_tags.get(emoji["path"], [])
                     tags_str = ", ".join(tags[:3]) if tags else "无标签"
@@ -1179,9 +1174,8 @@ class QQEmojiTool(BaseTool):
             if pattern in text_lower:
                 return True, f"匹配到情感关键词: {pattern}"
 
-        if "?" in text or "？" in text:
-            if random.random() < 0.2:
-                return True, "疑问句，发送表情增加趣味"
+        if ("?" in text or "？" in text) and random.random() < 0.2:
+            return True, "疑问句，发送表情增加趣味"
 
         exclamation_count = sum(1 for c in text if c in "!~?")
         if exclamation_count >= 2:

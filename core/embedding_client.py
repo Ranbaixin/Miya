@@ -4,9 +4,8 @@
 """
 
 import logging
-from typing import List, Optional
-import asyncio
 from enum import Enum
+from typing import List, Optional
 
 from core.system_config import get_api_url
 

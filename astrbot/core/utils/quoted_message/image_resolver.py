@@ -3,8 +3,9 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from astrbot import logger
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
+
+from astrbot import logger
 from astrbot.core.utils.string_utils import normalize_and_dedupe_strings
 
 from .image_refs import IMAGE_EXTENSIONS, get_existing_local_path, normalize_image_ref
@@ -14,9 +15,8 @@ from .onebot_client import OneBotClient
 def _build_image_id_candidates(image_ref: str) -> list[str]:
     candidates: list[str] = [image_ref]
     base_name, ext = os.path.splitext(image_ref)
-    if ext and base_name and base_name not in candidates:
-        if ext.lower() in IMAGE_EXTENSIONS:
-            candidates.append(base_name)
+    if ext and base_name and base_name not in candidates and ext.lower() in IMAGE_EXTENSIONS:
+        candidates.append(base_name)
     return candidates
 
 

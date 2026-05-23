@@ -8,10 +8,10 @@
 from __future__ import annotations
 
 import asyncio
-import os
+import contextlib
 import logging
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger("Miya.PlatformMessageMixin")
 
@@ -150,7 +150,6 @@ class MessageMixin:
     @staticmethod
     def _split_long_line(line: str, max_len: int) -> list:
         """拆分超长单行——按标点找断点"""
-        import re
 
         chunks = []
         remaining = line
@@ -214,10 +213,8 @@ class MessageMixin:
 
             group_id_int = 0
             if group_id:
-                try:
+                with contextlib.suppress(ValueError):
                     group_id_int = int(group_id)
-                except ValueError:
-                    pass
 
             perception_data = {
                 "content": content,
@@ -247,12 +244,12 @@ class MessageMixin:
                 if engine.is_superadmin(str(user_id), platform=self.platform_id):
                     perception_data["is_owner"] = True
                     # 从 superadmins 配置中获取名字和规范ID
-                    for person, info in engine._config.get("superadmins", {}).items():
+                    for _person, info in engine._config.get("superadmins", {}).items():
                         perception_data["owner_name"] = info.get("name", "")
                         # 获取规范用户ID（第一个有值的平台ID作为标准）
                         canonical_id = str(user_id)
                         ids = info.get("ids", {})
-                        for pid, raw_ids in ids.items():
+                        for _pid, raw_ids in ids.items():
                             if isinstance(raw_ids, list) and raw_ids:
                                 canonical_id = str(raw_ids[0])
                                 break
@@ -373,11 +370,11 @@ class MessageMixin:
 
     async def _tts_play_local(self, audio_path: str):
         """本地电脑播放"""
-        import concurrent.futures
 
         def _play_blocking():
-            import simpleaudio as sa
             import wave
+
+            import simpleaudio as sa
 
             with wave.open(audio_path, "rb") as wf:
                 wave_obj = sa.WaveObject.from_wave_read(wf)

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Provider 抽象基类
 
@@ -9,28 +8,21 @@ Provider 抽象基类
 
 import abc
 import asyncio
-import copy
 import json
 import logging
 import os
 import random
-import re
-import traceback
 from collections.abc import AsyncGenerator
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional
 
 from core.providers.entities import (
     LLMResponse,
-    RerankResult,
     TokenUsage,
-    ToolCallsResult,
 )
 from core.providers.register import (
     ProviderMeta,
     ProviderType,
-    register_provider_adapter,
 )
-from core.providers.register import get_provider_meta
 
 logger = logging.getLogger(__name__)
 
@@ -329,7 +321,7 @@ class Provider(abc.ABC):
 
         # 429 错误 - 轮换 Key
         if "429" in error_str:
-            logger.warning(f"[Provider] API 429 错误，尝试轮换 Key")
+            logger.warning("[Provider] API 429 错误，尝试轮换 Key")
             if chosen_key in available_keys:
                 available_keys.remove(chosen_key)
             if available_keys:
@@ -350,7 +342,7 @@ class Provider(abc.ABC):
             "maximum context length" in error_str
             or "context_length_exceeded" in error_str
         ):
-            logger.warning(f"[Provider] 上下文超长，尝试压缩")
+            logger.warning("[Provider] 上下文超长，尝试压缩")
             self.pop_record(contexts)
             payloads["messages"] = contexts
             return (
@@ -367,7 +359,7 @@ class Provider(abc.ABC):
         if "model is not a VLM" in error_str or "not a vision model" in error_str:
             if image_fallback_used or self._context_contains_image(contexts):
                 raise e
-            logger.warning(f"[Provider] 模型不支持视觉，降级到文本")
+            logger.warning("[Provider] 模型不支持视觉，降级到文本")
             new_contexts = self._remove_image_from_context(contexts)
             payloads["messages"] = new_contexts
             return (
@@ -388,7 +380,7 @@ class Provider(abc.ABC):
         if "function calling is not enabled" in error_str or (
             "function" in error_str and "support" in error_str
         ):
-            logger.info(f"[Provider] 模型不支持函数调用，自动移除工具")
+            logger.info("[Provider] 模型不支持函数调用，自动移除工具")
             payloads.pop("tools", None)
             return (
                 False,

@@ -14,16 +14,14 @@ Miya 访问控制模块 - 安全加强
 
 import asyncio
 import hashlib
-import hmac
 import logging
 import secrets
-import time
+from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
-from collections import defaultdict
 from functools import wraps
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -192,7 +190,7 @@ class APIKeyManager:
             with open(storage_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
 
-            logger.debug(f"[访问控制] API密钥已保存")
+            logger.debug("[访问控制] API密钥已保存")
 
         except Exception as e:
             logger.error(f"[访问控制] 保存API密钥失败: {e}")

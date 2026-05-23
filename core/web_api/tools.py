@@ -5,18 +5,18 @@
 
 import logging
 import subprocess
-import pandas as pd
-import numpy as np
-from typing import Dict, Any
 from datetime import datetime
-from pathlib import Path
+from typing import Any, Dict
+
+import numpy as np
+import pandas as pd
 
 from core.text_loader import get_permission
 
 logger = logging.getLogger(__name__)
 
 try:
-    from fastapi import APIRouter, HTTPException, Depends
+    from fastapi import APIRouter, Depends, HTTPException
     from pydantic import BaseModel
 
     FASTAPI_AVAILABLE = True
@@ -24,7 +24,8 @@ except ImportError:
     FASTAPI_AVAILABLE = False
     APIRouter = object
     HTTPException = Exception
-    Depends = lambda x: x
+    def Depends(x):
+        return x
 
 
 class ToolExecuteRequest(BaseModel):
@@ -149,7 +150,7 @@ class ToolRoutes:
                 analyzer = DataAnalyzer()
 
                 file_path = request.get("file_path", "")
-                analysis_type = request.get("analysis_type", "basic")
+                request.get("analysis_type", "basic")
 
                 if not file_path:
                     return {"success": False, "error": "缺少 file_path 参数"}
@@ -206,10 +207,7 @@ class ToolRoutes:
                     # 转换为DataFrame
                     if isinstance(data, dict) and data:
                         first_val = next(iter(data.values()))
-                        if isinstance(first_val, (int, float, str)):
-                            df = pd.DataFrame([data])
-                        else:
-                            df = pd.DataFrame(data)
+                        df = pd.DataFrame([data]) if isinstance(first_val, (int, float, str)) else pd.DataFrame(data)
                     else:
                         df = pd.DataFrame(data)
                 else:

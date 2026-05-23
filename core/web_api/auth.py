@@ -4,13 +4,13 @@
 """
 
 import logging
-from typing import Optional
 from datetime import datetime
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from .models import UserRegister, UserLogin
+from .models import UserLogin, UserRegister
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +92,7 @@ class AuthRoutes:
             try:
                 # JWT 无状态，登出只需前端清除token
                 # 这里可以添加登出日志记录
-                logger.info(f"[WebAPI] 用户登出")
+                logger.info("[WebAPI] 用户登出")
                 return {"success": True, "message": "登出成功"}
             except Exception as e:
                 logger.error(f"[WebAPI] 用户登出失败: {e}")

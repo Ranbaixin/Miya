@@ -1,13 +1,13 @@
-from pydantic import Field
-from pydantic.dataclasses import dataclass
-
-from astrbot.api import logger, sp
 from astrbot.core.agent.run_context import ContextWrapper
 from astrbot.core.agent.tool import FunctionTool, ToolExecResult
 from astrbot.core.astr_agent_context import AstrAgentContext
 from astrbot.core.knowledge_base.kb_helper import KBHelper
 from astrbot.core.star.context import Context
 from astrbot.core.tools.registry import builtin_tool
+from pydantic import Field
+from pydantic.dataclasses import dataclass
+
+from astrbot.api import logger, sp
 
 _KNOWLEDGE_BASE_TOOL_CONFIG = {
     "kb_agentic_mode": True,

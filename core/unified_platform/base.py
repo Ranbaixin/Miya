@@ -14,13 +14,14 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Optional, Dict, Any, Callable, Awaitable, Coroutine
+from typing import Any, Awaitable, Callable, Dict, Optional
 
-from .status import PlatformStatus, PlatformHealth, PlatformEvent
-from .reconnect import ReconnectPolicy, ExponentialBackoffPolicy, run_reconnect_loop
+from .reconnect import ExponentialBackoffPolicy, ReconnectPolicy, run_reconnect_loop
+from .status import PlatformEvent, PlatformHealth, PlatformStatus
 
 logger = logging.getLogger("Miya.UnifiedPlatform")
 
@@ -299,10 +300,8 @@ class BasePlatform(ABC):
 
     def off(self, event: PlatformEvent, callback: Callable):
         """移除事件监听器"""
-        try:
+        with contextlib.suppress(ValueError):
             self._event_listeners[event].remove(callback)
-        except ValueError:
-            pass
 
     async def _emit(self, event: PlatformEvent, data: Dict):
         """触发事件"""

@@ -3,19 +3,17 @@ import json
 import os
 import re
 import uuid
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from copy import deepcopy
 from pathlib import Path, PurePosixPath
 from typing import Any, cast
 
+from astrbot.core.agent.message import get_checkpoint_id, is_checkpoint_message
+from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
+from astrbot.core.platform.message_type import MessageType
 from quart import Response as QuartResponse
 from quart import g, make_response, request, send_file
 
-from core.astrbot_compat import logger, sp
-from astrbot.core.agent.message import get_checkpoint_id, is_checkpoint_message
-from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
-from core.astrbot_compat.db import BaseDatabase
-from astrbot.core.platform.message_type import MessageType
 from astrbot.core.platform.sources.webchat.message_parts_helper import (
     build_webchat_message_parts,
     create_attachment_part_from_existing_file,
@@ -24,8 +22,10 @@ from astrbot.core.platform.sources.webchat.message_parts_helper import (
 )
 from astrbot.core.platform.sources.webchat.webchat_queue_mgr import webchat_queue_mgr
 from astrbot.core.utils.active_event_registry import active_event_registry
-from core.astrbot_compat.utils import get_astrbot_data_path
 from astrbot.core.utils.datetime_utils import to_utc_isoformat
+from core.astrbot_compat import logger, sp
+from core.astrbot_compat.db import BaseDatabase
+from core.astrbot_compat.utils import get_astrbot_data_path
 
 from .route import Response, Route, RouteContext
 
@@ -951,10 +951,8 @@ class ChatRoute(Route):
                                         "llm_checkpoint_id": llm_checkpoint_id,
                                     },
                                 }
-                                try:
+                                with suppress(Exception):
                                     yield f"data: {json.dumps(saved_info, ensure_ascii=False)}\n\n"
-                                except Exception:
-                                    pass
                         if msg_type == "end":
                             break
             except BaseException as e:

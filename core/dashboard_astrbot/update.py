@@ -1,13 +1,13 @@
 import traceback
 
-from quart import request
-
-from core.astrbot_compat import DEMO_MODE, logger, pip_installer
 from astrbot.core.config.default import VERSION
 from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
 from astrbot.core.db.migration.helper import check_migration_needed_v4, do_migration_v4
 from astrbot.core.updator import AstrBotUpdator
+from quart import request
+
 from astrbot.core.utils.io import download_dashboard, get_dashboard_version
+from core.astrbot_compat import DEMO_MODE, logger, pip_installer
 
 from .route import Response, Route, RouteContext
 

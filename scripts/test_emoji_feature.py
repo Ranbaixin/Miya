@@ -10,13 +10,12 @@
 
 import os
 import sys
-import asyncio
-from pathlib import Path
 
 # 添加项目根目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from webnet.qq.message_handler import QQMessageHandler
+
 
 def test_emoji_name_extraction():
     """测试表情包名称提取"""
@@ -105,10 +104,10 @@ def test_emoji_file_search():
                 if not found:
                     print(f"  [NO] '{test_name}' -> 未找到匹配文件")
         else:
-            print(f"[NO] 表情包目录中没有图片文件")
+            print("[NO] 表情包目录中没有图片文件")
     else:
         print(f"[NO] 表情包目录不存在: {emoji_dir}")
-        print(f"[TIP] 建议创建目录并添加表情包文件")
+        print("[TIP] 建议创建目录并添加表情包文件")
 
 def test_message_handler_creation():
     """测试消息处理器创建"""

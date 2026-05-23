@@ -1,7 +1,8 @@
 """会话插件管理器 - 负责管理每个会话的插件启停状态"""
 
-from core.astrbot_compat import logger, sp
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
+
+from core.astrbot_compat import logger, sp
 
 
 class SessionPluginManager:

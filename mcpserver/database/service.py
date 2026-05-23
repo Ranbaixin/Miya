@@ -5,8 +5,8 @@ MCP Database 服务 - 轻量级数据库操作
 
 import json
 import sqlite3
-from typing import Dict, Any, List, Optional
 from pathlib import Path
+from typing import Any, Dict
 
 
 class DatabaseService:

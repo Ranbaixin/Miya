@@ -2,11 +2,11 @@
 
 from dataclasses import asdict
 
+from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
 from quart import jsonify, request
 
-from core.astrbot_compat import logger
-from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
 from astrbot.core.utils.t2i.template_manager import TemplateManager
+from core.astrbot_compat import logger
 
 from .route import Response, Route, RouteContext
 

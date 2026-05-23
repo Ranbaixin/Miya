@@ -5,9 +5,9 @@
 """
 
 import asyncio
+import logging
 import os
 import sys
-import logging
 
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -85,7 +85,7 @@ async def test_all_fixes():
         await analyzer.initialize()
         stats = analyzer.get_stats()
 
-        print(f"   [OK] 多模型系统初始化成功")
+        print("   [OK] 多模型系统初始化成功")
         print(f"       启用模型数: {stats['enabled_models']}")
 
         # 检查通义千问是否启用
@@ -101,7 +101,7 @@ async def test_all_fixes():
         handler = EnhancedQQImageHandler(mock_net)
         await handler.initialize()
 
-        print(f"   [OK] 增强版处理器初始化成功")
+        print("   [OK] 增强版处理器初始化成功")
         print(f"       多模型支持: {handler.multi_model_enabled}")
 
         print("\n7. 测试图片分析流程...")

@@ -12,10 +12,11 @@
 """
 
 import asyncio
+import contextlib
 import logging
 import time
-from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -259,10 +260,8 @@ class MessageBatcher:
         """取消窗口的计时器"""
         if window.timer_task and not window.timer_task.done():
             window.timer_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await window.timer_task
-            except asyncio.CancelledError:
-                pass
             window.timer_task = None
 
     async def get_next_batch(self) -> Optional[Tuple[str, List[QueuedMessage]]]:

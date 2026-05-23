@@ -2,10 +2,10 @@
 消息结构定义
 定义系统内的消息格式
 """
-from typing import Dict, Any, Optional
-from datetime import datetime
 import uuid
+from datetime import datetime
 from enum import Enum
+from typing import Any, Dict
 
 
 class MessageType(str, Enum):

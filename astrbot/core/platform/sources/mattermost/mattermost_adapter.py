@@ -6,8 +6,6 @@ from collections import deque
 from typing import Any, cast
 
 import aiohttp
-
-from astrbot.api import logger
 from astrbot.api.event import MessageChain
 from astrbot.api.message_components import At, Plain
 from astrbot.api.platform import (
@@ -18,6 +16,8 @@ from astrbot.api.platform import (
     PlatformMetadata,
 )
 from astrbot.core.platform.astr_message_event import MessageSesion
+
+from astrbot.api import logger
 
 from ...register import register_platform_adapter
 from .client import MattermostClient
@@ -229,7 +229,7 @@ class MattermostPlatformAdapter(Platform):
                 temp_paths,
             ) = await self.client.parse_post_attachments(file_ids)
             abm.message.extend(attachment_components)
-            setattr(abm, "temporary_file_paths", temp_paths)
+            abm.temporary_file_paths = temp_paths
 
         abm.message_str = self._build_message_str(
             abm.message,

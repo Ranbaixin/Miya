@@ -2,13 +2,13 @@
 思维链模块
 支持多步骤推理、思考过程记录、回溯和反思
 """
-import logging
-from typing import Dict, List, Optional, Callable, Any
-from dataclasses import dataclass, field
-from enum import Enum
-from datetime import datetime
 import json
+import logging
 import re
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -392,13 +392,13 @@ class ChainOfThought:
             return "无思维链"
         
         lines = [
-            f"# 思维链摘要",
-            f"",
+            "# 思维链摘要",
+            "",
             f"**目标**: {chain.goal}",
             f"**步骤数**: {len(chain.steps)}",
             f"**状态**: {'完成' if chain.completed_at else '进行中'}",
-            f"",
-            f"## 思考步骤"
+            "",
+            "## 思考步骤"
         ]
         
         for i, step in enumerate(chain.steps, 1):
@@ -416,7 +416,7 @@ class ChainOfThought:
         
         if chain.conclusion:
             lines.append("")
-            lines.append(f"## 结论")
+            lines.append("## 结论")
             lines.append(chain.conclusion)
         
         return "\n".join(lines)
@@ -567,34 +567,34 @@ class ChainOfThought:
             return ""
         
         lines = [
-            f"# 思维链报告",
-            f"",
+            "# 思维链报告",
+            "",
             f"**目标**: {chain.goal}",
             f"**创建时间**: {chain.created_at.strftime('%Y-%m-%d %H:%M:%S')}",
             f"**完成时间**: {chain.completed_at.strftime('%Y-%m-%d %H:%M:%S') if chain.completed_at else '进行中'}",
-            f"",
-            f"## 思考过程"
+            "",
+            "## 思考过程"
         ]
         
         for i, step in enumerate(chain.steps, 1):
             lines.append(f"\n### 步骤 {i}: {step.thought_type.value}")
             lines.append(f"**内容**: {step.content}")
             lines.append(f"**置信度**: {step.confidence:.2f}")
-            lines.append(f"**推理过程**:")
+            lines.append("**推理过程**:")
             lines.append(f"> {step.reasoning}")
             
             if step.evidence:
-                lines.append(f"\n**支持证据**:")
+                lines.append("\n**支持证据**:")
                 for evidence in step.evidence:
                     lines.append(f"- {evidence}")
             
             if step.alternatives:
-                lines.append(f"\n**替代方案**:")
+                lines.append("\n**替代方案**:")
                 for alt in step.alternatives:
                     lines.append(f"- {alt}")
         
         if chain.conclusion:
-            lines.append(f"\n## 结论")
+            lines.append("\n## 结论")
             lines.append(chain.conclusion)
         
         return "\n".join(lines)

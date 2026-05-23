@@ -4,13 +4,10 @@ MIYA Provider 完整版
 支持更多模型类型: STT, TTS, Embedding, Rerank
 """
 
-import logging
-import base64
-import json
 import asyncio
+import logging
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional, AsyncIterator
-from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -109,8 +106,8 @@ class EdgeTTS(TTSProvider):
         self.pitch = config.get("pitch", "+0Hz")
 
     async def text_to_speech(self, text: str, **kwargs) -> bytes:
+
         import edge_tts
-        import asyncio
 
         communicate = edge_tts.Communicate(text, self.voice)
 
@@ -339,9 +336,9 @@ class ProviderRegistry:
         """注册默认 Provider"""
         # LLM
         from core.providers_miya import (
-            OpenAIProvider,
-            DeepSeekProvider,
             AnthropicProvider,
+            DeepSeekProvider,
+            OpenAIProvider,
             SiliconFlowProvider,
         )
 

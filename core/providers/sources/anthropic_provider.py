@@ -5,14 +5,15 @@ Anthropic Claude Provider 实现
 """
 
 import logging
-from typing import List, Optional, AsyncIterator
+from typing import AsyncIterator, List, Optional
+
 import anthropic
 
 from .bridge import (
     BaseProvider,
-    ProviderConfig,
     ChatMessage,
     ChatResponse,
+    ProviderConfig,
 )
 
 logger = logging.getLogger(__name__)

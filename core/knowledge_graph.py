@@ -2,10 +2,11 @@
 知识图谱管理器 - 将五元组存储到Neo4j并支持检索
 """
 
-import logging
 import asyncio
-from typing import List, Optional, Dict, Tuple
-from core.quintuple_extractor import Quintuple, format_quintuples_for_prompt
+import logging
+from typing import Dict, List
+
+from core.quintuple_extractor import Quintuple
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +92,7 @@ class KnowledgeGraphManager:
                     """
                     MATCH (s:Entity)-[r:RELATES]->(o:Entity)
                     WHERE s.name CONTAINS $keyword OR o.name CONTAINS $keyword
-                    RETURN s.name as subject, s.type as subject_type, 
+                    RETURN s.name as subject, s.type as subject_type,
                            r.predicate as predicate, o.name as object, o.type as object_type
                     LIMIT $limit
                     """,

@@ -1,5 +1,3 @@
-from quart import request
-
 from astrbot.core.star.command_management import (
     list_command_conflicts,
     list_commands,
@@ -13,6 +11,7 @@ from astrbot.core.star.command_management import (
 from astrbot.core.star.command_management import (
     update_command_permission as update_command_permission_service,
 )
+from quart import request
 
 from .route import Response, Route, RouteContext
 

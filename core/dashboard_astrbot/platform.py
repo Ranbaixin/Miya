@@ -3,11 +3,11 @@
 提供统一的 webhook 回调入口，支持多个平台使用同一端口接收回调。
 """
 
+from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
 from quart import request
 
-from core.astrbot_compat import logger
-from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
 from astrbot.core.platform import Platform
+from core.astrbot_compat import logger
 
 from .route import Response, Route, RouteContext
 
@@ -81,9 +81,8 @@ class PlatformRoute(Route):
             平台适配器实例，未找到则返回 None
         """
         for platform in self.platform_manager.platform_insts:
-            if platform.config.get("webhook_uuid") == webhook_uuid:
-                if platform.unified_webhook():
-                    return platform
+            if platform.config.get("webhook_uuid") == webhook_uuid and platform.unified_webhook():
+                return platform
         return None
 
     async def get_platform_stats(self):

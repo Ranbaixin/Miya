@@ -6,16 +6,13 @@ ToolNet 工具注册表（兼容层）
 """
 
 import logging
-from typing import Dict, Any, List, Optional, TYPE_CHECKING
-
-from core.text_loader import get_permission
-
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 # 统一使用 webnet.tools.base 中的 ToolContext
 if TYPE_CHECKING:
-    from webnet.ToolNet.base import ToolContext as BaseToolContext
+    pass
 else:
     try:
         from webnet.ToolNet.base import ToolContext
@@ -54,7 +51,7 @@ class ToolRegistry:
     """工具注册表"""
 
     def __init__(self):
-        self.tools: Dict[str, "BaseTool"] = {}
+        self.tools: Dict[str, BaseTool] = {}
         self.logger = logging.getLogger(__name__)
 
     def register(self, tool: "BaseTool") -> bool:
@@ -208,7 +205,7 @@ class ToolRegistry:
             onebot_client = getattr(context, "onebot_client", None)
 
             if user_id is None or user_id == 0:
-                self.logger.info(f"[权限检查] user_id 未指定，跳过权限检查")
+                self.logger.info("[权限检查] user_id 未指定，跳过权限检查")
                 return {"allowed": True, "required_permission": None}
 
             if superadmin and user_id == superadmin:
@@ -338,12 +335,12 @@ class ToolRegistry:
 
     def _load_message_tools(self):
         """加载消息工具"""
-        from webnet.ToolNet.tools.message.send_message import SendMessageTool
-        from webnet.ToolNet.tools.message.send_text_file import SendTextFileTool
-        from webnet.ToolNet.tools.message.send_url_file import SendUrlFileTool
         from webnet.ToolNet.tools.message.get_recent_messages import (
             GetRecentMessagesTool,
         )
+        from webnet.ToolNet.tools.message.send_message import SendMessageTool
+        from webnet.ToolNet.tools.message.send_text_file import SendTextFileTool
+        from webnet.ToolNet.tools.message.send_url_file import SendUrlFileTool
 
         self.register(SendMessageTool())
         self.register(SendTextFileTool())
@@ -356,12 +353,12 @@ class ToolRegistry:
     def _load_auth_tools(self):
         """加载认证工具"""
         from webnet.ToolNet.tools.auth.add_user import AddUserTool
-        from webnet.ToolNet.tools.auth.remove_user import RemoveUserTool
         from webnet.ToolNet.tools.auth.check_permission import CheckPermissionTool
         from webnet.ToolNet.tools.auth.grant_permission import GrantPermissionTool
-        from webnet.ToolNet.tools.auth.revoke_permission import RevokePermissionTool
         from webnet.ToolNet.tools.auth.list_groups import ListGroupsTool
         from webnet.ToolNet.tools.auth.list_permissions import ListPermissionsTool
+        from webnet.ToolNet.tools.auth.remove_user import RemoveUserTool
+        from webnet.ToolNet.tools.auth.revoke_permission import RevokePermissionTool
 
         self.register(AddUserTool())
         self.register(RemoveUserTool())
@@ -376,11 +373,11 @@ class ToolRegistry:
 
     def _load_group_tools(self):
         """加载群工具"""
-        from webnet.ToolNet.tools.group.list_members import ListMembersTool
         from webnet.ToolNet.tools.group.add_member import AddMemberTool
+        from webnet.ToolNet.tools.group.get_group_info import GetGroupInfoTool
+        from webnet.ToolNet.tools.group.list_members import ListMembersTool
         from webnet.ToolNet.tools.group.remove_member import RemoveMemberTool
         from webnet.ToolNet.tools.group.set_group_name import SetGroupNameTool
-        from webnet.ToolNet.tools.group.get_group_info import GetGroupInfoTool
 
         self.register(ListMembersTool())
         self.register(AddMemberTool())
@@ -393,16 +390,16 @@ class ToolRegistry:
 
     def _load_memory_tools(self):
         """加载记忆工具（使用统一记忆接口）"""
+        from webnet.ToolNet.tools.memory.auto_extract_memory import AutoExtractMemory
         from webnet.ToolNet.tools.memory.memory_add import MemoryAdd
         from webnet.ToolNet.tools.memory.memory_delete import MemoryDelete
-        from webnet.ToolNet.tools.memory.memory_update import MemoryUpdate
         from webnet.ToolNet.tools.memory.memory_list import MemoryList
-        from webnet.ToolNet.tools.memory.auto_extract_memory import AutoExtractMemory
-        from webnet.ToolNet.tools.memory.memory_stats import (
-            MemoryStats,
-            MemorySearchByCategory,
-        )
         from webnet.ToolNet.tools.memory.memory_query import MemoryQueryTool
+        from webnet.ToolNet.tools.memory.memory_stats import (
+            MemorySearchByCategory,
+            MemoryStats,
+        )
+        from webnet.ToolNet.tools.memory.memory_update import MemoryUpdate
         from webnet.ToolNet.tools.memory.thinking_query import ThinkingQueryTool
 
         self.register(MemoryAdd())
@@ -421,8 +418,8 @@ class ToolRegistry:
     def _load_knowledge_tools(self):
         """加载知识库工具"""
         from webnet.ToolNet.tools.knowledge.add_knowledge import AddKnowledgeTool
-        from webnet.ToolNet.tools.knowledge.search_knowledge import SearchKnowledgeTool
         from webnet.ToolNet.tools.knowledge.delete_knowledge import DeleteKnowledgeTool
+        from webnet.ToolNet.tools.knowledge.search_knowledge import SearchKnowledgeTool
 
         self.register(AddKnowledgeTool())
         self.register(SearchKnowledgeTool())
@@ -434,8 +431,8 @@ class ToolRegistry:
     def _load_cognitive_tools(self):
         """加载认知工具"""
         from webnet.ToolNet.tools.cognitive.get_profile import GetProfileTool
-        from webnet.ToolNet.tools.cognitive.search_profiles import SearchProfilesTool
         from webnet.ToolNet.tools.cognitive.search_events import SearchEventsTool
+        from webnet.ToolNet.tools.cognitive.search_profiles import SearchProfilesTool
 
         self.register(GetProfileTool())
         self.register(SearchProfilesTool())
@@ -473,11 +470,11 @@ class ToolRegistry:
     def _load_entertainment_tools(self):
         """加载娱乐工具"""
         try:
-            from webnet.ToolNet.tools.entertainment.qqlike import QQLike
             from webnet.ToolNet.tools.entertainment.horoscope import Horoscope
-            from webnet.ToolNet.tools.entertainment.wenchang_dijun import WenchangDijun
-            from webnet.ToolNet.tools.entertainment.send_poke import SendPoke
+            from webnet.ToolNet.tools.entertainment.qqlike import QQLike
             from webnet.ToolNet.tools.entertainment.react_emoji import ReactEmoji
+            from webnet.ToolNet.tools.entertainment.send_poke import SendPoke
+            from webnet.ToolNet.tools.entertainment.wenchang_dijun import WenchangDijun
 
             self.register(QQLike())
             self.register(Horoscope())
@@ -493,10 +490,10 @@ class ToolRegistry:
     def _load_qq_multimedia_tools(self):
         """加载QQ多媒体工具"""
         try:
-            from webnet.ToolNet.tools.qq.qq_image import QQImageTool
-            from webnet.ToolNet.tools.qq.qq_file import QQFileTool
             from webnet.ToolNet.tools.qq.qq_emoji import QQEmojiTool
+            from webnet.ToolNet.tools.qq.qq_file import QQFileTool
             from webnet.ToolNet.tools.qq.qq_file_reader import QQFileReaderTool
+            from webnet.ToolNet.tools.qq.qq_image import QQImageTool
             from webnet.ToolNet.tools.qq.qq_image_analyzer import QQImageAnalyzerTool
 
             self.register(QQImageTool())
@@ -517,10 +514,10 @@ class ToolRegistry:
     def _load_visualization_tools(self):
         """加载可视化工具（数据分析、图表生成）"""
         try:
-            from webnet.ToolNet.tools.visualization.data_analyzer import DataAnalyzer
             from webnet.ToolNet.tools.visualization.chart_generator import (
                 ChartGenerator,
             )
+            from webnet.ToolNet.tools.visualization.data_analyzer import DataAnalyzer
 
             self.register(DataAnalyzer())
             self.register(ChartGenerator())
@@ -532,21 +529,21 @@ class ToolRegistry:
         """加载 LifeNet 记忆管理工具"""
         try:
             from webnet.ToolNet.tools.life.life_add_diary import LifeAddDiary
-            from webnet.ToolNet.tools.life.life_get_diary import LifeGetDiary
             from webnet.ToolNet.tools.life.life_add_summary import LifeAddSummary
-            from webnet.ToolNet.tools.life.life_get_summary import LifeGetSummary
             from webnet.ToolNet.tools.life.life_create_character_node import (
                 LifeCreateCharacterNode,
             )
             from webnet.ToolNet.tools.life.life_create_stage_node import (
                 LifeCreateStageNode,
             )
-            from webnet.ToolNet.tools.life.life_get_node import LifeGetNode
-            from webnet.ToolNet.tools.life.life_list_nodes import LifeListNodes
-            from webnet.ToolNet.tools.life.life_search_memory import LifeSearchMemory
+            from webnet.ToolNet.tools.life.life_get_diary import LifeGetDiary
             from webnet.ToolNet.tools.life.life_get_memory_context import (
                 LifeGetMemoryContext,
             )
+            from webnet.ToolNet.tools.life.life_get_node import LifeGetNode
+            from webnet.ToolNet.tools.life.life_get_summary import LifeGetSummary
+            from webnet.ToolNet.tools.life.life_list_nodes import LifeListNodes
+            from webnet.ToolNet.tools.life.life_search_memory import LifeSearchMemory
 
             # 注册所有 LifeNet 工具
             self.register(LifeAddDiary())
@@ -569,11 +566,11 @@ class ToolRegistry:
         try:
             # from webnet.ToolNet.tools.network.grok_search import GrokSearchTool  # 无免费额度，已禁用
             from webnet.ToolNet.tools.network.crawl_webpage import CrawlWebpageTool
-            from webnet.ToolNet.tools.network.whois_query import WhoisQueryTool
-            from webnet.ToolNet.tools.network.tcping import TCPingTool
             from webnet.ToolNet.tools.network.speed_test import SpeedTestTool
             from webnet.ToolNet.tools.network.tavily_search_tool import TavilySearchTool
+            from webnet.ToolNet.tools.network.tcping import TCPingTool
             from webnet.ToolNet.tools.network.weather_query import WeatherQueryTool
+            from webnet.ToolNet.tools.network.whois_query import WhoisQueryTool
 
             # self.register(GrokSearchTool())  # 无免费额度，已禁用
             self.register(CrawlWebpageTool())
@@ -675,7 +672,6 @@ class ToolRegistry:
 
                                 async def execute(self, context, **kwargs):
                                     try:
-                                        import sys
                                         from importlib import import_module
 
                                         # 将 ToolContext 转换为字典

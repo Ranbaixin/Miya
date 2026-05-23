@@ -7,14 +7,14 @@ MIYA 对话管理系统
 import asyncio
 import logging
 import uuid
-from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 from core.db_manager import (
+    ConversationMessage,
     DatabaseManager,
     Session,
-    ConversationMessage,
     get_db_manager,
 )
 

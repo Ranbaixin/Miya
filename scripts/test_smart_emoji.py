@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 智能表情包系统演示
 测试语义分析、智能匹配和自动标签功能
 """
 
-import asyncio
 import os
 import sys
 from pathlib import Path
@@ -95,7 +93,7 @@ def test_smart_emoji_system():
                 tags = em.emoji_tags.get(r["path"], [])
                 print(f"      {i}. {r['name']} [标签: {', '.join(tags[:3])}]")
         else:
-            print(f"      (无匹配结果)")
+            print("      (无匹配结果)")
 
     print("\n5. 上下文感知测试")
     print("-" * 40)

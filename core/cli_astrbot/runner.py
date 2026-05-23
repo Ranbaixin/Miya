@@ -1,6 +1,5 @@
 """CLI Runner"""
 
-import sys
 from .commands import CLIRunner as BaseCLIRunner
 
 

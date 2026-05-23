@@ -8,25 +8,23 @@ MIYA 模型池兼容层 v7.0
 本模块提供旧系统向后兼容
 """
 
-import os
 import logging
-from typing import Optional, List, Dict, Any
 from dataclasses import dataclass, field
-from enum import Enum
+from typing import Dict, List, Optional
 
 logger = logging.getLogger("model_pool_compat")
 
 # 使用新的统一系统
 from core.model_pool_manager import (
-    ModelPoolManager,
     Model,
-    ModelRoute,
-    get_model_pool as _get_new_pool,
-    TaskType,
-    ModelType,
     ModelProvider,
+    ModelRoute,
+    ModelType,
+    TaskType,
 )
-
+from core.model_pool_manager import (
+    get_model_pool as _get_new_pool,
+)
 
 # ==================== 兼容函数 ====================
 

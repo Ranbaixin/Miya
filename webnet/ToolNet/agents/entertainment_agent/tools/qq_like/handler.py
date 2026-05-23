@@ -2,7 +2,8 @@
 QQ点赞工具 handler
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
+
 from webnet.ToolNet.tools.entertainment.qqlike import QQLike
 
 

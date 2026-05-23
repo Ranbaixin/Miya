@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from astrbot.core.config import AstrBotConfig
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
+
+from astrbot.core.config import AstrBotConfig
 
 from . import HandlerFilter
 from .command import CommandFilter
@@ -103,10 +104,7 @@ class CommandGroupFilter(HandlerFilter):
         return "".join(parts)
 
     def custom_filter_ok(self, event: AstrMessageEvent, cfg: AstrBotConfig) -> bool:
-        for custom_filter in self.custom_filter_list:
-            if not custom_filter.filter(event, cfg):
-                return False
-        return True
+        return all(custom_filter.filter(event, cfg) for custom_filter in self.custom_filter_list)
 
     def startswith(self, message_str: str) -> bool:
         return message_str.startswith(tuple(self.get_complete_command_names()))

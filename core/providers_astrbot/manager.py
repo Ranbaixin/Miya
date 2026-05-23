@@ -1,12 +1,12 @@
 import asyncio
+import contextlib
 import copy
 import os
 import traceback
 from collections.abc import Callable
 from typing import Protocol, runtime_checkable
 
-from core.astrbot_compat import astrbot_config, logger, sp
-from core.astrbot_compat import AstrBotConfigManager
+from core.astrbot_compat import AstrBotConfigManager, astrbot_config, logger, sp
 from core.astrbot_compat.db import BaseDatabase
 from core.astrbot_compat.utils import safe_error
 
@@ -818,7 +818,7 @@ class ProviderManager:
     async def update_provider(self, origin_provider_id: str, new_config: dict) -> None:
         """Update provider config and reload the instance. Config will be saved after update."""
         async with self.resource_lock:
-            npid = new_config.get("id", None)
+            npid = new_config.get("id")
             if not npid:
                 raise ValueError("New provider config must have an 'id' field")
             config = self.acm.default_conf
@@ -842,7 +842,7 @@ class ProviderManager:
     async def create_provider(self, new_config: dict) -> None:
         """Add new provider config and load the instance. Config will be saved after addition."""
         async with self.resource_lock:
-            npid = new_config.get("id", None)
+            npid = new_config.get("id")
             if not npid:
                 raise ValueError("New provider config must have an 'id' field")
             config = self.acm.default_conf
@@ -860,10 +860,8 @@ class ProviderManager:
     async def terminate(self) -> None:
         if self._mcp_init_task and not self._mcp_init_task.done():
             self._mcp_init_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._mcp_init_task
-            except asyncio.CancelledError:
-                pass
 
         for provider_inst in self.provider_insts:
             if hasattr(provider_inst, "terminate"):

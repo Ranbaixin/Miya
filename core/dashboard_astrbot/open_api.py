@@ -3,12 +3,10 @@ import hashlib
 import json
 from uuid import uuid4
 
+from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
+from astrbot.core.platform.message_session import MessageSesion
 from quart import g, request, websocket
 
-from core.astrbot_compat import logger
-from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
-from core.astrbot_compat.db import BaseDatabase
-from astrbot.core.platform.message_session import MessageSesion
 from astrbot.core.platform.sources.webchat.message_parts_helper import (
     build_message_chain_from_payload,
     strip_message_parts_path_fields,
@@ -16,6 +14,8 @@ from astrbot.core.platform.sources.webchat.message_parts_helper import (
 )
 from astrbot.core.platform.sources.webchat.webchat_queue_mgr import webchat_queue_mgr
 from astrbot.core.utils.datetime_utils import to_utc_isoformat
+from core.astrbot_compat import logger
+from core.astrbot_compat.db import BaseDatabase
 
 from .api_key import ALL_OPEN_API_SCOPES
 from .chat import (
@@ -228,10 +228,7 @@ class OpenApiRoute(Route):
         if not api_key:
             return False, "Invalid API key"
 
-        if isinstance(api_key.scopes, list):
-            scopes = api_key.scopes
-        else:
-            scopes = list(ALL_OPEN_API_SCOPES)
+        scopes = api_key.scopes if isinstance(api_key.scopes, list) else list(ALL_OPEN_API_SCOPES)
 
         if "*" not in scopes and "chat" not in scopes:
             return False, "Insufficient API key scope"

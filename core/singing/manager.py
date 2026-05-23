@@ -7,13 +7,10 @@
 import asyncio
 import logging
 import os
-import re
-import time
 import threading
-from typing import Dict, List, Optional, Any
-from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-from .base import SingingEngine, SongInfo, LearnTask, LearnStatus, SongOutput
+from .base import LearnStatus, SingingEngine, SongOutput
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +64,7 @@ class SingingWorkflow:
         if engine.engine_name == "builtin":
             from core.singing.provider_builtin import BuiltinSingingEngine
 
-            builtin: "BuiltinSingingEngine" = engine  # type: ignore
+            builtin: BuiltinSingingEngine = engine  # type: ignore
             converted = os.path.join(output_dir, f"Vocals_{builtin.rvc_model}.wav")
             inst = os.path.join(output_dir, "Instrumental.wav")
 
@@ -218,14 +215,13 @@ class SingingWorkflow:
 
     async def _builtin_pipeline(self, song_name: str, output_dir: str, font_text: str):
         """内置引擎全流程：下载 → 分离 → 换声 → 入队 → 播放"""
-        from core.text_loader import get_singing_text
         from core.singing.provider_builtin import BuiltinSingingEngine
 
         engine = self.registry.get_engine()
         if engine is None or engine.engine_name != "builtin":
             return
 
-        builtin: "BuiltinSingingEngine" = engine  # type: ignore
+        builtin: BuiltinSingingEngine = engine  # type: ignore
         result = await builtin.process_full_pipeline(song_name, output_dir)
         if result is None:
             logger.error(f"[唱歌] builtin 全流程失败: {song_name}")

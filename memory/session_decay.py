@@ -9,10 +9,10 @@
 """
 
 import logging
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from datetime import datetime
-from typing import Optional, Tuple
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 

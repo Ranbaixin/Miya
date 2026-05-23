@@ -9,22 +9,22 @@ from pathlib import Path
 from typing import Literal, cast
 from urllib.parse import urlparse
 
-from google import genai
-from google.genai import types
-from google.genai.errors import APIError
-
 import astrbot.core.message.components as Comp
-from astrbot import logger
 from astrbot.api.provider import Provider
 from astrbot.core.agent.message import AudioURLPart, ContentPart, ImageURLPart, TextPart
 from astrbot.core.exceptions import EmptyModelOutputError
 from astrbot.core.message.message_event_result import MessageChain
 from astrbot.core.provider.entities import LLMResponse, TokenUsage
 from astrbot.core.provider.func_tool_manager import ToolSet
-from core.astrbot_compat.utils import get_astrbot_temp_path
+from google import genai
+from google.genai import types
+from google.genai.errors import APIError
+
+from astrbot import logger
 from astrbot.core.utils.io import download_file, download_image_by_url
 from astrbot.core.utils.media_utils import ensure_wav
 from astrbot.core.utils.network_utils import is_connection_error, log_connection_failure
+from core.astrbot_compat.utils import get_astrbot_temp_path
 
 from ..register import register_provider_adapter
 
@@ -265,7 +265,7 @@ class ProviderGoogleGenAI(Provider):
                 level = types.ThinkingLevel(thinking_level)
                 thinking_config = types.ThinkingConfig()
                 if not hasattr(types.ThinkingConfig, "thinking_level"):
-                    setattr(types.ThinkingConfig, "thinking_level", level)
+                    types.ThinkingConfig.thinking_level = level
                 else:
                     thinking_config.thinking_level = level
 
@@ -503,9 +503,8 @@ class ProviderGoogleGenAI(Provider):
             raise Exception("模型生成内容违反 Gemini 平台政策")
 
         # 防止旧版本SDK不存在IMAGE_SAFETY
-        if hasattr(types.FinishReason, "IMAGE_SAFETY"):
-            if finish_reason == types.FinishReason.IMAGE_SAFETY:
-                raise Exception("模型生成内容违反 Gemini 平台政策")
+        if hasattr(types.FinishReason, "IMAGE_SAFETY") and finish_reason == types.FinishReason.IMAGE_SAFETY:
+            raise Exception("模型生成内容违反 Gemini 平台政策")
 
         if not result_parts:
             logger.warning(f"收到的 candidate.content.parts 为空: {candidate}")

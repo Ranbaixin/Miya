@@ -10,15 +10,13 @@
 参考 Undefined 项目的安全防护设计
 """
 
-import asyncio
 import logging
 import re
 import time
+from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from enum import Enum
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +132,7 @@ class InjectionDetector:
                 )
                 return SecurityCheckResult(
                     level=SecurityLevel.DANGEROUS,
-                    message=f"检测到可疑注入模式",
+                    message="检测到可疑注入模式",
                     blocked=True,
                     reason=f"pattern_{i}",
                     metadata={"matched": match.group()[:50]},
@@ -230,7 +228,7 @@ class SensitiveWordFilter:
                 logger.warning(f"[SensitiveWordFilter] 检测到阻断词: {word}")
                 return SecurityCheckResult(
                     level=SecurityLevel.BLOCKED,
-                    message=f"检测到阻断词",
+                    message="检测到阻断词",
                     blocked=True,
                     reason="blocked_word",
                     metadata={"word": word},
@@ -242,7 +240,7 @@ class SensitiveWordFilter:
         if found:
             return SecurityCheckResult(
                 level=SecurityLevel.SUSPICIOUS,
-                message=f"检测到敏感词",
+                message="检测到敏感词",
                 reason="sensitive_word",
                 metadata={"words": found},
             )

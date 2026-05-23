@@ -1,8 +1,9 @@
 import os
 import uuid
 
-from astrbot.core import astrbot_config, logger
 from astrbot.core.config.default import WEBHOOK_SUPPORTED_PLATFORMS
+
+from astrbot.core import astrbot_config, logger
 
 
 def _get_callback_api_base() -> str:

@@ -3,9 +3,10 @@ from collections import defaultdict, deque
 from collections.abc import AsyncGenerator
 from datetime import datetime, timedelta
 
-from core.astrbot_compat import logger
 from astrbot.core.config.astrbot_config import RateLimitStrategy
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
+
+from core.astrbot_compat import logger
 
 from ..context import PipelineContext
 from ..stage import Stage, register_stage

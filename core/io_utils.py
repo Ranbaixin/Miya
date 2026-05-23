@@ -89,9 +89,8 @@ async def read_json(file_path: Path | str, use_lock: bool = False) -> Any | None
             return None
         if use_lock:
             lock_path = _lock_path_for(p)
-            with FileLock(lock_path, shared=True):
-                with open(p, "r", encoding="utf-8") as f:
-                    return json.load(f)
+            with FileLock(lock_path, shared=True), open(p, "r", encoding="utf-8") as f:
+                return json.load(f)
         with open(p, "r", encoding="utf-8") as f:
             return json.load(f)
 
@@ -191,10 +190,9 @@ async def append_line(
         p.parent.mkdir(parents=True, exist_ok=True)
         lock_path = Path(lock_file_path) if lock_file_path else _lock_path_for(p)
         if use_lock:
-            with FileLock(lock_path, shared=False):
-                with open(p, "a", encoding="utf-8") as f:
-                    f.write(line)
-                    f.flush()
+            with FileLock(lock_path, shared=False), open(p, "a", encoding="utf-8") as f:
+                f.write(line)
+                f.flush()
             return
         with open(p, "a", encoding="utf-8") as f:
             f.write(line)

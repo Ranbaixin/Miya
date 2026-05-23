@@ -2,6 +2,7 @@
 
 import abc
 import asyncio
+import contextlib
 import copy
 import functools
 import time
@@ -9,6 +10,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 import astrbot.core.message.components as Comp
+
 from astrbot.core.platform import AstrMessageEvent
 
 USER_SESSIONS: dict[str, "SessionWaiter"] = {}  # 存储 SessionWaiter 实例
@@ -144,10 +146,8 @@ class SessionWaiter:
     def _cleanup(self, error: Exception | None = None) -> None:
         """清理会话"""
         USER_SESSIONS.pop(self.session_id, None)
-        try:
+        with contextlib.suppress(ValueError):
             FILTERS.remove(self.session_filter)
-        except ValueError:
-            pass
         self.session_controller.stop(error)
 
     @classmethod

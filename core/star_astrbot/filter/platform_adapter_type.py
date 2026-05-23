@@ -1,7 +1,8 @@
 import enum
 
-from astrbot.core.config import AstrBotConfig
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
+
+from astrbot.core.config import AstrBotConfig
 
 from . import HandlerFilter
 

@@ -1,6 +1,5 @@
-from botpy import Client
-
 from astrbot.api.platform import AstrBotMessage, PlatformMetadata
+from botpy import Client
 
 from ..qqofficial.qqofficial_message_event import QQOfficialMessageEvent
 

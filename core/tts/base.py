@@ -5,8 +5,7 @@ TTS引擎抽象基类
 MIYA TTS 系统的基础层
 """
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any
-from pathlib import Path
+from typing import Any, Dict
 
 
 class TTSEngine(ABC):

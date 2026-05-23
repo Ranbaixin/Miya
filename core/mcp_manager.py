@@ -8,12 +8,13 @@
 """
 
 import asyncio
-import json
 import importlib
+import json
 import logging
-from pathlib import Path
-from typing import Dict, Any, Optional, List, Callable
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
+
 from core.constants import Encoding
 
 logger = logging.getLogger(__name__)
@@ -63,7 +64,7 @@ class MCPServiceInstance:
             self.call_count += 1
             self.last_called = asyncio.get_event_loop().time()
             return result
-        except Exception as e:
+        except Exception:
             self.error_count += 1
             raise
 

@@ -1,13 +1,10 @@
 """
 Python解释器工具
 """
-from typing import Dict, Any
 import logging
-import subprocess
-import tempfile
-from pathlib import Path
-from webnet.ToolNet.base import BaseTool, ToolContext
+from typing import Any, Dict
 
+from webnet.ToolNet.base import BaseTool, ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +46,7 @@ class PythonInterpreter(BaseTool):
             执行结果或错误信息
         """
         code = args.get("code", "")
-        timeout = args.get("timeout", 30)
+        args.get("timeout", 30)
 
         if not code.strip():
             return "代码不能为空"

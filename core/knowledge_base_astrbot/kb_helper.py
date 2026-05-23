@@ -7,8 +7,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import aiofiles
-
-from core.astrbot_compat import logger
 from astrbot.core.db.vec_db.base import BaseVecDB
 from astrbot.core.exceptions import KnowledgeBaseUploadError
 from astrbot.core.provider.manager import ProviderManager
@@ -19,6 +17,8 @@ from astrbot.core.provider.provider import (
 from astrbot.core.provider.provider import (
     Provider as LLMProvider,
 )
+
+from core.astrbot_compat import logger
 
 from .chunking.base import BaseChunker
 from .chunking.recursive import RecursiveCharacterChunker

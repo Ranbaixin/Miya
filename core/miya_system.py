@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 MIYA 系统初始化模块
 
 统一的系统初始化和管理入口
 """
 
-import asyncio
 import logging
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, Optional
 
 PROJECT_ROOT = Path(__file__).parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -99,7 +97,7 @@ class MIYASystem:
 
         self._initialized = True
         logger.info("=" * 50)
-        logger.info(f"[MIYA] System ready!")
+        logger.info("[MIYA] System ready!")
         logger.info(f"   Start time: {datetime.now()}")
         logger.info(f"   Modules: {len(self._modules)}")
         logger.info("=" * 50)
@@ -173,7 +171,7 @@ class MIYASystem:
             # Memory 模块是可选的
             self._modules["memory"].status = "ready"
             self._modules["memory"].load_time_ms = (time.time() - start) * 1000
-            logger.info(f"  [OK] Memory: ready")
+            logger.info("  [OK] Memory: ready")
         except Exception as e:
             self._modules["memory"].status = "disabled"
             logger.info(f"  [SKIP] Memory: {e}")
@@ -188,7 +186,7 @@ class MIYASystem:
         try:
             self._modules["personality"].status = "ready"
             self._modules["personality"].load_time_ms = (time.time() - start) * 1000
-            logger.info(f"  [OK] Personality: ready")
+            logger.info("  [OK] Personality: ready")
         except Exception as e:
             self._modules["personality"].status = "disabled"
             logger.info(f"  [SKIP] Personality: {e}")

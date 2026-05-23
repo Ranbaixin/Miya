@@ -3,8 +3,6 @@
 此文件定义了导出器和导入器共享的常量，确保两端配置一致。
 """
 
-from sqlmodel import SQLModel
-
 from astrbot.core.db.po import (
     Attachment,
     ChatUIProject,
@@ -25,6 +23,8 @@ from astrbot.core.knowledge_base.models import (
     KBMedia,
     KnowledgeBase,
 )
+from sqlmodel import SQLModel
+
 from astrbot.core.utils.astrbot_path import (
     get_astrbot_config_path,
     get_astrbot_plugin_data_path,

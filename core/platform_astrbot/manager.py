@@ -3,10 +3,11 @@ import traceback
 from asyncio import Queue
 from dataclasses import dataclass
 
-from core.astrbot_compat import logger
 from astrbot.core.config.astrbot_config import AstrBotConfig
 from astrbot.core.star.star_handler import EventType, star_handlers_registry, star_map
+
 from astrbot.core.utils.webhook_utils import ensure_platform_webhook_config
+from core.astrbot_compat import logger
 
 from .platform import Platform, PlatformStatus
 from .register import platform_cls_map

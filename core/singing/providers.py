@@ -9,11 +9,10 @@
 
 import asyncio
 import logging
-import json
 import os
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
 
-from .base import SingingEngine, SongInfo, LearnTask, LearnStatus
+from .base import LearnStatus, LearnTask, SingingEngine, SongInfo
 
 logger = logging.getLogger(__name__)
 
@@ -325,7 +324,7 @@ class RVCEngine(SingingEngine):
 
     async def set_model(self, model_name: str) -> bool:
         resp = await asyncio.get_event_loop().run_in_executor(
-            None, lambda: self._post(f"/set_model", data={"model_name": model_name})
+            None, lambda: self._post("/set_model", data={"model_name": model_name})
         )
         if resp is not None:
             self.model_name = model_name

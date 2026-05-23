@@ -7,9 +7,10 @@ KOOK / Slack / 钉钉 / Satori / 企业微信 / 微信公众号 — 专用平台
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Optional
 
 from .webhook_base import WebhookPlatform
 
@@ -47,37 +48,36 @@ class KOOKPlatform(WebhookPlatform):
 
             async def kook_loop():
                 url = f"wss://ws.kookapp.com/ws?token={self._token}"
-                async with aiohttp.ClientSession() as session:
-                    async with session.ws_connect(url) as ws:
-                        self._ws = ws
-                        self._heartbeat_task = asyncio.create_task(heartbeat(ws))
-                        async for msg in ws:
-                            if msg.type == aiohttp.WSMsgType.TEXT:
-                                data = json.loads(msg.data)
-                                if data.get("s") == 0:  # EVENT
-                                    d = data.get("d", {})
-                                    typ = d.get("type", 0)
-                                    if typ == 1:  # TEXT message
-                                        content = d.get("content", "")
-                                        author = d.get("extra", {}).get("author", {})
-                                        user_id = d.get("author_id", "") or author.get(
-                                            "id", ""
+                async with aiohttp.ClientSession() as session, session.ws_connect(url) as ws:
+                    self._ws = ws
+                    self._heartbeat_task = asyncio.create_task(heartbeat(ws))
+                    async for msg in ws:
+                        if msg.type == aiohttp.WSMsgType.TEXT:
+                            data = json.loads(msg.data)
+                            if data.get("s") == 0:  # EVENT
+                                d = data.get("d", {})
+                                typ = d.get("type", 0)
+                                if typ == 1:  # TEXT message
+                                    content = d.get("content", "")
+                                    author = d.get("extra", {}).get("author", {})
+                                    user_id = d.get("author_id", "") or author.get(
+                                        "id", ""
+                                    )
+                                    ch_type = d.get("channel_type", "PERSON")
+                                    if content.strip():
+                                        await platform.route_to_decision_hub(
+                                            content=content,
+                                            user_id=str(user_id),
+                                            message_type="group"
+                                            if ch_type == "GROUP"
+                                            else "private",
                                         )
-                                        ch_type = d.get("channel_type", "PERSON")
-                                        if content.strip():
-                                            await platform.route_to_decision_hub(
-                                                content=content,
-                                                user_id=str(user_id),
-                                                message_type="group"
-                                                if ch_type == "GROUP"
-                                                else "private",
-                                            )
 
             self._tasks.append(asyncio.create_task(kook_loop()))
-            logger.info(f"[kook] 已连接")
+            logger.info("[kook] 已连接")
             return True
         except ImportError:
-            logger.error(f"[kook] 请安装 aiohttp")
+            logger.error("[kook] 请安装 aiohttp")
             return True
         except Exception as e:
             logger.error(f"[kook] 连接失败: {e}")
@@ -87,10 +87,8 @@ class KOOKPlatform(WebhookPlatform):
         if self._heartbeat_task:
             self._heartbeat_task.cancel()
         if self._ws:
-            try:
+            with contextlib.suppress(Exception):
                 await self._ws.close()
-            except Exception:
-                pass
 
     def get_webhook_routes(self) -> Optional[dict]:
         return None
@@ -114,8 +112,8 @@ class SlackPlatform(WebhookPlatform):
             return True
         try:
             from slack_sdk.socket_mode.aiohttp import SocketModeClient
-            from slack_sdk.web.async_client import AsyncWebClient
             from slack_sdk.socket_mode.request import SocketModeRequest
+            from slack_sdk.web.async_client import AsyncWebClient
 
             platform = self
 
@@ -148,10 +146,10 @@ class SlackPlatform(WebhookPlatform):
 
             self._handler = client
             self._tasks.append(asyncio.create_task(slack_loop()))
-            logger.info(f"[slack] Socket Mode 已启动")
+            logger.info("[slack] Socket Mode 已启动")
             return True
         except ImportError:
-            logger.warning(f"[slack] 请安装 slack-sdk: pip install slack-sdk")
+            logger.warning("[slack] 请安装 slack-sdk: pip install slack-sdk")
             return True
         except Exception as e:
             logger.error(f"[slack] 连接失败: {e}")
@@ -159,10 +157,8 @@ class SlackPlatform(WebhookPlatform):
 
     async def _do_disconnect(self):
         if self._handler:
-            try:
+            with contextlib.suppress(Exception):
                 await self._handler.close()
-            except Exception:
-                pass
 
     def get_webhook_routes(self) -> Optional[dict]:
         return None
@@ -188,7 +184,7 @@ class DingTalkPlatform(WebhookPlatform):
             import sys
 
             sys.path.insert(0, r"D:\AI_MIYA_Facyory\dingtalk-stream-sdk-python")
-            from dingtalk_stream import DingTalkStreamClient, Credential, ChatbotHandler
+            from dingtalk_stream import ChatbotHandler, Credential, DingTalkStreamClient
 
             platform = self
 
@@ -214,7 +210,7 @@ class DingTalkPlatform(WebhookPlatform):
 
             self._client = client
             self._tasks.append(asyncio.create_task(dingtalk_loop()))
-            logger.info(f"[dingtalk] Stream 模式已启动")
+            logger.info("[dingtalk] Stream 模式已启动")
             return True
         except ImportError as e:
             logger.warning(f"[dingtalk] SDK 缺失: {e}")
@@ -249,11 +245,11 @@ class DingTalkPlatform(WebhookPlatform):
 
             self._client = client
             self._tasks.append(asyncio.create_task(dingtalk_loop()))
-            logger.info(f"[dingtalk] Stream 模式已启动")
+            logger.info("[dingtalk] Stream 模式已启动")
             return True
         except ImportError:
             logger.warning(
-                f"[dingtalk] 请安装 dingtalk-stream: pip install dingtalk-stream"
+                "[dingtalk] 请安装 dingtalk-stream: pip install dingtalk-stream"
             )
             return True
         except Exception as e:
@@ -262,10 +258,8 @@ class DingTalkPlatform(WebhookPlatform):
 
     async def _do_disconnect(self):
         if self._client:
-            try:
+            with contextlib.suppress(Exception):
                 await self._client.stop()
-            except Exception:
-                pass
 
 
 class SatoriPlatform(WebhookPlatform):
@@ -320,7 +314,7 @@ class SatoriPlatform(WebhookPlatform):
             self._tasks.append(asyncio.create_task(satori_loop()))
             return True
         except ImportError:
-            logger.warning(f"[satori] 请安装 aiohttp")
+            logger.warning("[satori] 请安装 aiohttp")
             return True
         except Exception as e:
             logger.error(f"[satori] 连接失败: {e}")

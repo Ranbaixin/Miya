@@ -8,14 +8,12 @@ MIYA 知识库系统
 - 文档解析 (PDF, EPUB, TXT, URL)
 """
 
+import json
 import logging
 import os
-import json
-import asyncio
-from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 from pathlib import Path
-import importlib
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +95,7 @@ class VectorStore:
 
     def _cosine_similarity(self, a: List[float], b: List[float]) -> float:
         """余弦相似度"""
-        dot = sum(x * y for x, y in zip(a, b))
+        dot = sum(x * y for x, y in zip(a, b, strict=False))
         norm_a = sum(x * x for x in a) ** 0.5
         norm_b = sum(x * x for x in b) ** 0.5
         if norm_a == 0 or norm_b == 0:
@@ -166,7 +164,7 @@ class BM25SparseRetriever:
         N = len(self._documents)
 
         scores = []
-        for doc_idx, doc in enumerate(self._documents):
+        for _doc_idx, doc in enumerate(self._documents):
             doc_words = doc.split()
             doc_len = len(doc_words)
             doc_word_freq = {}
@@ -236,7 +234,6 @@ class BM25SparseRetriever:
 
 
 import math
-
 
 # ==================== RRF 混合检索 ====================
 

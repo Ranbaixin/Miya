@@ -4,14 +4,17 @@
 """
 
 import matplotlib
+
 matplotlib.use('Agg')  # 使用非交互式后端
-import matplotlib.pyplot as plt
+import logging
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 import matplotlib.font_manager as fm
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Tuple, Any
-from pathlib import Path
-import logging
+
 from webnet.ToolNet.registry import BaseTool, ToolContext
 
 logger = logging.getLogger(__name__)
@@ -391,10 +394,7 @@ class ChartGenerator(BaseTool):
 
         fig, axes = plt.subplots(n_rows, n_cols, figsize=(16, 6 * n_rows))
 
-        if n_charts == 1:
-            axes = [axes]
-        else:
-            axes = axes.flatten()
+        axes = [axes] if n_charts == 1 else axes.flatten()
 
         for i, chart_config in enumerate(charts):
             ax = axes[i] if i < len(axes) else None

@@ -10,11 +10,11 @@ LifeBook - 多视角日记系统
 
 import json
 import logging
+from calendar import monthrange
+from collections import deque
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional
-from collections import deque
-from calendar import monthrange
 
 logger = logging.getLogger(__name__)
 
@@ -206,7 +206,7 @@ class LifeBook:
             for pattern_config in pattern_list:
                 pattern = pattern_config.get("pattern", "")
                 category_name = pattern_config.get("category", category)
-                field = pattern_config.get("field", "")
+                pattern_config.get("field", "")
 
                 match = re.search(pattern, user_message)
                 if match:
@@ -530,10 +530,7 @@ class LifeBook:
             if templates:
                 template = templates.get(template_key, "")
 
-            if extra:
-                template = template.format(content=content, **extra)
-            else:
-                template = template.format(content=content)
+            template = template.format(content=content, **extra) if extra else template.format(content=content)
 
             system_prompt = (
                 self._get_config_value("system_prompt")

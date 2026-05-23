@@ -9,20 +9,15 @@
 5. 记忆压缩
 """
 
-import asyncio
+import contextlib
 import logging
 import re
-from typing import Dict, List, Optional, Any
-from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 from memory import (
+    get_memory_core,
     store_dialogue,
     store_important,
-    search_memory,
-    get_dialogue_history,
-    MemoryLevel,
-    MemorySource,
-    get_memory_core,
 )
 from memory.historian import get_historian
 
@@ -99,10 +94,8 @@ class MemoryManager:
                 # 每 3 条消息强制 flush 到磁盘
                 self._conv_save_counter = getattr(self, "_conv_save_counter", 0) + 1
                 if self._conv_save_counter % 3 == 0:
-                    try:
+                    with contextlib.suppress(Exception):
                         await self.memory_net.conversation_history.flush()
-                    except Exception:
-                        pass
 
             # 存储到统一记忆系统 (新版 API)
             await store_dialogue(
@@ -197,10 +190,8 @@ class MemoryManager:
                 # 每 3 条消息强制 flush 到磁盘
                 self._conv_save_counter = getattr(self, "_conv_save_counter", 0) + 1
                 if self._conv_save_counter % 3 == 0:
-                    try:
+                    with contextlib.suppress(Exception):
                         await self.memory_net.conversation_history.flush()
-                    except Exception:
-                        pass
 
             # 存储到统一记忆系统 (新版 API)
             await store_dialogue(
@@ -261,7 +252,8 @@ class MemoryManager:
 
             # 【每日摘要】跨天时自动生昨日摘要
             try:
-                from datetime import datetime as dt, timedelta
+                from datetime import datetime as dt
+                from datetime import timedelta
 
                 today = dt.now().strftime("%Y-%m-%d")
                 self._last_summary_date = getattr(self, "_last_summary_date", "")
@@ -321,8 +313,8 @@ class MemoryManager:
 
         模式从 text_config.json 的 assistant_self.patterns 加载
         """
-        import re
         import json
+        import re
         from pathlib import Path
 
         # 从配置文件加载模式

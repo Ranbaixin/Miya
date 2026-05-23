@@ -4,10 +4,9 @@ AstrBot Provider 适配器
 将 AstrBot 的模型源适配到弥娅的 Provider 接口。
 """
 
-import asyncio
 import logging
-from typing import Dict, List, Any, Optional, AsyncIterator
 from abc import ABC, abstractmethod
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

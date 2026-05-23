@@ -16,31 +16,31 @@ from enum import Enum, auto
 from types import ModuleType
 
 import yaml
+from astrbot.core.agent.handoff import FunctionTool, HandoffTool
+from astrbot.core.config.astrbot_config import AstrBotConfig
+from astrbot.core.config.default import VERSION
+from astrbot.core.platform.register import unregister_platform_adapters_by_module
+from astrbot.core.provider.register import llm_tools
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.version import InvalidVersion, Version
 
+from astrbot.core.utils.io import remove_dir
+from astrbot.core.utils.metrics import Metric
+from astrbot.core.utils.requirements_utils import (
+    MissingRequirementsPlan,
+    plan_missing_requirements_install,
+)
 from core.astrbot_compat import (
     DependencyConflictError,
     logger,
     pip_installer,
     sp,
 )
-from astrbot.core.agent.handoff import FunctionTool, HandoffTool
-from astrbot.core.config.astrbot_config import AstrBotConfig
-from astrbot.core.config.default import VERSION
-from astrbot.core.platform.register import unregister_platform_adapters_by_module
-from astrbot.core.provider.register import llm_tools
 from core.astrbot_compat.utils import (
     get_astrbot_config_path,
     get_astrbot_path,
     get_astrbot_plugin_path,
     get_astrbot_temp_path,
-)
-from astrbot.core.utils.io import remove_dir
-from astrbot.core.utils.metrics import Metric
-from astrbot.core.utils.requirements_utils import (
-    MissingRequirementsPlan,
-    plan_missing_requirements_install,
 )
 
 from . import StarMetadata
@@ -497,7 +497,7 @@ class PluginManager:
                 author=metadata["author"],
                 desc=metadata["desc"],
                 version=metadata["version"],
-                repo=metadata["repo"] if "repo" in metadata else None,
+                repo=metadata.get("repo", None),
                 display_name=metadata.get("display_name", None),
                 support_platforms=(
                     [
@@ -967,9 +967,9 @@ class PluginManager:
 
                     # 在实例化前注入类属性，保证插件 __init__ 可读取这些值
                     if metadata.star_cls_type:
-                        setattr(metadata.star_cls_type, "name", p_name)
-                        setattr(metadata.star_cls_type, "author", p_author)
-                        setattr(metadata.star_cls_type, "plugin_id", plugin_id)
+                        metadata.star_cls_type.name = p_name
+                        metadata.star_cls_type.author = p_author
+                        metadata.star_cls_type.plugin_id = plugin_id
 
                     if path not in inactivated_plugins:
                         # 只有没有禁用插件时才实例化插件类
@@ -989,9 +989,9 @@ class PluginManager:
                             )
 
                         if metadata.star_cls:
-                            setattr(metadata.star_cls, "name", p_name)
-                            setattr(metadata.star_cls, "author", p_author)
-                            setattr(metadata.star_cls, "plugin_id", plugin_id)
+                            metadata.star_cls.name = p_name
+                            metadata.star_cls.author = p_author
+                            metadata.star_cls.plugin_id = plugin_id
                     else:
                         logger.info(f"插件 {metadata.name} 已被禁用。")
 

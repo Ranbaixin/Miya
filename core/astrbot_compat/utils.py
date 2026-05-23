@@ -4,14 +4,13 @@ AstrBot 工具函数兼容层
 提供 AstrBot 常用工具函数的兼容实现。
 """
 
-import os
-import sys
 import hashlib
 import json
+import os
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Optional, Union
-from datetime import datetime, timezone
 
 
 # 路径工具
@@ -43,9 +42,9 @@ def get_astrbot_log_path() -> str:
 def normalize_datetime_utc(dt: Optional[datetime] = None) -> str:
     """将日期时间规范化为 UTC ISO 格式"""
     if dt is None:
-        dt = datetime.now(timezone.utc)
+        dt = datetime.now(UTC)
     elif dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return dt.isoformat()
 
 

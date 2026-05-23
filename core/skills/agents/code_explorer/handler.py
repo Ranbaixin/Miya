@@ -1,6 +1,6 @@
 """代码探索Agent处理器"""
 
-from typing import Dict, Any, Optional
+from typing import Any, Dict
 
 
 async def handler(args: Dict[str, Any], context: Dict[str, Any]) -> str:

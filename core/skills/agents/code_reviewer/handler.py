@@ -1,7 +1,7 @@
 """代码审查Agent处理器"""
 
-from typing import Dict, Any
 import re
+from typing import Any, Dict
 
 
 async def handler(args: Dict[str, Any], context: Dict[str, Any]) -> str:

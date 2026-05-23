@@ -3,11 +3,10 @@
 为弥娅Agent提供统一的执行框架
 """
 
-import asyncio
+import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-import json
+from typing import Dict, List
 
 logger = logging.getLogger("Miya.AgentRunner")
 
@@ -104,7 +103,7 @@ class AgentRunner:
     async def execute_tool(self, tool_name: str, args: Dict, context: Dict) -> str:
         """执行指定工具"""
         if not self.tool_registry:
-            return f"工具注册表未初始化"
+            return "工具注册表未初始化"
 
         tools = self.tool_registry.get_tools_schema()
         for tool in tools:
@@ -130,7 +129,6 @@ class AgentRunner:
 
             sys.path.insert(0, str(self.agent_dir))
 
-            module_name = f"{self.agent_name}.tools.{tool_name}.handler"
             handler_module = __import__(
                 f"tools.{tool_name}.handler", fromlist=["execute"]
             )

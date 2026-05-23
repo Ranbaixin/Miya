@@ -326,7 +326,7 @@ def get_requirement_check_paths() -> list[str]:
 
 def _canonical_distribution_identity(distribution) -> tuple[str | None, str | None]:
     distribution_name = (
-        distribution.metadata["Name"] if "Name" in distribution.metadata else None
+        distribution.metadata.get("Name", None)
     )
     if not distribution_name:
         return None, None

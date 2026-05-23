@@ -1,5 +1,6 @@
 """LifeNet 列出节点工具"""
-from typing import Dict, Any
+from typing import Any, Dict
+
 from webnet.ToolNet.base import BaseTool, ToolContext
 
 

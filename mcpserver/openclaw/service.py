@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 OpenClaw MCP 服务 - 弥娅 AI 电脑控制引擎
 
@@ -15,10 +14,10 @@ OpenClaw MCP 服务 - 弥娅 AI 电脑控制引擎
 
 import json
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
-from .runtime import get_runtime
 from .client import OpenClawClient
+from .runtime import get_runtime
 
 logger = logging.getLogger("openclaw.service")
 

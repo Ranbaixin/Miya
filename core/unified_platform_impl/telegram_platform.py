@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 from core.unified_platform.base import BasePlatform
+
 from .message_mixin import MessageMixin
 
 logger = logging.getLogger("Miya.Platform.Telegram")

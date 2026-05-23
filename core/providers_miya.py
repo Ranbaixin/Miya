@@ -8,10 +8,9 @@ MIYA Provider 模块 (独立版本)
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, List, Any, AsyncIterator, Union
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-import json
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -682,8 +681,8 @@ def register_provider(
 
 import asyncio
 import copy
-from typing import Any, AsyncGenerator, Awaitable, Callable, Dict, List, Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Optional
 
 
 @dataclass

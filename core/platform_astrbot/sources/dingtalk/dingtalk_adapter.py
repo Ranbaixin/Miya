@@ -7,9 +7,6 @@ from typing import Literal, NoReturn, cast
 
 import aiohttp
 import dingtalk_stream
-from dingtalk_stream import AckMessage
-
-from astrbot import logger
 from astrbot.api.event import MessageChain
 from astrbot.api.message_components import At, File, Image, Plain, Record, Video
 from astrbot.api.platform import (
@@ -19,9 +16,10 @@ from astrbot.api.platform import (
     Platform,
     PlatformMetadata,
 )
-from core.astrbot_compat import sp
 from astrbot.core.platform.astr_message_event import MessageSesion
-from core.astrbot_compat.utils import get_astrbot_temp_path
+from dingtalk_stream import AckMessage
+
+from astrbot import logger
 from astrbot.core.utils.io import download_file
 from astrbot.core.utils.media_utils import (
     convert_audio_format,
@@ -29,6 +27,8 @@ from astrbot.core.utils.media_utils import (
     extract_video_cover,
     get_media_duration,
 )
+from core.astrbot_compat import sp
+from core.astrbot_compat.utils import get_astrbot_temp_path
 
 from ...register import register_platform_adapter
 from .dingtalk_event import DingtalkMessageEvent
@@ -377,18 +377,17 @@ class DingtalkPlatformAdapter(Platform):
             logger.warning(f"通过 dingtalk_stream 获取 access_token 失败: {e}")
 
         payload = {"appKey": self.client_id, "appSecret": self.client_secret}
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                "https://api.dingtalk.com/v1.0/oauth2/accessToken",
-                json=payload,
-            ) as resp:
-                if resp.status != 200:
-                    logger.error(
-                        f"获取钉钉机器人 access_token 失败: {resp.status}, {await resp.text()}",
-                    )
-                    return ""
-                data = await resp.json()
-                return cast(str, data.get("data", {}).get("accessToken", ""))
+        async with aiohttp.ClientSession() as session, session.post(
+            "https://api.dingtalk.com/v1.0/oauth2/accessToken",
+            json=payload,
+        ) as resp:
+            if resp.status != 200:
+                logger.error(
+                    f"获取钉钉机器人 access_token 失败: {resp.status}, {await resp.text()}",
+                )
+                return ""
+            data = await resp.json()
+            return cast(str, data.get("data", {}).get("accessToken", ""))
 
     async def _get_sender_staff_id(self, session: MessageSesion) -> str:
         try:
@@ -425,16 +424,15 @@ class DingtalkPlatformAdapter(Platform):
             "Content-Type": "application/json",
             "x-acs-dingtalk-access-token": access_token,
         }
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                "https://api.dingtalk.com/v1.0/robot/groupMessages/send",
-                headers=headers,
-                json=payload,
-            ) as resp:
-                if resp.status != 200:
-                    logger.error(
-                        f"钉钉群消息发送失败: {resp.status}, {await resp.text()}",
-                    )
+        async with aiohttp.ClientSession() as session, session.post(
+            "https://api.dingtalk.com/v1.0/robot/groupMessages/send",
+            headers=headers,
+            json=payload,
+        ) as resp:
+            if resp.status != 200:
+                logger.error(
+                    f"钉钉群消息发送失败: {resp.status}, {await resp.text()}",
+                )
 
     async def _send_private_message(
         self,
@@ -458,16 +456,15 @@ class DingtalkPlatformAdapter(Platform):
             "Content-Type": "application/json",
             "x-acs-dingtalk-access-token": access_token,
         }
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                "https://api.dingtalk.com/v1.0/robot/oToMessages/batchSend",
-                headers=headers,
-                json=payload,
-            ) as resp:
-                if resp.status != 200:
-                    logger.error(
-                        f"钉钉私聊消息发送失败: {resp.status}, {await resp.text()}",
-                    )
+        async with aiohttp.ClientSession() as session, session.post(
+            "https://api.dingtalk.com/v1.0/robot/oToMessages/batchSend",
+            headers=headers,
+            json=payload,
+        ) as resp:
+            if resp.status != 200:
+                logger.error(
+                    f"钉钉私聊消息发送失败: {resp.status}, {await resp.text()}",
+                )
 
     def _safe_remove_file(self, file_path: str | None) -> None:
         if not file_path:
@@ -507,21 +504,20 @@ class DingtalkPlatformAdapter(Platform):
             filename=media_file_path.name,
             content_type="application/octet-stream",
         )
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                f"https://oapi.dingtalk.com/media/upload?access_token={access_token}&type={media_type}",
-                data=form,
-            ) as resp:
-                if resp.status != 200:
-                    logger.error(
-                        f"钉钉媒体上传失败: {resp.status}, {await resp.text()}"
-                    )
-                    return ""
-                data = await resp.json()
-                if data.get("errcode") != 0:
-                    logger.error(f"钉钉媒体上传失败: {data}")
-                    return ""
-                return cast(str, data.get("media_id", ""))
+        async with aiohttp.ClientSession() as session, session.post(
+            f"https://oapi.dingtalk.com/media/upload?access_token={access_token}&type={media_type}",
+            data=form,
+        ) as resp:
+            if resp.status != 200:
+                logger.error(
+                    f"钉钉媒体上传失败: {resp.status}, {await resp.text()}"
+                )
+                return ""
+            data = await resp.json()
+            if data.get("errcode") != 0:
+                logger.error(f"钉钉媒体上传失败: {data}")
+                return ""
+            return cast(str, data.get("media_id", ""))
 
     async def upload_image(self, image: Image) -> str:
         image_file_path = await image.convert_to_file_path()

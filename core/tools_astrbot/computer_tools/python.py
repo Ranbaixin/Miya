@@ -2,13 +2,13 @@ import platform
 from dataclasses import dataclass, field
 
 import mcp
-
-from astrbot.api import FunctionTool
 from astrbot.core.agent.run_context import ContextWrapper
 from astrbot.core.agent.tool import ToolExecResult
 from astrbot.core.astr_agent_context import AstrAgentContext, AstrMessageEvent
 from astrbot.core.computer.computer_client import get_booter, get_local_booter
 from astrbot.core.message.message_event_result import MessageChain
+
+from astrbot.api import FunctionTool
 
 from ..registry import builtin_tool
 from .util import check_admin_permission

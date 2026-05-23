@@ -1,6 +1,5 @@
 from typing import TYPE_CHECKING
 
-from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent, MessageChain
 from astrbot.api.message_components import (
     At,
@@ -15,6 +14,8 @@ from astrbot.api.message_components import (
     Video,
 )
 from astrbot.api.platform import AstrBotMessage, PlatformMetadata
+
+from astrbot.api import logger
 
 if TYPE_CHECKING:
     from .satori_adapter import SatoriPlatformAdapter
@@ -114,12 +115,11 @@ class SatoriPlatformEvent(AstrMessageEvent):
         platform = getattr(self, "platform", None)
         user_id = getattr(self, "user_id", None)
 
-        if not platform or not user_id:
-            if hasattr(self.adapter, "logins") and self.adapter.logins:
-                current_login = self.adapter.logins[0]
-                platform = current_login.get("platform", "")
-                user = current_login.get("user", {})
-                user_id = user.get("id", "") if user else ""
+        if (not platform or not user_id) and hasattr(self.adapter, "logins") and self.adapter.logins:
+            current_login = self.adapter.logins[0]
+            platform = current_login.get("platform", "")
+            user = current_login.get("user", {})
+            user_id = user.get("id", "") if user else ""
 
         try:
             content_parts = []

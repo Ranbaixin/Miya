@@ -4,8 +4,7 @@
 专属技能：文案创作、故事编写、文学风格
 """
 
-import random
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 class MiyaWriter:

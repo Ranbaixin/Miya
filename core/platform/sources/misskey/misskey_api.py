@@ -13,6 +13,8 @@ except ImportError as e:
         "aiohttp and websockets are required for Misskey API. Please install them with: pip install aiohttp websockets",
     ) from e
 
+import contextlib
+
 from astrbot.api import logger
 
 from .misskey_utils import FileIDExtractor
@@ -159,33 +161,25 @@ class StreamingClient:
         except websockets.exceptions.ConnectionClosedError as e:
             logger.warning(f"[Misskey WebSocket] 连接意外关闭: {e}")
             self.is_connected = False
-            try:
+            with contextlib.suppress(Exception):
                 await self.disconnect()
-            except Exception:
-                pass
         except websockets.exceptions.ConnectionClosed as e:
             logger.warning(
                 f"[Misskey WebSocket] 连接已关闭 (代码: {e.code}, 原因: {e.reason})",
             )
             self.is_connected = False
-            try:
+            with contextlib.suppress(Exception):
                 await self.disconnect()
-            except Exception:
-                pass
         except websockets.exceptions.InvalidHandshake as e:
             logger.error(f"[Misskey WebSocket] 握手失败: {e}")
             self.is_connected = False
-            try:
+            with contextlib.suppress(Exception):
                 await self.disconnect()
-            except Exception:
-                pass
         except Exception as e:
             logger.error(f"[Misskey WebSocket] 监听消息失败: {e}")
             self.is_connected = False
-            try:
+            with contextlib.suppress(Exception):
                 await self.disconnect()
-            except Exception:
-                pass
 
     async def _handle_message(self, data: dict[str, Any]) -> None:
         message_type = data.get("type")
@@ -668,13 +662,12 @@ class MisskeyAPI:
     ) -> bytes | None:
         """使用临时会话下载文件"""
         connector = aiohttp.TCPConnector(ssl=ssl_verify)
-        async with aiohttp.ClientSession(connector=connector) as temp_session:
-            async with temp_session.get(
-                url,
-                timeout=aiohttp.ClientTimeout(total=15),
-            ) as response:
-                if response.status == 200:
-                    return await response.read()
+        async with aiohttp.ClientSession(connector=connector) as temp_session, temp_session.get(
+            url,
+            timeout=aiohttp.ClientTimeout(total=15),
+        ) as response:
+            if response.status == 200:
+                return await response.read()
         return None
 
     async def upload_and_find_file(
@@ -717,13 +710,11 @@ class MisskeyAPI:
                 logger.debug(
                     f"[Misskey API] SSL 验证下载失败: {ssl_error}，重试不验证 SSL",
                 )
-                try:
+                with contextlib.suppress(Exception):
                     tmp_bytes = await self._download_with_existing_session(
                         url,
                         ssl_verify=False,
                     ) or await self._download_with_temp_session(url, ssl_verify=False)
-                except Exception:
-                    pass
 
             if tmp_bytes:
                 with tempfile.NamedTemporaryFile(delete=False) as tmpf:
@@ -735,10 +726,8 @@ class MisskeyAPI:
                     logger.debug(f"[Misskey API] 本地上传成功: {result.get('id')}")
                     return result
                 finally:
-                    try:
+                    with contextlib.suppress(Exception):
                         os.unlink(tmp_path)
-                    except Exception:
-                        pass
         except Exception as e:
             logger.error(f"[Misskey API] 本地上传失败: {e}")
 

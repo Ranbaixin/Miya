@@ -5,15 +5,13 @@
 """
 
 import asyncio
-import logging
 import json
+import logging
 import os
 import sqlite3
 import uuid
-from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime, timedelta
-from pathlib import Path
-import traceback
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -188,7 +186,7 @@ class EnhancedTaskScheduler:
                     next_execute = datetime.now() + timedelta(seconds=retry_delay)
                     
                     self._update_task_status(
-                        task_id, 
+                        task_id,
                         "retrying",
                         retry_count=retry_count,
                         execute_at=next_execute
@@ -263,25 +261,25 @@ class EnhancedTaskScheduler:
     
     async def _execute_qq_image_task(self, task_data: Dict[str, Any]) -> bool:
         """执行QQ图片任务"""
-        logger.info(f"[模拟] 发送QQ图片任务")
+        logger.info("[模拟] 发送QQ图片任务")
         await asyncio.sleep(0.5)
         return True
     
     async def _execute_qq_file_task(self, task_data: Dict[str, Any]) -> bool:
         """执行QQ文件任务"""
-        logger.info(f"[模拟] 发送QQ文件任务")
+        logger.info("[模拟] 发送QQ文件任务")
         await asyncio.sleep(0.5)
         return True
     
     async def _execute_qq_action_task(self, task_data: Dict[str, Any]) -> bool:
         """执行QQ动作任务（点赞、拍一拍等）"""
-        logger.info(f"[模拟] 执行QQ动作任务")
+        logger.info("[模拟] 执行QQ动作任务")
         await asyncio.sleep(0.5)
         return True
     
     async def _execute_system_command_task(self, task_data: Dict[str, Any]) -> bool:
         """执行系统命令任务"""
-        logger.info(f"[模拟] 执行系统命令任务")
+        logger.info("[模拟] 执行系统命令任务")
         await asyncio.sleep(0.5)
         return True
     
@@ -363,11 +361,7 @@ class EnhancedTaskScheduler:
             return False
         
         # 根据任务类型验证字段
-        if task_type == "qq_message":
-            if not task_data.get("message"):
-                return False
-        
-        return True
+        return not (task_type == "qq_message" and not task_data.get("message"))
     
     def _parse_execute_time(self, task_data: Dict[str, Any]) -> Optional[datetime]:
         """解析执行时间"""
@@ -515,7 +509,7 @@ class EnhancedTaskScheduler:
             update_values.append(task_id)  # WHERE条件
             
             query = f"""
-                UPDATE tasks 
+                UPDATE tasks
                 SET {', '.join(update_fields)}
                 WHERE task_id = ?
             """
@@ -535,7 +529,7 @@ class EnhancedTaskScheduler:
             cursor = conn.cursor()
             
             cursor.execute("""
-                SELECT * FROM tasks 
+                SELECT * FROM tasks
                 WHERE status IN ('pending', 'retrying')
                 AND (execute_at IS NULL OR execute_at <= ?)
                 ORDER BY priority DESC, execute_at ASC
@@ -559,7 +553,7 @@ class EnhancedTaskScheduler:
             
             placeholders = ','.join(['?'] * len(status_list))
             query = f"""
-                SELECT * FROM tasks 
+                SELECT * FROM tasks
                 WHERE status IN ({placeholders})
                 ORDER BY created_at DESC
             """
@@ -601,14 +595,14 @@ class EnhancedTaskScheduler:
             cutoff_date = (datetime.now() - timedelta(days=30)).isoformat()
             
             cursor.execute("""
-                DELETE FROM tasks 
-                WHERE status = 'completed' 
+                DELETE FROM tasks
+                WHERE status = 'completed'
                 AND completed_at < ?
             """, (cutoff_date,))
             
             # 删除对应的历史记录
             cursor.execute("""
-                DELETE FROM task_history 
+                DELETE FROM task_history
                 WHERE task_id IN (
                     SELECT task_id FROM tasks WHERE status = 'completed' AND completed_at < ?
                 )
@@ -639,14 +633,14 @@ class EnhancedTaskScheduler:
             
             if status:
                 cursor.execute("""
-                    SELECT * FROM tasks 
+                    SELECT * FROM tasks
                     WHERE status = ?
                     ORDER BY created_at DESC
                     LIMIT ?
                 """, (status, limit))
             else:
                 cursor.execute("""
-                    SELECT * FROM tasks 
+                    SELECT * FROM tasks
                     ORDER BY created_at DESC
                     LIMIT ?
                 """, (limit,))
@@ -690,7 +684,7 @@ class EnhancedTaskScheduler:
             cursor = conn.cursor()
             
             cursor.execute("""
-                SELECT * FROM task_history 
+                SELECT * FROM task_history
                 WHERE task_id = ?
                 ORDER BY timestamp DESC
                 LIMIT ?
@@ -713,8 +707,8 @@ class EnhancedTaskScheduler:
             
             # 任务状态统计
             cursor.execute("""
-                SELECT status, COUNT(*) as count 
-                FROM tasks 
+                SELECT status, COUNT(*) as count
+                FROM tasks
                 GROUP BY status
             """)
             status_stats = {row[0]: row[1] for row in cursor.fetchall()}
@@ -722,15 +716,15 @@ class EnhancedTaskScheduler:
             # 今日任务统计
             today = datetime.now().date().isoformat()
             cursor.execute("""
-                SELECT COUNT(*) as count 
-                FROM tasks 
+                SELECT COUNT(*) as count
+                FROM tasks
                 WHERE DATE(created_at) = ?
             """, (today,))
             today_count = cursor.fetchone()[0]
             
             # 成功率统计
             cursor.execute("""
-                SELECT 
+                SELECT
                     COUNT(*) as total,
                     SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as success,
                     SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed

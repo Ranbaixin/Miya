@@ -6,8 +6,8 @@ MCP Memory 服务 - 弥娅记忆系统
 import json
 import time
 import uuid
-from typing import Dict, Any, List, Optional
 from pathlib import Path
+from typing import Any, Dict
 
 
 class MemoryService:

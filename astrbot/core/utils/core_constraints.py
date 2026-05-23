@@ -39,9 +39,8 @@ def _resolve_core_dist_name(core_dist_name: str | None) -> str | None:
             top_level = dist.read_text("top_level.txt") or ""
         except Exception:
             continue
-        if top_pkg in top_level.splitlines():
-            if "Name" in dist.metadata:
-                return dist.metadata["Name"]
+        if top_pkg in top_level.splitlines() and "Name" in dist.metadata:
+            return dist.metadata["Name"]
 
     return None
 

@@ -3,13 +3,12 @@
 """
 
 import asyncio
-import sys
 import os
+import sys
 
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from pathlib import Path
 
 
 async def test_basic_operations():
@@ -19,7 +18,6 @@ async def test_basic_operations():
     print("=" * 50)
 
     from memory.miya_memory import (
-        MiyaMemory,
         MemoryLevel,
         get_miya_memory,
         reset_miya_memory,
@@ -96,7 +94,7 @@ async def test_retrieval(memory):
 
     # 测试获取用户画像
     profile = await memory.get_user_profile("test_user")
-    print(f"[OK] 用户画像:")
+    print("[OK] 用户画像:")
     print(f"   - 总记忆数: {profile['total_memories']}")
     print(f"   - 偏好: {profile.get('preferences', [])[:3]}")
     print(f"   - 标签分布: {dict(list(profile.get('tags', {}).items())[:5])}")
@@ -216,10 +214,9 @@ async def test_cross_platform():
     print("=" * 50)
 
     from memory.miya_memory import (
-        MiyaMemory,
+        MemoryLevel,
         get_miya_memory,
         reset_miya_memory,
-        MemoryLevel,
     )
 
     reset_miya_memory()

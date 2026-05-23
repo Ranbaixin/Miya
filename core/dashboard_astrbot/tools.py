@@ -1,12 +1,12 @@
 import traceback
 
-from quart import request
-
-from core.astrbot_compat import logger
 from astrbot.core.agent.mcp_client import MCPTool, validate_mcp_stdio_config
 from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
-from astrbot.core.star import star_map
 from astrbot.core.tools.registry import get_builtin_tool_config_statuses
+from quart import request
+
+from astrbot.core.star import star_map
+from core.astrbot_compat import logger
 
 from .route import Response, Route, RouteContext
 
@@ -223,10 +223,7 @@ class ToolsRoute(Route):
 
             # 获取活动状态
             old_config = config["mcpServers"][old_name]
-            if isinstance(old_config, dict):
-                old_active = old_config.get("active", True)
-            else:
-                old_active = True
+            old_active = old_config.get("active", True) if isinstance(old_config, dict) else True
             active = server_data.get("active", old_active)
 
             # 创建新的配置对象

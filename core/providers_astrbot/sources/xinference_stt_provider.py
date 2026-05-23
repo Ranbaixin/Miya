@@ -6,12 +6,12 @@ from xinference_client.client.restful.async_restful_client import (
     AsyncClient as Client,
 )
 
-from core.astrbot_compat import logger
-from core.astrbot_compat.utils import get_astrbot_temp_path
 from astrbot.core.utils.tencent_record_helper import (
     convert_to_pcm_wav,
     tencent_silk_to_wav,
 )
+from core.astrbot_compat import logger
+from core.astrbot_compat.utils import get_astrbot_temp_path
 
 from ..entities import ProviderType
 from ..provider import STTProvider

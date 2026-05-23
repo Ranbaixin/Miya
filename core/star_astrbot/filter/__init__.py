@@ -1,8 +1,9 @@
 import abc
 
-from astrbot.core.config import AstrBotConfig
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
 from astrbot.core.platform.message_type import MessageType
+
+from astrbot.core.config import AstrBotConfig
 
 
 class HandlerFilter(abc.ABC):

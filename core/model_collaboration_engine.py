@@ -22,13 +22,12 @@ import logging
 import time
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from core.model_pool_manager import (
-    ModelPoolManager,
-    TaskType,
-    Model,
     ModelConfig,
+)
+from core.model_pool_manager import (
     ModelPoolManager as ModelPool,  # 别名，保持兼容性
 )
 from core.terminal_formatter import TerminalFormatter
@@ -382,9 +381,9 @@ class ModelCollaborationEngine:
                 ai_emotion_context += f"- 你的内心独白: {inner_thought}\n"
 
             ai_emotion_context += (
-                f"请根据上述情感自然回应，展现你真实的情感。\n"
-                f"注意：内心独白仅供你参考理解自己的感受，请不要在回复中直接引用或输出内心独白内容。\n"
-                f"禁止在回复中使用小括号()描述动作，如（微笑）、（点头）等。"
+                "请根据上述情感自然回应，展现你真实的情感。\n"
+                "注意：内心独白仅供你参考理解自己的感受，请不要在回复中直接引用或输出内心独白内容。\n"
+                "禁止在回复中使用小括号()描述动作，如（微笑）、（点头）等。"
             )
 
             return ai_emotion_context
@@ -551,9 +550,8 @@ class ModelCollaborationEngine:
 
         connectors = self.multi_intent.get("connectors", [])
         q_with_conn = self.multi_intent.get("question_with_connectors", 2)
-        if connectors and any(c in message for c in connectors):
-            if question_count >= q_with_conn:
-                score += 1
+        if connectors and any(c in message for c in connectors) and question_count >= q_with_conn:
+            score += 1
 
         score_min = self.score_range.get("min", 1)
         score_max = self.score_range.get("max", 5)
@@ -623,7 +621,6 @@ class ModelCollaborationEngine:
         # 思考过程
         from core.terminal_formatter import TerminalFormatter
 
-        thinking = ""
 
         # 仅在终端模式下显示详细步骤，QQ等其他平台不显示
         if platform == "terminal":
@@ -1395,19 +1392,9 @@ class ModelCollaborationEngine:
 
         first_line = lines[0].strip()
         # 检测英文/代码风格前缀：以 [ 开头且不含中文
-        if first_line.startswith("[") and not re.search(r"[\u4e00-\u9fff]", first_line):
-            lines.pop(0)
-            while lines and not lines[0].strip():
-                lines.pop(0)
-        # 检测纯英文/代码行开头（如 Paste the kaomoji...）
-        elif re.match(r"^[A-Za-z][a-z]+\s", first_line) and not re.search(
+        if first_line.startswith("[") and not re.search(r"[\u4e00-\u9fff]", first_line) or re.match(r"^[A-Za-z][a-z]+\s", first_line) and not re.search(
             r"[\u4e00-\u9fff]", first_line
-        ):
-            lines.pop(0)
-            while lines and not lines[0].strip():
-                lines.pop(0)
-        # 检测以代码风格开头的行（如 \`\`\`python, # code, // comment）
-        elif re.match(r"^[`#/\-]+", first_line) and not re.search(
+        ) or re.match(r"^[`#/\-]+", first_line) and not re.search(
             r"[\u4e00-\u9fff]", first_line
         ):
             lines.pop(0)

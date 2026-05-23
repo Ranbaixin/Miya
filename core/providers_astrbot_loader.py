@@ -4,13 +4,10 @@ AstrBot Provider 加载器
 自动加载 AstrBot 的模型源并适配到弥娅系统。
 """
 
-import asyncio
 import importlib
 import logging
 from pathlib import Path
-from typing import Dict, List, Any, Optional
-
-from .providers_astrbot_adapter import ProviderAdapterFactory
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -107,10 +104,7 @@ class AstrBotProviderLoader:
             return False
 
         # 检查是否有 initialize 方法
-        if not hasattr(cls, "initialize"):
-            return False
-
-        return True
+        return hasattr(cls, "initialize")
 
     def get_provider_class(self, provider_id: str) -> Optional[type]:
         """获取 Provider 类"""
@@ -214,7 +208,7 @@ class AstrBotProviderManager:
                 "id": provider_id,
                 "config": self._configs.get(provider_id, {}),
             }
-            for provider_id in self._instances.keys()
+            for provider_id in self._instances
         ]
 
 

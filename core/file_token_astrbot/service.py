@@ -1,9 +1,8 @@
 """File Token Service"""
 
-import uuid
 import time
-from pathlib import Path
-from typing import Optional, Dict, Any
+import uuid
+from typing import Any, Dict, Optional
 
 
 class FileTokenService:

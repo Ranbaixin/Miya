@@ -3,13 +3,12 @@ Hooks 系统 - 事件钩子
 支持 PreToolUse, PostToolUse, SessionStart, SessionStop 等事件
 """
 
+import logging
 import re
-import os
-from typing import Dict, List, Callable, Any, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-import logging
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("Miya.Hooks")
 
@@ -139,10 +138,9 @@ class HookManager:
 
             if rule.pattern:
                 for field_name in ["command", "file_path", "new_text", "user_prompt"]:
-                    if field_name in context:
-                        if re.search(rule.pattern, str(context[field_name])):
-                            matched = True
-                            break
+                    if field_name in context and re.search(rule.pattern, str(context[field_name])):
+                        matched = True
+                        break
 
             if matched:
                 return {

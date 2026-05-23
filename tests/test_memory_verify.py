@@ -1,15 +1,14 @@
 """验证记忆系统修复"""
 
 import asyncio
-import json
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from pathlib import Path
-from memory.core import MiyaMemoryCore, MemoryLevel, MemorySource, JsonBackend
-from datetime import datetime, timedelta
+
+from memory.core import MemoryLevel, MemorySource, MiyaMemoryCore
 
 
 async def test_all():
@@ -74,7 +73,7 @@ async def test_all():
 
     # 7. 过期记忆清理 (磁盘扫描)
     print("\n[TEST 7] 过期记忆清理 (含磁盘扫描)...")
-    expired_id = await core.store(
+    await core.store(
         content="过期测试",
         level=MemoryLevel.SHORT_TERM,
         user_id="test_user",
@@ -92,8 +91,8 @@ async def test_all():
     vec3 = core._simple_embed("今天天气很好")
     assert len(vec1) == 1536, "向量维度错误"
     # 相似文本应该有更高的相似度
-    sim_12 = sum(a * b for a, b in zip(vec1, vec2))
-    sim_13 = sum(a * b for a, b in zip(vec1, vec3))
+    sim_12 = sum(a * b for a, b in zip(vec1, vec2, strict=False))
+    sim_13 = sum(a * b for a, b in zip(vec1, vec3, strict=False))
     print(f"  相似度(编程vs编码): {sim_12:.4f}")
     print(f"  相似度(编程vs天气): {sim_13:.4f}")
     print("  [OK] n-gram哈希向量生成成功")

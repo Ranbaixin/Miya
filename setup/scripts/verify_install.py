@@ -4,11 +4,10 @@ Miya 安装验证脚本
 动态解析 setup/dependencies/*.txt，验证依赖是否可正确导入
 """
 
-import sys
 import importlib
 import re
+import sys
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 DEPS_DIR = ROOT / "setup" / "dependencies"

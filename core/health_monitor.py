@@ -3,18 +3,17 @@
 """
 
 import asyncio
-import time
-import psutil
-import socket
-from typing import Dict, List, Any, Optional, Callable, Union
-from dataclasses import dataclass, field
-from enum import Enum
+import contextlib
 import logging
-from datetime import datetime, timedelta
+import socket
 import threading
-import json
-import sys
-import os
+import time
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional, Union
+
+import psutil
 
 logger = logging.getLogger(__name__)
 
@@ -661,17 +660,13 @@ class HealthMonitor:
         
         if self._check_task:
             self._check_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._check_task
-            except asyncio.CancelledError:
-                pass
         
         if self._metrics_task:
             self._metrics_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._metrics_task
-            except asyncio.CancelledError:
-                pass
         
         logger.info("健康监视器已停止")
     

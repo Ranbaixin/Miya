@@ -6,8 +6,9 @@
 """
 
 import logging
-from typing import Dict, Any, Optional, List
 from datetime import datetime
+from typing import Any, Dict, Optional
+
 from .social_base import SocialBase
 
 logger = logging.getLogger(__name__)
@@ -50,7 +51,7 @@ class WeChatTools(SocialBase):
 
             if self.wechat_client:
                 # 使用微信客户端发送
-                result = await self.wechat_client.send_msg(
+                await self.wechat_client.send_msg(
                     to_name=target,
                     msg=message
                 )

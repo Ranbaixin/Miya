@@ -1,10 +1,10 @@
 """
 获取历史消息工具
 """
-from typing import Dict, Any, List
 import logging
-from webnet.ToolNet.base import BaseTool, ToolContext
+from typing import Any, Dict
 
+from webnet.ToolNet.base import BaseTool, ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +90,7 @@ class GetRecentMessagesTool(BaseTool):
                 for i, memory in enumerate(memories, 1):
                     content = memory.get('content', '')
                     sender = memory.get('sender', '未知')
-                    timestamp = memory.get('timestamp', '')
+                    memory.get('timestamp', '')
 
                     # 关键词过滤
                     if keyword and keyword not in content:

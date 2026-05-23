@@ -202,7 +202,7 @@ class AIInjectionDetector:
             is_injection = "INJECTION_DETECTED" in result.upper()
 
             if is_injection:
-                logger.info(f"[AI注入检测] AI判定为注入攻击")
+                logger.info("[AI注入检测] AI判定为注入攻击")
 
             return is_injection, result if is_injection else ""
 

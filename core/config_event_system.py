@@ -6,7 +6,7 @@
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Any
+from typing import Any, Callable, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +67,7 @@ class ConfigEventPublisher:
             callback: 回调函数，接收ConfigEvent对象
         """
         self._all_subscribers.append(callback)
-        logger.debug(f"[配置事件] 新增全局订阅者")
+        logger.debug("[配置事件] 新增全局订阅者")
 
     def unsubscribe_event(
         self,
@@ -75,10 +75,9 @@ class ConfigEventPublisher:
         callback: Callable[[ConfigEvent], None]
     ) -> None:
         """取消订阅特定类型的事件"""
-        if event_type in self._event_subscribers:
-            if callback in self._event_subscribers[event_type]:
-                self._event_subscribers[event_type].remove(callback)
-                logger.debug(f"[配置事件] 移除订阅者: event_type={event_type}")
+        if event_type in self._event_subscribers and callback in self._event_subscribers[event_type]:
+            self._event_subscribers[event_type].remove(callback)
+            logger.debug(f"[配置事件] 移除订阅者: event_type={event_type}")
 
     def unsubscribe_all_events(
         self,
@@ -87,7 +86,7 @@ class ConfigEventPublisher:
         """取消订阅所有事件"""
         if callback in self._all_subscribers:
             self._all_subscribers.remove(callback)
-            logger.debug(f"[配置事件] 移除全局订阅者")
+            logger.debug("[配置事件] 移除全局订阅者")
 
     async def publish_event(self, event: ConfigEvent) -> None:
         """发布事件到所有订阅者

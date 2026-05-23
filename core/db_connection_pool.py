@@ -16,10 +16,10 @@ import asyncio
 import logging
 import threading
 import time
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Type
-from queue import Queue, Empty
 from contextlib import contextmanager
+from dataclasses import dataclass
+from queue import Empty, Queue
+from typing import Any, Dict, List, Optional, Type
 
 logger = logging.getLogger(__name__)
 
@@ -468,7 +468,6 @@ async def shutdown_all_pools():
 # 示例使用
 if __name__ == "__main__":
     async def test_sqlite_pool():
-        import sqlite3
 
         # 创建SQLite连接池
         pool = SQLiteConnectionPool("test.db", PoolConfig(

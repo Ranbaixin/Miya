@@ -1,14 +1,17 @@
 """
 发送URL文件工具
 """
-from typing import Dict, Any
+import asyncio
+import builtins
+import contextlib
 import logging
 import os
 import tempfile
-import aiohttp
-import asyncio
-from webnet.ToolNet.base import BaseTool, ToolContext
+from typing import Any, Dict
 
+import aiohttp
+
+from webnet.ToolNet.base import BaseTool, ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -74,10 +77,7 @@ class SendUrlFileTool(BaseTool):
 
             # 解析目标会话
             if target_id is None:
-                if target_type == "group":
-                    target_id = context.group_id
-                else:
-                    target_id = context.user_id
+                target_id = context.group_id if target_type == "group" else context.user_id
 
             if target_id is None:
                 return "❌ 无法确定目标会话ID，请手动指定 target_id"
@@ -112,7 +112,7 @@ class SendUrlFileTool(BaseTool):
                             if downloaded > max_size:
                                 f.close()
                                 os.unlink(f.name)
-                                return f"❌ 下载超过大小限制"
+                                return "❌ 下载超过大小限制"
                             f.write(chunk)
                         temp_path = f.name
 
@@ -132,10 +132,8 @@ class SendUrlFileTool(BaseTool):
                     )
 
                 # 删除临时文件
-                try:
+                with contextlib.suppress(builtins.BaseException):
                     os.unlink(temp_path)
-                except:
-                    pass
 
                 if success:
                     size_mb = os.path.getsize(temp_path) / 1024 / 1024
@@ -143,7 +141,7 @@ class SendUrlFileTool(BaseTool):
                 else:
                     return f"❌ 文件发送失败: {filename}"
             else:
-                logger.warning(f"onebot_client 不可用，无法发送文件")
+                logger.warning("onebot_client 不可用，无法发送文件")
                 return f"⚠️ OneBot 客户端不可用，文件已下载但无法发送\n文件: {filename}"
 
         except asyncio.TimeoutError:

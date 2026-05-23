@@ -7,8 +7,6 @@ import asyncio
 import json
 import time
 from pathlib import Path
-from datetime import datetime, timedelta
-from typing import Any, Dict, List
 
 # Test configuration
 TEST_CONFIG = {
@@ -113,7 +111,7 @@ async def test_config_cache_performance():
     def load_config():
         return {"value": time.time()}
 
-    start = time.time()
+    time.time()
     for i in range(100):
         cache.put(f"config_{i}", "", load_config())
 
@@ -129,7 +127,7 @@ async def test_config_cache_performance():
 
 async def test_event_batcher_basic():
     """Test event batcher basic functionality"""
-    from core.event_batcher import EventBatcher, BatchConfig
+    from core.event_batcher import BatchConfig, EventBatcher
 
     batcher = EventBatcher(BatchConfig(
         max_batch_size=10,
@@ -158,7 +156,7 @@ async def test_event_batcher_basic():
 
 async def test_event_batcher_performance():
     """Test event batcher performance"""
-    from core.event_batcher import EventBatcher, BatchConfig
+    from core.event_batcher import BatchConfig, EventBatcher
 
     batcher = EventBatcher(BatchConfig(
         max_batch_size=100,
@@ -188,10 +186,9 @@ async def test_event_batcher_performance():
 
 async def test_db_connection_pool_basic():
     """Test database connection pool basic functionality"""
-    from core.db_connection_pool import SQLiteConnectionPool, PoolConfig
-
-    import sqlite3
     import tempfile
+
+    from core.db_connection_pool import PoolConfig, SQLiteConnectionPool
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as f:
         db_path = f.name
@@ -229,8 +226,9 @@ async def test_db_connection_pool_basic():
 
 async def test_config_encryption_basic():
     """Test config encryption basic functionality"""
-    from core.config_encryption import ConfigEncryption, EncryptionConfig
     import tempfile
+
+    from core.config_encryption import ConfigEncryption
 
     with tempfile.NamedTemporaryFile(delete=False) as f:
         key_file = Path(f.name)
@@ -264,8 +262,9 @@ async def test_config_encryption_basic():
 
 async def test_access_control_basic():
     """Test access control basic functionality"""
-    from core.access_control import APIKeyManager, Role, Permission
     import tempfile
+
+    from core.access_control import APIKeyManager, Permission, Role
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as f:
         storage_path = f.name
@@ -300,8 +299,9 @@ async def test_access_control_basic():
 
 async def test_audit_logger_basic():
     """Test audit logger basic functionality"""
-    from core.audit_logger import AuditLogger, AuditEventType, AuditEventLevel
     import tempfile
+
+    from core.audit_logger import AuditEventLevel, AuditEventType, AuditLogger
 
     with tempfile.TemporaryDirectory() as log_dir:
         logger = AuditLogger(log_dir=log_dir)
@@ -370,7 +370,7 @@ async def test_monitoring_basic():
 
 async def test_alert_notification():
     """Test alert notification"""
-    from core.monitoring import MonitoringSystem, AlertRule, AlertSeverity
+    from core.monitoring import AlertRule, AlertSeverity, MonitoringSystem
 
     monitoring = MonitoringSystem(check_interval=5.0)
 
@@ -398,16 +398,17 @@ async def test_alert_notification():
 
 async def test_config_hot_reload_with_cache():
     """Test config hot reload with cache integration"""
+    import tempfile
+
     from core.config_cache import ConfigCache
     from core.config_encryption import ConfigEncryption
-    import tempfile
 
     with tempfile.NamedTemporaryFile(delete=False) as f:
         key_file = Path(f.name)
 
     try:
         cache = ConfigCache(max_size=100)
-        encryption = ConfigEncryption(key_file=key_file)
+        ConfigEncryption(key_file=key_file)
 
         def load_config():
             return {"happy": 0.8, "sad": 0.1}
@@ -429,9 +430,10 @@ async def test_config_hot_reload_with_cache():
 
 async def test_api_security_flow():
     """Test API security flow"""
-    from core.access_control import APIKeyManager, Role, Permission
-    from core.audit_logger import AuditLogger, AuditEventType
     import tempfile
+
+    from core.access_control import APIKeyManager, Permission, Role
+    from core.audit_logger import AuditEventType, AuditLogger
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as f:
         storage_path = f.name
@@ -488,7 +490,7 @@ async def test_api_security_flow():
 async def test_performance_benchmark():
     """Performance benchmark test"""
     from core.config_cache import ConfigCache
-    from core.event_batcher import EventBatcher, BatchConfig
+    from core.event_batcher import BatchConfig, EventBatcher
 
     results = {}
 
@@ -531,7 +533,7 @@ async def test_performance_benchmark():
     assert results["cache_read_10000"] < 0.5, "Cache read too slow"
     assert results["event_publish_1000"] < 2.0, "Event publish too slow"
 
-    print(f"  [OK] Performance benchmark:")
+    print("  [OK] Performance benchmark:")
     print(f"    - Cache write 1000: {results['cache_write_1000']:.4f}s")
     print(f"    - Cache read 10000: {results['cache_read_10000']:.4f}s")
     print(f"    - Event publish 1000: {results['event_publish_1000']:.4f}s")

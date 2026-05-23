@@ -13,10 +13,10 @@ from typing import cast
 from funasr_onnx import SenseVoiceSmall
 from funasr_onnx.utils.postprocess_utils import rich_transcription_postprocess
 
-from core.astrbot_compat import logger
-from core.astrbot_compat.utils import get_astrbot_temp_path
 from astrbot.core.utils.io import download_file
 from astrbot.core.utils.tencent_record_helper import tencent_silk_to_wav
+from core.astrbot_compat import logger
+from core.astrbot_compat.utils import get_astrbot_temp_path
 
 from ..entities import ProviderType
 from ..provider import STTProvider
@@ -61,9 +61,7 @@ class ProviderSenseVoiceSTTSelfHost(STTProvider):
         with open(file_path, "rb") as f:
             file_header = f.read(8)
 
-        if silk_header in file_header:
-            return True
-        return False
+        return silk_header in file_header
 
     async def get_text(self, audio_url: str) -> str:
         try:

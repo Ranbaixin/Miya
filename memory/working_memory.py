@@ -8,14 +8,14 @@
 - 低信息量输入检测：识别"不是"、"对的对的"等短消息
 """
 
+import hashlib
 import json
 import logging
 import time
-import hashlib
-from dataclasses import dataclass, field, asdict
+from collections import defaultdict
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
-from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +23,8 @@ logger = logging.getLogger(__name__)
 def _load_working_memory_config() -> dict:
     """从 text_config.json 加载工作记忆配置"""
     try:
-        from pathlib import Path
         import json
+        from pathlib import Path
 
         config_path = Path(__file__).parent.parent / "config" / "text_config.json"
         if config_path.exists():
@@ -332,10 +332,7 @@ class WorkingMemoryManager:
 
         # 5. 更新或创建当前话题
         # 【修复】话题消息也加入发送者ID
-        if sender_id:
-            topic_msg = f"{sender}[{sender_id}]: {content}"
-        else:
-            topic_msg = f"{sender}: {content}"
+        topic_msg = f"{sender}[{sender_id}]: {content}" if sender_id else f"{sender}: {content}"
         if is_drift or state.current_topic is None:
             state.current_topic = self._create_new_topic(
                 group_id, sender, content, sender_id
@@ -402,10 +399,7 @@ class WorkingMemoryManager:
         # 低信息量词汇检测（从配置加载）
         config = _load_working_memory_config()
         low_info_words = config.get("low_info_words", [])
-        for word in low_info_words:
-            if content == word:
-                return True
-        return False
+        return any(content == word for word in low_info_words)
 
     def _create_new_topic(
         self, group_id: str, sender: str, content: str, sender_id: int = 0
@@ -414,10 +408,7 @@ class WorkingMemoryManager:
         topic_id = hashlib.md5(f"{group_id}_{time.time()}".encode()).hexdigest()[:8]
         keywords = list(self.drift_detector.get_current_topic_keywords(group_id))
         # 【修复】新话题消息也加入发送者ID
-        if sender_id:
-            first_msg = f"{sender}[{sender_id}]: {content}"
-        else:
-            first_msg = f"{sender}: {content}"
+        first_msg = f"{sender}[{sender_id}]: {content}" if sender_id else f"{sender}: {content}"
 
         return TopicSegment(
             topic_id=topic_id,
@@ -568,10 +559,10 @@ class WorkingMemoryManager:
     def _build_recovery_context(self, group_id: str, state: WorkingMemoryState) -> str:
         """构建时间衰减恢复上下文（重启后首次对话时注入）"""
         from memory.session_decay import (
-            get_phase,
             SessionPhase,
-            generate_topic_summary,
             generate_cold_summary,
+            generate_topic_summary,
+            get_phase,
             get_phase_description,
         )
 
@@ -852,11 +843,9 @@ class WorkingMemoryManager:
             with open(self._persist_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
-            from memory.session_decay import get_phase, SessionPhase
 
             now = time.time()
             loaded = 0
-            skipped = 0
 
             for gid, state_data in data.get("states", {}).items():
                 media = state_data.get("media_analysis", [])

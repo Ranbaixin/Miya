@@ -5,10 +5,10 @@
 
 import json
 import logging
-from pathlib import Path
-from typing import Dict, Any, List, Optional, Callable
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger("Miya.SkillsRegistry")
 
@@ -196,7 +196,7 @@ async def get_agent_handler(agent_name: str):
         return None
 
     try:
-        module_path = skill.module.replace(".", "/") + ".py"
+        skill.module.replace(".", "/") + ".py"
         import importlib.util
 
         spec = importlib.util.spec_from_file_location(
@@ -242,12 +242,7 @@ async def call_mcp_service(
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
 
-            if hasattr(module, "service"):
-                result = await module.service.handle_handoff(
-                    {"tool_name": tool_name, **params}
-                )
-                return result
-            elif hasattr(module, "service"):
+            if hasattr(module, "service") or hasattr(module, "service"):
                 result = await module.service.handle_handoff(
                     {"tool_name": tool_name, **params}
                 )

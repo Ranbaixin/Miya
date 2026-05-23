@@ -5,8 +5,8 @@ QQ机器人诊断脚本
 
 import asyncio
 import logging
-import sys
 import os
+import sys
 from pathlib import Path
 
 # 添加项目根目录到Python路径
@@ -59,7 +59,7 @@ async def diagnose_qq_connection():
             print("   ✅ OneBot客户端模块导入成功")
             
             # 创建客户端（但不连接）
-            client = QQOneBotClient(
+            QQOneBotClient(
                 ws_url=onebot_url,
                 bot_qq=int(bot_qq) if bot_qq != '0' else 0,
                 access_token=None
@@ -244,7 +244,7 @@ async def test_onebot_apis():
                     error_msg = str(e)
                     if "retcode=1200" in error_msg:
                         print(f"  ❌ {description}失败: 网络连接异常 (retcode=1200)")
-                        print(f"     💡 此API可能不受支持或需要特殊权限")
+                        print("     💡 此API可能不受支持或需要特殊权限")
                     elif "不支持" in error_msg or "未实现" in error_msg:
                         print(f"  ❌ {description}失败: API未实现")
                     else:
@@ -270,9 +270,6 @@ def main():
     print()
     
     # 检查Python版本
-    if sys.version_info < (3, 8):
-        print("❌ Python版本过低，需要3.8或更高版本")
-        return
     
     # 运行诊断
     loop = asyncio.new_event_loop()

@@ -23,7 +23,7 @@ import json
 import logging
 from copy import deepcopy
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Set
+from typing import Any, Dict, List, Optional, Set
 
 logger = logging.getLogger("Miya.PermissionEngine")
 
@@ -92,10 +92,7 @@ class UnifiedPermissionEngine:
 
             # 新格式：ids 字典 {platform: [user_ids]}
             for platform, raw_ids in ids.items():
-                if isinstance(raw_ids, str):
-                    raw_ids_list = [raw_ids] if raw_ids else []
-                else:
-                    raw_ids_list = raw_ids or []
+                raw_ids_list = ([raw_ids] if raw_ids else []) if isinstance(raw_ids, str) else raw_ids or []
                 for raw_id in raw_ids_list:
                     raw_id = str(raw_id)
                     if not raw_id:
@@ -276,7 +273,7 @@ class UnifiedPermissionEngine:
 
         # 精确匹配 + / 前缀匹配
         cmd_stripped = cmd.lstrip("/")
-        for cmd_key, cmd_info in commands.items():
+        for cmd_key, _cmd_info in commands.items():
             key_stripped = cmd_key.lower().lstrip("/")
             if cmd_stripped == key_stripped:
                 return False  # 非 superadmin 拒绝执行受保护命令
@@ -352,7 +349,7 @@ class UnifiedPermissionEngine:
                     "username": username or user_id,
                     "platform": platform,
                     "permission_groups": groups,
-                    "description": f"通过 API 添加",
+                    "description": "通过 API 添加",
                 }
             )
 

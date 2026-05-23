@@ -15,7 +15,6 @@ Miya AI 项目集成测试场景
 
 import asyncio
 import json
-from typing import Dict, Any
 from pathlib import Path
 
 # 测试配置
@@ -78,7 +77,7 @@ async def test_config_hot_reload_initialization():
 
 async def test_config_event_subscription():
     """测试配置事件订阅机制"""
-    from core.config_hot_reload import ConfigHotReload, ConfigEvent
+    from core.config_hot_reload import ConfigEvent, ConfigHotReload
 
     reloader = ConfigHotReload()
     event_received = []
@@ -233,7 +232,7 @@ async def test_fallback_mechanism():
 
 async def test_event_notification_system():
     """测试事件通知系统"""
-    from core.config_hot_reload import ConfigHotReload, ConfigEvent
+    from core.config_hot_reload import ConfigEvent, ConfigHotReload
 
     reloader = ConfigHotReload()
     notifications = []

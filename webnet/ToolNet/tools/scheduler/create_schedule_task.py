@@ -2,13 +2,13 @@
 创建定时任务
 """
 
-from typing import Dict, Any
 import logging
-from datetime import datetime, timedelta
 import re
 import uuid
-from webnet.ToolNet.base import BaseTool, ToolContext
+from datetime import datetime, timedelta
+from typing import Any, Dict
 
+from webnet.ToolNet.base import BaseTool, ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ class CreateScheduleTaskTool(BaseTool):
         import sys
 
         print(
-            f"=================== CREATE_SCHEDULE TOOL EXECUTED! ===================",
+            "=================== CREATE_SCHEDULE TOOL EXECUTED! ===================",
             file=sys.stderr,
         )
         print(f"args={args}, context={type(context)}", file=sys.stderr)
@@ -241,7 +241,7 @@ class CreateScheduleTaskTool(BaseTool):
                 )
 
                 # 格式化输出
-                result = f"✅ 定时任务已创建\n"
+                result = "✅ 定时任务已创建\n"
                 result += f"任务ID: {task_id}\n"
                 result += f"类型: {task_type}\n"
                 result += f"目标: {target_type}_{target_id}\n"
@@ -251,7 +251,7 @@ class CreateScheduleTaskTool(BaseTool):
                     if action_type == "qq_like":
                         result += f"动作: 给用户点赞 {times} 次\n"
                     elif action_type == "send_poke":
-                        result += f"动作: 拍一拍用户\n"
+                        result += "动作: 拍一拍用户\n"
                 elif message:
                     result += f"消息: {message}\n"
 

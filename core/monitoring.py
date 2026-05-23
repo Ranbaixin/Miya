@@ -13,19 +13,19 @@ Miya 监控和告警机制模块
 """
 
 import asyncio
+import contextlib
 import json
 import logging
 import smtplib
+import statistics
 import threading
 import time
-from dataclasses import dataclass, field, asdict
+from collections import deque
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from enum import Enum
-from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set
-from collections import defaultdict, deque
-import statistics
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -240,17 +240,7 @@ class AlertEngine:
 
         # 检查条件
         triggered = False
-        if rule.condition == "gt" and metric_value > rule.threshold:
-            triggered = True
-        elif rule.condition == "lt" and metric_value < rule.threshold:
-            triggered = True
-        elif rule.condition == "gte" and metric_value >= rule.threshold:
-            triggered = True
-        elif rule.condition == "lte" and metric_value <= rule.threshold:
-            triggered = True
-        elif rule.condition == "eq" and metric_value == rule.threshold:
-            triggered = True
-        elif rule.condition == "ne" and metric_value != rule.threshold:
+        if rule.condition == "gt" and metric_value > rule.threshold or rule.condition == "lt" and metric_value < rule.threshold or rule.condition == "gte" and metric_value >= rule.threshold or rule.condition == "lte" and metric_value <= rule.threshold or rule.condition == "eq" and metric_value == rule.threshold or rule.condition == "ne" and metric_value != rule.threshold:
             triggered = True
 
         if triggered:
@@ -423,16 +413,15 @@ class NotificationService:
 
         for webhook_url in self._webhook_urls:
             try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(
-                        webhook_url,
-                        json=payload,
-                        timeout=aiohttp.ClientTimeout(total=10)
-                    ) as response:
-                        if response.status == 200:
-                            logger.info(f"[通知服务] Webhook告警已发送: {webhook_url}")
-                        else:
-                            logger.warning(f"[通知服务] Webhook返回错误: {response.status}")
+                async with aiohttp.ClientSession() as session, session.post(
+                    webhook_url,
+                    json=payload,
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    if response.status == 200:
+                        logger.info(f"[通知服务] Webhook告警已发送: {webhook_url}")
+                    else:
+                        logger.warning(f"[通知服务] Webhook返回错误: {response.status}")
 
             except Exception as e:
                 logger.error(f"[通知服务] 发送Webhook失败: {webhook_url}, 错误: {e}")
@@ -440,15 +429,15 @@ class NotificationService:
     def _format_alert_email(self, alert: Alert) -> str:
         """格式化告警邮件"""
         lines = [
-            f"Miya 告警通知",
-            f"================",
-            f"",
+            "Miya 告警通知",
+            "================",
+            "",
             f"严重级别: {alert.severity.value.upper()}",
             f"指标名称: {alert.metric_name}",
             f"告警消息: {alert.message}",
             f"触发时间: {alert.triggered_at.isoformat()}",
-            f"",
-            f"详细信息:"
+            "",
+            "详细信息:"
         ]
 
         if alert.details:
@@ -579,10 +568,8 @@ class MonitoringSystem:
 
         if self._monitor_task:
             self._monitor_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._monitor_task
-            except asyncio.CancelledError:
-                pass
 
         logger.info("[监控系统] 监控已停止")
 

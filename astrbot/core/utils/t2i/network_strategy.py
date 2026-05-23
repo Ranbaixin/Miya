@@ -69,21 +69,20 @@ class NetworkRenderStrategy(RenderStrategy):
             async with aiohttp.ClientSession(
                 trust_env=True,
                 connector=build_tls_connector(),
-            ) as session:
-                async with session.get(
-                    "https://api.soulter.top/astrbot/t2i-endpoints",
-                ) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        all_endpoints: list[dict] = data.get("data", [])
-                        self.endpoints = [
-                            ep.get("url")
-                            for ep in all_endpoints
-                            if ep.get("active") and ep.get("url")
-                        ]
-                        logger.info(
-                            f"Successfully got {len(self.endpoints)} official T2I endpoints.",
-                        )
+            ) as session, session.get(
+                "https://api.soulter.top/astrbot/t2i-endpoints",
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    all_endpoints: list[dict] = data.get("data", [])
+                    self.endpoints = [
+                        ep.get("url")
+                        for ep in all_endpoints
+                        if ep.get("active") and ep.get("url")
+                    ]
+                    logger.info(
+                        f"Successfully got {len(self.endpoints)} official T2I endpoints.",
+                    )
         except Exception as e:
             logger.error(f"Failed to get official endpoints: {e}")
 

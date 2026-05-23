@@ -14,12 +14,12 @@
 """
 
 import asyncio
-import logging
 import json
+import logging
 from abc import ABC
-from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -361,7 +361,7 @@ class TelegramAdapter(PlatformAdapter):
 
     async def connect(self) -> bool:
         """连接Telegram"""
-        logger.info(f"[Telegram] 连接中")
+        logger.info("[Telegram] 连接中")
         self._connected = True
         return True
 
@@ -391,7 +391,7 @@ class DiscordAdapter(PlatformAdapter):
 
     async def connect(self) -> bool:
         """连接Discord"""
-        logger.info(f"[Discord] 连接中")
+        logger.info("[Discord] 连接中")
         self._connected = True
         return True
 
@@ -488,7 +488,7 @@ class PlatformAdapterManager:
         return {
             "total_platforms": len(self._adapters),
             "connected": sum(1 for a in self._adapters.values() if a.is_connected()),
-            "platforms": [p.value for p in self._adapters.keys()],
+            "platforms": [p.value for p in self._adapters],
         }
 
 

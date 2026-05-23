@@ -3,14 +3,13 @@ Miya OpenAI Provider
 融合 AstrBot 的完善实现 + Miya 的简便接口
 """
 
-import json
-from typing import Any, Literal
+from typing import Literal
 
 from openai import AsyncAzureOpenAI, AsyncOpenAI
 
 from ..tools import get_logger
-from .provider import LLMProvider, ProviderType
 from .entities import LLMResponse, TokenUsage
+from .provider import LLMProvider
 
 logger = get_logger(__name__)
 
@@ -22,10 +21,10 @@ class OpenAIProvider(LLMProvider):
         super().__init__(provider_config, provider_settings)
 
         self.api_key = self.get_keys()[0] or ""
-        self.base_url = provider_config.get("api_base", None)
+        self.base_url = provider_config.get("api_base")
         self.proxy = provider_config.get("proxy", "")
         self.timeout = provider_config.get("timeout", 120)
-        self.api_version = provider_config.get("api_version", None)
+        self.api_version = provider_config.get("api_version")
 
         model = provider_config.get("model", "gpt-4o-mini")
         self.set_model(model)

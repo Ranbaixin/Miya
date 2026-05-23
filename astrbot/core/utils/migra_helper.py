@@ -1,6 +1,5 @@
 import traceback
 
-from astrbot.core import astrbot_config, logger
 from astrbot.core.agent.runners.deerflow.constants import (
     DEERFLOW_AGENT_RUNNER_PROVIDER_ID_KEY,
     DEERFLOW_PROVIDER_TYPE,
@@ -9,6 +8,8 @@ from astrbot.core.astrbot_config_mgr import AstrBotConfig, AstrBotConfigManager
 from astrbot.core.db.migration.migra_45_to_46 import migrate_45_to_46
 from astrbot.core.db.migration.migra_token_usage import migrate_token_usage
 from astrbot.core.db.migration.migra_webchat_session import migrate_webchat_session
+
+from astrbot.core import astrbot_config, logger
 
 
 def _migra_agent_runner_configs(conf: AstrBotConfig, ids_map: dict) -> None:
@@ -115,7 +116,7 @@ def _migra_provider_to_source_structure(conf: AstrBotConfig) -> None:
             provider["custom_extra_body"] = {}
 
         # Remove fields that should be in source
-        keys_to_remove = [k for k in provider.keys() if k not in provider_only_fields]
+        keys_to_remove = [k for k in provider if k not in provider_only_fields]
         for key in keys_to_remove:
             del provider[key]
 

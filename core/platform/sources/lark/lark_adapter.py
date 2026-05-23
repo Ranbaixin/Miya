@@ -7,15 +7,8 @@ from pathlib import Path
 from typing import Any, cast
 from uuid import uuid4
 
-import lark_oapi as lark
-from lark_oapi.api.im.v1 import (
-    GetMessageRequest,
-    GetMessageResourceRequest,
-)
-from lark_oapi.api.im.v1.processor import P2ImMessageReceiveV1Processor
-
 import astrbot.api.message_components as Comp
-from astrbot import logger
+import lark_oapi as lark
 from astrbot.api.event import MessageChain
 from astrbot.api.platform import (
     AstrBotMessage,
@@ -25,6 +18,13 @@ from astrbot.api.platform import (
     PlatformMetadata,
 )
 from astrbot.core.platform.astr_message_event import MessageSesion
+from lark_oapi.api.im.v1 import (
+    GetMessageRequest,
+    GetMessageResourceRequest,
+)
+from lark_oapi.api.im.v1.processor import P2ImMessageReceiveV1Processor
+
+from astrbot import logger
 from astrbot.core.utils.astrbot_path import get_astrbot_temp_path
 from astrbot.core.utils.webhook_utils import log_webhook_info
 
@@ -534,9 +534,8 @@ class LarkPlatformAdapter(Platform):
                 open_id = m.id.open_id if m.id.open_id else ""
                 at_list[m.key] = Comp.At(qq=open_id, name=m.name)
 
-                if m.name == self.bot_name:
-                    if m.id.open_id is not None:
-                        abm.self_id = m.id.open_id
+                if m.name == self.bot_name and m.id.open_id is not None:
+                    abm.self_id = m.id.open_id
 
         if message.content is None:
             logger.warning("[Lark] 消息内容为空")

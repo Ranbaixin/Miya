@@ -124,13 +124,12 @@ class KookRolesRecord:
             return role_id in roles
 
         try:
-            if (cache := self._roles_cache.get(guild_id)) is not None:
-                if (
-                    cache.failed_count > self._max_retry_times
-                    and time.time() - cache.latest_update_time < self._retry_interval
-                ):
-                    new_future.set_result(None)
-                    return False
+            if (cache := self._roles_cache.get(guild_id)) is not None and (
+                cache.failed_count > self._max_retry_times
+                and time.time() - cache.latest_update_time < self._retry_interval
+            ):
+                new_future.set_result(None)
+                return False
 
             # 简单的容量控制 (LRU)
             if len(self._roles_cache) + 1 > self._cache_max_size:

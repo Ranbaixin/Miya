@@ -5,8 +5,9 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from astrbot import logger
 from astrbot.core.agent.message import Message
+
+from astrbot import logger
 
 
 @dataclass(slots=True)

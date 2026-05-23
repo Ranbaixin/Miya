@@ -10,9 +10,8 @@
 6. 阻塞/选择级工具优先级
 """
 import logging
-from typing import Dict, Optional, Any
 from pathlib import Path
-
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +23,7 @@ class PerceptionHandler:
     单一职责：处理现有模块及输入感知相关的复杂处理逻辑
     """
 
-    def __init__(self, 
+    def __init__(self,
                  terminal_tool: Optional[Any] = None,
                  auth_subnet: Optional[Any] = None,
                  game_mode_adapter: Optional[Any] = None,
@@ -99,10 +98,7 @@ class PerceptionHandler:
         # 例如从配置文件或数据库读取管理员列表
         admin_list = self._load_admin_list()
         
-        if user_id and user_id in admin_list:
-            return True
-        
-        return False
+        return bool(user_id and user_id in admin_list)
 
     def _load_admin_list(self) -> list:
         """
@@ -217,10 +213,7 @@ class PerceptionHandler:
                 return None
             
             # 提取命令
-            if content.startswith("/"):
-                command = content[1:].strip()
-            else:
-                command = content.strip()
+            command = content[1:].strip() if content.startswith("/") else content.strip()
             
             # 执行终端命令
             from webnet.ToolNet.base import ToolContext

@@ -50,10 +50,7 @@ def is_sing_request(text: str) -> bool:
     for skip in _get_sing_control_words():
         if text_lower.startswith(skip.lower()):
             return False
-    for word in _get_sing_trigger_words():
-        if word.lower() in text_lower:
-            return True
-    return False
+    return any(word.lower() in text_lower for word in _get_sing_trigger_words())
 
 
 def extract_song_name(text: str) -> str:
@@ -86,7 +83,7 @@ async def handle_sing_request(query: str, username: str = "") -> str:
 
 
 async def _init_from_config(registry, config: dict):
-    from core.singing import AutoConvertMusicEngine, RVCEngine, BuiltinSingingEngine
+    from core.singing import AutoConvertMusicEngine, BuiltinSingingEngine, RVCEngine
 
     engines_cfg = config.get("engines", {})
     preferred = config.get("preferred_engine", "builtin")

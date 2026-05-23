@@ -3,12 +3,10 @@ Linter 扫描器
 扫描代码的 lint 错误和警告
 """
 import logging
-from typing import List, Dict, Optional, Any
 from pathlib import Path
-import asyncio
+from typing import Dict, List, Optional
 
-from core.problem_scanner import BaseScanner, Problem, ProblemType, ProblemSeverity
-
+from core.problem_scanner import BaseScanner, Problem, ProblemSeverity, ProblemType
 
 logger = logging.getLogger(__name__)
 

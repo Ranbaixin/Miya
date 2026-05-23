@@ -6,10 +6,6 @@ import uuid
 from typing import Any, cast
 
 import aiohttp
-from slack_sdk.socket_mode.request import SocketModeRequest
-from slack_sdk.web.async_client import AsyncWebClient
-
-from astrbot.api import logger
 from astrbot.api.event import MessageChain
 from astrbot.api.message_components import *
 from astrbot.api.platform import (
@@ -20,6 +16,10 @@ from astrbot.api.platform import (
     PlatformMetadata,
 )
 from astrbot.core.platform.astr_message_event import MessageSesion
+from slack_sdk.socket_mode.request import SocketModeRequest
+from slack_sdk.web.async_client import AsyncWebClient
+
+from astrbot.api import logger
 from astrbot.core.utils.webhook_utils import log_webhook_info
 
 from ...register import register_platform_adapter
@@ -314,16 +314,15 @@ class SlackAdapter(Platform):
     async def get_file_base64(self, url: str) -> str:
         """下载 Slack 文件并返回 Base64 编码的内容"""
         headers = {"Authorization": f"Bearer {self.bot_token}"}
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as resp:
-                if resp.status == 200:
-                    content = await resp.read()
-                    base64_content = base64.b64encode(content).decode("utf-8")
-                    return base64_content
-                logger.error(
-                    f"Failed to download slack file: {resp.status} {await resp.text()}",
-                )
-                raise Exception(f"下载文件失败: {resp.status}")
+        async with aiohttp.ClientSession() as session, session.get(url, headers=headers) as resp:
+            if resp.status == 200:
+                content = await resp.read()
+                base64_content = base64.b64encode(content).decode("utf-8")
+                return base64_content
+            logger.error(
+                f"Failed to download slack file: {resp.status} {await resp.text()}",
+            )
+            raise Exception(f"下载文件失败: {resp.status}")
 
     async def run(self) -> None:
         self.bot_self_id = await self.get_bot_user_id()

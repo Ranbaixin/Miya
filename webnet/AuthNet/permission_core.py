@@ -11,9 +11,9 @@
 """
 
 import json
-from pathlib import Path
-from typing import Dict, List, Any, Optional, Union
 import logging
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -135,10 +135,7 @@ class PermissionCore:
             default_groups = ["Default"]
             
             # 桌面端用户自动获得 User 权限组
-            if user_id.startswith("desktop_") or (context and context.get("platform") == "desktop"):
-                default_groups = ["User"]
-            # 终端用户自动获得 User 权限组
-            elif user_id.startswith("terminal_") or (context and context.get("platform") == "terminal"):
+            if user_id.startswith("desktop_") or (context and context.get("platform") == "desktop") or user_id.startswith("terminal_") or (context and context.get("platform") == "terminal"):
                 default_groups = ["User"]
             
             user = {
@@ -185,7 +182,7 @@ class PermissionCore:
                     result=result,
                     platform=context.get('platform') if context else None
                 )
-            except Exception as e:
+            except Exception:
                 pass  # 审计日志失败不应影响主流程
 
         # 【新增】缓存结果
@@ -321,9 +318,8 @@ class PermissionCore:
             user["permissions"] = [user["permissions"]] if user["permissions"] else []
         
         # 添加权限
-        if isinstance(user["permissions"], list):
-            if permission not in user["permissions"]:
-                user["permissions"].append(permission)
+        if isinstance(user["permissions"], list) and permission not in user["permissions"]:
+            user["permissions"].append(permission)
         
         # 保存
         self.users_file.write_text(
@@ -358,10 +354,9 @@ class PermissionCore:
         
         # 移除权限
         user_perms = user.get("permissions", [])
-        if isinstance(user_perms, list):
-            if permission in user_perms:
-                user_perms.remove(permission)
-                user["permissions"] = user_perms
+        if isinstance(user_perms, list) and permission in user_perms:
+            user_perms.remove(permission)
+            user["permissions"] = user_perms
         
         # 保存
         self.users_file.write_text(

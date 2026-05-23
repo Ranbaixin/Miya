@@ -2,18 +2,18 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from sqlalchemy import delete, func, select, text, update
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlmodel import col, desc
-
-from core.astrbot_compat import logger
 from astrbot.core.knowledge_base.models import (
     BaseKBModel,
     KBDocument,
     KBMedia,
     KnowledgeBase,
 )
+from sqlalchemy import delete, func, select, text, update
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlmodel import col, desc
+
 from astrbot.core.utils.astrbot_path import get_astrbot_knowledge_base_path
+from core.astrbot_compat import logger
 
 if TYPE_CHECKING:
     from astrbot.core.db.vec_db.faiss_impl import FaissVecDB

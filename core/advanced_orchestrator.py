@@ -3,15 +3,13 @@
 整合任务规划、自主探索、智能执行和思维链，实现Claude级别的能力
 """
 import logging
-from typing import Dict, List, Optional, Any
 from datetime import datetime
-import asyncio
-import json
+from typing import Dict, List, Optional
 
-from .task_planner import TaskPlanner, Task, TaskStatus
-from .autonomous_explorer import AutonomousExplorer, ExplorationPlan
-from .intelligent_executor import IntelligentExecutor, ExecutionResult
-from .chain_of_thought import ChainOfThought, ThoughtType
+from .autonomous_explorer import AutonomousExplorer
+from .chain_of_thought import ChainOfThought
+from .intelligent_executor import IntelligentExecutor
+from .task_planner import Task, TaskPlanner, TaskStatus
 
 logger = logging.getLogger(__name__)
 
@@ -186,7 +184,7 @@ class AdvancedOrchestrator:
         try:
             chain = await self.chain_of_thought.analyze(goal, context)
             
-            summary = self.chain_of_thought.get_chain_summary(chain)
+            self.chain_of_thought.get_chain_summary(chain)
             
             return {
                 'success': True,
@@ -274,11 +272,7 @@ class AdvancedOrchestrator:
         
         # 检查目标本身
         goal_lower = goal.lower()
-        for keyword in exploration_keywords:
-            if keyword in goal_lower:
-                return True
-        
-        return False
+        return any(keyword in goal_lower for keyword in exploration_keywords)
     
     async def _explore_if_needed(self, goal: str, context: Optional[Dict]) -> Dict:
         """进行探索"""
@@ -431,7 +425,7 @@ class AdvancedOrchestrator:
         if result['success']:
             conclusion = "任务成功完成"
             if reflection['failed_tasks']:
-                conclusion += f"（部分任务失败，但不影响整体结果）"
+                conclusion += "（部分任务失败，但不影响整体结果）"
         else:
             conclusion = "任务未完全完成"
         

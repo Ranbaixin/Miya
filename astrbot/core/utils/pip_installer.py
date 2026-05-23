@@ -508,9 +508,7 @@ def _collect_candidate_modules(
     try:
         for distribution in importlib_metadata.distributions(path=[site_packages_path]):
             distribution_name = (
-                distribution.metadata["Name"]
-                if "Name" in distribution.metadata
-                else None
+                distribution.metadata.get("Name", None)
             )
             if not distribution_name:
                 continue

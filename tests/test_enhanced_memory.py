@@ -1,16 +1,14 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 Test enhanced Miya memory system with new fields
 """
 
 import asyncio
 import sys
-import os
 
 sys.path.append(".")
 
-from memory.core import get_memory_core, MemoryLevel, MemorySource
+from memory.core import MemoryLevel, MemorySource, get_memory_core
 
 
 async def test_enhanced_memory():
@@ -121,7 +119,7 @@ async def test_enhanced_memory():
         print("\n4. Testing field retrieval by memory ID...")
         work_memory = await core.get_by_id(work_memory_id)
         if work_memory:
-            print(f"   [OK] Retrieved work memory:")
+            print("   [OK] Retrieved work memory:")
             print(f"     - Content: {work_memory.content}")
             print(f"     - Event Type: {work_memory.event_type}")
             print(f"     - Location: {work_memory.location}")
@@ -143,7 +141,7 @@ async def test_enhanced_memory():
         # Test user profile with enhanced fields
         print("\n5. Testing user profile generation...")
         profile = await core.get_user_profile("user_001")
-        print(f"   [OK] User profile generated:")
+        print("   [OK] User profile generated:")
         print(f"     - Total memories: {profile['total_memories']}")
         print(f"     - By level: {profile['by_level']}")
         print(f"     - By tag: {list(profile['by_tag'].keys())}")

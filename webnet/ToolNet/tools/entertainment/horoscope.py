@@ -2,13 +2,14 @@
 星座运势工具
 """
 
-from typing import Dict, Any
 import logging
+from typing import Any, Dict
+
 import httpx
-from webnet.ToolNet.base import BaseTool, ToolContext
+
 from core.constants import NetworkTimeout
 from core.system_config import get_api_url
-
+from webnet.ToolNet.base import BaseTool, ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -77,8 +78,8 @@ class Horoscope(BaseTool):
     ) -> str:
         """保存运势到记忆系统"""
         try:
+
             from memory.undefined_memory import get_undefined_memory_adapter
-            from datetime import datetime
 
             adapter = get_undefined_memory_adapter()
 
@@ -132,10 +133,10 @@ class Horoscope(BaseTool):
             fortune_data = data.get("data", {})
 
             # 格式化运势信息
-            title = fortune_data.get("title", constellation)
-            time_text = fortune_data.get("type", time_type)
+            fortune_data.get("title", constellation)
+            fortune_data.get("type", time_type)
             short_comment = fortune_data.get("shortcomment", "")
-            date_text = fortune_data.get("time", "")
+            fortune_data.get("time", "")
 
             # 运势评分
             fortune = fortune_data.get("fortune", {})
@@ -151,7 +152,7 @@ class Horoscope(BaseTool):
             index = fortune_data.get("index", {})
 
             # 运势文本
-            fortunetext = fortune_data.get("fortunetext", {})
+            fortune_data.get("fortunetext", {})
 
             # 幸运信息
             lucky_color = fortune_data.get("luckycolor", "")

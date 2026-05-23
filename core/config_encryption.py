@@ -14,18 +14,17 @@ Miya 配置加密存储模块 - 安全加强
 
 import base64
 import hashlib
-import json
 import logging
 import os
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, Optional, Set
 
 try:
     from cryptography.fernet import Fernet
-    from cryptography.hazmat.primitives.ciphers.aead import AESGCM, ChaCha20Poly1305
     from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM, ChaCha20Poly1305
     from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
     CRYPTO_AVAILABLE = True
 except ImportError:
@@ -319,7 +318,7 @@ class ConfigEncryption:
                             )
                             decrypted = self.decrypt(encrypted)
                             decrypted_config[key] = decrypted
-                        except Exception as e:
+                        except Exception:
                             logger.warning(f"[配置加密] 解密失败,使用原值: {key}")
                             decrypted_config[key] = value
                     else:
@@ -334,10 +333,7 @@ class ConfigEncryption:
     def _is_sensitive_key(self, key: str) -> bool:
         """检查是否是敏感键"""
         key_lower = key.lower()
-        for sensitive_key in self.SENSITIVE_KEYS:
-            if sensitive_key in key_lower:
-                return True
-        return False
+        return any(sensitive_key in key_lower for sensitive_key in self.SENSITIVE_KEYS)
 
     def _is_encrypted_value(self, value: str) -> bool:
         """检查是否是加密值(启发式)"""
@@ -378,7 +374,7 @@ class ConfigEncryption:
         self._key_store[new_key_id] = new_key
         self._key_cache.clear()
 
-        logger.info(f"[配置加密] 密钥轮换完成")
+        logger.info("[配置加密] 密钥轮换完成")
 
     def export_key(self, key_id: str = "master", password: Optional[str] = None) -> str:
         """导出密钥(加密)"""

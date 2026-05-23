@@ -6,9 +6,8 @@
 """
 
 import logging
-from typing import Dict, Optional, List
 from abc import ABC, abstractmethod
-
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -305,7 +304,7 @@ class GameModeAdapter(IGameModeAdapter):
 
         try:
             # 遍历所有游戏模式，查找该用户是否在游戏中
-            for chat_id, mode in self._game_mode_manager.modes.items():
+            for _chat_id, mode in self._game_mode_manager.modes.items():
                 if mode.game_id:
                     # 检查该游戏是否有这个用户的角色
                     characters = self._game_memory_manager.get_visible_characters(

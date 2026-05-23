@@ -4,7 +4,6 @@ import time
 import traceback
 from collections.abc import AsyncGenerator
 
-from astrbot.core import file_token_service, html_renderer, logger
 from astrbot.core.message.components import At, Image, Json, Node, Plain, Record, Reply
 from astrbot.core.message.message_event_result import ResultContentType
 from astrbot.core.pipeline.content_safety_check.stage import ContentSafetyCheckStage
@@ -13,6 +12,8 @@ from astrbot.core.platform.message_type import MessageType
 from astrbot.core.star.session_llm_manager import SessionServiceManager
 from astrbot.core.star.star import star_map
 from astrbot.core.star.star_handler import EventType, star_handlers_registry
+
+from astrbot.core import file_token_service, html_renderer, logger
 
 from ..context import PipelineContext
 from ..stage import Stage, register_stage, registered_stages
@@ -207,50 +208,49 @@ class ResultDecorateStage(Stage):
                 "qq_official",
                 "weixin_official_account",
                 "dingtalk",
-            ]:
-                if (
-                    self.only_llm_result and result.is_model_result()
-                ) or not self.only_llm_result:
-                    new_chain = []
-                    for comp in result.chain:
-                        if isinstance(comp, Plain):
-                            if len(comp.text) > self.words_count_threshold:
-                                # 不分段回复
-                                new_chain.append(comp)
-                                continue
-
-                            # 根据 split_mode 选择分段方式
-                            if self.split_mode == "words":
-                                split_response = self._split_text_by_words(comp.text)
-                            else:  # regex 模式
-                                try:
-                                    split_response = re.findall(
-                                        self.regex,
-                                        comp.text,
-                                        re.DOTALL | re.MULTILINE,
-                                    )
-                                except re.error:
-                                    logger.error(
-                                        f"分段回复正则表达式错误，使用默认分段方式: {traceback.format_exc()}",
-                                    )
-                                    split_response = re.findall(
-                                        r".*?[。？！~…]+|.+$",
-                                        comp.text,
-                                        re.DOTALL | re.MULTILINE,
-                                    )
-
-                            if not split_response:
-                                new_chain.append(comp)
-                                continue
-                            for seg in split_response:
-                                if self.content_cleanup_rule:
-                                    seg = re.sub(self.content_cleanup_rule, "", seg)
-                                if seg.strip():
-                                    new_chain.append(Plain(seg))
-                        else:
-                            # 非 Plain 类型的消息段不分段
+            ] and ((
+                self.only_llm_result and result.is_model_result()
+            ) or not self.only_llm_result):
+                new_chain = []
+                for comp in result.chain:
+                    if isinstance(comp, Plain):
+                        if len(comp.text) > self.words_count_threshold:
+                            # 不分段回复
                             new_chain.append(comp)
-                    result.chain = new_chain
+                            continue
+
+                        # 根据 split_mode 选择分段方式
+                        if self.split_mode == "words":
+                            split_response = self._split_text_by_words(comp.text)
+                        else:  # regex 模式
+                            try:
+                                split_response = re.findall(
+                                    self.regex,
+                                    comp.text,
+                                    re.DOTALL | re.MULTILINE,
+                                )
+                            except re.error:
+                                logger.error(
+                                    f"分段回复正则表达式错误，使用默认分段方式: {traceback.format_exc()}",
+                                )
+                                split_response = re.findall(
+                                    r".*?[。？！~…]+|.+$",
+                                    comp.text,
+                                    re.DOTALL | re.MULTILINE,
+                                )
+
+                        if not split_response:
+                            new_chain.append(comp)
+                            continue
+                        for seg in split_response:
+                            if self.content_cleanup_rule:
+                                seg = re.sub(self.content_cleanup_rule, "", seg)
+                            if seg.strip():
+                                new_chain.append(Plain(seg))
+                    else:
+                        # 非 Plain 类型的消息段不分段
+                        new_chain.append(comp)
+                result.chain = new_chain
 
             # TTS
             tts_provider = self.ctx.plugin_manager.context.get_using_tts_provider(

@@ -1,9 +1,10 @@
 import json
 
-from astrbot import logger
 from astrbot.core.conversation_mgr import ConversationManager
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
 from astrbot.core.provider.entities import ProviderRequest
+
+from astrbot import logger
 
 
 async def persist_agent_history(

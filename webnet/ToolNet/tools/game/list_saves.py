@@ -3,11 +3,12 @@
 ListSaves - 列出当前游戏的所有存档
 """
 
-from typing import Dict, Any
-from webnet.ToolNet.base import BaseTool, ToolContext
-from webnet.EntertainmentNet.game_mode.game_memory_manager import get_game_memory_manager
-from webnet.EntertainmentNet.game_mode import get_game_mode_manager
+from typing import Any, Dict
+
 from core.constants import Encoding
+from webnet.EntertainmentNet.game_mode import get_game_mode_manager
+from webnet.EntertainmentNet.game_mode.game_memory_manager import get_game_memory_manager
+from webnet.ToolNet.base import BaseTool, ToolContext
 
 
 class ListSaves(BaseTool):
@@ -40,7 +41,6 @@ class ListSaves(BaseTool):
         self.logger.info(f"[ListSaves] 查找游戏 {game_id} 的存档")
 
         # 查找游戏目录
-        from pathlib import Path
         game_dir = game_memory_manager._find_game_path(game_id)
 
         if not game_dir.exists():
@@ -74,13 +74,13 @@ class ListSaves(BaseTool):
             game_name = game_metadata.game_name if game_metadata else "未知游戏"
 
             # 格式化输出
-            result = f"📂 **游戏存档列表**\n\n"
+            result = "📂 **游戏存档列表**\n\n"
             result += f"🎮 **游戏**: {game_name}\n"
             result += f"🆔 **存档ID**: {save_id}\n"
             result += f"📝 **存档名称**: {save_name}\n"
             result += f"🕐 **创建时间**: {created_at}\n\n"
 
-            result += f"💡 使用 `create_game_save` 创建新存档覆盖当前存档\n"
+            result += "💡 使用 `create_game_save` 创建新存档覆盖当前存档\n"
 
             return result
 

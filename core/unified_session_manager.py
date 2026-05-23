@@ -4,12 +4,11 @@
 统一 Miya SessionManager 和 AstrBot ConversationManager
 """
 
-import asyncio
 import logging
-from typing import Optional, Dict, Any, List
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +87,7 @@ class UnifiedSessionManager:
         """初始化AstrBot会话管理 (备用)"""
         try:
             from astrbot.core.conversation_mgr import ConversationManager
+
             from astrbot.core.db import BaseDatabase
 
             db = BaseDatabase()
@@ -179,10 +179,7 @@ class UnifiedSessionManager:
         """搜索消息"""
         results = []
 
-        if session_id:
-            sessions = [session_id]
-        else:
-            sessions = list(self._histories.keys())
+        sessions = [session_id] if session_id else list(self._histories.keys())
 
         for sid in sessions:
             history = self._histories.get(sid, [])

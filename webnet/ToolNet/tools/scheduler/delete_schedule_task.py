@@ -1,10 +1,10 @@
 """
 删除指定定时任务
 """
-from typing import Dict, Any
 import logging
-from webnet.ToolNet.base import BaseTool, ToolContext
+from typing import Any, Dict
 
+from webnet.ToolNet.base import BaseTool, ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +94,7 @@ class DeleteScheduleTaskTool(BaseTool):
                         **context.memory_engine.dream_memory
                     }
                     similar_ids = [
-                        mid for mid in all_memories.keys()
+                        mid for mid in all_memories
                         if task_id.lower() in mid.lower() and "scheduled_task" in mid
                     ]
                     if similar_ids:

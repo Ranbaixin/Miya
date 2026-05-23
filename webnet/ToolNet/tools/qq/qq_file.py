@@ -4,12 +4,11 @@ QQ文件发送工具
 支持发送文件到QQ群或私聊，支持多种文件类型
 """
 
-import asyncio
+import builtins
+import contextlib
 import logging
 import os
-import aiofiles
-from typing import Dict, Any, Optional, List
-from pathlib import Path
+from typing import Any, Dict, Optional
 
 from webnet.ToolNet.base import BaseTool, ToolContext
 
@@ -135,10 +134,8 @@ class QQFileTool(BaseTool):
                 
                 # 清理临时文件（如果是下载的）
                 if file_source == "url":
-                    try:
+                    with contextlib.suppress(builtins.BaseException):
                         os.unlink(temp_file_path)
-                    except:
-                        pass
                 
                 if result and result.get("status") == "ok":
                     file_name = os.path.basename(temp_file_path)
@@ -150,10 +147,8 @@ class QQFileTool(BaseTool):
             except Exception as e:
                 # 清理临时文件
                 if file_source == "url":
-                    try:
+                    with contextlib.suppress(builtins.BaseException):
                         os.unlink(temp_file_path)
-                    except:
-                        pass
                 raise e
                 
         except Exception as e:
@@ -171,13 +166,14 @@ class QQFileTool(BaseTool):
             return 0
     
     async def _process_file(
-        self, 
-        file_source: str, 
+        self,
+        file_source: str,
         file_path: str,
         max_size_mb: int
     ) -> Optional[str]:
         """处理文件，返回临时文件路径"""
         import tempfile
+
         import httpx
         
         temp_file = None
@@ -213,7 +209,7 @@ class QQFileTool(BaseTool):
                         raise Exception(f"下载文件失败: HTTP {response.status_code}")
                     
                     # 检查内容类型
-                    content_type = response.headers.get('content-type', '')
+                    response.headers.get('content-type', '')
                     content_length = int(response.headers.get('content-length', 0))
                     
                     max_size_bytes = max_size_mb * 1024 * 1024
@@ -230,7 +226,7 @@ class QQFileTool(BaseTool):
                             
                             # 检查下载过程中的大小
                             if total_size > max_size_bytes:
-                                raise ValueError(f"文件下载过程中超过大小限制")
+                                raise ValueError("文件下载过程中超过大小限制")
                             
                             await f.write(chunk)
                 
@@ -257,10 +253,8 @@ class QQFileTool(BaseTool):
             
             # 清理临时文件
             if temp_file_path and os.path.exists(temp_file_path):
-                try:
+                with contextlib.suppress(builtins.BaseException):
                     os.unlink(temp_file_path)
-                except:
-                    pass
                     
             return None
     
@@ -279,7 +273,7 @@ class QQFileTool(BaseTool):
         for category, exts in categories.items():
             info_lines.append(f"  {category}: {', '.join(exts)}")
         
-        info_lines.append(f"\n最大文件大小: 50MB")
+        info_lines.append("\n最大文件大小: 50MB")
         info_lines.append("注意: 实际限制可能受OneBot实现影响")
         
         return "\n".join(info_lines)

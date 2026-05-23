@@ -19,9 +19,9 @@ QQ交互子网 - 向后兼容层
 # 从新模块导入所有公开接口
 from webnet.qq import (
     QQMessage,
+    QQNet,
     QQNotice,
     QQOneBotClient,
-    QQNet,
 )
 
 # 导出所有公开接口

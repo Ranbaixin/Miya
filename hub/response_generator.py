@@ -10,10 +10,7 @@
 """
 
 import logging
-import asyncio
-from typing import Dict, Optional, Any, List
-from pathlib import Path
-
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -231,7 +228,6 @@ class ResponseGenerator:
                 # 使用多模型管理器
                 ai_client_to_use = self.ai_client
                 if self.model_pool:
-                    from core.model_pool_compat import TaskType
 
                     task_type = await self.model_pool.classify_task(content, context)
                     (
@@ -275,13 +271,12 @@ class ResponseGenerator:
                             tools=None,
                             tool_choice="none",
                         )
-                    except Exception as e2:
+                    except Exception:
                         response = "系统出了点问题。我记下了，等会再试。"
             else:
                 # 不使用工具
                 ai_client_to_use = self.ai_client
                 if self.model_pool:
-                    from core.model_pool_compat import TaskType
 
                     task_type = await self.model_pool.classify_task(content, context)
                     (
@@ -338,16 +333,14 @@ class ResponseGenerator:
             name = self.identity.name
 
         # 使用文本加载器
-        from core.text_loader import get_greeting, is_greeting, get_text
+        from core.text_loader import get_greeting, get_text, is_greeting
 
         # 基于人格和平台生成响应
         greeting_empathy_threshold = pconfig.get_response_threshold("greeting_empathy")
         greeting_warmth_threshold = pconfig.get_response_threshold("greeting_warmth")
 
         if is_greeting(content):
-            if empathy > greeting_empathy_threshold:
-                return get_greeting(name, "hello")
-            elif warmth > greeting_warmth_threshold:
+            if empathy > greeting_empathy_threshold or warmth > greeting_warmth_threshold:
                 return get_greeting(name, "hello")
             else:
                 return get_greeting(name, "hello")
@@ -581,11 +574,9 @@ class ResponseGenerator:
         Returns:
             如果是快速命令，返回响应；否则返回None让AI处理
         """
-        from core.personality import Personality
 
         # 获取personality（如果可用）
         personality = self.personality
-        emotion = None
 
         # 尝试从context获取emotion
         # 这里简化处理，直接检查命令
@@ -599,8 +590,6 @@ class ResponseGenerator:
         if content_lower in ["状态", "查看状态", "/状态", "状态查询"]:
             logger.info(f"[响应生成器] 捕获状态命令: {content}")
             profile = personality.get_profile()
-            emotion_state = {"dominant": "neutral", "intensity": 0.5}
-            existential_state = {}
 
             lines = [
                 "【弥娅状态】",
@@ -718,10 +707,7 @@ class ResponseGenerator:
             }
             core_name = core_abbrev.get(current_core, "") if current_core else ""
 
-            if core_name:
-                tag = f"\n\n[{form_name}|{speak_mode}|{core_name}]"
-            else:
-                tag = f"\n\n[{form_name}|{speak_mode}]"
+            tag = f"\n\n[{form_name}|{speak_mode}|{core_name}]" if core_name else f"\n\n[{form_name}|{speak_mode}]"
 
             return response + tag
         except Exception as e:

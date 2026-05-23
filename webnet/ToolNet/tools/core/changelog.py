@@ -6,8 +6,9 @@
 
 import logging
 import os
-from typing import Dict, Any
 from pathlib import Path
+from typing import Any, Dict
+
 from webnet.ToolNet.base import BaseTool, ToolContext
 
 logger = logging.getLogger(__name__)

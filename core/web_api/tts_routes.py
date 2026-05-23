@@ -3,10 +3,11 @@
 提供 /tts/speech 端点，连接前端 TTS 播放到后端多引擎
 """
 
-import logging
-import tempfile
-import os
+import contextlib
 import json
+import logging
+import os
+import tempfile
 from typing import Optional
 
 from starlette.responses import Response
@@ -42,15 +43,15 @@ async def _synthesize_edge_tts(text, voice, speed, fmt):
     await communicate.save(tmp_path)
     with open(tmp_path, "rb") as f:
         data = f.read()
-    try:
+    with contextlib.suppress(OSError):
         os.unlink(tmp_path)
-    except OSError:
-        pass
     return data
 
 
 async def _synthesize_gpt_sovits(config, text):
-    import aiohttp, re
+    import re
+
+    import aiohttp
 
     sovits = config.get("engines", {}).get("gpt_sovits", {})
     api_url = sovits.get("api_url", "http://127.0.0.1:9880")
@@ -78,12 +79,11 @@ async def _synthesize_gpt_sovits(config, text):
 
     async with aiohttp.ClientSession(
         timeout=aiohttp.ClientTimeout(total=timeout)
-    ) as session:
-        async with session.post(f"{api_url.rstrip('/')}/tts", json=payload) as resp:
-            if resp.status != 200:
-                text_err = await resp.text()
-                raise RuntimeError(f"GPT-SoVITS {resp.status}: {text_err[:200]}")
-            return await resp.read()
+    ) as session, session.post(f"{api_url.rstrip('/')}/tts", json=payload) as resp:
+        if resp.status != 200:
+            text_err = await resp.text()
+            raise RuntimeError(f"GPT-SoVITS {resp.status}: {text_err[:200]}")
+        return await resp.read()
 
 
 async def _synthesize_api_tts(config, text):
@@ -106,16 +106,15 @@ async def _synthesize_api_tts(config, text):
 
     async with aiohttp.ClientSession(
         timeout=aiohttp.ClientTimeout(total=30)
-    ) as session:
-        async with session.post(
-            api_url,
-            json=payload,
-            headers={"Authorization": f"Bearer {api_key}"},
-        ) as resp:
-            if resp.status != 200:
-                text_err = await resp.text()
-                raise RuntimeError(f"API TTS {resp.status}: {text_err[:200]}")
-            return await resp.read()
+    ) as session, session.post(
+        api_url,
+        json=payload,
+        headers={"Authorization": f"Bearer {api_key}"},
+    ) as resp:
+        if resp.status != 200:
+            text_err = await resp.text()
+            raise RuntimeError(f"API TTS {resp.status}: {text_err[:200]}")
+        return await resp.read()
 
 
 class TTSRoutes:
@@ -158,11 +157,10 @@ class TTSRoutes:
             try:
                 if engine == "gpt_sovits":
                     audio_data = await _synthesize_gpt_sovits(config, input_text)
-                    fmt = "wav"
                     content_type = "audio/wav"
                 elif engine == "api_tts":
                     audio_data = await _synthesize_api_tts(config, input_text)
-                    fmt = (
+                    (
                         api_conf.get("format", "mp3")
                         if (api_conf := config.get("engines", {}).get("api_tts", {}))
                         else "mp3"

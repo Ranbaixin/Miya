@@ -2,7 +2,7 @@
 端口工具模块 - 提供统一的端口检测和自动切换功能
 """
 import socket
-from typing import Optional, Tuple
+from typing import Tuple
 
 
 def is_port_in_use(port: int, host: str = "0.0.0.0") -> bool:

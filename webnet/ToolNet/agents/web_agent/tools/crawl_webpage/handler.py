@@ -2,10 +2,11 @@
 网页爬取工具 - web_agent专用
 """
 
-from typing import Dict, Any
 import logging
-import httpx
 import re
+from typing import Any, Dict
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +57,7 @@ async def execute(args: Dict[str, Any], context: Dict[str, Any]) -> str:
             if len(content) > max_length:
                 content = content[:max_length] + "..."
 
-            result = f"【网页内容】\n"
+            result = "【网页内容】\n"
             if title:
                 result += f"标题: {title}\n"
             result += f"URL: {url}\n\n"

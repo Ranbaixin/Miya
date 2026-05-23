@@ -4,11 +4,11 @@
 支持 SSE 流式响应，与 QQ 端灵魂处理逻辑一致
 """
 
-import logging
-import json
 import asyncio
+import json
+import logging
 from datetime import datetime
-from typing import Dict, Any, AsyncGenerator
+from typing import AsyncGenerator, Dict
 
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
@@ -88,12 +88,12 @@ class ChatRoutes:
                 )
 
                 # 获取处理前的状态
-                emotion_before = (
+                (
                     self.decision_hub.emotion.get_emotion_state()
                     if self.decision_hub.emotion
                     else None
                 )
-                personality_before = (
+                (
                     self.decision_hub.personality.get_profile()
                     if self.decision_hub.personality
                     else None
@@ -199,8 +199,6 @@ class ChatRoutes:
             yield f"data: {json.dumps({'type': 'session_id', 'data': None, 'session_id': session_id}, ensure_ascii=False)}\n\n"
 
             message_accumulator = BotMessageAccumulator()
-            agent_stats = {}
-            client_connected = True
 
             async with asyncio.timeout(120):
                 response = await self.decision_hub.process_perception_cross_platform(

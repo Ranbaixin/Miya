@@ -2,14 +2,12 @@
 问题扫描器
 负责主动发现代码、配置、依赖等问题
 """
-import logging
-from typing import List, Dict, Optional, Any
-from dataclasses import dataclass, field
-from enum import Enum
-from datetime import datetime
 import asyncio
-from pathlib import Path
-
+import logging
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -412,12 +410,12 @@ class ProblemScanner:
             "问题扫描报告",
             "=" * 70,
             "",
-            f"📊 统计信息:",
+            "📊 统计信息:",
             f"   总计: {stats['total']} 个问题",
             f"   可自动修复: {stats['auto_fixable']} 个",
             f"   需要批准: {stats['requires_approval']} 个",
             "",
-            f"按严重程度分布:",
+            "按严重程度分布:",
         ]
 
         for severity in ['critical', 'high', 'medium', 'low', 'info']:

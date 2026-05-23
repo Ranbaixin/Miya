@@ -2,10 +2,10 @@
 戳一戳工具
 """
 
-from typing import Dict, Any
 import logging
-from webnet.ToolNet.base import BaseTool, ToolContext
+from typing import Any, Dict
 
+from webnet.ToolNet.base import BaseTool
 
 logger = logging.getLogger(__name__)
 
@@ -48,15 +48,15 @@ class SendPoke(BaseTool):
 
         # 获取目标用户
         if at_list and len(at_list) > 0:
-            target_user_id = at_list[0]
+            at_list[0]
         elif user_id:
-            target_user_id = user_id
+            pass
         else:
-            target_user_id = actual_args.get("target_user_id")
+            actual_args.get("target_user_id")
 
         # 戳一戳功能在当前环境不可用，转为感知模式
         # 让 AI 感受到被拍，然后自然回应
         return (
-            f"[FINAL] 感受到了被拍一拍的触碰。"
-            f"请在回复中表达对这份互动的感受，不需要执行实际操作。"
+            "[FINAL] 感受到了被拍一拍的触碰。"
+            "请在回复中表达对这份互动的感受，不需要执行实际操作。"
         )

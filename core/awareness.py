@@ -109,8 +109,8 @@ class ActivityAwareness:
     def get_activity_context(group_id: str = "", user_id: str = "") -> Dict[str, any]:
         """获取当前活动上下文（含时间衰减分层）"""
         from memory.session_decay import (
-            get_phase,
             SessionPhase,
+            get_phase,
             get_phase_description,
         )
 
@@ -126,18 +126,15 @@ class ActivityAwareness:
             if group_id and user_id:
                 is_active = diteng.is_user_active_with_bot(group_id, user_id)
                 summary = diteng.get_layered_context(group_id)
-                if summary:
-                    summary = f"\n[群聊动态]\n{summary}"
-                else:
-                    summary = "\n[群聊动态] 暂无近期消息"
+                summary = f"\n[群聊动态]\n{summary}" if summary else "\n[群聊动态] 暂无近期消息"
         except Exception as e:
             logger.debug(f"[意识] 谛听检查失败: {e}")
 
         # 2. 如果不活跃，通过用户活跃追踪器检查衰减层级（最可靠）
         if not is_active:
             try:
-                from memory.user_activity_tracker import get_last_active
                 from memory.session_decay import get_phase, get_phase_description
+                from memory.user_activity_tracker import get_last_active
 
                 last_active = get_last_active(str(user_id))
                 if last_active > 0:

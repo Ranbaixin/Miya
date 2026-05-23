@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 QQ 机器人配置模块稳定性测试（更新版）
 """
 
-import asyncio
 import logging
-import sys
 import os
+import sys
 
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -76,9 +74,9 @@ def test_qq_config_loader():
 def test_unified_qq_config():
     """测试 UnifiedQQConfig"""
     from webnet.qq.unified_config import (
-        get_unified_config,
-        get_qq_config,
         get_connection_config,
+        get_qq_config,
+        get_unified_config,
     )
 
     print("\n" + "=" * 50)
@@ -195,7 +193,7 @@ def test_yaml_config_file():
         with open(config_path, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
 
-        print(f"  配置文件加载: 成功")
+        print("  配置文件加载: 成功")
         print(f"  顶级键: {list(config.keys())}")
 
         # 检查关键配置项
@@ -222,7 +220,7 @@ def test_yaml_config_file():
         print(f"  AI模型: {ai_analysis.get('model')}")
 
         features = qq.get("features", {})
-        print(f"  功能开关:")
+        print("  功能开关:")
         print(f"    戳一戳: {features.get('poke_reply')}")
         print(f"    表情包: {features.get('emoji_request')}")
         print(f"    主动聊天: {features.get('active_chat')}")

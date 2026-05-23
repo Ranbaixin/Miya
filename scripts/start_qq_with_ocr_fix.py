@@ -3,9 +3,9 @@
 启动QQ机器人并验证OCR修复
 """
 
+import logging
 import os
 import sys
-import logging
 
 # 添加项目根目录到路径
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -32,7 +32,7 @@ def test_ocr_before_start():
         # 尝试初始化OCR
         logger.info("初始化PaddleOCR...")
         try:
-            ocr = PaddleOCR(lang='ch')
+            PaddleOCR(lang='ch')
             logger.info("✅ PaddleOCR初始化成功")
             return True
         except Exception as e:
@@ -40,7 +40,7 @@ def test_ocr_before_start():
             
             # 尝试使用更简单的参数
             try:
-                ocr = PaddleOCR()
+                PaddleOCR()
                 logger.info("✅ PaddleOCR无参数初始化成功")
                 return True
             except Exception as e2:

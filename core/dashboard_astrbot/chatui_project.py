@@ -1,7 +1,7 @@
 from quart import g, request
 
-from core.astrbot_compat.db import BaseDatabase
 from astrbot.core.utils.datetime_utils import to_utc_isoformat
+from core.astrbot_compat.db import BaseDatabase
 
 from .route import Response, Route, RouteContext
 

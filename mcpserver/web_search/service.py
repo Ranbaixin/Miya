@@ -3,9 +3,9 @@
 MCP Web Search 服务 - 提供网络搜索能力
 """
 
-import json
 import asyncio
-from typing import Dict, Any, Optional, List
+import json
+from typing import Any, Dict
 from urllib.parse import quote_plus
 
 
@@ -38,7 +38,6 @@ class WebSearchService:
             return json.dumps({"error": "缺少 query 参数"})
 
         try:
-            import subprocess
 
             if engine == "google":
                 url = f"https://www.google.com/search?q={quote_plus(query)}&num={count}"

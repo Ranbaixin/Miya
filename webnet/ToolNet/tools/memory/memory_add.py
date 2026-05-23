@@ -4,10 +4,10 @@
 本工具优先使用新版 MiyaMemoryCore 记忆系统
 """
 
-from typing import Dict, Any
 import logging
-from webnet.ToolNet.base import BaseTool, ToolContext
+from typing import Any, Dict
 
+from webnet.ToolNet.base import BaseTool, ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -53,11 +53,11 @@ class MemoryAdd(BaseTool):
 
         # 优先级 1: 新版 MiyaMemoryCore（权威记忆源）
         try:
-            from memory import get_memory_core, MemoryLevel, MemorySource
+            from memory import MemoryLevel, MemorySource, get_memory_core
 
             core = await get_memory_core()
 
-            memory_id = await core.store(
+            await core.store(
                 content=content,
                 level=MemoryLevel.LONG_TERM,
                 priority=priority,
@@ -83,7 +83,7 @@ class MemoryAdd(BaseTool):
             from memory.undefined_memory import get_undefined_memory_adapter
 
             adapter = get_undefined_memory_adapter()
-            uuid = await adapter.add_memory(content, user_id, tags=tags)
+            await adapter.add_memory(content, user_id, tags=tags)
 
             tag_str = ", ".join(tags) if tags else "无"
             return (
@@ -96,7 +96,7 @@ class MemoryAdd(BaseTool):
         cognitive_memory = getattr(context, "cognitive_memory", None)
         if cognitive_memory:
             try:
-                memo_id = await cognitive_memory.add_memo(
+                await cognitive_memory.add_memo(
                     content=content,
                     priority=priority,
                     tags=tags,

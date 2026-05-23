@@ -2,13 +2,13 @@ import asyncio
 import os
 from typing import Any, cast
 
+from astrbot.api.event import AstrMessageEvent, MessageChain
+from astrbot.api.message_components import Image, Plain, Record
+from astrbot.api.platform import AstrBotMessage, PlatformMetadata
 from wechatpy import WeChatClient
 from wechatpy.replies import ImageReply, VoiceReply
 
 from astrbot.api import logger
-from astrbot.api.event import AstrMessageEvent, MessageChain
-from astrbot.api.message_components import Image, Plain, Record
-from astrbot.api.platform import AstrBotMessage, PlatformMetadata
 from astrbot.core.utils.media_utils import convert_audio_to_amr
 
 

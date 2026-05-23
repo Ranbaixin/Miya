@@ -3,7 +3,6 @@ import ssl
 import threading
 
 import aiohttp
-
 from astrbot.utils.http_ssl_common import (
     build_ssl_context_with_certifi as _build_ssl_context,
 )

@@ -3,12 +3,11 @@
 从 text_config.json 加载配置
 """
 
-import asyncio
 import json
 import logging
-from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Dict
 
 logger = logging.getLogger("Miya.CommandHandler")
 
@@ -237,7 +236,6 @@ class CommandHandler:
     async def _handle_system_reload(self, args: list) -> CommandResult:
         """重载配置"""
         try:
-            from core.config_hot_reload import ConfigHotReload
 
             return CommandResult(True, "配置已重载")
         except Exception as e:

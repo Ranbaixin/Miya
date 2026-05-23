@@ -6,9 +6,9 @@ AI唱歌引擎抽象基类
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional, List, Dict, Any
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class LearnStatus(str, Enum):

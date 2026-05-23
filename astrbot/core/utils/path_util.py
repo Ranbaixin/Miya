@@ -23,10 +23,7 @@ def path_Mapping(mappings, srcPath: str) -> str:
         elif os.path.exists(rule[0] + ":" + rule[1]):
             # 前面两个项目合并路径存在，说明是本地Window路径。后面一个或两个项目组成的路径本地大概率无法解析，直接拼接
             from_ = rule[0] + ":" + rule[1]
-            if len(rule) == 3:
-                to_ = rule[2]
-            else:
-                to_ = rule[2] + ":" + rule[3]
+            to_ = rule[2] if len(rule) == 3 else rule[2] + ":" + rule[3]
         else:
             # 前面两个项目合并路径不存在，说明第一个项目是本地Linux路径，后面一个或两个项目直接拼接。
             from_ = rule[0]

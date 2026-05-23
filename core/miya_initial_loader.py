@@ -5,10 +5,7 @@
 """
 
 import asyncio
-import logging
-from asyncio import Queue
-from pathlib import Path
-from typing import Optional, Any
+from typing import Optional
 
 from core.log_broker import LogBroker, get_logger
 
@@ -29,8 +26,8 @@ class MiyaInitialLoader:
 
     async def start(self):
         """启动系统"""
-        from core.miya_lifecycle import MiyaCoreLifecycle
         from core.dashboard.miya_dashboard import MiyaDashboard
+        from core.miya_lifecycle import MiyaCoreLifecycle
 
         # 创建核心生命周期
         self.core_lifecycle = MiyaCoreLifecycle()
@@ -56,10 +53,7 @@ class MiyaInitialLoader:
 
         try:
             dashboard_coro = self.dashboard.run()
-            if dashboard_coro:
-                task = asyncio.gather(core_task, dashboard_coro)
-            else:
-                task = core_task
+            task = asyncio.gather(core_task, dashboard_coro) if dashboard_coro else core_task
 
             await task
 

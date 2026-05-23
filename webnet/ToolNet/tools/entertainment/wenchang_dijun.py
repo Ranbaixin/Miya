@@ -2,14 +2,15 @@
 文昌帝君抽签工具
 """
 
-from typing import Dict, Any
 import logging
 import random
+from typing import Any, Dict
+
 import httpx
-from webnet.ToolNet.base import BaseTool, ToolContext
+
 from core.constants import NetworkTimeout
 from core.system_config import get_api_url
-
+from webnet.ToolNet.base import BaseTool, ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -234,7 +235,6 @@ class WenchangDijun(BaseTool):
 
             # 优先尝试从 API 获取
             try:
-                fortune_data = {}
                 async with httpx.AsyncClient(
                     timeout=NetworkTimeout.REDIS_CONNECT_TIMEOUT
                 ) as client:
@@ -245,7 +245,7 @@ class WenchangDijun(BaseTool):
                 if data.get("code") != 200:
                     raise ValueError(f"API 返回错误: {data.get('msg')}")
 
-                fortune_data = data.get("data", {})
+                data.get("data", {})
 
                 logger.info("成功从 API 获取抽签结果")
                 result = await get_api_fortune()

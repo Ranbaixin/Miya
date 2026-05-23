@@ -3,9 +3,8 @@
 """
 
 import json
-import os
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict
 
 
 def get_miya_root() -> Path:

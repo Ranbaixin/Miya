@@ -3,17 +3,17 @@
 所有模型从 multi_model_config.json 模型池加载
 """
 
-import asyncio
 import hashlib
 import logging
 import os
 import warnings
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Dict, Optional
 
 # 禁SSL警告
 warnings.filterwarnings("ignore", message="Unverified HTTPS request")
+
+import contextlib
 
 import httpx
 
@@ -130,10 +130,8 @@ class QQImageHandler:
             if isinstance(seg, dict) and seg.get("type") == "at":
                 at_qq = seg.get("data", {}).get("qq", "")
                 if at_qq and at_qq != "all":
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         at_list.append(int(at_qq))
-                    except (ValueError, TypeError):
-                        pass
         return at_list
 
     async def _auto_save_emoji(self, event: Dict, image_data: bytes, image_info: Dict):
@@ -154,7 +152,7 @@ class QQImageHandler:
                     user_id=user_id, image_data=image_data, image_info=image_info
                 )
                 if save_result.get("success"):
-                    logger.info(f"[QQImageHandler] 表情包已自动保存")
+                    logger.info("[QQImageHandler] 表情包已自动保存")
             except ImportError:
                 pass
         except Exception as e:
@@ -254,8 +252,9 @@ class QQImageHandler:
     def _create_fallback_result(self, image_data: bytes) -> Dict[str, Any]:
         """创建 fallback 结果（本地简单分析）"""
         try:
-            from PIL import Image
             import io
+
+            from PIL import Image
 
             image_format = self._detect_image_format(image_data)
             size_kb = len(image_data) / 1024
@@ -348,7 +347,5 @@ class QQImageHandler:
 
     async def cleanup(self):
         """清理资源"""
-        try:
+        with contextlib.suppress(Exception):
             await self.http_client.aclose()
-        except Exception:
-            pass

@@ -5,18 +5,18 @@ TTS 提供商实现
 MIYA TTS 系统的提供商层
 """
 import asyncio
+import builtins
+import contextlib
 import logging
-from typing import Dict, Any, List, Optional
-from pathlib import Path
-import tempfile
 import os
 import platform
 import subprocess
-import re
+import tempfile
+from typing import Any, Dict, List, Optional
 
-from .base import TTSEngine
 from core.constants import HTTPStatus
 
+from .base import TTSEngine
 
 logger = logging.getLogger(__name__)
 
@@ -69,10 +69,8 @@ class APITTSEngine(TTSEngine):
             if result_path and os.path.exists(result_path):
                 with open(result_path, "rb") as f:
                     audio_data = f.read()
-                try:
+                with contextlib.suppress(builtins.BaseException):
                     os.unlink(result_path)
-                except:
-                    pass
                 return audio_data
 
             return None
@@ -218,7 +216,7 @@ class SystemTTSEngine(TTSEngine):
             if self.os_type == "Windows":
                 try:
                     import win32com.client
-                    speaker = win32com.client.Dispatch("SAPI.SpVoice")
+                    win32com.client.Dispatch("SAPI.SpVoice")
                     logger.info("Windows SAPI TTS available")
                 except ImportError:
                     logger.warning("pywin32 not installed, Windows TTS unavailable")
@@ -250,10 +248,8 @@ class SystemTTSEngine(TTSEngine):
             if result_path and os.path.exists(result_path):
                 with open(result_path, "rb") as f:
                     audio_data = f.read()
-                try:
+                with contextlib.suppress(builtins.BaseException):
                     os.unlink(result_path)
-                except:
-                    pass
                 return audio_data
 
             return None
@@ -474,10 +470,8 @@ class GPTSoviTSEngine(TTSEngine):
             if result_path and os.path.exists(result_path):
                 with open(result_path, "rb") as f:
                     audio_data = f.read()
-                try:
+                with contextlib.suppress(builtins.BaseException):
                     os.unlink(result_path)
-                except:
-                    pass
                 return audio_data
 
             return None

@@ -3,11 +3,11 @@
 从 MemoryNet 迁移到 ToolNet
 """
 
+from .auto_extract_memory import AutoExtractMemory
 from .memory_add import MemoryAdd
 from .memory_delete import MemoryDelete
-from .memory_update import MemoryUpdate
 from .memory_list import MemoryList
-from .auto_extract_memory import AutoExtractMemory
+from .memory_update import MemoryUpdate
 from .thinking_query import ThinkingQueryTool
 
 __all__ = [

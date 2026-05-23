@@ -3,9 +3,11 @@
 综合多维因素进行决策
 """
 from typing import Dict, List, Optional
-from .emotion import Emotion
-from core.personality import Personality
+
 from core.ethics import Ethics
+from core.personality import Personality
+
+from .emotion import Emotion
 
 
 class Decision:

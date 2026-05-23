@@ -2,8 +2,8 @@
 QQ等级查询工具 - info_agent专用
 """
 
-from typing import Dict, Any
 import logging
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ async def execute(args: Dict[str, Any], context: Dict[str, Any]) -> str:
                     next_level = data.get("next_level", 0)
                     next_gap = data.get("next_gap", 0)
 
-                    result = f"【QQ等级查询】\n"
+                    result = "【QQ等级查询】\n"
                     result += f"QQ号: {qq}\n"
                     if nick:
                         result += f"昵称: {nick}\n"

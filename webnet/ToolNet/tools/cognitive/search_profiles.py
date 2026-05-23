@@ -1,8 +1,9 @@
 """
 搜索认知档案工具
 """
-from typing import Dict, Any
 import logging
+from typing import Any, Dict
+
 from webnet.ToolNet.base import BaseTool
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,6 @@ class SearchProfilesTool(BaseTool):
 
     async def execute(self, args: Dict[str, Any], context) -> str:
         """执行搜索认知档案（占位实现）"""
-        query = args.get("query")
-        limit = args.get("limit", 10)
+        args.get("query")
+        args.get("limit", 10)
         return "搜索认知档案功能占位实现"

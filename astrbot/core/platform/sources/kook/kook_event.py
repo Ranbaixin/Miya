@@ -4,7 +4,6 @@ from collections.abc import Coroutine
 from pathlib import Path
 from typing import Any
 
-from astrbot import logger
 from astrbot.api.event import AstrMessageEvent, MessageChain
 from astrbot.api.platform import AstrBotMessage, PlatformMetadata
 from astrbot.core.message.components import (
@@ -19,6 +18,8 @@ from astrbot.core.message.components import (
     Reply,
     Video,
 )
+
+from astrbot import logger
 from astrbot.core.platform import MessageType
 
 from .kook_client import KookClient

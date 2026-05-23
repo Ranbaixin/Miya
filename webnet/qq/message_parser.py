@@ -5,8 +5,8 @@ QQ消息解析器
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Callable, Awaitable
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,6 @@ class QQMessageParser:
         import re
 
         segments = []
-        remaining = text
 
         cq_pattern = re.compile(r"\[CQ:([^,]+),([^\]]+)\]")
 
@@ -156,7 +155,7 @@ class QQMessageParser:
             elif seg_type == "at":
                 qq = data.get("qq", "")
                 if int(qq) == bot_qq:
-                    texts.append(f"[@弥娅]")
+                    texts.append("[@弥娅]")
                 else:
                     texts.append(f"[@{qq}]")
             elif seg_type == "image":
@@ -217,10 +216,7 @@ class QQMessageParser:
         self, message_content: List[Dict[str, Any]], segment_type: str
     ) -> bool:
         """检查消息是否包含指定类型的段"""
-        for segment in message_content:
-            if segment.get("type") == segment_type:
-                return True
-        return False
+        return any(segment.get("type") == segment_type for segment in message_content)
 
     def get_reply_id(self, message_content: List[Dict[str, Any]]) -> Optional[int]:
         """获取引用消息的ID"""
@@ -265,10 +261,7 @@ class QQMessageParser:
     def has_media(self, message_content: List[Dict[str, Any]]) -> bool:
         """检查消息是否包含多媒体"""
         media_types = {"image", "file", "record", "video", "audio"}
-        for segment in message_content:
-            if segment.get("type") in media_types:
-                return True
-        return False
+        return any(segment.get("type") in media_types for segment in message_content)
 
 
 def get_message_parser(qq_client=None) -> QQMessageParser:

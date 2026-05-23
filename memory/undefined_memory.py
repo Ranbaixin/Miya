@@ -3,7 +3,7 @@ Legacy undefined_memory - 已迁移到新版记忆系统
 兼容旧接口
 """
 
-from typing import Optional, List, Dict
+from typing import Dict, List, Optional
 
 
 class UndefinedMemoryAdapter:

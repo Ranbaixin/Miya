@@ -2,10 +2,10 @@ import time
 import uuid
 
 import numpy as np
-
-from astrbot import logger
 from astrbot.core.exceptions import KnowledgeBaseUploadError
 from astrbot.core.provider.provider import EmbeddingProvider, RerankProvider
+
+from astrbot import logger
 
 from ..base import BaseVecDB, Result
 from .document_storage import DocumentStorage

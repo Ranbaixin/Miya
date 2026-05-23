@@ -16,11 +16,12 @@
 """
 
 import asyncio
+import contextlib
 import logging
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Any, Callable, Coroutine, Dict, Optional
+from typing import Callable, Dict, Optional
 
 logger = logging.getLogger("Miya.MessageQueue")
 
@@ -188,10 +189,8 @@ class MessageQueueManager:
         for task in self._processor_tasks.values():
             if not task.done():
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
         self._processor_tasks.clear()
         self._next_dispatch_at.clear()
 

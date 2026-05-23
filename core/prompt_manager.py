@@ -4,10 +4,12 @@
 完全依赖人格模块，不维护独立的人格数据
 """
 
-from typing import Dict, Optional, List
-from pathlib import Path
 import json
+from pathlib import Path
+from typing import Dict, List, Optional
+
 from jinja2 import Template
+
 from core.constants import Encoding
 
 
@@ -63,9 +65,9 @@ class PromptManager:
                         "sender_identity_prefix", self.sender_identity_prefix
                     )
 
-                logger.info(f"[PromptManager] 文本配置加载成功")
+                logger.info("[PromptManager] 文本配置加载成功")
             else:
-                logger.warning(f"[PromptManager] 配置文件不存在")
+                logger.warning("[PromptManager] 配置文件不存在")
                 self.text_config = {}
         except Exception as e:
             logger.warning(f"[PromptManager] 配置加载失败: {e}")
@@ -290,7 +292,7 @@ class PromptManager:
                             else:
                                 tools_desc.append(f"- {tool}")
                         if tools_desc:
-                            context_parts.append(f"\n【可用工具】")
+                            context_parts.append("\n【可用工具】")
                             context_parts.extend(tools_desc)
 
             if context.get("timestamp"):
@@ -305,7 +307,7 @@ class PromptManager:
                         f"消息中@的用户QQ号：{', '.join(map(str, filtered_at_list))}"
                     )
                     context_parts.append(
-                        f"提示：如果要给这些用户点赞，直接使用qq_like工具，目标QQ号就是上面的号码"
+                        "提示：如果要给这些用户点赞，直接使用qq_like工具，目标QQ号就是上面的号码"
                     )
 
             # 添加工具执行结果（如果有）
@@ -328,7 +330,7 @@ class PromptManager:
 
                 # 判断工具是否成功
                 elif "✅" in tool_result:
-                    context_parts.append(f"已帮你完成。")
+                    context_parts.append("已帮你完成。")
                     context_parts.append("简短回应。不要解释工具做了什么。")
                 elif "❌" in tool_result:
                     context_parts.append(f"操作失败：{tool_result}")
@@ -383,7 +385,7 @@ class PromptManager:
                 try:
                     template = Template(system_prompt)
                     system_prompt = template.render(**additional_context)
-                    logger.debug(f"[PromptManager] Jinja2模板渲染成功")
+                    logger.debug("[PromptManager] Jinja2模板渲染成功")
                 except Exception as e:
                     logger.warning(
                         f"[PromptManager] Jinja2模板渲染失败: {e}, 回退到简单替换"
@@ -466,8 +468,8 @@ class PromptManager:
             # 从配置加载提示词模板
             search_prefix = ""
             try:
-                from pathlib import Path
                 import json
+                from pathlib import Path
 
                 config_path = (
                     Path(__file__).parent.parent / "config" / "text_config.json"
@@ -553,7 +555,7 @@ class PromptManager:
 
             role = memory.get("role", "")
             content = memory.get("content", "")
-            timestamp = memory.get("timestamp", "")
+            memory.get("timestamp", "")
 
             if role and content:
                 if role == "user":

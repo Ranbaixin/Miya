@@ -4,13 +4,12 @@ MIYA Platform 扩展
 支持更多平台: 飞书, 钉钉, Discord, Slack, LINE, 企业微信等
 """
 
-import logging
 import asyncio
 import json
-from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Any, Callable
+import logging
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +101,6 @@ class FeishuAdapter:
 
     async def send_message(self, target: str, message: str) -> bool:
         """发送消息"""
-        import httpx
 
         # 获取 tenant_access_token
         token_resp = await self._client.post(
@@ -202,10 +200,10 @@ class DingTalkAdapter:
         return True
 
     async def send_image(self, target: str, image_path: str) -> bool:
-        return await self.send_message(target, f"[图片]")
+        return await self.send_message(target, "[图片]")
 
     async def send_voice(self, target: str, voice_path: str) -> bool:
-        return await self.send_message(target, f"[语音]")
+        return await self.send_message(target, "[语音]")
 
     async def get_user_info(self, user_id: str) -> Optional[User]:
         return User(user_id=user_id, platform=self.platform_type)
@@ -248,7 +246,6 @@ class DiscordAdapter:
 
     async def send_message(self, target: str, message: str) -> bool:
         """发送消息到频道或用户"""
-        import httpx
 
         # target 可以是 channel_id 或 user_id
         await self._client.post(
@@ -257,7 +254,6 @@ class DiscordAdapter:
         return True
 
     async def send_image(self, target: str, image_url: str) -> bool:
-        import httpx
 
         await self._client.post(
             f"{self.base_url}/channels/{target}/messages",
@@ -306,7 +302,6 @@ class SlackAdapter:
 
     async def send_message(self, target: str, message: str) -> bool:
         """发送消息到 channel 或 user"""
-        import httpx
 
         await self._client.post(
             "https://slack.com/api/chat.postMessage",
@@ -318,7 +313,7 @@ class SlackAdapter:
         return await self.send_message(target, f"[图片: {image_url}]")
 
     async def send_voice(self, target: str, voice_path: str) -> bool:
-        return await self.send_message(target, f"[语音]")
+        return await self.send_message(target, "[语音]")
 
     async def get_user_info(self, user_id: str) -> Optional[User]:
         return User(user_id=user_id, platform=self.platform_type)
@@ -358,7 +353,6 @@ class LINEAdapter:
 
     async def send_message(self, target: str, message: str) -> bool:
         """发送消息"""
-        import httpx
 
         await self._client.post(
             "https://api.line.me/v2/bot/message/push",
@@ -367,7 +361,6 @@ class LINEAdapter:
         return True
 
     async def send_image(self, target: str, image_url: str) -> bool:
-        import httpx
 
         await self._client.post(
             "https://api.line.me/v2/bot/message/push",
@@ -432,7 +425,6 @@ class WeChatWorkAdapter:
 
     async def send_message(self, target: str, message: str) -> bool:
         """发送应用消息"""
-        import httpx
 
         await self._client.post(
             "https://qyapi.weixin.qq.com/cgi-bin/message/send",
@@ -499,7 +491,7 @@ class PlatformRegistry:
         return self._adapters.get(platform)
 
     def list_platforms(self) -> List[Dict]:
-        return [{"type": p.value, "name": p.value} for p in self._adapters.keys()]
+        return [{"type": p.value, "name": p.value} for p in self._adapters]
 
     def register(self, platform: PlatformType, adapter_cls: Any):
         self._adapters[platform] = adapter_cls

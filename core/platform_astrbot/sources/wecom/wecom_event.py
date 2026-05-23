@@ -1,13 +1,13 @@
 import asyncio
 import os
 
+from astrbot.api.event import AstrMessageEvent, MessageChain
+from astrbot.api.message_components import File, Image, Plain, Record, Video
+from astrbot.api.platform import AstrBotMessage, PlatformMetadata
 from wechatpy.enterprise import WeChatClient
 from wechatpy.exceptions import WeChatClientException
 
 from astrbot.api import logger
-from astrbot.api.event import AstrMessageEvent, MessageChain
-from astrbot.api.message_components import File, Image, Plain, Record, Video
-from astrbot.api.platform import AstrBotMessage, PlatformMetadata
 from astrbot.core.utils.media_utils import convert_audio_to_amr
 
 from .wecom_kf_message import WeChatKFMessage

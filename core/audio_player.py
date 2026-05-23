@@ -3,12 +3,13 @@
 支持异步播放、音量控制、播放状态管理
 """
 
+import array
 import asyncio
+import contextlib
 import logging
+import wave
 from pathlib import Path
 from typing import Optional
-import wave
-import array
 
 try:
     import simpleaudio as sa
@@ -180,10 +181,8 @@ class AudioPlayer:
     async def wait_until_finished(self):
         """等待播放完成"""
         if self._current_task:
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._current_task
-            except asyncio.CancelledError:
-                pass
 
     def cleanup(self):
         """清理资源"""

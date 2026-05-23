@@ -12,13 +12,13 @@
 参考 Undefined 项目的认知记忆架构
 """
 
+import json
 import logging
 import re
-import json
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -232,10 +232,7 @@ class UserPersonaManager:
         now = datetime.now().isoformat()
 
         # 更新用户侧写
-        if group_id:
-            user_key = f"{group_id}:{user_id}"
-        else:
-            user_key = user_id
+        user_key = f"{group_id}:{user_id}" if group_id else user_id
 
         persona = self.get_or_create_user_persona(user_id, user_name, group_id or "")
 
@@ -245,9 +242,8 @@ class UserPersonaManager:
         persona.total_interactions += 1
 
         # 提取名字（如果收到新的名字）
-        if user_name and user_name != persona.user_name:
-            if user_name not in persona.nicknames:
-                persona.nicknames.append(user_name)
+        if user_name and user_name != persona.user_name and user_name not in persona.nicknames:
+            persona.nicknames.append(user_name)
 
         # 从消息中提取信息
         self._extract_info_from_message(persona, message)
@@ -358,7 +354,6 @@ class UserPersonaManager:
                 persona.favorite_games.append(game)
 
         # 提取动漫
-        animes = ["番剧", "动漫", "漫画"]
         # 可以扩展更多
 
         # 提取喜欢的事物
@@ -418,9 +413,9 @@ class UserPersonaManager:
         if persona.response_length_prefer:
             lines.append(f"回复偏好: {persona.response_length_prefer}")
         if persona.emoji_frequency > 5:
-            lines.append(f"使用表情: 频繁")
+            lines.append("使用表情: 频繁")
         if persona.question_frequency > 10:
-            lines.append(f"喜欢提问")
+            lines.append("喜欢提问")
 
         # 备注
         if persona.notes:

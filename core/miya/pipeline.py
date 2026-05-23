@@ -3,7 +3,7 @@
 """
 
 import logging
-from typing import Any, List, Callable
+from typing import Any, Callable, List
 
 logger = logging.getLogger("miya.pipeline")
 
@@ -28,7 +28,7 @@ class Pipeline:
 
     async def initialize(self) -> None:
         """初始化"""
-        logger.info(f"[Pipeline] 初始化 9 阶段流水线")
+        logger.info("[Pipeline] 初始化 9 阶段流水线")
 
         # 预留实现
         for stage in PIPELINE_STAGES:

@@ -5,13 +5,12 @@ MIYA 数据库层
 """
 
 import asyncio
-import logging
 import json
+import logging
 import os
-from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -81,10 +80,7 @@ class DatabaseManager:
 
     def _create_tables(self):
         """创建表"""
-        if self._use_sqlite3:
-            cursor = self._conn.cursor()
-        else:
-            cursor = self._db.cursor()
+        cursor = self._conn.cursor() if self._use_sqlite3 else self._db.cursor()
 
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS sessions (

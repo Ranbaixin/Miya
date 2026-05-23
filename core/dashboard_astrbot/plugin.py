@@ -5,15 +5,11 @@ import os
 import ssl
 import traceback
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import aiohttp
 import certifi
-from quart import request
-
-from astrbot.api import sp
-from core.astrbot_compat import DEMO_MODE, file_token_service, logger
 from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
 from astrbot.core.star.filter.command import CommandFilter
 from astrbot.core.star.filter.command_group import CommandGroupFilter
@@ -24,6 +20,10 @@ from astrbot.core.star.star_manager import (
     PluginManager,
     PluginVersionIncompatibleError,
 )
+from quart import request
+
+from astrbot.api import sp
+from core.astrbot_compat import DEMO_MODE, file_token_service, logger
 from core.astrbot_compat.utils import (
     get_astrbot_data_path,
     get_astrbot_temp_path,
@@ -235,10 +235,7 @@ class PluginRoute(Route):
             cache_file = os.path.join(data_dir, f"plugins_custom_{url_hash}.json")
 
             # 更安全的后缀处理方式
-            if custom_url.endswith(".json"):
-                md5_url = custom_url[:-5] + "-md5.json"
-            else:
-                md5_url = custom_url + "-md5.json"
+            md5_url = custom_url[:-5] + "-md5.json" if custom_url.endswith(".json") else custom_url + "-md5.json"
 
             urls = [custom_url]
         else:
@@ -377,7 +374,7 @@ class PluginRoute(Route):
         try:
             return datetime.fromtimestamp(
                 plugin_dir.stat().st_mtime,
-                timezone.utc,
+                UTC,
             ).isoformat()
         except OSError as exc:
             logger.warning(f"获取插件安装时间失败 {plugin.name}: {exc!s}")
@@ -682,7 +679,7 @@ class PluginRoute(Route):
             *(_update_one(name) for name in plugin_names),
             return_exceptions=True,
         )
-        for name, result in zip(plugin_names, raw_results):
+        for name, result in zip(plugin_names, raw_results, strict=False):
             if isinstance(result, asyncio.CancelledError):
                 raise result
             if isinstance(result, BaseException):

@@ -12,9 +12,9 @@ AstrBot Provider 桥接模块
 """
 
 import logging
-from typing import Optional, Dict, List, Any, Callable, Union
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

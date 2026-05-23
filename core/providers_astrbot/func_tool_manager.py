@@ -12,9 +12,6 @@ from types import MappingProxyType
 from typing import Any
 
 import aiohttp
-
-from astrbot import logger
-from core.astrbot_compat import sp
 from astrbot.core.agent.mcp_client import MCPClient, MCPTool
 from astrbot.core.agent.tool import FunctionTool, ToolSet
 from astrbot.core.tools.registry import (
@@ -23,6 +20,9 @@ from astrbot.core.tools.registry import (
     get_builtin_tool_name,
     iter_builtin_tool_classes,
 )
+
+from astrbot import logger
+from core.astrbot_compat import sp
 from core.astrbot_compat.utils import get_astrbot_data_path
 
 DEFAULT_MCP_CONFIG = {"mcpServers": {}}
@@ -926,56 +926,55 @@ class FunctionToolManager:
         }
 
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, headers=headers) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        mcp_server_list = data.get("data", {}).get(
-                            "mcp_server_list",
-                            [],
-                        )
-                        local_mcp_config = self.load_mcp_config()
+            async with aiohttp.ClientSession() as session, session.get(url, headers=headers) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    mcp_server_list = data.get("data", {}).get(
+                        "mcp_server_list",
+                        [],
+                    )
+                    local_mcp_config = self.load_mcp_config()
 
-                        synced_count = 0
+                    synced_count = 0
+                    for server in mcp_server_list:
+                        server_name = server["name"]
+                        operational_urls = server.get("operational_urls", [])
+                        if not operational_urls:
+                            continue
+                        url_info = operational_urls[0]
+                        server_url = url_info.get("url")
+                        if not server_url:
+                            continue
+                        # 添加到配置中(同名会覆盖)
+                        local_mcp_config["mcpServers"][server_name] = {
+                            "url": server_url,
+                            "transport": "sse",
+                            "active": True,
+                            "provider": "modelscope",
+                        }
+                        synced_count += 1
+
+                    if synced_count > 0:
+                        self.save_mcp_config(local_mcp_config)
+                        tasks = []
                         for server in mcp_server_list:
-                            server_name = server["name"]
-                            operational_urls = server.get("operational_urls", [])
-                            if not operational_urls:
-                                continue
-                            url_info = operational_urls[0]
-                            server_url = url_info.get("url")
-                            if not server_url:
-                                continue
-                            # 添加到配置中(同名会覆盖)
-                            local_mcp_config["mcpServers"][server_name] = {
-                                "url": server_url,
-                                "transport": "sse",
-                                "active": True,
-                                "provider": "modelscope",
-                            }
-                            synced_count += 1
-
-                        if synced_count > 0:
-                            self.save_mcp_config(local_mcp_config)
-                            tasks = []
-                            for server in mcp_server_list:
-                                name = server["name"]
-                                tasks.append(
-                                    self.enable_mcp_server(
-                                        name=name,
-                                        config=local_mcp_config["mcpServers"][name],
-                                    ),
-                                )
-                            await asyncio.gather(*tasks)
-                            logger.info(
-                                f"从 ModelScope 同步了 {synced_count} 个 MCP 服务器",
+                            name = server["name"]
+                            tasks.append(
+                                self.enable_mcp_server(
+                                    name=name,
+                                    config=local_mcp_config["mcpServers"][name],
+                                ),
                             )
-                        else:
-                            logger.warning("没有找到可用的 ModelScope MCP 服务器")
-                    else:
-                        raise Exception(
-                            f"ModelScope API 请求失败: HTTP {response.status}",
+                        await asyncio.gather(*tasks)
+                        logger.info(
+                            f"从 ModelScope 同步了 {synced_count} 个 MCP 服务器",
                         )
+                    else:
+                        logger.warning("没有找到可用的 ModelScope MCP 服务器")
+                else:
+                    raise Exception(
+                        f"ModelScope API 请求失败: HTTP {response.status}",
+                    )
 
         except aiohttp.ClientError as e:
             raise Exception(f"网络连接错误: {e!s}")

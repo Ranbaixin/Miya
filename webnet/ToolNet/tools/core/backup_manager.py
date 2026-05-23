@@ -3,19 +3,16 @@
 支持文件、目录、数据库的备份和恢复
 """
 
-import os
-import shutil
-import zipfile
-import tarfile
-import logging
 import hashlib
-from typing import Dict, List, Optional, Any
-from pathlib import Path
-from datetime import datetime
-from dataclasses import dataclass, field
 import json
-import subprocess
-import platform
+import logging
+import shutil
+import tarfile
+import zipfile
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 try:
     from cryptography.fernet import Fernet
@@ -437,7 +434,7 @@ class BackupManager:
         if not record:
             raise ValueError(f"备份记录不存在: {backup_path}")
 
-        backup_file = Path(backup_path)
+        Path(backup_path)
         task = self.tasks.get(record.task_name)
 
         return {

@@ -1,11 +1,11 @@
 """
 列出所有定时任务
 """
-from typing import Dict, Any
 import logging
 from datetime import datetime
-from webnet.ToolNet.base import BaseTool, ToolContext
+from typing import Any, Dict
 
+from webnet.ToolNet.base import BaseTool, ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +125,7 @@ class ListScheduleTasksTool(BaseTool):
             tasks = tasks[:limit]
 
             # 格式化输出
-            result = f"📅 定时任务列表\n"
+            result = "📅 定时任务列表\n"
             result += f"状态筛选: {status_filter}\n"
             result += f"共 {len(tasks)} 个任务\n\n"
 

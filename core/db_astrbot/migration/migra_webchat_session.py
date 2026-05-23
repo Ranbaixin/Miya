@@ -9,12 +9,12 @@ Changes:
 - Session_id format: {platform_id}_{uuid}
 """
 
+from astrbot.core.db.po import ConversationV2, PlatformMessageHistory, PlatformSession
 from sqlalchemy import func, select
 from sqlmodel import col
 
 from astrbot.api import logger, sp
 from astrbot.core.db import BaseDatabase
-from astrbot.core.db.po import ConversationV2, PlatformMessageHistory, PlatformSession
 
 
 async def migrate_webchat_session(db_helper: BaseDatabase) -> None:

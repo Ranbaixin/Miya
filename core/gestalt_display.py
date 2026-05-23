@@ -3,7 +3,6 @@
 """
 
 import logging
-import sys
 
 logger = logging.getLogger("Miya.GestaltDisplay")
 
@@ -45,9 +44,7 @@ class GestaltDisplay:
             return
 
         print(f"\n{Colors.CYAN}{Colors.BOLD}╔{'═' * 50}╗{Colors.RESET}")
-        print(
-            f"{Colors.CYAN}{Colors.BOLD}║  ◆ {title} {'═' * (50 - len(title) - 6)}║{Colors.RESET}"
-        )
+        print(f"{Colors.CYAN}{Colors.BOLD}║  ◆ {title} {'═' * (50 - len(title) - 6)}║{Colors.RESET}")
         print(f"{Colors.CYAN}{Colors.BOLD}╚{'═' * 50}╝{Colors.RESET}")
 
     def print_thinking(
@@ -91,7 +88,7 @@ class GestaltDisplay:
 
         status_icons = {"processing": "◐", "done": "◉", "error": "◉", "waiting": "○"}
 
-        icon = icons.get(step, "•")
+        icons.get(step, "•")
         status_icon = status_icons.get(status, "◐")
         color = status_colors.get(status, Colors.CYAN)
 
@@ -137,14 +134,12 @@ class GestaltDisplay:
             return
 
         # 截断过长的结果
-        display_result = (
-            result[:max_length] + "..." if len(result) > max_length else result
-        )
+        display_result = result[:max_length] + "..." if len(result) > max_length else result
 
         print(f"\n{Colors.GREEN}▶ 结果:{Colors.RESET}")
         print(f"   {Colors.DIM}{display_result}{Colors.RESET}")
 
-    def print_separator(self, char: "─" = "─", length: int = 40):
+    def print_separator(self, char: str = "─", length: int = 40):
         """打印分隔线"""
         if not self.enabled:
             return
@@ -158,9 +153,7 @@ class GestaltDisplay:
 
         print(f"   {Colors.TEAL}⚡ 工具: {tool_name} (来自 {agent_name}){Colors.RESET}")
 
-    def print_complexity_analysis(
-        self, complexity: str, tool_count: int, agent_tools: list
-    ):
+    def print_complexity_analysis(self, complexity: str, tool_count: int, agent_tools: list):
         """打印复杂度分析"""
         if not self.enabled:
             return

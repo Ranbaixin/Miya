@@ -3,16 +3,18 @@
 
 支持多种 TTS 引擎：
 - Edge-TTS (微软Edge语音)
-- VITS (本地部署)  
+- VITS (本地部署)
 - GPT-SoVITS (保留原有)
 
 使用 TTSWrapper 解决 asyncio 事件循环冲突问题
 """
 
+import builtins
+import contextlib
 import logging
-from typing import Optional, Dict, List
 from dataclasses import dataclass
 from enum import Enum
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -65,10 +67,8 @@ class MiyaVoiceManager:
             logger.info("[VoiceManager] Edge-TTS 初始化完成")
             
             # 检查 SoVITS
-            try:
+            with contextlib.suppress(builtins.BaseException):
                 logger.info("[VoiceManager] GPT-SoVITS 可用（需配置）")
-            except:
-                pass
             
             return True
         except Exception as e:
@@ -99,7 +99,7 @@ class MiyaVoiceManager:
     
     def get_available_engines(self) -> List[str]:
         """获取可用的引擎列表"""
-        return [e.value for e in self._engines.keys()]
+        return [e.value for e in self._engines]
     
     def get_available_voices(self) -> Dict[str, List[str]]:
         """获取各引擎可用的语音列表"""

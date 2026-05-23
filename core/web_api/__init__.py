@@ -6,7 +6,7 @@
 import logging
 import os
 import time
-from typing import Any, Optional, Dict
+from typing import Any, Dict, Optional
 
 from starlette.responses import StreamingResponse
 
@@ -38,14 +38,14 @@ from datetime import datetime
 from .models import (
     BlogPostCreate,
     BlogPostUpdate,
-    UserRegister,
-    UserLogin,
     ChatRequest,
-    TerminalChatRequest,
-    SecurityScanRequest,
-    IPBlockRequest,
     GitHubConfig,
+    IPBlockRequest,
+    SecurityScanRequest,
+    TerminalChatRequest,
     ToolExecuteRequest,
+    UserLogin,
+    UserRegister,
 )
 
 
@@ -128,10 +128,11 @@ class WebAPI:
             logger.warning(f"[WebAPI] 添加资源管理路由失败: {e}")
         try:
             from pathlib import Path
+
             from webnet.miya_webui import (
-                get_global_webui,
                 create_management_routes,
                 create_runtime_routes,
+                get_global_webui,
             )
 
             webui = get_global_webui(Path("config"), Path("data"))
@@ -147,12 +148,12 @@ class WebAPI:
             from .auth import AuthRoutes
             from .blogs import BlogRoutes
             from .chat import ChatRoutes
+            from .desktop import DesktopRoutes
+            from .security import SecurityRoutes
 
             # 终端路由已迁移至 Open-ClaudeCode
             from .system import SystemRoutes
-            from .desktop import DesktopRoutes
             from .tools import ToolRoutes
-            from .security import SecurityRoutes
             # 跨终端路由已迁移至 Open-ClaudeCode
 
             # 初始化路由模块
@@ -230,7 +231,9 @@ class WebAPI:
         @self.router.get("/api/system/info")
         async def get_system_info():
             """获取系统信息（psutil 实时数据）"""
-            import platform, psutil
+            import platform
+
+            import psutil
 
             try:
                 dp = "C:\\" if platform.system() == "Windows" else "/"
@@ -427,12 +430,12 @@ class WebAPI:
                     destination="decision_hub",
                 )
 
-                emotion_before = (
+                (
                     self.decision_hub.emotion.get_emotion_state()
                     if self.decision_hub.emotion
                     else None
                 )
-                personality_before = (
+                (
                     self.decision_hub.personality.get_profile()
                     if self.decision_hub.personality
                     else None
@@ -504,8 +507,8 @@ class WebAPI:
             3. 灵魂发生器 + AI Client + 工具编排
             4. SSE 流式输出
             """
-            import json
             import asyncio
+            import json
 
             session_id = request.session_id or "default"
             platform = request.platform or "web"
@@ -644,8 +647,8 @@ class WebAPI:
             """获取平台统计信息"""
             try:
                 from config.platforms_config import (
-                    list_all_platforms,
                     get_enabled_platforms,
+                    list_all_platforms,
                 )
 
                 platforms = list_all_platforms()
@@ -675,8 +678,8 @@ class WebAPI:
             """获取配置文件中的平台列表"""
             try:
                 from config.platforms_config import (
-                    list_all_platforms,
                     get_enabled_platforms,
+                    list_all_platforms,
                 )
 
                 all_ = list_all_platforms()
@@ -697,8 +700,10 @@ class WebAPI:
                 return {"success": False, "platform": [], "error": str(e)}
 
         @self.router.post("/api/config/platform/new")
-        async def add_new_platform(request: Dict = {}):
+        async def add_new_platform(request: Dict = None):
             """添加新平台"""
+            if request is None:
+                request = {}
             try:
                 platform_id = request.get("id")
                 if not platform_id:
@@ -711,8 +716,10 @@ class WebAPI:
                 return {"success": False, "message": str(e)}
 
         @self.router.post("/api/config/platform/update")
-        async def update_platform(request: Dict = {}):
+        async def update_platform(request: Dict = None):
             """更新平台配置"""
+            if request is None:
+                request = {}
             try:
                 platform_id = request.get("id")
                 if not platform_id:
@@ -731,8 +738,10 @@ class WebAPI:
                 return {"success": False, "message": str(e)}
 
         @self.router.post("/api/config/platform/delete")
-        async def delete_platform(request: Dict = {}):
+        async def delete_platform(request: Dict = None):
             """删除平台"""
+            if request is None:
+                request = {}
             try:
                 platform_id = request.get("id")
                 if not platform_id:
@@ -797,15 +806,21 @@ class WebAPI:
             return {"success": True, "data": {"items": []}}
 
         @self.router.post("/api/kb/create")
-        async def create_knowledge_base(request: Dict = {}):
+        async def create_knowledge_base(request: Dict = None):
+            if request is None:
+                request = {}
             return {"success": True, "message": "created"}
 
         @self.router.post("/api/kb/update")
-        async def update_knowledge_base(request: Dict = {}):
+        async def update_knowledge_base(request: Dict = None):
+            if request is None:
+                request = {}
             return {"success": True, "message": "updated"}
 
         @self.router.post("/api/kb/delete")
-        async def delete_knowledge_base(request: Dict = {}):
+        async def delete_knowledge_base(request: Dict = None):
+            if request is None:
+                request = {}
             return {"success": True, "message": "deleted"}
 
         @self.router.get("/api/kb/get")
@@ -813,7 +828,9 @@ class WebAPI:
             return {"success": True, "data": {"kb_id": kb_id}}
 
         @self.router.post("/api/kb/retrieve")
-        async def retrieve_from_knowledge_base(request: Dict = {}):
+        async def retrieve_from_knowledge_base(request: Dict = None):
+            if request is None:
+                request = {}
             return {"success": True, "data": {"items": []}}
 
         @self.router.get("/api/kb/document/list")
@@ -825,11 +842,15 @@ class WebAPI:
             return {"success": True, "data": {"doc_id": doc_id}}
 
         @self.router.post("/api/kb/document/upload")
-        async def upload_kb_document(request: Dict = {}):
+        async def upload_kb_document(request: Dict = None):
+            if request is None:
+                request = {}
             return {"success": True, "message": "uploaded"}
 
         @self.router.post("/api/kb/document/delete")
-        async def delete_kb_document(request: Dict = {}):
+        async def delete_kb_document(request: Dict = None):
+            if request is None:
+                request = {}
             return {"success": True, "message": "deleted"}
 
         @self.router.get("/api/kb/chunk/list")
@@ -837,7 +858,9 @@ class WebAPI:
             return {"success": True, "data": {"items": []}}
 
         @self.router.post("/api/kb/chunk/delete")
-        async def delete_kb_chunk(request: Dict = {}):
+        async def delete_kb_chunk(request: Dict = None):
+            if request is None:
+                request = {}
             return {"success": True, "message": "deleted"}
 
         # ==================== Memory API ====================
@@ -847,11 +870,15 @@ class WebAPI:
             return {"success": True, "data": {"items": []}}
 
         @self.router.post("/api/memory/add")
-        async def add_memory(request: Dict = {}):
+        async def add_memory(request: Dict = None):
+            if request is None:
+                request = {}
             return {"success": True, "message": "added"}
 
         @self.router.post("/api/memory/delete")
-        async def delete_memory(request: Dict = {}):
+        async def delete_memory(request: Dict = None):
+            if request is None:
+                request = {}
             return {"success": True, "message": "deleted"}
 
         @self.router.get("/api/memory/search")
@@ -871,26 +898,27 @@ class WebAPI:
             返回标准 OpenAI chat.completion 响应（含 tool_calls）。
             由调用方（OpenClaw 等）自行执行工具。
             """
+            import json
             import time
             import uuid
-            import json
+
             from starlette.responses import StreamingResponse
 
             model_name = request.get("model", "")
             messages = request.get("messages", [])
             temperature = request.get("temperature", 0.7)
             max_tokens = request.get("max_tokens", 2000)
-            tools = request.get("tools", None)
-            tool_choice = request.get("tool_choice", None)
+            tools = request.get("tools")
+            tool_choice = request.get("tool_choice")
             stream = request.get("stream", False)
-            stream_options = request.get("stream_options", None)
+            stream_options = request.get("stream_options")
 
             if not messages:
                 raise HTTPException(status_code=400, detail="messages is required")
 
             try:
-                from core.model_pool_manager import ModelPoolManager
                 from core.ai_client import AIMessage
+                from core.model_pool_manager import ModelPoolManager
 
                 pool = ModelPoolManager()
                 client_wrapper = pool.create_ai_client(model_id=model_name)
@@ -1096,16 +1124,18 @@ class WebAPI:
     async def _do_tts_local(self, text: str):
         """TTS 本地播放 (fire-and-forget)"""
         try:
-            from core.tts.engine_router import synthesize
             import concurrent.futures
+
+            from core.tts.engine_router import synthesize
 
             audio_path = await synthesize(text)
             if not audio_path:
                 return
 
             def _play():
-                import simpleaudio as sa
                 import wave
+
+                import simpleaudio as sa
 
                 with wave.open(audio_path, "rb") as wf:
                     wave_obj = sa.WaveObject.from_wave_read(wf)

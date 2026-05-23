@@ -5,15 +5,14 @@ ToolNet 子网基类
 """
 
 import logging
-import asyncio
-from typing import Any, Dict, List, Optional, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 from core.constants import LogLevel
+
 from .registry import ToolRegistry
 from .subnet_router import ToolSubnetRouter
-
 
 logger = logging.getLogger(__name__)
 

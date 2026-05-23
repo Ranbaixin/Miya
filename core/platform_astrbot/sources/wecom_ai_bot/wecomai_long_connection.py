@@ -1,6 +1,7 @@
 """企业微信智能机器人长连接客户端。"""
 
 import asyncio
+import contextlib
 import json
 import uuid
 from collections.abc import Awaitable, Callable
@@ -81,10 +82,8 @@ class WecomAIBotLongConnectionClient:
                             break
                 finally:
                     heartbeat_task.cancel()
-                    try:
+                    with contextlib.suppress(asyncio.CancelledError):
                         await heartbeat_task
-                    except asyncio.CancelledError:
-                        pass
                     self._ws = None
 
     async def _subscribe(self) -> None:

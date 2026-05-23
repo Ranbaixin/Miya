@@ -36,7 +36,6 @@ import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from astrbot.api import FunctionTool, logger
 from astrbot.api.event import MessageChain
 from astrbot.core.agent.run_context import ContextWrapper
 from astrbot.core.agent.tool import ToolExecResult
@@ -44,6 +43,8 @@ from astrbot.core.astr_agent_context import AstrAgentContext
 from astrbot.core.computer.computer_client import get_booter
 from astrbot.core.computer.file_read_utils import read_file_tool_result
 from astrbot.core.message.components import File, Image
+
+from astrbot.api import FunctionTool, logger
 from core.astrbot_compat.utils import (
     get_astrbot_skills_path,
     get_astrbot_system_tmp_path,

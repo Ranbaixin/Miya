@@ -2,13 +2,15 @@
 对话历史持久化系统
 """
 import asyncio
+import contextlib
 import json
 import logging
-import aiofiles
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
-from dataclasses import dataclass, asdict
+
+import aiofiles
 
 logger = logging.getLogger(__name__)
 
@@ -109,10 +111,8 @@ class ConversationHistoryManager:
                     old_task = self._save_tasks[session_id]
                     if not old_task.done():
                         old_task.cancel()
-                        try:
+                        with contextlib.suppress(asyncio.CancelledError):
                             await old_task
-                        except asyncio.CancelledError:
-                            pass
 
                 data = [asdict(m) for m in messages]
 

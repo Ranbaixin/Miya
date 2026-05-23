@@ -3,10 +3,11 @@ import random
 import traceback
 from collections.abc import AsyncGenerator
 
-from core.astrbot_compat import logger
 from astrbot.core.message.components import Image, Plain, Record
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
+
 from astrbot.core.utils.media_utils import ensure_wav
+from core.astrbot_compat import logger
 
 from ..context import PipelineContext
 from ..stage import Stage, register_stage

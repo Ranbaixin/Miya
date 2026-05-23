@@ -3,13 +3,11 @@
 将自主决策引擎与弥娅的人设、记忆、情绪系统集成
 """
 import logging
-from typing import Dict, TYPE_CHECKING
 from datetime import datetime
 
+from core.autonomous_engine import RiskLevel
 from core.autonomy_manager import AutonomyManager
 from core.knowledge_integration import KnowledgeIntegration
-from core.autonomous_engine import RiskLevel
-
 
 logger = logging.getLogger(__name__)
 
@@ -122,18 +120,18 @@ class AutonomyWithPersonality:
                 if decision.risk_level == RiskLevel.LOW:
                     decision.risk_level = RiskLevel.MEDIUM
                 decision.auto_approved = False
-                decision.reasoning += f" (战态形态：严厉谨慎)"
+                decision.reasoning += " (战态形态：严厉谨慎)"
 
             elif form_name == '缪斯形态':
                 # 缪斯形态：更专注、更有洞察力
-                decision.reasoning += f" (缪斯形态：专注分析)"
+                decision.reasoning += " (缪斯形态：专注分析)"
 
             elif form_name == '幽灵形态':
                 # 幽灵形态：更脆弱、更谨慎
                 if decision.risk_level == RiskLevel.SAFE:
                     decision.risk_level = RiskLevel.LOW
                 decision.auto_approved = False
-                decision.reasoning += f" (幽灵形态：脆弱谨慎)"
+                decision.reasoning += " (幽灵形态：脆弱谨慎)"
 
             # 记录情绪影响（独立于人格系统）
             if self.emotion and hasattr(self.emotion, 'get_dominant_emotion'):
@@ -268,7 +266,7 @@ class AutonomyWithPersonality:
             # 获取人格向量
             logic = self.personality.get_vector('logic')
             warmth = self.personality.get_vector('warmth')
-            resilience = self.personality.get_vector('resilience')
+            self.personality.get_vector('resilience')
 
             # 【弥娅人格集成】高逻辑性：减少自动修复，更谨慎
             if logic > 0.8:
@@ -289,12 +287,12 @@ class AutonomyWithPersonality:
             if form_name == '战态':
                 # 战态：更谨慎
                 max_fixes = max(1, max_fixes // 2)
-                self.logger.info(f"战态形态：更谨慎，减少修复数量")
+                self.logger.info("战态形态：更谨慎，减少修复数量")
 
             elif form_name == '歌姬形态':
                 # 歌姬形态：更积极
                 max_fixes = min(20, max_fixes + 5)
-                self.logger.info(f"歌姬形态：更积极，增加修复数量")
+                self.logger.info("歌姬形态：更积极，增加修复数量")
 
         # 执行改进
         result = await self.autonomy.manual_improvement(

@@ -3,12 +3,11 @@
 动态加载形态、说话模式等人格相关命令配置
 """
 
-import json
 import logging
-import os
-import yaml
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Set
+from typing import Any, Dict, List, Optional
+
+import yaml
 
 logger = logging.getLogger(__name__)
 

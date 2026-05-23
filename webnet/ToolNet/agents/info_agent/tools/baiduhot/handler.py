@@ -2,8 +2,9 @@
 百度热搜工具 - info_agent专用
 """
 
-from typing import Dict, Any
 import logging
+from typing import Any, Dict
+
 import httpx
 
 logger = logging.getLogger(__name__)
@@ -22,8 +23,8 @@ async def execute(args: Dict[str, Any], context: Dict[str, Any]) -> str:
             if resp.status_code != 200:
                 return f"获取百度热搜失败: HTTP {resp.status_code}"
 
-            import re
             import json
+            import re
 
             # 尝试从页面提取数据
             html = resp.text

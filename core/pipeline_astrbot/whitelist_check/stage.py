@@ -1,8 +1,9 @@
 from collections.abc import AsyncGenerator
 
-from core.astrbot_compat import logger
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
 from astrbot.core.platform.message_type import MessageType
+
+from core.astrbot_compat import logger
 
 from ..context import PipelineContext
 from ..stage import Stage, register_stage
@@ -45,18 +46,16 @@ class WhitelistCheckStage(Stage):
             return
 
         # 检查是否在白名单
-        if self.wl_ignore_admin_on_group:
-            if (
-                event.role == "admin"
-                and event.get_message_type() == MessageType.GROUP_MESSAGE
-            ):
-                return
-        if self.wl_ignore_admin_on_friend:
-            if (
-                event.role == "admin"
-                and event.get_message_type() == MessageType.FRIEND_MESSAGE
-            ):
-                return
+        if self.wl_ignore_admin_on_group and (
+            event.role == "admin"
+            and event.get_message_type() == MessageType.GROUP_MESSAGE
+        ):
+            return
+        if self.wl_ignore_admin_on_friend and (
+            event.role == "admin"
+            and event.get_message_type() == MessageType.FRIEND_MESSAGE
+        ):
+            return
         if (
             event.unified_msg_origin not in self.whitelist
             and str(event.get_group_id()).strip() not in self.whitelist

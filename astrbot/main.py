@@ -9,9 +9,10 @@ import runtime_bootstrap
 
 runtime_bootstrap.initialize_runtime_bootstrap()
 
-from astrbot.core import LogBroker, LogManager, db_helper, logger  # noqa: E402
 from astrbot.core.config.default import VERSION  # noqa: E402
 from astrbot.core.initial_loader import InitialLoader  # noqa: E402
+
+from astrbot.core import LogBroker, LogManager, db_helper, logger  # noqa: E402
 from astrbot.core.utils.astrbot_path import (  # noqa: E402
     get_astrbot_config_path,
     get_astrbot_data_path,

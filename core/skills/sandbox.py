@@ -13,17 +13,12 @@
 
 import asyncio
 import logging
-import os
-import tempfile
-import psutil
-import signal
-import time
-import threading
 import sys
-from typing import Any, Dict, Optional, Callable, List, Union
+import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
+from typing import Any, Callable, Dict, Optional
 
 # Windows compatibility - resource module is Unix-only
 if sys.platform != "win32":
@@ -320,10 +315,7 @@ class SkillSandbox:
             return False
 
         # 默认允许（除非有白名单）
-        if self.config.enabled_modules:
-            return False
-
-        return True
+        return not self.config.enabled_modules
 
     def check_path_access(self, path: str) -> bool:
         """检查路径访问权限"""
@@ -335,10 +327,7 @@ class SkillSandbox:
 
         # 白名单检查
         if self.config.allowed_paths:
-            for allowed in self.config.allowed_paths:
-                if path.startswith(allowed):
-                    return True
-            return False
+            return any(path.startswith(allowed) for allowed in self.config.allowed_paths)
 
         return True
 

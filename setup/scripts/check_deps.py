@@ -5,11 +5,10 @@ Miya 依赖检查脚本
 """
 
 import re
-import sys
 import subprocess
+import sys
 from pathlib import Path
 from typing import Dict
-
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 DEPS_DIR = ROOT / "setup" / "dependencies"
@@ -99,17 +98,7 @@ def check_constraint(installed: str, spec: str) -> bool:
             continue
         op, target = m.group(1), m.group(2).strip()
         tv = parse_ver(target)
-        if op == ">=" and not (iv >= tv):
-            ok = False
-        elif op == ">" and not (iv > tv):
-            ok = False
-        elif op == "<=" and not (iv <= tv):
-            ok = False
-        elif op == "<" and not (iv < tv):
-            ok = False
-        elif op == "==" and not (iv == tv):
-            ok = False
-        elif op == "!=" and not (iv != tv):
+        if op == ">=" and not (iv >= tv) or op == ">" and not (iv > tv) or op == "<=" and not (iv <= tv) or op == "<" and not (iv < tv) or op == "==" and iv != tv or op == "!=" and iv == tv:
             ok = False
         elif op == "~=":
             if not (iv >= tv):
@@ -176,7 +165,7 @@ def run() -> int:
 
     if missing_list or mismatch_list:
         print("\nRecommend:")
-        print(f"  pip install -r setup/requirements/full.txt")
+        print("  pip install -r setup/requirements/full.txt")
     else:
         print("\n[OK] All dependencies verified!")
 

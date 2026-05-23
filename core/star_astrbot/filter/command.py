@@ -4,8 +4,9 @@ import types
 import typing
 from typing import Any
 
-from astrbot.core.config import AstrBotConfig
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
+
+from astrbot.core.config import AstrBotConfig
 
 from ..star_handler import StarHandlerMetadata
 from . import HandlerFilter
@@ -85,10 +86,7 @@ class CommandFilter(HandlerFilter):
         self.custom_filter_list.append(custom_filter)
 
     def custom_filter_ok(self, event: AstrMessageEvent, cfg: AstrBotConfig) -> bool:
-        for custom_filter in self.custom_filter_list:
-            if not custom_filter.filter(event, cfg):
-                return False
-        return True
+        return all(custom_filter.filter(event, cfg) for custom_filter in self.custom_filter_list)
 
     def validate_and_convert_params(
         self,
@@ -183,10 +181,7 @@ class CommandFilter(HandlerFilter):
         return self._cmpl_cmd_names
 
     def equals(self, message_str: str) -> bool:
-        for full_cmd in self.get_complete_command_names():
-            if message_str == full_cmd:
-                return True
-        return False
+        return any(message_str == full_cmd for full_cmd in self.get_complete_command_names())
 
     def filter(self, event: AstrMessageEvent, cfg: AstrBotConfig) -> bool:
         if not event.is_at_or_wake_command:

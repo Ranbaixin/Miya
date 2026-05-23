@@ -14,15 +14,13 @@
 """
 
 import asyncio
-import json
 import logging
-import os
 import time
-from pathlib import Path
-from typing import Any, Dict, List, Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -192,15 +190,14 @@ class MiyaWebUI:
                 if (
                     hasattr(self.miya_instance, "decision_hub")
                     and self.miya_instance.decision_hub
-                ):
-                    if hasattr(self.miya_instance.decision_hub, "tool_subnet"):
-                        tool_subnet = self.miya_instance.decision_hub.tool_subnet
-                        if tool_subnet:
-                            stats = tool_subnet.get_stats()
-                            self.stats.tool_calls_success = stats.get(
-                                "success_calls", 0
-                            )
-                            self.stats.tool_calls_failed = stats.get("failed_calls", 0)
+                ) and hasattr(self.miya_instance.decision_hub, "tool_subnet"):
+                    tool_subnet = self.miya_instance.decision_hub.tool_subnet
+                    if tool_subnet:
+                        stats = tool_subnet.get_stats()
+                        self.stats.tool_calls_success = stats.get(
+                            "success_calls", 0
+                        )
+                        self.stats.tool_calls_failed = stats.get("failed_calls", 0)
             except Exception as e:
                 logger.debug(f"[MiyaWebUI] 获取统计失败: {e}")
 
@@ -222,26 +219,25 @@ class MiyaWebUI:
             # 检查配置项
             config_status.ai_api_key = (
                 "AI_API_KEY=" in content
-                and not content.split("AI_API_KEY=")[1].split("\n")[0].strip() == ""
+                and content.split("AI_API_KEY=")[1].split("\n")[0].strip() != ""
             )
             config_status.ai_model = (
                 "AI_MODEL=" in content
-                and not content.split("AI_MODEL=")[1].split("\n")[0].strip() == ""
+                and content.split("AI_MODEL=")[1].split("\n")[0].strip() != ""
             )
             config_status.onebot_ws_url = (
                 "QQ_ONEBOT_WS_URL=" in content
-                and not content.split("QQ_ONEBOT_WS_URL=")[1].split("\n")[0].strip()
-                == ""
+                and content.split("QQ_ONEBOT_WS_URL=")[1].split("\n")[0].strip() != ""
             )
             config_status.bot_qq = (
                 "QQ_BOT_QQ=" in content
-                and not content.split("QQ_BOT_QQ=")[1].split("\n")[0].strip() == ""
+                and content.split("QQ_BOT_QQ=")[1].split("\n")[0].strip() != ""
             )
             config_status.redis = "REDIS_HOST=" in content
             config_status.milvus = "MILVUS_HOST=" in content
             config_status.neo4j = (
                 "NEO4J_PASSWORD=" in content
-                and not content.split("NEO4J_PASSWORD=")[1].split("\n")[0].strip() == ""
+                and content.split("NEO4J_PASSWORD=")[1].split("\n")[0].strip() != ""
             )
 
         except Exception as e:

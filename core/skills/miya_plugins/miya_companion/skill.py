@@ -5,9 +5,9 @@
 从 YAML 配置文件加载回应消息
 """
 
-import time
 import random
-from typing import Dict, Any, Optional
+import time
+from typing import Any, Dict
 
 
 class MiyaCompanion:
@@ -34,7 +34,7 @@ class MiyaCompanion:
         """处理陪伴请求"""
         action = tool_call.get("action", "")
         message = tool_call.get("message", "")
-        emotion = tool_call.get("emotion", "")
+        tool_call.get("emotion", "")
 
         if action == "comfort":
             return self._comfort(message)
@@ -72,7 +72,7 @@ class MiyaCompanion:
         """日常关怀"""
         hour = time.localtime().tm_hour
         check_in = self._config.get("check_in_responses", {})
-        if 22 <= hour or hour < 6:
+        if hour >= 22 or hour < 6:
             response = check_in.get("night", "")
         elif 6 <= hour < 12:
             response = check_in.get("morning", "")

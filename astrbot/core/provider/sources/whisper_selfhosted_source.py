@@ -63,9 +63,7 @@ class ProviderOpenAIWhisperSelfHost(STTProvider):
         with open(file_path, "rb") as f:
             file_header = f.read(8)
 
-        if silk_header in file_header:
-            return True
-        return False
+        return silk_header in file_header
 
     async def get_text(self, audio_url: str) -> str:
         loop = asyncio.get_running_loop()

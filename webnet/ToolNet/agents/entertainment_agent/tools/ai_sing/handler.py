@@ -3,7 +3,8 @@ AI 唱歌工具 handler
 让 AI 可以主动调用弥娅的唱歌功能
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
+
 from core.singing.engine_router import handle_sing_request
 
 

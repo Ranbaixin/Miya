@@ -1,8 +1,9 @@
 """
 添加知识工具
 """
-from typing import Dict, Any
 import logging
+from typing import Any, Dict
+
 from webnet.ToolNet.base import BaseTool
 
 logger = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ class AddKnowledgeTool(BaseTool):
 
     async def execute(self, args: Dict[str, Any], context) -> str:
         """执行添加知识（占位实现）"""
-        content = args.get("content")
-        title = args.get("title", "")
-        category = args.get("category", "")
+        args.get("content")
+        args.get("title", "")
+        args.get("category", "")
         return "添加知识功能占位实现"

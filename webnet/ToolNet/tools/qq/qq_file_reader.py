@@ -4,15 +4,13 @@ QQ文件读取工具
 支持读取和分析QQ文件内容，包括TXT、PDF、DOCX等格式
 """
 
-import asyncio
 import logging
-import os
-import json
 import mimetypes
-import chardet
-from typing import Dict, Any, Optional, List, Tuple
-from pathlib import Path
+import os
 import traceback
+from typing import Any, Dict
+
+import chardet
 
 from webnet.ToolNet.base import BaseTool, ToolContext
 
@@ -172,7 +170,7 @@ class QQFileReaderTool(BaseTool):
             # 获取MIME类型
             mime_type, _ = mimetypes.guess_type(file_path)
             
-            info = f"📄 **文件信息**\n"
+            info = "📄 **文件信息**\n"
             info += f"文件名: {file_name}\n"
             info += f"类型: {file_type} ({file_ext})\n"
             info += f"MIME类型: {mime_type or '未知'}\n"
@@ -187,9 +185,9 @@ class QQFileReaderTool(BaseTool):
             return f"❌ 获取文件信息失败: {str(e)}"
     
     async def _read_file_content(
-        self, 
-        file_path: str, 
-        file_ext: str, 
+        self,
+        file_path: str,
+        file_ext: str,
         max_length: int,
         encoding: str,
         include_statistics: bool
@@ -275,8 +273,8 @@ class QQFileReaderTool(BaseTool):
             raise Exception(f"读取文档文件失败: {str(e)}")
     
     async def _process_text_content(
-        self, 
-        content: str, 
+        self,
+        content: str,
         file_path: str,
         max_length: int,
         include_statistics: bool
@@ -294,7 +292,7 @@ class QQFileReaderTool(BaseTool):
             response += f"行数: {stats['line_count']:,}\n"
             response += f"单词数: {stats['word_count']:,}\n"
         
-        response += f"\n--- 内容预览 ---\n"
+        response += "\n--- 内容预览 ---\n"
         
         # 截取内容
         if len(content) > max_length:
@@ -307,8 +305,8 @@ class QQFileReaderTool(BaseTool):
         return response
     
     async def _process_document_content(
-        self, 
-        doc_data: Dict[str, Any], 
+        self,
+        doc_data: Dict[str, Any],
         file_path: str,
         max_length: int
     ) -> str:
@@ -332,7 +330,7 @@ class QQFileReaderTool(BaseTool):
         char_count = len(full_text)
         response += f"字符数: {char_count:,}\n"
         
-        response += f"\n--- 内容预览 ---\n"
+        response += "\n--- 内容预览 ---\n"
         
         # 截取内容
         if len(full_text) > max_length:
@@ -345,8 +343,8 @@ class QQFileReaderTool(BaseTool):
         return response
     
     async def _process_code_content(
-        self, 
-        content: str, 
+        self,
+        content: str,
         file_path: str,
         file_ext: str,
         max_length: int
@@ -364,7 +362,7 @@ class QQFileReaderTool(BaseTool):
         # 代码统计
         lines = content.split('\n')
         line_count = len(lines)
-        char_count = len(content)
+        len(content)
         
         # 统计空行和注释行
         empty_lines = 0
@@ -431,7 +429,7 @@ class QQFileReaderTool(BaseTool):
                     # 关键词提取
                     keywords = analysis_data.get("关键词提取", [])
                     if keywords:
-                        response += f"\n🔑 **关键词 Top 10:**\n"
+                        response += "\n🔑 **关键词 Top 10:**\n"
                         for i, kw in enumerate(keywords[:10]):
                             response += f"{i+1}. {kw.get('关键词', '')} ({kw.get('频次', 0)}次)\n"
                     
@@ -581,10 +579,7 @@ class QQFileReaderTool(BaseTool):
         total_words = len(words)
         
         # 计算平均行长度
-        if total_lines > 0:
-            avg_line_length = sum(len(line) for line in lines) / total_lines
-        else:
-            avg_line_length = 0
+        avg_line_length = sum(len(line) for line in lines) / total_lines if total_lines > 0 else 0
         
         return {
             "char_count": total_chars,

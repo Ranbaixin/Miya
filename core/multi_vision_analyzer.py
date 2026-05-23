@@ -5,18 +5,14 @@
 
 import asyncio
 import base64
-import hashlib
-import httpx
 import logging
-import os
-import random
 import time
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
-from core.system_config import get_constant
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -202,10 +198,7 @@ class MultiVisionAnalyzer:
                     kw in model_name
                     for kw in ["qwen", "glm", "internvl", "llava", "kimi", "moonshot"]
                 ):
-                    if "glm" in model_name:
-                        v_model_type = VisionModelType.ZHIPU_VL
-                    else:
-                        v_model_type = VisionModelType.SILICONFLOW_VL
+                    v_model_type = VisionModelType.ZHIPU_VL if "glm" in model_name else VisionModelType.SILICONFLOW_VL
                 else:
                     v_model_type = VisionModelType.SIMPLE_ANALYSIS
 
@@ -350,7 +343,7 @@ class MultiVisionAnalyzer:
 
         # 直接使用简单模式（禁用协作，减少超时）
         # 检查是否启用协作模式
-        use_collaboration = getattr(self, "_use_collaboration", True)
+        getattr(self, "_use_collaboration", True)
 
         # 传统模式：选择最佳模型
         selected_model = await self._select_best_model()
@@ -411,7 +404,7 @@ class MultiVisionAnalyzer:
                 tried_models.add(selected_model.name)
 
                 # 强制选择下一个模型，跳过已尝试过的
-                logger.info(f"[MultiVisionAnalyzer] 尝试选择备用模型...")
+                logger.info("[MultiVisionAnalyzer] 尝试选择备用模型...")
                 fallback = await self._select_fallback_model(selected_model)
 
                 if fallback and fallback.name not in tried_models:
@@ -544,7 +537,7 @@ class MultiVisionAnalyzer:
         available_models.sort(key=lambda m: m.priority)
 
         # 链式协作：先语义理解，再深度分析
-        logger.info(f"[MultiVisionAnalyzer] 使用链式协作模式")
+        logger.info("[MultiVisionAnalyzer] 使用链式协作模式")
 
         model_1 = available_models[0]
         model_2 = (
@@ -554,14 +547,12 @@ class MultiVisionAnalyzer:
         # 步骤1: 模型1语义理解
         logger.info(f"[MultiVisionAnalyzer] 步骤1: {model_1.name} 语义理解")
 
-        prompt_1 = "请简洁描述这张图片的核心内容（30字以内）："
         result_1 = await self._call_vision_api(model_1, image_base64, image_format)
         understanding = result_1.get("description", "")[:100]
 
         # 步骤2: 模型2深度分析
         logger.info(f"[MultiVisionAnalyzer] 步骤2: {model_2.name} 深度分析")
 
-        prompt_2 = f"基于图片描述「{understanding}」，请详细分析图片内容："
         result_2 = await self._call_vision_api(model_2, image_base64, image_format)
 
         # 合并结果
@@ -780,9 +771,10 @@ class MultiVisionAnalyzer:
     def _simple_image_analysis(self, image_data: bytes) -> Dict[str, Any]:
         """简单图片分析（无API）- 使用PIL进行本地分析"""
         try:
-            from PIL import Image
-            import io
             import colorsys
+            import io
+
+            from PIL import Image
 
             image_format = self._detect_image_format(image_data)
             size_kb = len(image_data) / 1024
@@ -846,10 +838,7 @@ class MultiVisionAnalyzer:
                 brightness_desc = "中等亮度"
 
             # 判断冷暖色
-            if warm_pixels > cool_pixels:
-                color_temp = "暖色调"
-            else:
-                color_temp = "冷色调"
+            color_temp = "暖色调" if warm_pixels > cool_pixels else "冷色调"
 
             # 判断形状
             if aspect_ratio > 1.5:
@@ -881,7 +870,7 @@ class MultiVisionAnalyzer:
             # 从配置加载模板
             config = _load_vision_config()
             simple_config = config.get("simple_analysis", {})
-            tags_config = simple_config.get("tags", {})
+            simple_config.get("tags", {})
             content_tags = simple_config.get("content_tags", {})
             size_tags = simple_config.get("size_tags", {})
             desc_template = simple_config.get(
@@ -942,7 +931,7 @@ class MultiVisionAnalyzer:
         except Exception as e:
             logger.warning(f"简单图片分析失败: {e}")
             config = _load_vision_config()
-            fallback = config.get("fallback", {})
+            config.get("fallback", {})
             image_format = self._detect_image_format(image_data)
             size_kb = len(image_data) / 1024
             description = f"{image_format.upper()}格式图片，大小{size_kb:.1f}KB"

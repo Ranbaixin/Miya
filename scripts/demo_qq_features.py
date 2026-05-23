@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 QQ功能演示脚本
 展示所有已实现的功能
 """
 
+import logging
 import os
 import sys
-import logging
 
 # 添加项目根目录到Python路径
 project_root = os.path.dirname(os.path.dirname(__file__))

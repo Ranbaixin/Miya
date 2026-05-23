@@ -29,14 +29,12 @@ description: 技能描述
 日期: 2026-04-28
 """
 
-import re
-import os
-import json
 import logging
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +101,7 @@ class SkillMarkdownParser:
         name = ""
         description = ""
 
-        for i, line in enumerate(lines):
+        for _i, line in enumerate(lines):
             line = line.strip()
 
             # 标题
@@ -291,7 +289,7 @@ class SkillManager:
     def list_skills(self, enabled_only: bool = False) -> List[Dict]:
         """列出技能"""
         result = []
-        for name, skill in self._skills.items():
+        for _name, skill in self._skills.items():
             if enabled_only and not skill.enabled:
                 continue
             result.append(
@@ -362,13 +360,6 @@ class SkillManager:
             for tool in skill.tools:
                 if tool.name == tool_name:
                     # 构建执行上下文
-                    exec_context = {
-                        "skill_name": skill.name,
-                        "tool_name": tool_name,
-                        "instructions": skill.instructions,
-                        "arguments": arguments,
-                        "context": context,
-                    }
 
                     # 这里可以调用实际的技能处理逻辑
                     return f"执行技能工具: {tool_name}\n技能: {skill.name}\n参数: {arguments}"

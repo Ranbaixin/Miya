@@ -6,14 +6,12 @@
 
 import asyncio
 import logging
-from typing import Any
 
 from miya.core.platform import (
     Platform,
     PlatformMetadata,
-    MiyaMessageEvent,
-    register_platform_adapter,
     PlatformStatus,
+    register_platform_adapter,
 )
 
 logger = logging.getLogger("miya.platform.extra")

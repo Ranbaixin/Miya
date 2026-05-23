@@ -7,12 +7,12 @@
 - 安全防护 (SecurityGuard)
 """
 
-import logging
-from typing import Optional, Dict, Any, List
-from pathlib import Path
-from datetime import datetime
 import json
+import logging
 import sqlite3
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 try:
     import jwt
@@ -137,7 +137,7 @@ class AuthManager:
         if cursor.fetchone()[0] == 0:
             # 创建默认管理员
             import hashlib
-            password_hash = hashlib.sha256("admin123".encode()).hexdigest()
+            password_hash = hashlib.sha256(b"admin123").hexdigest()
 
             cursor.execute("""
                 INSERT INTO users (username, email, password_hash, level, trust_score)
@@ -389,7 +389,6 @@ class WebNet:
         conn.commit()
 
         # 获取新创建的博客
-        post_id = cursor.lastrowid
         post = await self.get_blog_post(slug)
 
         conn.close()

@@ -1,13 +1,11 @@
 import asyncio
+import contextlib
 import json
 import time
 from xml.etree import ElementTree as ET
 
 import websockets
 from aiohttp import ClientSession, ClientTimeout
-from websockets.asyncio.client import ClientConnection, connect
-
-from astrbot.api import logger
 from astrbot.api.event import MessageChain
 from astrbot.api.message_components import (
     At,
@@ -26,6 +24,9 @@ from astrbot.api.platform import (
     register_platform_adapter,
 )
 from astrbot.core.platform.astr_message_event import MessageSession
+from websockets.asyncio.client import ClientConnection, connect
+
+from astrbot.api import logger
 
 
 @register_platform_adapter(
@@ -171,10 +172,8 @@ class SatoriPlatformAdapter(Platform):
         finally:
             if self.heartbeat_task:
                 self.heartbeat_task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await self.heartbeat_task
-                except asyncio.CancelledError:
-                    pass
             if self.ws:
                 try:
                     await self.ws.close()

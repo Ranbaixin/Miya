@@ -8,14 +8,14 @@ import hashlib
 import json
 import os
 import zipfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from astrbot.core.config.default import VERSION
 from sqlalchemy import select
 
 from astrbot.core import logger
-from astrbot.core.config.default import VERSION
 from astrbot.core.db import BaseDatabase
 from astrbot.core.utils.astrbot_path import (
     get_astrbot_backups_path,
@@ -418,7 +418,7 @@ class AstrBotExporter:
         # 收集知识库 ID
         kb_document_tables = {}
         if self.kb_manager:
-            for kb_id in self.kb_manager.kb_insts.keys():
+            for kb_id in self.kb_manager.kb_insts:
                 kb_document_tables[kb_id] = "documents"
 
         # 收集附件文件列表
@@ -437,7 +437,7 @@ class AstrBotExporter:
                 media_files: list[str] = []
                 media_dir = kb_helper.kb_medias_dir
                 if media_dir.exists():
-                    for root, _, files in os.walk(media_dir):
+                    for _root, _, files in os.walk(media_dir):
                         for file in files:
                             media_files.append(file)
                 if media_files:
@@ -446,7 +446,7 @@ class AstrBotExporter:
         manifest = {
             "version": BACKUP_MANIFEST_VERSION,
             "astrbot_version": VERSION,
-            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "exported_at": datetime.now(UTC).isoformat(),
             "origin": "exported",  # 标记备份来源：exported=本实例导出, uploaded=用户上传
             "schema_version": {
                 "main_db": "v4",

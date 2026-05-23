@@ -12,16 +12,16 @@
 7. 社交面具 - 真实情绪与表达分离
 """
 
-import logging
-import time
-import random
-import json
-import sys
 import asyncio
-from pathlib import Path
-from typing import Dict, List, Optional, Any, Union
+import json
+import logging
+import random
+import sys
+import time
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("Miya.灵魂发生器")
 
@@ -529,9 +529,7 @@ class ContextDetector:
             return ContextType.COLD_WAR
         elif intimate_count >= 2:
             return ContextType.INTIMATE
-        elif close_count >= 2:
-            return ContextType.CLOSE
-        elif intimate_count >= 1:
+        elif close_count >= 2 or intimate_count >= 1:
             return ContextType.CLOSE
         elif len(history) < 3:
             return ContextType.ACQUAINTANCE
@@ -541,7 +539,7 @@ class ContextDetector:
     def _detect_time_context(self) -> ContextType:
         """检测时间情境 - 增强版"""
         current_hour = time.localtime().tm_hour
-        minute = time.localtime().tm_min
+        time.localtime().tm_min
 
         if 5 <= current_hour < 8:
             return ContextType.JUST_WOKE_UP
@@ -553,7 +551,7 @@ class ContextDetector:
             return ContextType.AFTERNOON
         elif 18 <= current_hour < 22:
             return ContextType.EVENING
-        elif 22 <= current_hour or current_hour < 2:
+        elif current_hour >= 22 or current_hour < 2:
             return ContextType.LATE_NIGHT
         else:
             return ContextType.IN_CONVERSATION
@@ -889,10 +887,7 @@ class PsychoAnalyzer:
                 "亲近": "关系很亲近了，可以放心表达真实感受",
                 "亲密": "非常亲密了，可以大胆撒娇和依赖",
             }
-            if hasattr(rel, "value"):
-                rel_name = rel.value
-            else:
-                rel_name = str(rel)
+            rel_name = rel.value if hasattr(rel, "value") else str(rel)
             if rel_name in rel_names:
                 reflections.append(rel_names[rel_name])
 
@@ -1362,7 +1357,7 @@ class SoulGenerator:
             if history and isinstance(history, list):
                 max_history = min(len(history), 8)
                 context_parts = []
-                for i, msg in enumerate(history[-max_history:]):
+                for _i, msg in enumerate(history[-max_history:]):
                     role = msg.get("role", "unknown")
                     content = msg.get("content", "")
                     if not content:
@@ -1448,7 +1443,7 @@ class SoulGenerator:
                         from core.unified_permission import get_permission_engine
 
                         engine = get_permission_engine()
-                        for person, info in engine._config.get(
+                        for _person, info in engine._config.get(
                             "superadmins", {}
                         ).items():
                             owner_name = info.get("name", "佳")
@@ -1539,8 +1534,8 @@ class SoulGenerator:
 
             logger.warning(f"[灵魂] AI响应: {response[:500] if response else 'None'}")
 
-            import re
             import json
+            import re
 
             def _try_parse_json(text: str) -> Optional[Dict]:
                 """多策略解析JSON，处理AI返回的各种非标准格式"""

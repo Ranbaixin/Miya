@@ -2,10 +2,10 @@
 HTML渲染工具
 """
 
-from typing import Dict, Any
-import logging
 import base64
-from io import BytesIO
+import logging
+from typing import Any, Dict
+
 from webnet.ToolNet.base import BaseTool, ToolContext
 
 logger = logging.getLogger(__name__)

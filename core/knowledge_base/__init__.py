@@ -9,8 +9,8 @@ Miya Knowledge Base - 知识库系统
 import asyncio
 import logging
 import os
-from pathlib import Path
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger("miya.knowledge_base")
@@ -206,7 +206,7 @@ class RankFusion:
                 key = r.chunk_id
                 fused[key] = fused.get(key, 0) + 1 / (rank + 60)
 
-        sorted_results = sorted(
+        sorted(
             fused.items(),
             key=lambda x: x[1],
             reverse=True,

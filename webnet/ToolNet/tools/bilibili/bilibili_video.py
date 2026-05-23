@@ -3,18 +3,17 @@ B站视频处理工具
 支持：B站链接/BV号/AV号解析、视频信息获取、视频卡片生成
 """
 
-from typing import Dict, Any, Optional
 import logging
+from typing import Any, Dict, Optional
 
 from webnet.ToolNet.base import BaseTool, ToolContext
-from webnet.ToolNet.tools.bilibili.parser import (
-    extract_from_message,
-    extract_all_from_message,
-)
 from webnet.ToolNet.tools.bilibili.downloader import (
-    get_video_info,
     build_info_card,
-    VideoInfo,
+    get_video_info,
+)
+from webnet.ToolNet.tools.bilibili.parser import (
+    extract_all_from_message,
+    extract_from_message,
 )
 
 logger = logging.getLogger(__name__)

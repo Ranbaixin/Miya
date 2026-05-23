@@ -12,14 +12,14 @@ import os
 import shutil
 import zipfile
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from astrbot.core.config.default import VERSION
 from sqlalchemy import delete
 
 from astrbot.core import logger
-from astrbot.core.config.default import VERSION
 from astrbot.core.db import BaseDatabase
 from astrbot.core.utils.astrbot_path import (
     get_astrbot_data_path,
@@ -529,16 +529,15 @@ class AstrBotImporter:
 
     async def _clear_main_db(self) -> None:
         """清空主数据库所有表"""
-        async with self.main_db.get_db() as session:
-            async with session.begin():
-                for table_name, model_class in MAIN_DB_MODELS.items():
-                    try:
-                        await session.execute(delete(model_class))
-                        logger.debug(f"已清空表 {table_name}")
-                    except Exception as e:
-                        raise DatabaseClearError(
-                            f"清空表 {table_name} 失败: {e}"
-                        ) from e
+        async with self.main_db.get_db() as session, session.begin():
+            for table_name, model_class in MAIN_DB_MODELS.items():
+                try:
+                    await session.execute(delete(model_class))
+                    logger.debug(f"已清空表 {table_name}")
+                except Exception as e:
+                    raise DatabaseClearError(
+                        f"清空表 {table_name} 失败: {e}"
+                    ) from e
 
     async def _clear_kb_data(self) -> None:
         """清空知识库数据"""
@@ -546,14 +545,13 @@ class AstrBotImporter:
             return
 
         # 清空知识库元数据表
-        async with self.kb_manager.kb_db.get_db() as session:
-            async with session.begin():
-                for table_name, model_class in KB_METADATA_MODELS.items():
-                    try:
-                        await session.execute(delete(model_class))
-                        logger.debug(f"已清空知识库表 {table_name}")
-                    except Exception as e:
-                        logger.warning(f"清空知识库表 {table_name} 失败: {e}")
+        async with self.kb_manager.kb_db.get_db() as session, session.begin():
+            for table_name, model_class in KB_METADATA_MODELS.items():
+                try:
+                    await session.execute(delete(model_class))
+                    logger.debug(f"已清空知识库表 {table_name}")
+                except Exception as e:
+                    logger.warning(f"清空知识库表 {table_name} 失败: {e}")
 
         # 删除知识库文件目录
         for kb_id in list(self.kb_manager.kb_insts.keys()):
@@ -573,28 +571,27 @@ class AstrBotImporter:
         """导入主数据库数据"""
         imported: dict[str, int] = {}
 
-        async with self.main_db.get_db() as session:
-            async with session.begin():
-                for table_name, rows in data.items():
-                    model_class = MAIN_DB_MODELS.get(table_name)
-                    if not model_class:
-                        logger.warning(f"未知的表: {table_name}")
-                        continue
-                    normalized_rows = self._preprocess_main_table_rows(table_name, rows)
+        async with self.main_db.get_db() as session, session.begin():
+            for table_name, rows in data.items():
+                model_class = MAIN_DB_MODELS.get(table_name)
+                if not model_class:
+                    logger.warning(f"未知的表: {table_name}")
+                    continue
+                normalized_rows = self._preprocess_main_table_rows(table_name, rows)
 
-                    count = 0
-                    for row in normalized_rows:
-                        try:
-                            # 转换 datetime 字符串为 datetime 对象
-                            row = self._convert_datetime_fields(row, model_class)
-                            obj = model_class(**row)
-                            session.add(obj)
-                            count += 1
-                        except Exception as e:
-                            logger.warning(f"导入记录到 {table_name} 失败: {e}")
+                count = 0
+                for row in normalized_rows:
+                    try:
+                        # 转换 datetime 字符串为 datetime 对象
+                        row = self._convert_datetime_fields(row, model_class)
+                        obj = model_class(**row)
+                        session.add(obj)
+                        count += 1
+                    except Exception as e:
+                        logger.warning(f"导入记录到 {table_name} 失败: {e}")
 
-                    imported[table_name] = count
-                    logger.debug(f"导入表 {table_name}: {count} 条记录")
+                imported[table_name] = count
+                logger.debug(f"导入表 {table_name}: {count} 条记录")
 
         return imported
 
@@ -688,10 +685,7 @@ class AstrBotImporter:
     def _normalize_platform_stats_timestamp(self, value: Any) -> str | None:
         if isinstance(value, datetime):
             dt = value
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            else:
-                dt = dt.astimezone(timezone.utc)
+            dt = dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt.astimezone(UTC)
             return dt.isoformat()
         if isinstance(value, str):
             timestamp = value.strip()
@@ -701,10 +695,7 @@ class AstrBotImporter:
                 timestamp = f"{timestamp[:-1]}+00:00"
             try:
                 dt = datetime.fromisoformat(timestamp)
-                if dt.tzinfo is None:
-                    dt = dt.replace(tzinfo=timezone.utc)
-                else:
-                    dt = dt.astimezone(timezone.utc)
+                dt = dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt.astimezone(UTC)
                 return dt.isoformat()
             except ValueError:
                 return None
@@ -721,24 +712,23 @@ class AstrBotImporter:
             return
 
         # 1. 导入知识库元数据
-        async with self.kb_manager.kb_db.get_db() as session:
-            async with session.begin():
-                for table_name, rows in kb_meta_data.items():
-                    model_class = KB_METADATA_MODELS.get(table_name)
-                    if not model_class:
-                        continue
+        async with self.kb_manager.kb_db.get_db() as session, session.begin():
+            for table_name, rows in kb_meta_data.items():
+                model_class = KB_METADATA_MODELS.get(table_name)
+                if not model_class:
+                    continue
 
-                    count = 0
-                    for row in rows:
-                        try:
-                            row = self._convert_datetime_fields(row, model_class)
-                            obj = model_class(**row)
-                            session.add(obj)
-                            count += 1
-                        except Exception as e:
-                            logger.warning(f"导入知识库记录到 {table_name} 失败: {e}")
+                count = 0
+                for row in rows:
+                    try:
+                        row = self._convert_datetime_fields(row, model_class)
+                        obj = model_class(**row)
+                        session.add(obj)
+                        count += 1
+                    except Exception as e:
+                        logger.warning(f"导入知识库记录到 {table_name} 失败: {e}")
 
-                    result.imported_tables[f"kb_{table_name}"] = count
+                result.imported_tables[f"kb_{table_name}"] = count
 
         # 2. 导入每个知识库的文档和文件
         for kb_data in kb_meta_data.get("knowledge_bases", []):
@@ -840,10 +830,7 @@ class AstrBotImporter:
                             original_path = att.get("path")
                             break
 
-                    if original_path:
-                        target_path = Path(original_path)
-                    else:
-                        target_path = attachments_dir / os.path.basename(name)
+                    target_path = Path(original_path) if original_path else attachments_dir / os.path.basename(name)
 
                     # Validate path is within attachments directory (CWE-22)
                     if not _validate_path_within(target_path, attachments_dir):

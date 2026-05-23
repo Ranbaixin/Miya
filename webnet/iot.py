@@ -110,10 +110,7 @@ class IoTNet:
     def _match_trigger(self, event: Dict, trigger: Dict) -> bool:
         """匹配触发条件"""
         # 简化实现：精确匹配
-        for key, value in trigger.items():
-            if event.get(key) != value:
-                return False
-        return True
+        return all(event.get(key) == value for key, value in trigger.items())
 
     def _get_timestamp(self) -> str:
         """获取时间戳"""

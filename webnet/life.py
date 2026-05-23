@@ -9,13 +9,12 @@ LifeBook 功能的 QQ 机器人接口
 
 import logging
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Optional
 
 from memory.lifebook_manager import (
     LifeBookManager,
     MemoryLevel,
     NodeType,
-    Node,
 )
 
 logger = logging.getLogger(__name__)

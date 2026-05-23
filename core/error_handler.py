@@ -4,15 +4,13 @@
 """
 
 import asyncio
-import logging
-import traceback
 import functools
+import logging
 import time
-from typing import Optional, Any, Callable, TypeVar, cast
-from enum import Enum
 from dataclasses import dataclass
+from typing import Any, Callable, Optional, TypeVar, cast
 
-from .project_types import ErrorCode, AppError
+from .project_types import AppError, ErrorCode
 
 logger = logging.getLogger(__name__)
 
@@ -218,7 +216,7 @@ def log_execution_time(func: Callable[P, R]) -> Callable[P, R]:
                 logger.warning(f"函数 {func.__name__} 执行时间过长: {elapsed:.3f}s")
                 
             return result
-        except Exception as e:
+        except Exception:
             elapsed = time.time() - start_time
             logger.error(f"函数 {func.__name__} 执行失败, 耗时: {elapsed:.3f}s", exc_info=True)
             raise
@@ -237,7 +235,7 @@ def log_execution_time(func: Callable[P, R]) -> Callable[P, R]:
                 logger.warning(f"函数 {func.__name__} 执行时间过长: {elapsed:.3f}s")
                 
             return result
-        except Exception as e:
+        except Exception:
             elapsed = time.time() - start_time
             logger.error(f"函数 {func.__name__} 执行失败, 耗时: {elapsed:.3f}s", exc_info=True)
             raise

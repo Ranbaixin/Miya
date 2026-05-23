@@ -3,11 +3,10 @@
 供 OneBot / QQOfficial / 其他平台复用
 """
 
-import logging
-import tempfile
-import os
-import atexit
 import hashlib
+import logging
+import os
+import tempfile
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -114,7 +113,9 @@ async def _synthesize_edge_tts(config: dict, text: str) -> str:
 
 
 async def _synthesize_gpt_sovits(config: dict, text: str) -> str:
-    import aiohttp, re
+    import re
+
+    import aiohttp
 
     sovits = config.get("engines", {}).get("gpt_sovits", {})
     api_url = sovits.get("api_url", "http://127.0.0.1:9880")
@@ -168,13 +169,12 @@ async def _synthesize_api_tts(config: dict, text: str) -> str:
         "response_format": fmt,
         "speed": api_conf.get("speed", 1.0),
     }
-    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as s:
-        async with s.post(
-            api_url, json=payload, headers={"Authorization": f"Bearer {api_key}"}
-        ) as r:
-            if r.status != 200:
-                raise RuntimeError(f"API TTS {r.status}")
-            data = await r.read()
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as s, s.post(
+        api_url, json=payload, headers={"Authorization": f"Bearer {api_key}"}
+    ) as r:
+        if r.status != 200:
+            raise RuntimeError(f"API TTS {r.status}")
+        data = await r.read()
     tmp = tempfile.NamedTemporaryFile(suffix=f".{fmt}", delete=False)
     tmp_path = tmp.name
     tmp.close()

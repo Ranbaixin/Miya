@@ -8,14 +8,13 @@
 - 智能重试策略
 """
 
-import asyncio
-import platform
 import json
+import platform
 import re
 import time
-from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Dict, List, Optional
 
 
 class TaskState(Enum):
@@ -336,7 +335,7 @@ class MiyaAgentV3:
         if result.state == TaskState.COMPLETED:
             output.append(f"\n✅ 任务完成! (耗时 {result.total_time:.2f}秒)")
         elif result.state == TaskState.NEEDS_CONFIRMATION:
-            output.append(f"\n⚠️ 需要确认")
+            output.append("\n⚠️ 需要确认")
         elif result.state == TaskState.FAILED:
             output.append(f"\n❌ 任务失败: {result.error}")
         else:
@@ -353,7 +352,7 @@ class MiyaAgentV3:
 
         # 最终输出
         if result.final_output:
-            output.append(f"\n📄 结果:")
+            output.append("\n📄 结果:")
             output.append(result.final_output[:500])
 
         return "\n".join(output)
@@ -373,7 +372,7 @@ class MiyaAgentV3:
         )
 
         if not verification.get("success") and verification.get("alternative"):
-            for retry in range(self.max_retries):
+            for _retry in range(self.max_retries):
                 execution_result = await self._execute_command(
                     verification["alternative"]
                 )
@@ -591,13 +590,13 @@ class MiyaAgentV3:
         output.append("=" * 60)
         output.append("【弥亚智能代理 V3 - AI推理引擎】")
         output.append("=" * 60)
-        output.append(f"\n📋 【意图理解】")
+        output.append("\n📋 【意图理解】")
         output.append(f"  用户说: {request}")
         output.append(f"  理解意图: {intent.get('intent', 'unknown')}")
-        output.append(f"\n💭 【AI推理】")
+        output.append("\n💭 【AI推理】")
         output.append(f"  推理命令: {plan.get('command', '')}")
         output.append(f"  推理理由: {plan.get('reasoning', '')}")
-        output.append(f"\n⚡ 【执行结果】")
+        output.append("\n⚡ 【执行结果】")
         output.append(
             f"  {'✓ 命令执行成功' if result.get('success') else '✗ 命令执行失败'}"
         )

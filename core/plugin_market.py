@@ -4,17 +4,15 @@
 """
 
 import asyncio
-import hashlib
 import json
 import logging
-import os
 import ssl
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, List, Optional
+
 import aiohttp
 import certifi
-from pathlib import Path
-from typing import Any, Dict, List, Optional
-from dataclasses import dataclass
-from datetime import datetime
 
 logger = logging.getLogger("Miya.PluginMarket")
 
@@ -98,21 +96,20 @@ class AstrBotPluginMarket:
             try:
                 async with aiohttp.ClientSession(
                     trust_env=True, connector=connector
-                ) as session:
-                    async with session.get(
-                        url, timeout=aiohttp.ClientTimeout(total=30)
-                    ) as response:
-                        if response.status == 200:
-                            try:
-                                data = await response.json()
-                            except aiohttp.ContentTypeError:
-                                text = await response.text()
-                                data = json.loads(text)
+                ) as session, session.get(
+                    url, timeout=aiohttp.ClientTimeout(total=30)
+                ) as response:
+                    if response.status == 200:
+                        try:
+                            data = await response.json()
+                        except aiohttp.ContentTypeError:
+                            text = await response.text()
+                            data = json.loads(text)
 
-                            if data:
-                                logger.info(f"成功获取插件市场数据: {len(data)} 个插件")
-                                await self._update_md5()
-                                return data
+                        if data:
+                            logger.info(f"成功获取插件市场数据: {len(data)} 个插件")
+                            await self._update_md5()
+                            return data
 
             except asyncio.TimeoutError:
                 logger.warning(f"获取插件市场超时: {url}")
@@ -129,15 +126,14 @@ class AstrBotPluginMarket:
 
             async with aiohttp.ClientSession(
                 trust_env=True, connector=connector
-            ) as session:
-                async with session.get(
-                    PLUGIN_MD5_URL, timeout=aiohttp.ClientTimeout(total=10)
-                ) as response:
-                    if response.status == 200:
-                        md5_data = await response.json()
-                        self._md5_cache_file.write_text(
-                            json.dumps(md5_data, ensure_ascii=False), encoding="utf-8"
-                        )
+            ) as session, session.get(
+                PLUGIN_MD5_URL, timeout=aiohttp.ClientTimeout(total=10)
+            ) as response:
+                if response.status == 200:
+                    md5_data = await response.json()
+                    self._md5_cache_file.write_text(
+                        json.dumps(md5_data, ensure_ascii=False), encoding="utf-8"
+                    )
 
         except Exception as e:
             logger.warning(f"更新 MD5 失败: {e}")
@@ -230,20 +226,19 @@ class AstrBotPluginMarket:
         try:
             async with aiohttp.ClientSession(
                 trust_env=True, connector=connector
-            ) as session:
-                async with session.get(
-                    plugin.download_url, timeout=aiohttp.ClientTimeout(total=120)
-                ) as response:
-                    if response.status == 200:
-                        content = await response.read()
+            ) as session, session.get(
+                plugin.download_url, timeout=aiohttp.ClientTimeout(total=120)
+            ) as response:
+                if response.status == 200:
+                    content = await response.read()
 
-                        zip_path = target_dir / f"{plugin.name}.zip"
-                        zip_path.write_bytes(content)
+                    zip_path = target_dir / f"{plugin.name}.zip"
+                    zip_path.write_bytes(content)
 
-                        logger.info(f"插件 {plugin.name} 下载成功")
-                        return True
-                    else:
-                        logger.error(f"下载插件失败: {response.status}")
+                    logger.info(f"插件 {plugin.name} 下载成功")
+                    return True
+                else:
+                    logger.error(f"下载插件失败: {response.status}")
 
         except Exception as e:
             logger.error(f"下载插件 {plugin.name} 异常: {e}")

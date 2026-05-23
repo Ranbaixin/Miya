@@ -5,9 +5,8 @@
 ===============================================
 """
 
-import asyncio
 import logging
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("miya.unified.knowledge")
 

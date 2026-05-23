@@ -8,10 +8,10 @@ import uuid
 from pathlib import Path
 from xml.sax.saxutils import escape
 
+from astrbot.core.config.default import VERSION
 from httpx import AsyncClient, Timeout
 
 from astrbot import logger
-from astrbot.core.config.default import VERSION
 from astrbot.core.utils.astrbot_path import get_astrbot_temp_path
 
 from ..entities import ProviderType

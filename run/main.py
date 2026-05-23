@@ -2,14 +2,16 @@
 弥娅系统总入口（终端模式）- 使用统一跨平台架构
 """
 
-import sys
-import logging
 import asyncio
-from datetime import datetime
-from pathlib import Path
+import builtins
+import contextlib
+import logging
 
 # 跨平台控制台编码设置 - 支持中文输入
 import os
+import sys
+from datetime import datetime
+from pathlib import Path
 
 os.environ["PYTHONIOENCODING"] = "utf-8"
 
@@ -17,17 +19,12 @@ os.environ["PYTHONIOENCODING"] = "utf-8"
 if sys.platform == "win32":
     import subprocess
 
-    try:
+    with contextlib.suppress(builtins.BaseException):
         subprocess.run(["chcp", "65001"], shell=True, capture_output=True)
-    except:
-        pass
 
     # Windows 下设置标准输入输出编码
     # 注意：不要在模块加载时包装 stdout/stderr，因为这会与 uvicorn 等库的日志配置冲突
     # 仅在需要时在 chinese_input 函数中进行包装
-    import io
-    import codecs
-    import locale
 
 
 def chinese_input(prompt: str) -> str:
@@ -96,17 +93,16 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # 使用统一的端口检测工具
-from utils.port_utils import check_and_get_port
-
-from core import Personality, Ethics, Identity, Arbitrator, Entropy, PromptManager
-from hub import MemoryEmotion, MemoryEngine, Emotion, Decision, Scheduler, DecisionHub
-from mlink import MLinkCore, Message, Router
-from webnet import NetManager, CrossNetEngine
 from config import Settings
-from core.constants import Encoding
-from hub.platform_adapters import get_adapter
-from core.system_detector import get_system_detector
+from core import Arbitrator, Entropy, Ethics, Identity, Personality, PromptManager
 from core.autonomy_with_personality import get_autonomy_with_personality
+from core.constants import Encoding
+from core.system_detector import get_system_detector
+from hub import Decision, DecisionHub, Emotion, MemoryEmotion, MemoryEngine, Scheduler
+from hub.platform_adapters import get_adapter
+from mlink import Message, MLinkCore
+from utils.port_utils import check_and_get_port
+from webnet import CrossNetEngine, NetManager
 
 
 class Miya:
@@ -120,7 +116,7 @@ class Miya:
         # 【第一阶段】系统环境检测
         self.system_detector = get_system_detector()
         self.system_info = self.system_detector.detect()
-        self.logger.info(f"✅ 系统检测完成:")
+        self.logger.info("✅ 系统检测完成:")
         self.logger.info(
             f"   操作系统: {self.system_info.os_name} {self.system_info.os_version}"
         )
@@ -164,7 +160,7 @@ class Miya:
     def _init_databases(self):
         """初始化可选数据库 - 默认禁用（SQLite 已替代）"""
         self.logger.info(
-            f"  [数据库] 外部数据库已禁用（SQLite 已替代 Redis/Milvus/Neo4j）"
+            "  [数据库] 外部数据库已禁用（SQLite 已替代 Redis/Milvus/Neo4j）"
         )
         self.redis = None
         self.milvus = None
@@ -278,6 +274,7 @@ class Miya:
     def _init_neo4j(self):
         """初始化 Neo4j 客户端"""
         import os
+
         from dotenv import load_dotenv
 
         load_dotenv(Path(__file__).parent.parent / "config" / ".env")
@@ -297,11 +294,11 @@ class Miya:
                 database=neo4j_database,
             )
             if neo4j.is_mock_mode():
-                self.logger.warning(f"  [数据库] Neo4j 连接失败，使用模拟模式")
+                self.logger.warning("  [数据库] Neo4j 连接失败，使用模拟模式")
             else:
-                self.logger.info(f"  [数据库] Neo4j 连接成功")
+                self.logger.info("  [数据库] Neo4j 连接成功")
         else:
-            self.logger.warning(f"  [数据库] 未配置 Neo4j 密码，使用模拟模式")
+            self.logger.warning("  [数据库] 未配置 Neo4j 密码，使用模拟模式")
             neo4j = None
 
         return neo4j
@@ -379,11 +376,12 @@ class Miya:
     def _init_unified_memory(self):
         """初始化统一记忆系统"""
         try:
-            from memory import get_memory_core, get_memory_adapter
             import asyncio
 
+            from memory import get_memory_adapter, get_memory_core
+
             try:
-                loop = asyncio.get_running_loop()
+                asyncio.get_running_loop()
                 # 如果有运行中的loop，在后台任务中初始化
                 import concurrent.futures
 
@@ -443,6 +441,7 @@ class Miya:
     def _init_ai_client(self):
         """初始化AI客户端 - 所有模型从 multi_model_config.json 加载"""
         import os
+
         from dotenv import load_dotenv
 
         load_dotenv(Path(__file__).parent.parent / "config" / ".env")
@@ -536,7 +535,6 @@ class Miya:
             )
 
             # 初始化向量缓存
-            import os
 
             data_dir = Path(__file__).parent.parent / "data"
             data_dir.mkdir(exist_ok=True)
@@ -587,13 +585,13 @@ class Miya:
         """启动 API 服务器（后台线程）"""
         try:
             import threading
-            import uvicorn
             from pathlib import Path
-            import os
+
+            import uvicorn
 
             # 使用统一的端口检测工具
             api_port, port_changed = check_and_get_port(8000, port_name="Web API")
-            project_root = Path(__file__).parent.parent
+            Path(__file__).parent.parent
 
             # 如果端口改变了，更新前端 .env 配置（已移除旧的前端配置更新逻辑）
             # 新架构中，前端通过共享包自动检测端口，无需手动更新配置文件
@@ -785,7 +783,6 @@ class Miya:
         """
         # 使用M-Link Message格式
         # 注意：content 需要是字典格式，包含 platform、content、user_id、sender_name 等
-        from mlink import Message
 
         perception_data = {
             "platform": "terminal",
@@ -872,8 +869,8 @@ def main():
         # 显示系统状态
         print("=" * 50)
         print("【弥娅系统】")
-        print(f"  版本: v7.0.0")
-        print(f"  已启动")
+        print("  版本: v7.0.0")
+        print("  已启动")
         print("=" * 50)
 
         # 启动定时任务调度器
@@ -887,7 +884,7 @@ def main():
 
                 # 在后台线程中启动调度器
                 miya.scheduler.start_background()
-            except Exception as e:
+            except Exception:
                 pass
 
         # 交互循环 - 使用异步主循环
@@ -934,35 +931,35 @@ def main():
                         print(f"\n=== {miya.identity.name} 系统状态 ===")
                         print(f"版本: {miya.identity.version}")
                         print(f"UUID: {miya.identity.uuid}")
-                        print(f"\n【人格状态】")
+                        print("\n【人格状态】")
                         print(f"  形态: {status['personality']['state']}")
                         print(f"  主导特质: {status['personality']['dominant_trait']}")
-                        print(f"  人格向量:")
+                        print("  人格向量:")
                         for trait, value in status["personality"]["vectors"].items():
                             print(f"    {trait}: {value:.2f}")
-                        print(f"\n【情绪状态】")
+                        print("\n【情绪状态】")
                         print(f"  主导情绪: {status['emotion']['dominant']}")
                         print(f"  情绪强度: {status['emotion']['intensity']:.2f}")
-                        print(f"  当前情绪:")
+                        print("  当前情绪:")
                         for emotion, intensity in status["emotion"]["current"].items():
                             print(f"    {emotion}: {intensity:.2f}")
-                        print(f"\n【记忆统计】")
+                        print("\n【记忆统计】")
                         print(
                             f"  潮汐记忆: {status['memory_stats'].get('tide_count', 0)}条"
                         )
                         print(
                             f"  长期记忆: {status['memory_stats'].get('longterm_count', 0)}条"
                         )
-                        print(f"\n【感知状态】")
+                        print("\n【感知状态】")
                         print(f"  全局激活: {status['perception']['global_active']}")
                         print(f"  外部感知: {status['perception']['external_active']}")
                         print(f"  内部感知: {status['perception']['internal_active']}")
-                        print(f"\n【信任统计】")
+                        print("\n【信任统计】")
                         print(f"  平均信任: {status['trust_stats']['avg_score']:.2f}")
                         print(
                             f"  总交互: {status['trust_stats']['total_interactions']}"
                         )
-                        print(f"\n【系统健康】")
+                        print("\n【系统健康】")
                         print(
                             f"  熵值: {status['entropy_health']['current_entropy']:.3f}"
                         )
@@ -982,7 +979,7 @@ def main():
                         print(f"  尝试修复: {result['fixes_attempted']}")
                         print(f"  成功修复: {result['fixes_successful']}")
                         if result.get("personality_influenced"):
-                            print(f"  人设影响: 是")
+                            print("  人设影响: 是")
                         if result.get("current_emotion"):
                             print(f"  当前情绪: {result['current_emotion']}")
                         print()
@@ -995,7 +992,7 @@ def main():
                         print(f"\n=== {miya.identity.name} 学习报告 ===")
                         if report.get("personality"):
                             personality = report["personality"]
-                            print(f"\n【人格状态】")
+                            print("\n【人格状态】")
                             vectors = personality.get("vectors", {})
                             print(
                                 f"  形态: {personality.get('current_form', {}).get('name', '未知')}"
@@ -1004,7 +1001,7 @@ def main():
                                 f"  专属称呼: {personality.get('current_title', '佳')}"
                             )
                             print(f"  状态: {personality.get('state', '未知')}")
-                            print(f"  人格向量:")
+                            print("  人格向量:")
                             if vectors:
                                 vector_names = {
                                     "warmth": "温暖度",
@@ -1019,7 +1016,7 @@ def main():
                             print()
                         if report.get("emotion"):
                             emotion = report["emotion"]
-                            print(f"\n【情绪状态】")
+                            print("\n【情绪状态】")
                             current_emotion = emotion.get("current_emotion", {})
                             if current_emotion:
                                 print(
@@ -1028,14 +1025,14 @@ def main():
                                 print(
                                     f"  情绪强度: {current_emotion.get('intensity', 0):.2f}"
                                 )
-                                print(f"  当前情绪:")
+                                print("  当前情绪:")
                                 for emotion_name, intensity in current_emotion.get(
                                     "current", {}
                                 ).items():
                                     print(f"    {emotion_name}: {intensity:.2f}")
                             print()
                         if report.get("memory"):
-                            print(f"\n【记忆统计】")
+                            print("\n【记忆统计】")
                             stats = report.get("memory", {})
                             print(f"  长期记忆: {stats.get('longterm_count', 0)}条")
                             print(f"  潮汐记忆: {stats.get('tide_count', 0)}条")
@@ -1044,13 +1041,13 @@ def main():
                             print()
                         if report.get("learning"):
                             learning = report.get("learning", {})
-                            print(f"\n【学习统计】")
+                            print("\n【学习统计】")
                             print(f"  学习次数: {learning.get('total_learnings', 0)}次")
                             print(
                                 f"  改进次数: {learning.get('total_improvements', 0)}次"
                             )
                             if learning.get("learning_history"):
-                                print(f"  最近学习:")
+                                print("  最近学习:")
                                 for item in learning.get("learning_history", [])[:5]:
                                     print(
                                         f"    - {item.get('type', '未知')}: {item.get('description', '无描述')}"

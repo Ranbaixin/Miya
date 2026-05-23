@@ -4,7 +4,7 @@ MIYA Platform 配置
 预配置常用平台适配器
 """
 
-from typing import Dict, Any, Optional
+from typing import Any, Dict
 
 # ==================== QQ 配置模板 ====================
 

@@ -3,8 +3,9 @@
 处理冲突决策和行为仲裁
 """
 from typing import Dict, List, Optional
-from .personality import Personality
+
 from .ethics import Ethics
+from .personality import Personality
 
 
 class Arbitrator:

@@ -11,12 +11,11 @@
 日期: 2026-04-28
 """
 
-import asyncio
 import logging
-from typing import Any, Dict, List, Optional, Callable, Awaitable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
+from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 logger = logging.getLogger("Miya.Gestalt")
 
@@ -92,21 +91,15 @@ class GestaltHooks:
     """
 
     def __init__(self):
-        self._hooks: Dict[HookEvent, List[Callable]] = {
-            event: [] for event in HookEvent
-        }
+        self._hooks: Dict[HookEvent, List[Callable]] = {event: [] for event in HookEvent}
         logger.info("[GestaltHooks] Hooks系统初始化")
 
-    def register(
-        self, event: HookEvent, handler: Callable[[Dict], Awaitable[Any]]
-    ) -> None:
+    def register(self, event: HookEvent, handler: Callable[[Dict], Awaitable[Any]]) -> None:
         """注册Hook处理器"""
         self._hooks[event].append(handler)
         logger.info(f"[GestaltHooks] 注册Hook: {event.value} -> {handler.__name__}")
 
-    def unregister(
-        self, event: HookEvent, handler: Callable[[Dict], Awaitable[Any]]
-    ) -> None:
+    def unregister(self, event: HookEvent, handler: Callable[[Dict], Awaitable[Any]]) -> None:
         """注销Hook处理器"""
         if handler in self._hooks[event]:
             self._hooks[event].remove(handler)
@@ -178,7 +171,7 @@ class MCPToolManager:
                 config = json.load(f)
                 return config.get("mcpServers", {})
         except Exception as e:
-            logger.info(f"[MCPToolManager] 加载配置失败: {e}"))
+            logger.info(f"[MCPToolManager] 加载配置失败: {e}")
             return {}
 
     async def _connect_mcp(self, name: str, config: Dict):
@@ -198,7 +191,7 @@ class MCPToolManager:
                     }
                 logger.info(f"[MCPToolManager] 加载MCP工具: {name} - {len(tools)}个")
         except Exception as e:
-            logger.info(f"[MCPToolManager] MCP工具加载失败 {name}: {e}"))
+            logger.info(f"[MCPToolManager] MCP工具加载失败 {name}: {e}")
 
     def get_tools_schema(self) -> List[Dict]:
         """获取MCP工具Schema"""
@@ -289,9 +282,7 @@ class HandoffManager:
 
         return {"error": f"Agent {to_agent} has no run method"}
 
-    def get_handoff_history(
-        self, agent_id: Optional[str] = None, limit: int = 10
-    ) -> List[Dict]:
+    def get_handoff_history(self, agent_id: Optional[str] = None, limit: int = 10) -> List[Dict]:
         """获取Handoff历史"""
         if agent_id:
             return [
@@ -391,19 +382,17 @@ class GestaltControllerEnhanced:
     async def _init_skills_system(self):
         """初始化Skills系统"""
         try:
+            from core.skills.sandbox import SandboxLevel, get_skill_sandbox
             from core.skills.skill_md import get_skill_manager
-            from core.skills.sandbox import get_skill_sandbox, SandboxLevel
 
             self._skill_manager = get_skill_manager()
             await self._skill_manager.initialize()
 
             self._skill_sandbox = get_skill_sandbox(SandboxLevel.RESTRICTED)
 
-            logger.info(
-                f"[GestaltEnhanced] Skills系统初始化: {len(self._skill_manager._skills)} 个技能"
-            )
+            logger.info(f"[GestaltEnhanced] Skills系统初始化: {len(self._skill_manager._skills)} 个技能")
         except Exception as e:
-            logger.info(f"[GestaltEnhanced] Skills系统初始化失败: {e}"))
+            logger.info(f"[GestaltEnhanced] Skills系统初始化失败: {e}")
 
         # 初始化AstrBot风格工具
         self._init_astrbot_tools()
@@ -417,7 +406,7 @@ class GestaltControllerEnhanced:
             self._astrbot_tools = registry
             logger.info("[GestaltEnhanced] AstrBot工具系统已加载")
         except Exception as e:
-            logger.info(f"[GestaltEnhanced] AstrBot工具加载失败: {e}"))
+            logger.info(f"[GestaltEnhanced] AstrBot工具加载失败: {e}")
 
     async def _tool_get_current_time(self, args: Dict, context: Dict) -> str:
         """获取当前时间"""
@@ -477,9 +466,7 @@ class GestaltControllerEnhanced:
         user_id = args.get("user_id", context.get("user_id", ""))
         group_id = args.get("group_id", context.get("group_id", ""))
 
-        logger.info(
-            f"[GestaltEnhanced] 发送消息: {user_id}/{group_id} - {message[:50]}..."
-        )
+        logger.info(f"[GestaltEnhanced] 发送消息: {user_id}/{group_id} - {message[:50]}...")
         return f"消息已发送: {message[:50]}..."
 
     async def _load_agent_tools(self):
@@ -508,12 +495,10 @@ class GestaltControllerEnhanced:
                         self._tool_sources[tool_name] = agent_name
 
             self._agent_tools_loaded = True
-            logger.info(
-                f"[GestaltEnhanced] 加载了 {len(self._tool_sources)} 个Agent工具"
-            )
+            logger.info(f"[GestaltEnhanced] 加载了 {len(self._tool_sources)} 个Agent工具")
 
         except Exception as e:
-            logger.info(f"[GestaltEnhanced] 加载Agent工具失败: {e}"))
+            logger.info(f"[GestaltEnhanced] 加载Agent工具失败: {e}")
 
     def _build_tool_context(self, context: Dict[str, Any]) -> Any:
         """构建工具执行上下文"""
@@ -576,20 +561,13 @@ class GestaltControllerEnhanced:
 
         return ToolContext(**filtered)
 
-    async def execute_tool(
-        self, tool_name: str, args: Dict[str, Any], context: Dict[str, Any]
-    ) -> str:
+    async def execute_tool(self, tool_name: str, args: Dict[str, Any], context: Dict[str, Any]) -> str:
         """执行工具 - 增强版"""
         start_time = datetime.now().timestamp()
 
         # 安全日志
         safe_args = {
-            k: (
-                "[图片数据]"
-                if isinstance(v, str) and ("[CQ:" in v or "base64," in v)
-                else v
-            )
-            for k, v in args.items()
+            k: ("[图片数据]" if isinstance(v, str) and ("[CQ:" in v or "base64," in v) else v) for k, v in args.items()
         }
         logger.info(f"[GestaltEnhanced] 执行工具: {tool_name}, 参数: {safe_args}")
 
@@ -618,7 +596,7 @@ class GestaltControllerEnhanced:
                     )
 
             # 1.7 检查AstrBot工具
-            elif hasattr(self, '_astrbot_tools') and self._astrbot_tools:
+            elif hasattr(self, "_astrbot_tools") and self._astrbot_tools:
                 # 直接调用工具类的对应方法
                 tools_obj = self._astrbot_tools.computer
                 if hasattr(tools_obj, tool_name):
@@ -641,15 +619,9 @@ class GestaltControllerEnhanced:
                 result = await self.mcp_manager.execute_tool(tool_name, args, context)
 
             # 3. 检查Agent工具
-            elif (
-                self.tool_subnet
-                and hasattr(self.tool_subnet, "registry")
-                and self.tool_subnet.registry
-            ):
+            elif self.tool_subnet and hasattr(self.tool_subnet, "registry") and self.tool_subnet.registry:
                 tool_context = self._build_tool_context(context)
-                result = await self.tool_subnet.registry.execute_tool(
-                    tool_name, tool_context, **args
-                )
+                result = await self.tool_subnet.registry.execute_tool(tool_name, tool_context, **args)
 
             # 4. 工具不存在
             else:
@@ -702,21 +674,19 @@ class GestaltControllerEnhanced:
         """判断是否是Agent工具"""
         return tool_name in self._tool_sources
 
-def get_all_tool_sources(self) -> Dict[str, str]:
+    def get_all_tool_sources(self) -> Dict[str, str]:
         """获取所有工具来源"""
         sources = dict(self._tool_sources)
         sources.update({name: "builtin" for name in self._builtin_tools.keys()})
-        
+
         # 添加Skills工具
         if self._skill_manager:
             for skill in self._skill_manager._skills.values():
                 if skill.enabled:
                     for tool in skill.tools:
                         sources[tool.name] = "skill"
-        
-        sources.update(
-            {name: f"mcp:{info.get('mcp_server', '')}" for name, info in self.mcp_manager._tools.items()}
-        )
+
+        sources.update({name: f"mcp:{info.get('mcp_server', '')}" for name, info in self.mcp_manager._tools.items()})
         return sources
 
     def get_execution_history(self, limit: int = 20) -> List[Dict]:
@@ -735,13 +705,11 @@ def get_all_tool_sources(self) -> Dict[str, str]:
         """获取统计信息"""
         total = len(self._execution_history)
         success = sum(1 for r in self._execution_history if r.success)
-        
+
         skill_tools = 0
         if self._skill_manager:
-            skill_tools = sum(
-                len(s.tools) for s in self._skill_manager._skills.values() if s.enabled
-            )
-        
+            skill_tools = sum(len(s.tools) for s in self._skill_manager._skills.values() if s.enabled)
+
         return {
             "total_executions": total,
             "success_count": success,
@@ -767,14 +735,8 @@ def get_gestalt_controller_enhanced() -> GestaltControllerEnhanced:
     return _gestalt_enhanced
 
 
-async def initialize_gestalt_enhanced(
-    tool_subnet=None, mcp_config: Optional[Dict] = None
-) -> GestaltControllerEnhanced:
+async def initialize_gestalt_enhanced(tool_subnet=None, mcp_config: Optional[Dict] = None) -> GestaltControllerEnhanced:
     """初始化增强版格式塔"""
     controller = get_gestalt_controller_enhanced()
     await controller.initialize(tool_subnet, mcp_config)
     return controller
-
-
-import os
-from pathlib import Path

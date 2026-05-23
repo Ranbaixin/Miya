@@ -3,7 +3,7 @@ QQ工具实用函数
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ class OneBotAPICompatibility:
             error_msg = str(e)
             if "retcode=1200" in error_msg or "网络连接异常" in error_msg:
                 return {
-                    "supported": False, 
+                    "supported": False,
                     "message": f"API不支持或网络异常: {api_name}",
                     "error": error_msg
                 }

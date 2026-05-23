@@ -4,21 +4,19 @@
 """
 
 import logging
-from typing import Dict, List, Optional, Any, Callable
-from datetime import datetime, timedelta
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
-import json
-from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
 
 try:
-    from apscheduler.schedulers.background import BackgroundScheduler
-    from apscheduler.schedulers.asyncio import AsyncIOScheduler
-    from apscheduler.triggers.cron import CronTrigger
-    from apscheduler.triggers.interval import IntervalTrigger
-    from apscheduler.triggers.date import DateTrigger
+    from apscheduler.executors.pool import ProcessPoolExecutor, ThreadPoolExecutor
     from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
-    from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    from apscheduler.schedulers.background import BackgroundScheduler
+    from apscheduler.triggers.cron import CronTrigger
+    from apscheduler.triggers.date import DateTrigger
+    from apscheduler.triggers.interval import IntervalTrigger
     APSCHEDULER_AVAILABLE = True
 except ImportError:
     APSCHEDULER_AVAILABLE = False
@@ -177,7 +175,7 @@ class TaskScheduler:
                 raise
 
         # 添加到调度器
-        job = self.scheduler.add_job(
+        self.scheduler.add_job(
             wrapper,
             trigger=trigger,
             id=task.task_id,

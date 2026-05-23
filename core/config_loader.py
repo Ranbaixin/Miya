@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 MIYA 配置加载器
 
@@ -10,11 +9,11 @@ MIYA 配置加载器
 3. 默认值
 """
 
-import os
-import json
 import logging
+import os
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
@@ -161,8 +160,8 @@ def get_base_url(provider: str) -> str:
 
 # ==================== text_config.json 加载 (委托到 config.config_utils) ====================
 
-from config.config_utils import reload_config as shared_reload_config
 from config.config_utils import get_section as shared_get_section
+from config.config_utils import reload_config as shared_reload_config
 
 # 委托 text_config 加载到统一的 config/config_utils
 _text_config_loaded = False

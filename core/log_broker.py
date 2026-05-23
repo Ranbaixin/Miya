@@ -4,8 +4,7 @@
 
 import logging
 from asyncio import Queue
-from typing import Any, Callable, Dict, Optional
-from datetime import datetime
+from typing import Callable, Optional
 
 
 class LogBroker:

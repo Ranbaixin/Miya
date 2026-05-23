@@ -4,8 +4,8 @@
 
 import asyncio
 import logging
-import sys
 import os
+import sys
 
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -19,14 +19,12 @@ logger = logging.getLogger(__name__)
 
 async def test_proactive_chat():
     """测试主动聊天系统"""
+    # 重置全局实例以便测试
+    import core.proactive_chat as proactive_module
     from core.proactive_chat import (
-        ProactiveChatSystem,
         ChatContext,
         get_proactive_chat_system,
     )
-
-    # 重置全局实例以便测试
-    import core.proactive_chat as proactive_module
 
     proactive_module._proactive_system = None
 
@@ -185,9 +183,9 @@ async def test_proactive_chat():
 
     result6 = await system.check_and_respond(777888)
     if result6:
-        print(f"  结果: 触发（异常）")
+        print("  结果: 触发（异常）")
     else:
-        print(f"  结果: 被静默时段阻止（正常）")
+        print("  结果: 被静默时段阻止（正常）")
 
     # 恢复设置
     system._quiet_hours = original_quiet_hours
@@ -216,7 +214,7 @@ async def test_proactive_chat():
 
     if result7a and not result7b:
         print(f"  第一次: {msg1}")
-        print(f"  第二次: 被去重（正常）")
+        print("  第二次: 被去重（正常）")
     else:
         print(f"  第一次: {msg1}")
         print(f"  第二次: {'触发' if result7b else '被阻止'}")

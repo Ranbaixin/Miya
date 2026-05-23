@@ -3,7 +3,8 @@ Web API 请求/响应模型
 定义所有 API 的请求和响应数据结构
 """
 
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, EmailStr
 
 

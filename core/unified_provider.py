@@ -5,11 +5,10 @@ Provider 统一管理模块
 提供统一的模型调用接口
 """
 
-import asyncio
 import logging
-from typing import Optional, Dict, Any, List, Callable
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +107,7 @@ class UnifiedProviderManager:
         """列出所有可用模型"""
         models = []
 
-        for name in self._miya_providers.keys():
+        for name in self._miya_providers:
             models.append(
                 ModelInfo(
                     id=name,
@@ -122,9 +121,7 @@ class UnifiedProviderManager:
 
     async def select_model(self, task_type: str) -> str:
         """根据任务类型智能选择模型"""
-        if task_type in ["agent_task", "complex"]:
-            return "default"
-        elif task_type in ["tool_task", "fast"]:
+        if task_type in ["agent_task", "complex"] or task_type in ["tool_task", "fast"]:
             return "default"
         return "default"
 

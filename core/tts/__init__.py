@@ -41,19 +41,19 @@ from .manager import TTSRegistry, get_tts_registry
 
 # 提供者实现层
 from .providers import (
-    APITTSEngine,           # OpenAI/Azure/讯飞/百度/阿里 API
-    SystemTTSEngine,        # Windows SAPI / macOS say / Linux espeak
-    GPTSoviTSEngine,        # GPT-SoVITS v2
-)
-
-# 工具函数
-from .utils import (
-    filter_text,            # 文本过滤
-    split_text_for_qq,      # QQ文本分割
+    APITTSEngine,  # OpenAI/Azure/讯飞/百度/阿里 API
+    GPTSoviTSEngine,  # GPT-SoVITS v2
+    SystemTTSEngine,  # Windows SAPI / macOS say / Linux espeak
 )
 
 # M-Link网络集成
 from .subnet import TTSNet
+
+# 工具函数
+from .utils import (
+    filter_text,  # 文本过滤
+    split_text_for_qq,  # QQ文本分割
+)
 
 __all__ = [
     # 抽象基类

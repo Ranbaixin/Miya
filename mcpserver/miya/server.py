@@ -4,20 +4,18 @@
 为 Open-ClaudeCode 提供弥娅的灵魂能力
 """
 
-import json
-import sys
-import os
-import logging
 import asyncio
+import json
+import logging
+import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 # MCP SDK
 try:
     from mcp.server import Server
     from mcp.server.stdio import stdio_server
-    from mcp.types import Tool, TextContent, Resource
+    from mcp.types import Resource, TextContent, Tool
 except ImportError:
     print("Please install mcp: pip install mcp", file=sys.stderr)
     sys.exit(1)
@@ -28,7 +26,7 @@ sys.path.insert(0, str(MIYA_ROOT))
 
 # 尝试导入 model_pool
 try:
-    from core.model_pool_compat import get_model_pool, TaskType
+    from core.model_pool_compat import TaskType, get_model_pool
 
     MODEL_POOL_AVAILABLE = True
 except ImportError:
@@ -349,8 +347,8 @@ model_selector = MiyaModelSelector()
 # 初始化协作引擎
 collaboration_engine = None
 try:
-    from core.model_pool_compat import get_model_pool
     from core.model_collaboration_engine import ModelCollaborationEngine
+    from core.model_pool_compat import get_model_pool
 
     _mp = get_model_pool()
     if _mp:

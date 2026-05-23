@@ -4,8 +4,9 @@
 提供记忆统计、搜索、查看等功能
 """
 
-from typing import Dict, Any, Optional, List
 import logging
+from typing import Any, Dict
+
 from webnet.ToolNet.base import BaseTool, ToolContext
 
 logger = logging.getLogger(__name__)

@@ -3,10 +3,10 @@ Miya项目类型定义
 统一项目中的所有类型定义，提高代码可维护性和类型安全性
 """
 
-from typing import TypedDict, Literal, NewType, Optional, Union, Any
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
+from typing import Any, Literal, NewType, Optional, TypedDict
 
 # ==================== 基本类型别名 ====================
 SessionID = NewType('SessionID', str)

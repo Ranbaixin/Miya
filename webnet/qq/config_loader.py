@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 QQ配置加载器
 负责加载和管理QQ相关配置
 """
 
-import os
-import yaml
 import logging
-from typing import Dict, Any, Optional
-from pathlib import Path
+import os
+from typing import Any, Dict, Optional
+
+import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +42,7 @@ class QQConfigLoader:
                 return os.path.abspath(path)
                 
         # 如果都不存在，使用项目根目录下的路径
-        return os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
+        return os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
                           "config", "qq_config.yaml")
     
     def load_config(self) -> bool:

@@ -1,5 +1,6 @@
 import abc
 import asyncio
+import contextlib
 import os
 from collections.abc import AsyncGenerator
 from typing import Literal, TypeAlias, Union
@@ -13,6 +14,7 @@ from astrbot.core.provider.entities import (
     ToolCallsResult,
 )
 from astrbot.core.provider.register import provider_cls_map
+
 from astrbot.core.utils.astrbot_path import get_astrbot_path
 
 Providers: TypeAlias = Union[
@@ -307,10 +309,8 @@ class TTSProvider(AbstractProvider):
             )
 
         # 清理测试文件
-        try:
+        with contextlib.suppress(Exception):
             os.remove(audio_path)
-        except Exception:
-            pass
 
 
 class EmbeddingProvider(AbstractProvider):

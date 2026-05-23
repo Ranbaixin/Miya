@@ -4,8 +4,8 @@
 从 YAML 配置文件加载情绪响应
 """
 
-from typing import Dict, List, Optional
 import random
+from typing import Dict, List, Optional
 
 
 class FormStyle:
@@ -348,9 +348,9 @@ class Emotion:
         Args:
             content: 用户输入内容
         """
-        content_lower = content.lower()
+        content.lower()
 
-        for label, keywords, emotion_type, delta in _EXISTENTIAL_DETECTORS:
+        for _label, keywords, emotion_type, delta in _EXISTENTIAL_DETECTORS:
             if any(kw in content for kw in keywords):
                 self.activate_existential(emotion_type)
                 if delta != 0.0:

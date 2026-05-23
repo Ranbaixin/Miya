@@ -23,6 +23,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import os
 import sys
@@ -74,8 +75,8 @@ async def run_daemon(
     platform_ids: list[str] | None = None,
 ):
     """启动弥娅守护进程"""
-    from core.miya_daemon import MiyaDaemon
     from core.management_api import ManagementAPI
+    from core.miya_daemon import MiyaDaemon
 
     logger = logging.getLogger("Miya.Bootstrap")
 
@@ -128,10 +129,8 @@ async def run_daemon(
     print("\n  💫 弥娅已就绪，按 Ctrl+C 退出...\n")
 
     # 4. 等待退出信号
-    try:
+    with contextlib.suppress(KeyboardInterrupt):
         await daemon.wait()
-    except KeyboardInterrupt:
-        pass
 
     # 5. 优雅关闭
     print("\n正在关闭...")

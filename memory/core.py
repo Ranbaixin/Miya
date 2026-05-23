@@ -32,20 +32,20 @@
 """
 
 import asyncio
+import contextlib
+import hashlib
 import json
 import logging
-import re
+import os
 import uuid
-import hashlib
-import aiofiles
-from dataclasses import dataclass, asdict, field
+from collections import defaultdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Union, Type
-from collections import defaultdict
-import copy
-import os
+from typing import Any, Dict, List, Optional, Set, Union
+
+import aiofiles
 
 
 # 直接定义编码常量，避免循环导入
@@ -253,9 +253,7 @@ class MemoryItem:
         if self.is_archived:
             return False
         # 内容检查
-        if not self.content or len(self.content.strip()) < 1:
-            return False
-        return True
+        return not (not self.content or len(self.content.strip()) < 1)
 
     def update_access(self):
         """更新访问统计"""
@@ -445,10 +443,7 @@ class JsonBackend(MemoryBackend):
     def _get_dir(self, level: Union[MemoryLevel, List[MemoryLevel]]) -> Path:
         """获取层级目录"""
         if isinstance(level, list):
-            if level:
-                level = level[0]
-            else:
-                level = MemoryLevel.LONG_TERM
+            level = level[0] if level else MemoryLevel.LONG_TERM
 
         dirs = {
             MemoryLevel.DIALOGUE: self.dialogue_dir,
@@ -586,17 +581,11 @@ class JsonBackend(MemoryBackend):
 
         if query.user_id:
             user_candidates = self._get_candidates_by_user(query.user_id)
-            if candidate_ids is None:
-                candidate_ids = user_candidates
-            else:
-                candidate_ids = candidate_ids & user_candidates
+            candidate_ids = user_candidates if candidate_ids is None else candidate_ids & user_candidates
 
         if query.group_id:
             group_candidates = self._get_candidates_by_group(query.group_id)
-            if candidate_ids is None:
-                candidate_ids = group_candidates
-            else:
-                candidate_ids = candidate_ids & group_candidates
+            candidate_ids = group_candidates if candidate_ids is None else candidate_ids & group_candidates
 
         search_levels = (
             [query.levels]
@@ -715,11 +704,10 @@ class JsonBackend(MemoryBackend):
             return False
 
         # 文本搜索
-        if query.query:
-            if query.query.lower() not in memory.content.lower():
-                # 检查标签
-                if not any(query.query.lower() in tag.lower() for tag in memory.tags):
-                    return False
+        if query.query and query.query.lower() not in memory.content.lower():
+            # 检查标签
+            if not any(query.query.lower() in tag.lower() for tag in memory.tags):
+                return False
 
         # 对话详情过滤
         if query.event_type and memory.event_type != query.event_type:
@@ -733,13 +721,7 @@ class JsonBackend(MemoryBackend):
             return False
         if query.emotional_tone and memory.emotional_tone != query.emotional_tone:
             return False
-        if (
-            memory.significance < query.min_significance
-            or memory.significance > query.max_significance
-        ):
-            return False
-
-        return True
+        return not (memory.significance < query.min_significance or memory.significance > query.max_significance)
 
     def _sort_results(
         self, results: List[MemoryItem], sort_by: str, order: str
@@ -956,8 +938,9 @@ class MiyaMemoryCore:
         提取为独立方法，消除 primary/fallback 路径的重复代码。
         """
         try:
-            from core.embedding_client import EmbeddingClient, EmbeddingProvider
             import json
+
+            from core.embedding_client import EmbeddingClient, EmbeddingProvider
 
             model_config_path = (
                 Path(__file__).parent.parent / "config" / "multi_model_config.json"
@@ -1357,18 +1340,16 @@ class MiyaMemoryCore:
             return MemoryLevel.LONG_TERM
 
         for emotion in cfg.get("strong_emotions", []):
-            if emotion in emotional_tone:
-                if significance >= 0.5:
-                    return MemoryLevel.LONG_TERM
+            if emotion in emotional_tone and significance >= 0.5:
+                return MemoryLevel.LONG_TERM
 
         for event in cfg.get("long_term_events", []):
             if event in event_type:
                 return MemoryLevel.LONG_TERM
 
         for keyword, keyword_importance in cfg.get("important_keywords", {}).items():
-            if keyword in content_lower:
-                if significance >= keyword_importance - 0.2:
-                    return MemoryLevel.LONG_TERM
+            if keyword in content_lower and significance >= keyword_importance - 0.2:
+                return MemoryLevel.LONG_TERM
 
         priority_tags = set(cfg.get("priority_tags", []))
         if tags and any(t in priority_tags for t in tags):
@@ -1588,16 +1569,14 @@ class MiyaMemoryCore:
             return False
         if query.level and memory.level != query.level:
             return False
-        if query.tags:
-            if not any(tag in memory.tags for tag in query.tags):
-                return False
+        if query.tags and not any(tag in memory.tags for tag in query.tags):
+            return False
         if memory.priority < query.min_priority:
             return False
         if query.query:
             q = query.query.lower()
-            if q not in memory.content.lower():
-                if not any(q in tag.lower() for tag in memory.tags):
-                    return False
+            if q not in memory.content.lower() and not any(q in tag.lower() for tag in memory.tags):
+                return False
         # 对话详情过滤
         if query.event_type and memory.event_type != query.event_type:
             return False
@@ -1796,10 +1775,8 @@ class MiyaMemoryCore:
         await self.backend.delete(memory_id)
 
         if self.sqlite_backend:
-            try:
+            with contextlib.suppress(Exception):
                 await self.sqlite_backend.delete(memory_id)
-            except Exception:
-                pass
 
         self._stats["total_deleted"] += 1
         return True
@@ -1823,7 +1800,7 @@ class MiyaMemoryCore:
         # 2. 扫描磁盘文件，清理过期的短期记忆
         short_term_dir = self.backend.short_term_dir
         if short_term_dir.exists():
-            now = datetime.now()
+            datetime.now()
             for file_path in short_term_dir.rglob("*.json"):
                 try:
                     with open(file_path, "r", encoding="utf-8") as f:
@@ -1955,7 +1932,7 @@ class MiyaMemoryCore:
             衰减的记录数
         """
         count = 0
-        cutoff = datetime.now() - timedelta(days=days)
+        datetime.now() - timedelta(days=days)
 
         all_ids = await self.backend.get_all_ids()
 
@@ -2278,12 +2255,13 @@ async def get_memory_core(
         # 自动加载 embedding 客户端
         if embedding_client is None:
             try:
-                from core.embedding_client import (
-                    get_embedding_client,
-                    EmbeddingProvider,
-                )
-                from pathlib import Path
                 import os
+                from pathlib import Path
+
+                from core.embedding_client import (
+                    EmbeddingProvider,
+                    get_embedding_client,
+                )
 
                 model_config_path = (
                     Path(__file__).parent.parent / "config" / "multi_model_config.json"

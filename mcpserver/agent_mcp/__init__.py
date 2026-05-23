@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 from pathlib import Path
@@ -24,7 +25,7 @@ logger = logging.getLogger(__name__)
 # 尝试导入 fastmcp，未安装时降级
 try:
     from mcp import ClientSession
-    from mcp.client.stdio import stdio_client, StdioServerParameters
+    from mcp.client.stdio import StdioServerParameters, stdio_client
 
     HAS_MCP = True
 except ImportError:
@@ -76,10 +77,8 @@ class AgentMCPRegistry:
             asyncio.create_task(self._close_session(session))
 
     async def _close_session(self, session: Any) -> None:
-        try:
+        with contextlib.suppress(Exception):
             await session.__aexit__(None, None, None)
-        except Exception:
-            pass
 
     async def get_tools(self, agent_name: str) -> list[dict[str, Any]]:
         """获取 Agent 的 MCP 工具列表 (懒加载)"""
@@ -152,18 +151,17 @@ class AgentMCPRegistry:
             env={**__import__("os").environ, **env},
         )
 
-        async with stdio_client(params) as (read, write):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                result = await session.list_tools()
-                return [
-                    {
-                        "name": t.name,
-                        "description": t.description or "",
-                        "inputSchema": t.inputSchema or {},
-                    }
-                    for t in result.tools
-                ]
+        async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
+            await session.initialize()
+            result = await session.list_tools()
+            return [
+                {
+                    "name": t.name,
+                    "description": t.description or "",
+                    "inputSchema": t.inputSchema or {},
+                }
+                for t in result.tools
+            ]
 
     def _map_name(self, server_name: str, tool_name: str) -> str:
         """将 server.tool → server-delimiter-tool"""
@@ -198,11 +196,10 @@ class AgentMCPRegistry:
             env=server_config.get("env", {}),
         )
 
-        async with stdio_client(params) as (read, write):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                result = await session.call_tool(original_tool, arguments=arguments)
-                return result
+        async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
+            await session.initialize()
+            result = await session.call_tool(original_tool, arguments=arguments)
+            return result
 
     def dispose(self) -> None:
         """释放所有 MCP 连接"""

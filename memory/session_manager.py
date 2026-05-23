@@ -7,11 +7,11 @@
 - 与统一记忆系统集成
 """
 
-from typing import List, Optional, Dict
 from datetime import datetime
 from enum import Enum
+from typing import Dict, List, Optional
 
-from memory import get_dialogue_history, store_dialogue, MemoryLevel
+from memory import get_dialogue_history, store_dialogue
 
 
 class SessionCategory(Enum):

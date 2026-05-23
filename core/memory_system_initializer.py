@@ -3,19 +3,18 @@
 整合 Undefined 记忆、对话历史持久化、潮汐记忆
 """
 
-import asyncio
 import logging
 from pathlib import Path
-import os
+
 from dotenv import load_dotenv
 
-from core.conversation_history import (
-    get_conversation_history_manager,
-    ConversationHistoryManager,
-)
-from memory.undefined_memory import get_undefined_memory_adapter, UndefinedMemoryAdapter
-from hub.memory_engine import MemoryEngine
 from core.constants import Encoding
+from core.conversation_history import (
+    ConversationHistoryManager,
+    get_conversation_history_manager,
+)
+from hub.memory_engine import MemoryEngine
+from memory.undefined_memory import UndefinedMemoryAdapter, get_undefined_memory_adapter
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +78,7 @@ class MemorySystemInitializer:
             memory_count = self.undefined_memory.count()
             logger.info(f"  [OK] 存储目录: {self.data_dir / 'memory'}")
             logger.info(f"  [OK] 手动记忆数量: {memory_count}")
-            logger.info(f"  [OK] 存储文件: undefined_memory.json")
+            logger.info("  [OK] 存储文件: undefined_memory.json")
 
             # 3. 初始化潮汐记忆/梦境压缩引擎
             logger.info("\n[3/3] 初始化潮汐记忆/梦境压缩引擎...")
@@ -97,9 +96,9 @@ class MemorySystemInitializer:
             logger.info(
                 f"  • 手动记忆: {self.data_dir / 'memory' / 'undefined_memory.json'}"
             )
-            logger.info(f"  • Redis: 已禁用")
-            logger.info(f"  • Milvus: 已禁用")
-            logger.info(f"  • Neo4j: 已禁用")
+            logger.info("  • Redis: 已禁用")
+            logger.info("  • Milvus: 已禁用")
+            logger.info("  • Neo4j: 已禁用")
 
             return True
 

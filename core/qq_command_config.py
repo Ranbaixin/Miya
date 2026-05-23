@@ -5,7 +5,7 @@ QQ命令配置加载器
 """
 
 import logging
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ def _load_config() -> Dict[str, Any]:
         return _config
 
     try:
-        from core.text_loader import get_text, get_command_keywords
+        from core.text_loader import get_command_keywords, get_text
 
         _config = {
             "command_aliases": get_command_keywords(),
@@ -102,10 +102,7 @@ def is_memory_command(content: str) -> bool:
     memory_aliases = config.get("command_aliases", {}).get("memory", [])
     content_lower = content.lower().strip()
 
-    for alias in memory_aliases:
-        if content_lower.startswith(alias.lower()):
-            return True
-    return False
+    return any(content_lower.startswith(alias.lower()) for alias in memory_aliases)
 
 
 def get_quick_response_keywords(response_type: str) -> List[str]:

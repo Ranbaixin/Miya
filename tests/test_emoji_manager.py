@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 智能表情包管理器测试
 """
 
-import asyncio
 import logging
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -23,7 +21,7 @@ def test_emoji_config():
     print("测试 1: 表情包配置加载")
 
     # 测试 text_config.json 中的 poke_responses
-    from core.text_loader import get_text, get_pat_pat_trigger
+    from core.text_loader import get_pat_pat_trigger, get_text
 
     poke_builtin = get_text("poke_responses.builtin_emoji", "")
     poke_local = get_text("poke_responses.local_emoji", "")
@@ -60,7 +58,7 @@ def test_emoji_directory():
         image_extensions = (".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp")
         image_files = []
 
-        for root, dirs, files in os.walk(emoji_dir):
+        for root, _dirs, files in os.walk(emoji_dir):
             for file in files:
                 if file.lower().endswith(image_extensions):
                     image_files.append(os.path.join(root, file))
@@ -68,7 +66,7 @@ def test_emoji_directory():
         print(f"  找到 {len(image_files)} 个表情包文件")
 
         if image_files:
-            print(f"  示例文件:")
+            print("  示例文件:")
             for f in image_files[:5]:
                 print(f"    - {f}")
 
@@ -84,17 +82,17 @@ def test_qq_emoji_config():
     print("\n" + "=" * 50)
     print("测试 3: QQ 配置中的表情包设置")
 
-    from webnet.qq.config_loader import get_tool_config, get_qq_config
+    from webnet.qq.config_loader import get_qq_config, get_tool_config
 
     tool_cfg = get_tool_config("qq_emoji")
-    print(f"  qq_emoji 工具配置:")
+    print("  qq_emoji 工具配置:")
     print(f"    enabled: {tool_cfg.get('enabled')}")
     print(f"    emoji_dir: {tool_cfg.get('emoji_dir')}")
     print(f"    standard_emojis: {tool_cfg.get('standard_emojis')}")
     print(f"    custom_emojis: {tool_cfg.get('custom_emojis')}")
 
     features = get_qq_config("features")
-    print(f"  功能开关:")
+    print("  功能开关:")
     print(f"    emoji_request: {features.get('emoji_request')}")
     print(f"    poke_reply: {features.get('poke_reply')}")
 
@@ -123,12 +121,12 @@ def test_message_handler_poke():
     print(f"  拍一拍事件 target_id: {mock_event['target_id']}")
 
     if bot_qq == 0:
-        print(f"  WARNING: bot_qq is 0, poke will not respond!")
-        print(f"  Please set QQ_BOT_QQ=your_bot_qq in config/.env")
+        print("  WARNING: bot_qq is 0, poke will not respond!")
+        print("  Please set QQ_BOT_QQ=your_bot_qq in config/.env")
     elif bot_qq == mock_event["target_id"]:
-        print(f"  OK: bot_qq matches, poke will respond normally")
+        print("  OK: bot_qq matches, poke will respond normally")
     else:
-        print(f"  WARNING: bot_qq does not match target_id")
+        print("  WARNING: bot_qq does not match target_id")
 
 
 if __name__ == "__main__":

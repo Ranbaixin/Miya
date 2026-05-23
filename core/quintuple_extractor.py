@@ -3,11 +3,11 @@
 参考 NagaAgent 的 quintuple_extractor 实现
 """
 
+import asyncio
 import json
 import logging
-import asyncio
-from typing import List, Tuple, Optional, Dict
 from dataclasses import dataclass
+from typing import Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 

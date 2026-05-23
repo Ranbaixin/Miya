@@ -1,5 +1,6 @@
 """LifeNet 获取记忆上下文工具"""
-from typing import Dict, Any
+from typing import Any, Dict
+
 from webnet.ToolNet.base import BaseTool, ToolContext
 
 

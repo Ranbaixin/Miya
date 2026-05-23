@@ -1,11 +1,12 @@
 import json
 from dataclasses import dataclass, field
 
-from astrbot.api import FunctionTool
 from astrbot.core.agent.run_context import ContextWrapper
 from astrbot.core.agent.tool import ToolExecResult
 from astrbot.core.astr_agent_context import AstrAgentContext
 from astrbot.core.computer.computer_client import get_booter
+
+from astrbot.api import FunctionTool
 
 from ..registry import builtin_tool
 from .util import check_admin_permission, is_local_runtime, workspace_root
@@ -49,8 +50,10 @@ class ExecuteShellTool(FunctionTool):
         context: ContextWrapper[AstrAgentContext],
         command: str,
         background: bool = False,
-        env: dict = {},
+        env: dict = None,
     ) -> ToolExecResult:
+        if env is None:
+            env = {}
         if permission_error := check_admin_permission(context, "Shell execution"):
             return permission_error
 

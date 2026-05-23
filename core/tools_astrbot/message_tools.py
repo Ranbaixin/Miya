@@ -3,11 +3,7 @@ import os
 import shlex
 import uuid
 
-from pydantic import Field
-from pydantic.dataclasses import dataclass
-
 import astrbot.core.message.components as Comp
-from astrbot.api import logger
 from astrbot.core.agent.run_context import ContextWrapper
 from astrbot.core.agent.tool import FunctionTool, ToolExecResult
 from astrbot.core.astr_agent_context import AstrAgentContext
@@ -15,6 +11,10 @@ from astrbot.core.computer.computer_client import get_booter
 from astrbot.core.message.message_event_result import MessageChain
 from astrbot.core.platform.message_session import MessageSession
 from astrbot.core.tools.registry import builtin_tool
+from pydantic import Field
+from pydantic.dataclasses import dataclass
+
+from astrbot.api import logger
 from core.astrbot_compat.utils import get_astrbot_temp_path
 
 

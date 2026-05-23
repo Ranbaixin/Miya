@@ -9,17 +9,13 @@
 - 提供 M-Link memory_flow 接口
 """
 
-import asyncio
 import logging
-from typing import Dict, List, Optional
 from datetime import datetime
 from pathlib import Path
+from typing import Dict, List
 
-from mlink.message import Message, MessageType, FlowType
-from core.conversation_history import get_conversation_history_manager
-from memory.undefined_memory import get_undefined_memory_adapter
 from core.memory_system_initializer import get_memory_system_initializer
-from core.conversation_history import ConversationMessage
+from mlink.message import Message, MessageType
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +68,7 @@ class MemoryNet:
             )
 
             logger.info("[MemoryNet] 全局记忆系统初始化成功")
-            logger.info(f"[MemoryNet] 记忆流 (memory_flow) 已启用")
+            logger.info("[MemoryNet] 记忆流 (memory_flow) 已启用")
 
         except Exception as e:
             logger.error(f"[MemoryNet] 初始化失败: {e}", exc_info=True)
@@ -971,13 +967,12 @@ class MemoryNet:
                 return  # 对话不够长，无需压缩
 
             # 最近的对话保留
-            recent_messages = messages[-recent_count:]
+            messages[-recent_count:]
 
             # 早期对话压缩
             old_messages = messages[:-recent_count]
 
             # 生成摘要
-            import json
 
             summary = self._generate_conversation_summary(old_messages)
 

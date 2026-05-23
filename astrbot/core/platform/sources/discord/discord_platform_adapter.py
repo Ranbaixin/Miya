@@ -4,10 +4,6 @@ import sys
 from typing import Any, cast
 
 import discord
-from discord.abc import GuildChannel, Messageable, PrivateChannel
-from discord.channel import DMChannel
-
-from astrbot import logger
 from astrbot.api.event import MessageChain
 from astrbot.api.message_components import File, Image, Plain
 from astrbot.api.platform import (
@@ -23,6 +19,10 @@ from astrbot.core.star.filter.command import CommandFilter
 from astrbot.core.star.filter.command_group import CommandGroupFilter
 from astrbot.core.star.star import star_map
 from astrbot.core.star.star_handler import StarHandlerMetadata, star_handlers_registry
+from discord.abc import GuildChannel, Messageable, PrivateChannel
+from discord.channel import DMChannel
+
+from astrbot import logger
 
 from .client import DiscordBotClient
 from .discord_platform_event import DiscordPlatformEvent

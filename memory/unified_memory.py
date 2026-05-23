@@ -3,10 +3,10 @@
 兼容旧接口
 """
 
-import logging
 import enum
-from typing import List, Dict, Optional, Any
+import logging
 from pathlib import Path
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

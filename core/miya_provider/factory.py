@@ -3,7 +3,7 @@ Miya Provider Factory
 工厂模式创建Provider
 """
 
-from .provider_manager import ProviderManager, get_provider_manager
+from .provider_manager import get_provider_manager
 
 
 class ProviderFactory:

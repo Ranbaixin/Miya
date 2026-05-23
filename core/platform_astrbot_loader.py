@@ -4,13 +4,10 @@ AstrBot 平台加载器
 自动加载 AstrBot 的平台适配器并集成到弥娅系统。
 """
 
-import asyncio
 import importlib
 import logging
 from pathlib import Path
-from typing import Dict, List, Any, Optional
-
-from .platform_astrbot_adapter import PlatformAdapterFactory
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -131,11 +128,7 @@ class AstrBotPlatformLoader:
 
         # 检查是否有必要的方法
         required_methods = ["initialize", "connect", "send_message"]
-        for method in required_methods:
-            if not hasattr(cls, method):
-                return False
-
-        return True
+        return all(hasattr(cls, method) for method in required_methods)
 
     def get_platform_class(self, platform_id: str) -> Optional[type]:
         """获取平台类"""
@@ -239,7 +232,7 @@ class AstrBotPlatformManager:
                 "id": platform_id,
                 "config": self._configs.get(platform_id, {}),
             }
-            for platform_id in self._instances.keys()
+            for platform_id in self._instances
         ]
 
 

@@ -2,7 +2,8 @@
 运势查询工具 handler
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
+
 from webnet.ToolNet.tools.entertainment.horoscope import Horoscope
 
 

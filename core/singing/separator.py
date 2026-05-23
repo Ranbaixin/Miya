@@ -10,7 +10,7 @@ import logging
 import os
 import shutil
 from abc import ABC, abstractmethod
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +112,7 @@ class DemucsSeparator(VocalSeparator):
 
             dmc_v = None
             stem_files = {}
-            for root, dirs, files in os.walk(dmc_out):
+            for root, _dirs, files in os.walk(dmc_out):
                 for f in files:
                     fp = os.path.join(root, f)
                     if f == "vocals.wav":
@@ -299,8 +299,8 @@ async def _build_instrumental(stem_files: dict, output_dir: str) -> Optional[str
 
     no_vocals = stem_files.get("no_vocals.wav")
     if no_vocals:
-        import shutil
         import os
+        import shutil
 
         target = os.path.join(output_dir, "Instrumental.wav")
         shutil.move(no_vocals, target)
@@ -312,8 +312,8 @@ async def _build_instrumental(stem_files: dict, output_dir: str) -> Optional[str
     if not inst_parts:
         return None
 
-    import subprocess as _sp
     import os
+    import subprocess as _sp
 
     target = os.path.join(output_dir, "Instrumental.wav")
     inputs = []
@@ -405,14 +405,14 @@ def _check_amplitude(vocal_path: Optional[str], inst_path: Optional[str]):
                     path, frames=max_read, start=start_frame, dtype="float32"
                 )
             else:
-                import wave
                 import array as _arr
+                import wave
 
                 with wave.open(path, "rb") as w:
                     sw = w.getsampwidth()
                     n_frames = min(w.getnframes(), max_read)
                     frames = w.readframes(n_frames)
-                    n_samples = n_frames * w.getnchannels()
+                    n_frames * w.getnchannels()
                     if sw == 2:
                         raw = _arr.array("h", frames)
                     elif sw == 4:

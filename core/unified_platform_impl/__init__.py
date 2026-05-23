@@ -4,21 +4,21 @@
 所有平台适配器的命名空间包。
 """
 
-from .qq_official_platform import QQOfficialPlatform
-from .telegram_platform import TelegramPlatform
 from .discord_platform import DiscordPlatform
-from .onebot_platform import OneBotPlatform
 from .generic_platform import GenericPlatform, WebChatPlatform
+from .onebot_platform import OneBotPlatform
+from .qq_official_platform import QQOfficialPlatform
+from .real_platforms import (
+    DingTalkPlatform,
+    KOOKPlatform,
+    SatoriPlatform,
+    SlackPlatform,
+    WeChatOfficialPlatform,
+    WeComPlatform,
+)
+from .telegram_platform import TelegramPlatform
 from .webhook_base import WebhookPlatform
 from .webhook_platforms import LarkPlatform, LINEPlatform
-from .real_platforms import (
-    KOOKPlatform,
-    SlackPlatform,
-    DingTalkPlatform,
-    SatoriPlatform,
-    WeComPlatform,
-    WeChatOfficialPlatform,
-)
 
 __all__ = [
     "QQOfficialPlatform",

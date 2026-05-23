@@ -3,7 +3,6 @@ Miya Provider 实体定义
 """
 
 from dataclasses import dataclass, field
-from typing import Any
 
 
 @dataclass

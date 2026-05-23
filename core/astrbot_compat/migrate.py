@@ -4,11 +4,9 @@ AstrBot 依赖迁移脚本
 将 *_astrbot 模块的 astrbot.core 依赖迁移到 core.astrbot_compat
 """
 
-import os
 import re
 from pathlib import Path
 from typing import Dict, List, Tuple
-
 
 # 迁移映射表
 IMPORT_MAPPING = {
@@ -68,7 +66,7 @@ def migrate_file(file_path: Path) -> Tuple[bool, List[str]]:
     for pattern, replacement in MULTILINE_PATTERNS:
         if re.search(pattern, content):
             content = re.sub(pattern, replacement, content, flags=re.DOTALL)
-            changes.append(f"  Multi-line import migrated")
+            changes.append("  Multi-line import migrated")
 
     # 如果有修改，写入文件
     if content != original_content:

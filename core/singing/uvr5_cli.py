@@ -10,7 +10,6 @@ sys.path.insert(0, base)
 sys.path.insert(0, os.path.join(base, "tools", "uvr5"))
 os.chdir(base)
 
-import torch
 
 
 def _rename_vr_output(input_audio, output_vocal, output_inst):

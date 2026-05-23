@@ -3,8 +3,9 @@ info_agent - 信息查询助手
 整合天气、热搜、论文搜索等工具
 """
 
-from typing import Dict, Any
 import logging
+from typing import Any, Dict
+
 from webnet.ToolNet.base import BaseTool, ToolContext
 
 logger = logging.getLogger("info_agent")

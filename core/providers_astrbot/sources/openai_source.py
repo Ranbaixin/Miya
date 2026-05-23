@@ -12,18 +12,8 @@ from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import unquote, urlparse
 
-import httpx
-from openai import AsyncAzureOpenAI, AsyncOpenAI
-from openai._exceptions import NotFoundError
-from openai.lib.streaming.chat._completions import ChatCompletionStreamState
-from openai.types.chat.chat_completion import ChatCompletion
-from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
-from openai.types.completion_usage import CompletionUsage
-from PIL import Image as PILImage
-from PIL import UnidentifiedImageError
-
 import astrbot.core.message.components as Comp
-from astrbot import logger
+import httpx
 from astrbot.api.provider import Provider
 from astrbot.core.agent.message import (
     AudioURLPart,
@@ -36,7 +26,16 @@ from astrbot.core.agent.tool import ToolSet
 from astrbot.core.exceptions import EmptyModelOutputError
 from astrbot.core.message.message_event_result import MessageChain
 from astrbot.core.provider.entities import LLMResponse, TokenUsage, ToolCallsResult
-from core.astrbot_compat.utils import get_astrbot_temp_path
+from openai import AsyncAzureOpenAI, AsyncOpenAI
+from openai._exceptions import NotFoundError
+from openai.lib.streaming.chat._completions import ChatCompletionStreamState
+from openai.types.chat.chat_completion import ChatCompletion
+from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
+from openai.types.completion_usage import CompletionUsage
+from PIL import Image as PILImage
+from PIL import UnidentifiedImageError
+
+from astrbot import logger
 from astrbot.core.utils.io import download_file, download_image_by_url
 from astrbot.core.utils.media_utils import ensure_wav
 from astrbot.core.utils.network_utils import (
@@ -45,6 +44,7 @@ from astrbot.core.utils.network_utils import (
     log_connection_failure,
 )
 from astrbot.core.utils.string_utils import normalize_and_dedupe_strings
+from core.astrbot_compat.utils import get_astrbot_temp_path
 
 from ..register import register_provider_adapter
 
@@ -133,10 +133,7 @@ class ProviderOpenAIOfficial(Provider):
             candidate.lower()
             for candidate in self._extract_error_text_candidates(error)
         ]
-        for pattern in patterns:
-            if any(pattern in candidate for candidate in candidates):
-                return True
-        return False
+        return any(any(pattern in candidate for candidate in candidates) for pattern in patterns)
 
     @staticmethod
     def _context_contains_image(contexts: list[dict]) -> bool:
@@ -177,9 +174,7 @@ class ProviderOpenAIOfficial(Provider):
         error_text = " ".join(text.lower() for text in text_sources if text)
         if "invalid_attachment" in error_text:
             return True
-        if "download attachment" in error_text and "404" in error_text:
-            return True
-        return False
+        return bool("download attachment" in error_text and "404" in error_text)
 
     @classmethod
     def _encode_image_file_to_data_url(

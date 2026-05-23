@@ -32,7 +32,7 @@ def filter_text(text: str,
     # 过滤特殊字符
     if filter_special_chars:
         # 保留中文、英文、数字、基本标点
-        text = re.sub(r'[^\u4e00-\u9fa5a-zA-Z0-9，。！？、；：""''（）《》【】\s,\.!?;:\'\-]', '', text)
+        text = re.sub(r'[^\u4e00-\u9fa5a-zA-Z0-9，。！？、；：""''（）《》【】\\s,\\.!?;:\'\\-]', '', text)
 
     # 清理多余空格
     text = re.sub(r'\s+', '', text)

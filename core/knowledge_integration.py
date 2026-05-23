@@ -3,15 +3,12 @@
 第四阶段核心模块 - 将记忆、模式学习与自主决策引擎集成
 """
 import logging
-from typing import Dict, List, Optional, Any
-from datetime import datetime
-from pathlib import Path
+from typing import Any, Dict, Optional
 
-from core.system_memory import SystemMemory, get_system_memory, MemoryType
-from core.pattern_learner import PatternLearner, get_pattern_learner, PatternMatch
-from core.autonomous_engine import AutonomousEngine, get_autonomous_engine
+from core.autonomous_engine import get_autonomous_engine
+from core.pattern_learner import get_pattern_learner
 from core.problem_scanner import Problem
-
+from core.system_memory import get_system_memory
 
 logger = logging.getLogger(__name__)
 

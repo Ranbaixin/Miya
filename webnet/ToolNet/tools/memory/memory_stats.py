@@ -2,10 +2,10 @@
 记忆统计与分类查询工具
 """
 
-from typing import Dict, Any, Optional
 import logging
-from webnet.ToolNet.base import BaseTool, ToolContext
+from typing import Any, Dict
 
+from webnet.ToolNet.base import BaseTool, ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ class MemoryStats(BaseTool):
                     else 0,
                 }
 
-            result = f"📊 记忆统计\n"
+            result = "📊 记忆统计\n"
             result += f"├─ 短期记忆: {stats.get('short_term_count', 0)} 条\n"
             result += f"├─ 认知记忆: {stats.get('cognitive_count', 0)} 条\n"
             result += f"└─ 长期记忆: {stats.get('long_term_count', 0)} 条\n"
@@ -69,7 +69,7 @@ class MemoryStats(BaseTool):
             if include_categories and hasattr(memory, "get_all_categories"):
                 categories = memory.get_all_categories()
                 if categories:
-                    result += f"\n📈 分类统计:\n"
+                    result += "\n📈 分类统计:\n"
                     cat_names = {
                         "emotion": "情感类",
                         "chat": "闲聊类",
@@ -136,7 +136,7 @@ class MemorySearchByCategory(BaseTool):
         limit = args.get("limit", 10)
 
         try:
-            from memory.unified_memory import get_unified_memory, MemoryCategory
+            from memory.unified_memory import MemoryCategory, get_unified_memory
 
             memory = get_unified_memory("data/memory")
 

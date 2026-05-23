@@ -5,29 +5,25 @@ MIYA AstrBot 整合层
 """
 
 # Provider 整合
-from core.providers_astrbot.provider import Provider as AstrBotProvider
+# Knowledge Base 整合
+from core.knowledge_base_astrbot.kb_mgr import KnowledgeBaseManager
+
+# Platform 整合
+from core.platform_astrbot.adapter import AstrBotPlatformAdapter
+from core.providers_astrbot.manager import ProviderManager
 from core.providers_astrbot.provider import (
+    EmbeddingProvider,
     Provider,
+    RerankProvider,
     STTProvider,
     TTSProvider,
-    EmbeddingProvider,
-    RerankProvider,
 )
-from core.providers_astrbot.manager import ProviderManager
-from core.providers_astrbot.register import provider_cls_map
 
 # Star 整合
 from core.star_astrbot.star import Star as AstrBotStar
 from core.star_astrbot.star_manager import StarManager as AstrBotStarManager
 
-# Platform 整合
-from core.platform_astrbot.adapter import AstrBotPlatformAdapter
-
-# Knowledge Base 整合
-from core.knowledge_base_astrbot.kb_mgr import KnowledgeBaseManager
-
 # Dashboard 整合
-from core.dashboard_astrbot import route as dashboard_routes
 
 
 class AstrBotIntegration:

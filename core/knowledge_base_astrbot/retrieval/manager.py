@@ -7,12 +7,13 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from astrbot import logger
 from astrbot.core.db.vec_db.base import Result
 from astrbot.core.knowledge_base.kb_db_sqlite import KBSQLiteDatabase
 from astrbot.core.knowledge_base.retrieval.rank_fusion import RankFusion
 from astrbot.core.knowledge_base.retrieval.sparse_retriever import SparseRetriever
 from astrbot.core.provider.provider import RerankProvider
+
+from astrbot import logger
 
 from ..kb_helper import KBHelper
 

@@ -4,9 +4,9 @@
 """
 
 import json
-from typing import Dict, List, Optional, Any
-from datetime import datetime
 import logging
+from datetime import datetime
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class ReportGenerator:
         # 报告头部
         report = f"""# {title}
 
-**生成时间**: {datetime.now().strftime('%Y年%m月%d日 %H:%M')}  
+**生成时间**: {datetime.now().strftime('%Y年%m月%d日 %H:%M')}
 **作者**: {author}
 
 ---
@@ -107,8 +107,8 @@ class ReportGenerator:
 
 本次调研主要关注以下维度:
 
-{chr(10).join(f"- {category}: {len(research_data.get('调研内容', {}).get(category, []))}条信息" 
-                for category in research_data.get('调研内容', {}).keys())}
+{chr(10).join(f"- {category}: {len(research_data.get('调研内容', {}).get(category, []))}条信息"
+                for category in research_data.get('调研内容', {}))}
 
 ---
 
@@ -136,7 +136,7 @@ class ReportGenerator:
 
 ### 分析深度
 
-{f"- 基础搜索" if not depth else "- 深度分析（{len(depth.get('关键发现', []))}个关键发现）"}
+{"- 基础搜索" if not depth else "- 深度分析（{len(depth.get('关键发现', []))}个关键发现）"}
 
 ---
 
@@ -170,7 +170,7 @@ class ReportGenerator:
             if items:
                 section += f"""**{category}**
 
-{chr(10).join(f"- {item.get('标题', item.get('内容', ''))[:100]}" 
+{chr(10).join(f"- {item.get('标题', item.get('内容', ''))[:100]}"
                         for item in items[:3])}
 
 ---
@@ -240,7 +240,7 @@ class ReportGenerator:
 
 | # | 来源 | 可靠性 |
 |---|--------|--------|
-{chr(10).join(f"| {i+1} | {source[:50]} | {'高' if '.gov' in source or '.edu' in source else '中'} |" 
+{chr(10).join(f"| {i+1} | {source[:50]} | {'高' if '.gov' in source or '.edu' in source else '中'} |"
                 for i, source in enumerate(research_data.get('信息来源', [])[:20]))}
 
 ---
@@ -260,7 +260,7 @@ class ReportGenerator:
 ### B. 原始数据快照
 
 ```json
-{json.dumps({k: v for k, v in research_data.items() if k != '深度分析'}, 
+{json.dumps({k: v for k, v in research_data.items() if k != '深度分析'},
             ensure_ascii=False, indent=2)[:5000]}...
 ```
 

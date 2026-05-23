@@ -3,11 +3,10 @@
 实现记忆的潮汐机制和梦境压缩
 集成真实数据库客户端
 """
-from typing import Dict, List, Optional
-from datetime import datetime, timedelta
 import heapq
 import logging
-import json
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

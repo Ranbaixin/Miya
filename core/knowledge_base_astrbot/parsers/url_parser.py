@@ -59,27 +59,26 @@ class URLExtractor:
         }
 
         try:
-            async with aiohttp.ClientSession(trust_env=True) as session:
-                async with session.post(
-                    api_url,
-                    json=payload,
-                    headers=headers,
-                    timeout=30.0,  # 增加超时时间，因为内容提取可能需要更长时间
-                ) as response:
-                    if response.status != 200:
-                        reason = await response.text()
-                        raise OSError(
-                            f"Tavily web extraction failed: {reason}, status: {response.status}"
-                        )
+            async with aiohttp.ClientSession(trust_env=True) as session, session.post(
+                api_url,
+                json=payload,
+                headers=headers,
+                timeout=30.0,  # 增加超时时间，因为内容提取可能需要更长时间
+            ) as response:
+                if response.status != 200:
+                    reason = await response.text()
+                    raise OSError(
+                        f"Tavily web extraction failed: {reason}, status: {response.status}"
+                    )
 
-                    data = await response.json()
-                    results = data.get("results", [])
+                data = await response.json()
+                results = data.get("results", [])
 
-                    if not results:
-                        raise ValueError(f"No content extracted from URL: {url}")
+                if not results:
+                    raise ValueError(f"No content extracted from URL: {url}")
 
-                    # 返回第一个结果的内容
-                    return results[0].get("raw_content", "")
+                # 返回第一个结果的内容
+                return results[0].get("raw_content", "")
 
         except aiohttp.ClientError as e:
             raise OSError(f"Failed to fetch URL {url}: {e}") from e

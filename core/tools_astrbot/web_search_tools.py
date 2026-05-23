@@ -5,13 +5,13 @@ from dataclasses import dataclass as std_dataclass
 from dataclasses import field
 
 import aiohttp
+from astrbot.core.agent.tool import FunctionTool, ToolExecResult
+from astrbot.core.astr_agent_context import AstrAgentContext
+from astrbot.core.tools.registry import builtin_tool
 from pydantic import Field
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 from core.astrbot_compat import logger, sp
-from astrbot.core.agent.tool import FunctionTool, ToolExecResult
-from astrbot.core.astr_agent_context import AstrAgentContext
-from astrbot.core.tools.registry import builtin_tool
 
 WEB_SEARCH_TOOL_NAMES = [
     "web_search_baidu",
@@ -140,27 +140,26 @@ async def _tavily_search(
         "Authorization": f"Bearer {tavily_key}",
         "Content-Type": "application/json",
     }
-    async with aiohttp.ClientSession(trust_env=True) as session:
-        async with session.post(
-            "https://api.tavily.com/search",
-            json=payload,
-            headers=header,
-        ) as response:
-            if response.status != 200:
-                reason = await response.text()
-                raise Exception(
-                    f"Tavily web search failed: {reason}, status: {response.status}",
-                )
-            data = await response.json()
-            return [
-                SearchResult(
-                    title=item.get("title"),
-                    url=item.get("url"),
-                    snippet=item.get("content"),
-                    favicon=item.get("favicon"),
-                )
-                for item in data.get("results", [])
-            ]
+    async with aiohttp.ClientSession(trust_env=True) as session, session.post(
+        "https://api.tavily.com/search",
+        json=payload,
+        headers=header,
+    ) as response:
+        if response.status != 200:
+            reason = await response.text()
+            raise Exception(
+                f"Tavily web search failed: {reason}, status: {response.status}",
+            )
+        data = await response.json()
+        return [
+            SearchResult(
+                title=item.get("title"),
+                url=item.get("url"),
+                snippet=item.get("content"),
+                favicon=item.get("favicon"),
+            )
+            for item in data.get("results", [])
+        ]
 
 
 async def _tavily_extract(provider_settings: dict, payload: dict) -> list[dict]:
@@ -169,24 +168,23 @@ async def _tavily_extract(provider_settings: dict, payload: dict) -> list[dict]:
         "Authorization": f"Bearer {tavily_key}",
         "Content-Type": "application/json",
     }
-    async with aiohttp.ClientSession(trust_env=True) as session:
-        async with session.post(
-            "https://api.tavily.com/extract",
-            json=payload,
-            headers=header,
-        ) as response:
-            if response.status != 200:
-                reason = await response.text()
-                raise Exception(
-                    f"Tavily web search failed: {reason}, status: {response.status}",
-                )
-            data = await response.json()
-            results: list[dict] = data.get("results", [])
-            if not results:
-                raise ValueError(
-                    "Error: Tavily web searcher does not return any results."
-                )
-            return results
+    async with aiohttp.ClientSession(trust_env=True) as session, session.post(
+        "https://api.tavily.com/extract",
+        json=payload,
+        headers=header,
+    ) as response:
+        if response.status != 200:
+            reason = await response.text()
+            raise Exception(
+                f"Tavily web search failed: {reason}, status: {response.status}",
+            )
+        data = await response.json()
+        results: list[dict] = data.get("results", [])
+        if not results:
+            raise ValueError(
+                "Error: Tavily web searcher does not return any results."
+            )
+        return results
 
 
 async def _bocha_search(
@@ -202,28 +200,27 @@ async def _bocha_search(
         # See: https://github.com/aio-libs/aiohttp/issues/11898
         "Accept-Encoding": "gzip, deflate",
     }
-    async with aiohttp.ClientSession(trust_env=True) as session:
-        async with session.post(
-            "https://api.bochaai.com/v1/web-search",
-            json=payload,
-            headers=header,
-        ) as response:
-            if response.status != 200:
-                reason = await response.text()
-                raise Exception(
-                    f"BoCha web search failed: {reason}, status: {response.status}",
-                )
-            data = await response.json()
-            rows = data["data"]["webPages"]["value"]
-            return [
-                SearchResult(
-                    title=item.get("name"),
-                    url=item.get("url"),
-                    snippet=item.get("snippet"),
-                    favicon=item.get("siteIcon"),
-                )
-                for item in rows
-            ]
+    async with aiohttp.ClientSession(trust_env=True) as session, session.post(
+        "https://api.bochaai.com/v1/web-search",
+        json=payload,
+        headers=header,
+    ) as response:
+        if response.status != 200:
+            reason = await response.text()
+            raise Exception(
+                f"BoCha web search failed: {reason}, status: {response.status}",
+            )
+        data = await response.json()
+        rows = data["data"]["webPages"]["value"]
+        return [
+            SearchResult(
+                title=item.get("name"),
+                url=item.get("url"),
+                snippet=item.get("snippet"),
+                favicon=item.get("siteIcon"),
+            )
+            for item in rows
+        ]
 
 
 async def _brave_search(
@@ -235,27 +232,26 @@ async def _brave_search(
         "Accept": "application/json",
         "X-Subscription-Token": brave_key,
     }
-    async with aiohttp.ClientSession(trust_env=True) as session:
-        async with session.get(
-            "https://api.search.brave.com/res/v1/web/search",
-            params=payload,
-            headers=header,
-        ) as response:
-            if response.status != 200:
-                reason = await response.text()
-                raise Exception(
-                    f"Brave web search failed: {reason}, status: {response.status}",
-                )
-            data = await response.json()
-            rows = data.get("web", {}).get("results", [])
-            return [
-                SearchResult(
-                    title=item.get("title", ""),
-                    url=item.get("url", ""),
-                    snippet=item.get("description", ""),
-                )
-                for item in rows
-            ]
+    async with aiohttp.ClientSession(trust_env=True) as session, session.get(
+        "https://api.search.brave.com/res/v1/web/search",
+        params=payload,
+        headers=header,
+    ) as response:
+        if response.status != 200:
+            reason = await response.text()
+            raise Exception(
+                f"Brave web search failed: {reason}, status: {response.status}",
+            )
+        data = await response.json()
+        rows = data.get("web", {}).get("results", [])
+        return [
+            SearchResult(
+                title=item.get("title", ""),
+                url=item.get("url", ""),
+                snippet=item.get("description", ""),
+            )
+            for item in rows
+        ]
 
 
 async def _baidu_search(
@@ -271,29 +267,28 @@ async def _baidu_search(
         "X-Appbuilder-Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
-    async with aiohttp.ClientSession(trust_env=True) as session:
-        async with session.post(
-            "https://qianfan.baidubce.com/v2/ai_search/web_search",
-            json=payload,
-            headers=headers,
-        ) as response:
-            if response.status != 200:
-                reason = await response.text()
-                raise Exception(
-                    f"Baidu AI Search failed: {reason}, status: {response.status}",
-                )
-            data = await response.json()
-            references = data.get("references", [])
-            return [
-                SearchResult(
-                    title=item.get("title", ""),
-                    url=item.get("url", ""),
-                    snippet=item.get("content", ""),
-                    favicon=item.get("icon"),
-                )
-                for item in references
-                if item.get("url")
-            ]
+    async with aiohttp.ClientSession(trust_env=True) as session, session.post(
+        "https://qianfan.baidubce.com/v2/ai_search/web_search",
+        json=payload,
+        headers=headers,
+    ) as response:
+        if response.status != 200:
+            reason = await response.text()
+            raise Exception(
+                f"Baidu AI Search failed: {reason}, status: {response.status}",
+            )
+        data = await response.json()
+        references = data.get("references", [])
+        return [
+            SearchResult(
+                title=item.get("title", ""),
+                url=item.get("url", ""),
+                snippet=item.get("content", ""),
+                favicon=item.get("icon"),
+            )
+            for item in references
+            if item.get("url")
+        ]
 
 
 @builtin_tool(config=_TAVILY_WEB_SEARCH_TOOL_CONFIG)

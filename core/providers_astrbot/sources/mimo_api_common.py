@@ -6,12 +6,12 @@ from urllib.parse import urlparse
 import httpx
 
 from astrbot import logger
-from core.astrbot_compat.utils import get_astrbot_temp_path
 from astrbot.core.utils.io import download_file
 from astrbot.core.utils.tencent_record_helper import (
     convert_to_pcm_wav,
     tencent_silk_to_wav,
 )
+from core.astrbot_compat.utils import get_astrbot_temp_path
 
 DEFAULT_MIMO_API_BASE = "https://api.xiaomimimo.com/v1"
 DEFAULT_MIMO_TTS_MODEL = "mimo-v2-tts"

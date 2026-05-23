@@ -8,14 +8,12 @@ Provider 配置加载器
 
 import json
 import logging
-from typing import Dict, List, Optional, Any
 from pathlib import Path
-from dataclasses import asdict
+from typing import Any, Dict, List, Optional
 
 from .bridge import (
     ProviderConfig,
     ProviderType,
-    PROVIDER_TYPE_MAP,
     get_provider_bridge,
 )
 
@@ -119,10 +117,7 @@ class ProviderConfigLoader:
 
                 # 获取API配置
                 keys = merged_config.get("key", [""])
-                if isinstance(keys, list):
-                    api_key = keys[0] if keys else ""
-                else:
-                    api_key = keys
+                api_key = (keys[0] if keys else "") if isinstance(keys, list) else keys
 
                 pc = ProviderConfig(
                     id=provider_id,

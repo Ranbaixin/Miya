@@ -5,9 +5,10 @@ AstrBot Agent Runner - 核心执行器
 """
 
 import logging
-from typing import Optional, Any, Dict, List, Callable, AsyncIterator
-from .context import AgentContext
+from typing import Any, AsyncIterator, Dict, List, Optional
+
 from .config import AgentConfig
+from .context import AgentContext
 
 logger = logging.getLogger(__name__)
 

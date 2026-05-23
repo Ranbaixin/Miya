@@ -21,11 +21,11 @@ reply = await registry.workflow.process_song_request("青花瓷", username="佳"
 v2.0.0: 内置引擎 (BuiltinSingingEngine)，自包含本地管线
 """
 
-from .base import SingingEngine, SongInfo, LearnTask, LearnStatus, SongOutput
-from .providers import AutoConvertMusicEngine, RVCEngine
-from .provider_builtin import BuiltinSingingEngine
+from .base import LearnStatus, LearnTask, SingingEngine, SongInfo, SongOutput
+from .engine_router import extract_song_name, handle_sing_request, is_sing_request
 from .manager import SingingRegistry, SingingWorkflow, get_singing_registry
-from .engine_router import is_sing_request, extract_song_name, handle_sing_request
+from .provider_builtin import BuiltinSingingEngine
+from .providers import AutoConvertMusicEngine, RVCEngine
 
 __all__ = [
     "SingingEngine",

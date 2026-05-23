@@ -2,22 +2,21 @@
 内存管理和资源清理系统
 """
 
-import gc
-import weakref
-import tracemalloc
-import psutil
 import asyncio
-import time
+import contextlib
+import gc
+import linecache
 import logging
-from typing import Any, Dict, List, Optional, Set, Callable, Union
+import sys
+import threading
+import time
+import tracemalloc
+from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
-import threading
-from collections import defaultdict
-import sys
-import os
-from pathlib import Path
-import linecache
+from typing import Any, Callable, Dict, List, Optional
+
+import psutil
 
 logger = logging.getLogger(__name__)
 
@@ -396,7 +395,7 @@ class ResourceManager:
         """清理模块缓存"""
         # 清理sys.modules中的一些临时模块
         modules_to_remove = []
-        for name, module in sys.modules.items():
+        for name, _module in sys.modules.items():
             if name.startswith('_temp_') or name.startswith('tmp_'):
                 modules_to_remove.append(name)
         
@@ -465,17 +464,13 @@ class ResourceManager:
         
         if self._cleanup_task:
             self._cleanup_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._cleanup_task
-            except asyncio.CancelledError:
-                pass
         
         if self._monitor_task:
             self._monitor_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._monitor_task
-            except asyncio.CancelledError:
-                pass
         
         # 清理所有资源
         with self._lock:
@@ -631,8 +626,9 @@ async def cleanup_all_resources():
 
 def get_memory_info() -> Dict[str, Any]:
     """获取内存信息"""
-    import psutil
     import gc
+
+    import psutil
     
     process = psutil.Process()
     memory_info = process.memory_info()

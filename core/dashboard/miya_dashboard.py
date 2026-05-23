@@ -8,11 +8,8 @@
 - 会话管理
 """
 
-import os
-import asyncio
-import json
 import logging
-from pathlib import Path
+import os
 from typing import Optional
 
 logger = logging.getLogger("Miya.Dashboard")
@@ -20,7 +17,7 @@ logger = logging.getLogger("Miya.Dashboard")
 
 # 尝试导入 Quart
 try:
-    from quart import Quart, websocket, request, jsonify, send_from_directory
+    from quart import Quart, jsonify, request, send_from_directory, websocket
 
     HAS_QUART = True
 except ImportError:
@@ -136,7 +133,7 @@ class MiyaDashboard:
         async def api_chat():
             """聊天 API"""
             data = await request.get_json()
-            message = data.get("message", "")
+            data.get("message", "")
             # TODO: 连接 Miya 核心处理消息
             return jsonify({"status": "ok", "response": "处理中..."})
 
@@ -147,7 +144,7 @@ class MiyaDashboard:
         platforms = status.get("platforms", False)
         providers = status.get("providers", False)
         knowledge = status.get("knowledge", False)
-        plugins = status.get("plugins", False)
+        status.get("plugins", False)
         miya_core = status.get("miya_core", False)
 
         return f"""<!DOCTYPE html>
@@ -265,7 +262,7 @@ class MiyaDashboard:
     </div>
     
     <div class="footer">
-        基于 AstrBot 架构设计 | 
+        基于 AstrBot 架构设计 |
         <a href="https://github.com/AstrBotDevs/AstrBot" style="color: #e94560;">AstrBot</a>
     </div>
     
@@ -312,10 +309,10 @@ class MiyaDashboard:
             if self.webui_dir:
                 config.static_folder = self.webui_dir
 
-            logger.info(f"=" * 50)
+            logger.info("=" * 50)
             logger.info(f"Dashboard 启动: http://{self.host}:{self.port}")
             logger.info(f"访问地址: http://localhost:{self.port}")
-            logger.info(f"=" * 50)
+            logger.info("=" * 50)
 
             return serve(self.app, config)
 

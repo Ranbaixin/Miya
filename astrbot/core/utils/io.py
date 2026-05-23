@@ -133,33 +133,32 @@ async def download_file(url: str, path: str, show_progress: bool = False) -> Non
         async with aiohttp.ClientSession(
             trust_env=True,
             connector=connector,
-        ) as session:
-            async with session.get(url, timeout=1800) as resp:
-                if resp.status != 200:
-                    raise Exception(f"下载文件失败: {resp.status}")
-                total_size = int(resp.headers.get("content-length", 0))
-                downloaded_size = 0
-                start_time = time.time()
-                if show_progress:
-                    print(f"文件大小: {total_size / 1024:.2f} KB | 文件地址: {url}")
-                with open(path, "wb") as f:
-                    while True:
-                        chunk = await resp.content.read(8192)
-                        if not chunk:
-                            break
-                        f.write(chunk)
-                        downloaded_size += len(chunk)
-                        if show_progress:
-                            elapsed_time = (
-                                time.time() - start_time
-                                if time.time() - start_time > 0
-                                else 1
-                            )
-                            speed = downloaded_size / 1024 / elapsed_time  # KB/s
-                            print(
-                                f"\r下载进度: {downloaded_size / total_size:.2%} 速度: {speed:.2f} KB/s",
-                                end="",
-                            )
+        ) as session, session.get(url, timeout=1800) as resp:
+            if resp.status != 200:
+                raise Exception(f"下载文件失败: {resp.status}")
+            total_size = int(resp.headers.get("content-length", 0))
+            downloaded_size = 0
+            start_time = time.time()
+            if show_progress:
+                print(f"文件大小: {total_size / 1024:.2f} KB | 文件地址: {url}")
+            with open(path, "wb") as f:
+                while True:
+                    chunk = await resp.content.read(8192)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+                    downloaded_size += len(chunk)
+                    if show_progress:
+                        elapsed_time = (
+                            time.time() - start_time
+                            if time.time() - start_time > 0
+                            else 1
+                        )
+                        speed = downloaded_size / 1024 / elapsed_time  # KB/s
+                        print(
+                            f"\r下载进度: {downloaded_size / total_size:.2%} 速度: {speed:.2f} KB/s",
+                            end="",
+                        )
     except (aiohttp.ClientConnectorSSLError, aiohttp.ClientConnectorCertificateError):
         # 关闭SSL验证（仅在证书验证失败时作为fallback）
         logger.warning(
@@ -174,27 +173,26 @@ async def download_file(url: str, path: str, show_progress: bool = False) -> Non
         ssl_context = ssl.create_default_context()
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, ssl=ssl_context, timeout=120) as resp:
-                total_size = int(resp.headers.get("content-length", 0))
-                downloaded_size = 0
-                start_time = time.time()
-                if show_progress:
-                    print(f"文件大小: {total_size / 1024:.2f} KB | 文件地址: {url}")
-                with open(path, "wb") as f:
-                    while True:
-                        chunk = await resp.content.read(8192)
-                        if not chunk:
-                            break
-                        f.write(chunk)
-                        downloaded_size += len(chunk)
-                        if show_progress:
-                            elapsed_time = time.time() - start_time
-                            speed = downloaded_size / 1024 / elapsed_time  # KB/s
-                            print(
-                                f"\r下载进度: {downloaded_size / total_size:.2%} 速度: {speed:.2f} KB/s",
-                                end="",
-                            )
+        async with aiohttp.ClientSession() as session, session.get(url, ssl=ssl_context, timeout=120) as resp:
+            total_size = int(resp.headers.get("content-length", 0))
+            downloaded_size = 0
+            start_time = time.time()
+            if show_progress:
+                print(f"文件大小: {total_size / 1024:.2f} KB | 文件地址: {url}")
+            with open(path, "wb") as f:
+                while True:
+                    chunk = await resp.content.read(8192)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+                    downloaded_size += len(chunk)
+                    if show_progress:
+                        elapsed_time = time.time() - start_time
+                        speed = downloaded_size / 1024 / elapsed_time  # KB/s
+                        print(
+                            f"\r下载进度: {downloaded_size / total_size:.2%} 速度: {speed:.2f} KB/s",
+                            end="",
+                        )
     if show_progress:
         print()
 
@@ -210,7 +208,7 @@ def get_local_ip_addresses():
     net_interfaces = psutil.net_if_addrs()
     network_ips = []
 
-    for interface, addrs in net_interfaces.items():
+    for _interface, addrs in net_interfaces.items():
         for addr in addrs:
             if addr.family == socket.AF_INET:  # 使用 socket.AF_INET 代替 psutil.AF_INET
                 network_ips.append(addr.address)
@@ -243,10 +241,7 @@ async def download_dashboard(
     proxy: str | None = None,
 ) -> None:
     """下载管理面板文件"""
-    if path is None:
-        zip_path = Path(get_astrbot_data_path()).absolute() / "dashboard.zip"
-    else:
-        zip_path = Path(path).absolute()
+    zip_path = Path(get_astrbot_data_path()).absolute() / "dashboard.zip" if path is None else Path(path).absolute()
 
     if latest or len(str(version)) != 40:
         ver_name = "latest" if latest else version

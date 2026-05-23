@@ -4,24 +4,21 @@ Miya Provider Manager
 """
 
 import asyncio
-import copy
-import os
+import logging
 import traceback
 from collections.abc import Callable
-from typing import Any, Optional
+from typing import Optional
 
+from .entities import LLMResponse
 from .provider import (
     AbstractProvider,
-    LLMProvider,
-    TTSProvider,
-    STTProvider,
     EmbeddingProvider,
-    RerankProvider,
+    LLMProvider,
     ProviderType,
-    ProviderMeta,
+    RerankProvider,
+    STTProvider,
+    TTSProvider,
 )
-from .entities import LLMResponse
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -116,11 +113,11 @@ class ProviderManager:
 
     def dynamic_import_provider(self, provider_type: str) -> AbstractProvider:
         """动态导入 Provider - 按需加载"""
-        from .sources.openai_provider import OpenAIProvider
         from .sources.anthropic_provider import AnthropicProvider
         from .sources.deepseek_provider import DeepSeekProvider
-        from .sources.zhipu_provider import ZhipuProvider
+        from .sources.openai_provider import OpenAIProvider
         from .sources.siliconflow_provider import SiliconFlowProvider
+        from .sources.zhipu_provider import ZhipuProvider
 
         provider_map = {
             "openai_chat_completion": OpenAIProvider,
@@ -190,11 +187,10 @@ class ProviderManager:
                 self.stt_provider_insts.append(inst)
                 if not self.curr_stt_provider:
                     self.curr_stt_provider = inst
-        elif "tts" in provider_type:
-            if isinstance(inst, TTSProvider):
-                self.tts_provider_insts.append(inst)
-                if not self.curr_tts_provider:
-                    self.curr_tts_provider = inst
+        elif "tts" in provider_type and isinstance(inst, TTSProvider):
+            self.tts_provider_insts.append(inst)
+            if not self.curr_tts_provider:
+                self.curr_tts_provider = inst
 
     def _get_provider_settings(self, provider_config: dict) -> dict:
         """获取 Provider 配置"""
@@ -323,10 +319,7 @@ class ProviderManager:
     ) -> LLMResponse:
         """简便聊天接口"""
         provider = None
-        if provider_id and provider_id in self.inst_map:
-            provider = self.inst_map[provider_id]
-        else:
-            provider = self.curr_provider
+        provider = self.inst_map[provider_id] if provider_id and provider_id in self.inst_map else self.curr_provider
 
         if not provider:
             raise ValueError("没有可用的Provider")

@@ -3,10 +3,8 @@ B站标识符解析模块
 从消息中提取 B站视频 BV号/AV号/b23.tv短链
 """
 
-import re
-import html
-import json
 import logging
+import re
 from typing import Optional
 
 import httpx

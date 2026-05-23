@@ -14,7 +14,7 @@ import os
 import shutil
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +136,7 @@ class NeteaseMusicSource(MusicSource):
 
     async def download(self, song: SongResult, output_dir: str) -> Optional[str]:
         import re
+
         import requests
 
         try:
@@ -188,8 +189,9 @@ class BilibiliMusicSource(MusicSource):
         return True
 
     async def search(self, query: str) -> Optional[SongResult]:
-        import requests
         from urllib.parse import quote
+
+        import requests
 
         url = (
             f"https://api.bilibili.com/x/web-interface/search/type"
@@ -227,8 +229,8 @@ class BilibiliMusicSource(MusicSource):
             return None
 
     async def download(self, song: SongResult, output_dir: str) -> Optional[str]:
-        import subprocess as _sp
         import re
+        import subprocess as _sp
 
         bv_id = song.song_id
         if not bv_id:

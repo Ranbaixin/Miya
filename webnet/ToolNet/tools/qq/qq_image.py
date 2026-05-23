@@ -4,14 +4,15 @@ QQ图片发送工具
 支持发送图片到QQ群或私聊，支持多种图片来源
 """
 
-import asyncio
+import base64
+import builtins
+import contextlib
 import logging
 import os
+from typing import Any, Dict, Optional
+
 import aiofiles
-from typing import Dict, Any, Optional
-import base64
 import httpx
-from urllib.parse import urlparse
 
 from webnet.ToolNet.base import BaseTool, ToolContext
 
@@ -120,10 +121,8 @@ class QQImageTool(BaseTool):
                     target_desc = f"用户 {target_id}"
                 
                 # 清理临时文件
-                try:
+                with contextlib.suppress(builtins.BaseException):
                     os.unlink(temp_file_path)
-                except:
-                    pass
                 
                 if result and result.get("status") == "ok":
                     return f"✅ 图片已发送到 {target_desc}"
@@ -132,10 +131,8 @@ class QQImageTool(BaseTool):
                     
             except Exception as e:
                 # 清理临时文件
-                try:
+                with contextlib.suppress(builtins.BaseException):
                     os.unlink(temp_file_path)
-                except:
-                    pass
                 raise e
                 
         except Exception as e:
@@ -153,8 +150,8 @@ class QQImageTool(BaseTool):
             return 0
     
     async def _process_image(
-        self, 
-        image_source: str, 
+        self,
+        image_source: str,
         image_path: str,
         resize: bool,
         max_width: int,
@@ -228,9 +225,9 @@ class QQImageTool(BaseTool):
             return None
     
     async def _resize_image_if_needed(
-        self, 
-        image_path: str, 
-        max_width: int, 
+        self,
+        image_path: str,
+        max_width: int,
         max_height: int
     ) -> None:
         """如果需要，调整图片大小"""

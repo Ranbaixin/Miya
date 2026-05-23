@@ -60,7 +60,7 @@ class FileLock:
         self._shared = shared
         self._handle: IO[bytes] | None = None
 
-    def __enter__(self) -> "FileLock":
+    def __enter__(self) -> FileLock:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._handle = open(self._path, "a+b")
         if self._shared:

@@ -3,13 +3,13 @@
 管理和调度系统任务
 """
 
-from typing import Dict, List, Optional, Callable, Any
-import threading
-import heapq
 import asyncio
+import contextlib
+import heapq
 import logging
+import threading
 from datetime import datetime, timedelta
-
+from typing import Any, Callable, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -93,10 +93,8 @@ class Scheduler:
         self._running = False
         if self._task:
             self._task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._task
-            except asyncio.CancelledError:
-                pass
         logger.info("任务调度器已停止")
 
     async def _run_loop(self):

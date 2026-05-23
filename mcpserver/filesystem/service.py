@@ -3,11 +3,10 @@
 MCP 文件系统服务 - 提供文件操作能力
 """
 
-import os
-import json
 import asyncio
+import json
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict
 
 
 class FilesystemService:
@@ -21,7 +20,7 @@ class FilesystemService:
     async def handle_handoff(self, tool_call: Dict[str, Any]) -> str:
         """处理工具调用"""
         tool_name = tool_call.get("tool_name", "")
-        message = tool_call.get("message", "")
+        tool_call.get("message", "")
 
         if tool_name == "read_file" or "read" in tool_name.lower():
             return await self._read_file(tool_call)
@@ -40,7 +39,7 @@ class FilesystemService:
         """读取文件"""
         file_path = tool_call.get("file_path", "")
         offset = tool_call.get("offset", 0)
-        limit = tool_call.get("limit", None)
+        limit = tool_call.get("limit")
 
         if not file_path:
             return json.dumps({"error": "缺少 file_path 参数"})
@@ -126,10 +125,7 @@ class FilesystemService:
             if not path.exists():
                 return json.dumps({"error": f"目录不存在: {dir_path}"})
 
-            if recursive:
-                files = [str(p) for p in path.rglob(pattern)]
-            else:
-                files = [str(p) for p in path.glob(pattern)]
+            files = [str(p) for p in path.rglob(pattern)] if recursive else [str(p) for p in path.glob(pattern)]
 
             return json.dumps(
                 {

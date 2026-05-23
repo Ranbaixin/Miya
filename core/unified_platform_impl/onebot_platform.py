@@ -8,11 +8,13 @@ OneBot / NapCat 平台适配器
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 from core.unified_platform.base import BasePlatform
+
 from .message_mixin import MessageMixin
 
 logger = logging.getLogger("Miya.Platform.OneBot")
@@ -54,6 +56,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         """加载 qq_config.yaml 配置"""
         try:
             from pathlib import Path
+
             import yaml
 
             config_path = (
@@ -199,19 +202,15 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         at_list = []
         if isinstance(message, str):
             for m in re.finditer(r"\[CQ:at,qq=(\d+)\]", message):
-                try:
+                with contextlib.suppress(ValueError):
                     at_list.append(int(m.group(1)))
-                except ValueError:
-                    pass
             return at_list
         for seg in message:
             if isinstance(seg, dict) and seg.get("type") == "at":
                 at_qq = seg.get("data", {}).get("qq")
                 if at_qq:
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         at_list.append(int(at_qq))
-                    except (ValueError, TypeError):
-                        pass
         return at_list
 
     # ============ 群名解析 (OneBot 专用) ============
@@ -458,14 +457,13 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             import aiohttp
 
             http_url = f"http://127.0.0.1:3000/{action}"
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    http_url, json=params, timeout=aiohttp.ClientTimeout(total=3)
-                ) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        if data.get("status") == "ok":
-                            return data.get("data")
+            async with aiohttp.ClientSession() as session, session.post(
+                http_url, json=params, timeout=aiohttp.ClientTimeout(total=3)
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    if data.get("status") == "ok":
+                        return data.get("data")
         except Exception:
             pass
         return None
@@ -529,11 +527,11 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
         # === 4. 发送者角色 ===
         sender_role = sender.get("role", "member")
-        sender_title = sender.get("title", "")
+        sender.get("title", "")
 
         # === 5. @检测 + at列表 ===
         is_at_bot = self._is_at_bot(raw_message, bot_qq) if bot_qq else True
-        at_list = self._extract_at_list(raw_message)
+        self._extract_at_list(raw_message)
 
         # === 6. 消息段解析（text / reply / image / file / face） ===
         reply_id = ""
@@ -689,7 +687,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 logger.info(
                     f"[{self.platform_id}] 引用获取成功: {str(reply_data)[:80]}"
                 )
-                reply_sender = reply_data.get("sender", {}).get("nickname", "")
+                reply_data.get("sender", {}).get("nickname", "")
                 reply_raw = reply_data.get("message", "")
                 # 调试日志
                 logger.debug(
@@ -916,7 +914,8 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
     async def _send_voice_reply(self, msg_type: str, target_id: str, text: str):
         """发送语音回复，返回 (audio_path, success)，失败回退文字"""
-        import tempfile, os, json
+        import json
+        import os
 
         config_path = "config/tts_config.json"
         try:
@@ -1017,8 +1016,9 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         import asyncio
 
         try:
-            import simpleaudio as sa
             import wave
+
+            import simpleaudio as sa
 
             with wave.open(audio_path, "rb") as wf:
                 wave_obj = sa.WaveObject.from_wave_read(wf)
@@ -1088,14 +1088,13 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         tts_endpoint = f"{api_url.rstrip('/')}/tts"
         async with aiohttp.ClientSession(
             timeout=aiohttp.ClientTimeout(total=timeout)
-        ) as session:
-            async with session.post(tts_endpoint, json=payload) as resp:
-                if resp.status != 200:
-                    text_err = await resp.text()
-                    raise RuntimeError(
-                        f"GPT-SoVITS 返回 {resp.status}: {text_err[:200]}"
-                    )
-                audio_data = await resp.read()
+        ) as session, session.post(tts_endpoint, json=payload) as resp:
+            if resp.status != 200:
+                text_err = await resp.text()
+                raise RuntimeError(
+                    f"GPT-SoVITS 返回 {resp.status}: {text_err[:200]}"
+                )
+            audio_data = await resp.read()
 
         tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
         tmp_path = tmp.name
@@ -1130,16 +1129,15 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
         async with aiohttp.ClientSession(
             timeout=aiohttp.ClientTimeout(total=30)
-        ) as session:
-            async with session.post(
-                api_url,
-                json=payload,
-                headers={"Authorization": f"Bearer {api_key}"},
-            ) as resp:
-                if resp.status != 200:
-                    text_err = await resp.text()
-                    raise RuntimeError(f"API TTS 返回 {resp.status}: {text_err[:200]}")
-                audio_data = await resp.read()
+        ) as session, session.post(
+            api_url,
+            json=payload,
+            headers={"Authorization": f"Bearer {api_key}"},
+        ) as resp:
+            if resp.status != 200:
+                text_err = await resp.text()
+                raise RuntimeError(f"API TTS 返回 {resp.status}: {text_err[:200]}")
+            audio_data = await resp.read()
 
         tmp = tempfile.NamedTemporaryFile(suffix=f".{fmt}", delete=False)
         tmp_path = tmp.name
@@ -1341,7 +1339,8 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         msg_type: str = "",
     ):
         """发送图片消息（兼容两种参数签名）"""
-        import tempfile, os
+        import os
+        import tempfile
 
         if not image_data:
             return None
@@ -1374,10 +1373,8 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 return {"status": "ok"}
             return None
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 os.unlink(tmp_path)
-            except Exception:
-                pass
 
     async def send_group_image(self, group_id: int, image_path: str, caption: str = ""):
         """发送群图片消息"""
@@ -1470,16 +1467,15 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         try:
             import aiohttp
 
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    url,
-                    headers={
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-                    },
-                    timeout=aiohttp.ClientTimeout(total=30),
-                ) as resp:
-                    if resp.status == 200:
-                        return await resp.read()
+            async with aiohttp.ClientSession() as session, session.get(
+                url,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                },
+                timeout=aiohttp.ClientTimeout(total=30),
+            ) as resp:
+                if resp.status == 200:
+                    return await resp.read()
         except Exception as e:
             logger.error(f"[{self.platform_id}] 下载图片失败: {e}")
         return None
@@ -1560,15 +1556,14 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         try:
             import aiohttp
 
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    url, timeout=aiohttp.ClientTimeout(total=300)
-                ) as response:
-                    if response.status == 200:
-                        with open(save_path, "wb") as f:
-                            async for chunk in response.content.iter_chunked(8192):
-                                f.write(chunk)
-                        return True
+            async with aiohttp.ClientSession() as session, session.get(
+                url, timeout=aiohttp.ClientTimeout(total=300)
+            ) as response:
+                if response.status == 200:
+                    with open(save_path, "wb") as f:
+                        async for chunk in response.content.iter_chunked(8192):
+                            f.write(chunk)
+                    return True
         except Exception as e:
             logger.error(f"[{self.platform_id}] 下载群文件失败: {e}")
         return False
@@ -1605,7 +1600,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             if not root.exists():
                 continue
             for img_file in root.rglob("*"):
-                if not img_file.suffix.lower() in (
+                if img_file.suffix.lower() not in (
                     ".gif",
                     ".jpg",
                     ".jpeg",
@@ -1660,23 +1655,22 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                     ),
                     "Referer": "https://qun.qq.com/",
                 }
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(
-                        url,
-                        headers=headers,
-                        timeout=aiohttp.ClientTimeout(total=15),
-                    ) as resp:
-                        if resp.status == 200:
-                            raw = await resp.read()
-                            if len(raw) > 1024:
-                                logger.debug(
-                                    f"[{self.platform_id}] HTTP 下载成功(url): {len(raw) / 1024:.1f}KB"
-                                )
-                                return raw
-                            else:
-                                logger.debug(
-                                    f"[{self.platform_id}] HTTP 下载数据过小: {len(raw)}B"
-                                )
+                async with aiohttp.ClientSession() as session, session.get(
+                    url,
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=15),
+                ) as resp:
+                    if resp.status == 200:
+                        raw = await resp.read()
+                        if len(raw) > 1024:
+                            logger.debug(
+                                f"[{self.platform_id}] HTTP 下载成功(url): {len(raw) / 1024:.1f}KB"
+                            )
+                            return raw
+                        else:
+                            logger.debug(
+                                f"[{self.platform_id}] HTTP 下载数据过小: {len(raw)}B"
+                            )
             except Exception as e:
                 logger.debug(f"[{self.platform_id}] 直接下载图片失败(url): {e}")
 
@@ -1738,10 +1732,8 @@ class OneBotPlatform(MessageMixin, BasePlatform):
     async def _do_disconnect(self):
         self._connected = False
         if self._ws:
-            try:
+            with contextlib.suppress(Exception):
                 await self._ws.close()
-            except Exception:
-                pass
         self._ws = None
 
     async def _do_health_check(self) -> bool:

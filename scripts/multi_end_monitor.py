@@ -4,18 +4,19 @@
 实时显示各端服务状态和性能指标
 """
 
-import sys
-import os
-import time
-import threading
-import socket
-import json
 import asyncio
-import aiohttp
-from datetime import datetime
-from typing import Dict, List, Optional
-from dataclasses import dataclass, field
+import os
 import platform
+import socket
+import sys
+import threading
+import time
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Dict, Optional
+
+import aiohttp
+
 
 @dataclass
 class ServiceStatus:
@@ -154,7 +155,7 @@ class MultiEndMonitor:
         print(f"{'服务名称':<15} {'类型':<10} {'状态':<12} {'端口':<8} {'运行时间':<12} {'备注'}")
         print("-" * 80)
         
-        for service_id, service in self.services.items():
+        for _service_id, service in self.services.items():
             # 状态图标
             status_icon = {
                 "running": "🟢",
@@ -259,8 +260,8 @@ class MultiEndMonitor:
                     time.sleep(0.1)
         else:
             import select
-            import tty
             import termios
+            import tty
 
             # 保存原始终端设置
             old_settings = termios.tcgetattr(sys.stdin)

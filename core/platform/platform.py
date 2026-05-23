@@ -8,6 +8,7 @@ from enum import Enum
 from typing import Any
 
 from astrbot.core.message.message_event_result import MessageChain
+
 from astrbot.core.utils.metrics import Metric
 
 from .astr_message_event import AstrMessageEvent

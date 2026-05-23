@@ -4,9 +4,9 @@
 """
 
 import logging
-from typing import List, Dict, Optional, Any
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -148,7 +148,7 @@ class SemanticDynamicsEngine:
 
     def _cosine_similarity(self, vec1: List[float], vec2: List[float]) -> float:
         """计算余弦相似度"""
-        dot = sum(a * b for a, b in zip(vec1, vec2))
+        dot = sum(a * b for a, b in zip(vec1, vec2, strict=False))
         norm1 = sum(a * a for a in vec1) ** 0.5
         norm2 = sum(b * b for b in vec2) ** 0.5
 

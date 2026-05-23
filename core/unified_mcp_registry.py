@@ -4,11 +4,10 @@ MCP 双通道整合模块
 统一 Miya 原生MCP 和 AstrBot MCP 工具系统
 """
 
-import asyncio
 import logging
-from typing import Optional, Dict, Any, List, Callable
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

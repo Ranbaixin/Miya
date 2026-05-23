@@ -5,9 +5,9 @@ QQ交互子网 - TTS语音处理逻辑
 
 import asyncio
 import logging
-import tempfile
 import os
-from typing import List, Dict, Optional
+import tempfile
+from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -134,11 +134,11 @@ class QQTTsHandler:
         """
         # 如果未启用智能TTS判断，直接返回False
         if not self.smart_tts_enabled:
-            logger.debug(f"[QQNet] 智能TTS判断未启用，使用文字")
+            logger.debug("[QQNet] 智能TTS判断未启用，使用文字")
             return False
 
         text_length = len(text)
-        text_stripped = text.strip()
+        text.strip()
 
         # 1. 极短消息（1-5字）- 纯文字
         if text_length <= 5:
@@ -149,7 +149,7 @@ class QQTTsHandler:
         code_indicators = ["```", "```python", "```json", "```javascript",
                          "```html", "```css", "<code>", "<pre>"]
         if any(indicator in text for indicator in code_indicators):
-            logger.debug(f"[QQNet] 包含代码块，使用文字")
+            logger.debug("[QQNet] 包含代码块，使用文字")
             return False
 
         # 3. 包含大量特殊符号和换行（如表格、列表）- 纯文字
@@ -175,7 +175,7 @@ class QQTTsHandler:
             dialogue_indicators = ["好的", "明白", "收到", "没问题", "当然",
                                "你好", "谢谢", "再见", "晚安", "早安", "呢", "呀",
                                "哈", "嗯", "哦", "～", "~", "！", "!", "？", "?"]
-            text_lower = text.lower()
+            text.lower()
             if any(indicator in text for indicator in dialogue_indicators):
                 logger.debug(f"[QQNet] 中等对话消息，使用TTS语音: length={text_length}")
                 return True
@@ -217,7 +217,7 @@ class QQTTsHandler:
                     if self.tts_voice_mode == "voice":
                         # 语音模式：启用TTS
                         should_use_tts = True
-                        logger.debug(f"[QQNet] 语音模式，启用TTS")
+                        logger.debug("[QQNet] 语音模式，启用TTS")
                     elif self.tts_voice_mode == "text":
                         # 文本模式：使用智能判断
                         should_use_tts = self._should_use_tts(message)
@@ -249,12 +249,12 @@ class QQTTsHandler:
                             await asyncio.sleep(0.5)
                     return True
                 else:
-                    result = await self.qq_net.onebot_client.send_group_message(group_id, message)
+                    await self.qq_net.onebot_client.send_group_message(group_id, message)
                     logger.debug(f"[QQNet] 发送群消息: group={group_id}")
                     return True
 
             # 列表格式消息(富文本)
-            result = await self.qq_net.onebot_client.send_group_message(group_id, message)
+            await self.qq_net.onebot_client.send_group_message(group_id, message)
             logger.debug(f"[QQNet] 发送群消息: group={group_id}")
             return True
         except Exception as e:
@@ -272,7 +272,7 @@ class QQTTsHandler:
                     if self.tts_voice_mode == "voice":
                         # 语音模式：启用TTS
                         should_use_tts = True
-                        logger.debug(f"[QQNet] 语音模式，启用TTS")
+                        logger.debug("[QQNet] 语音模式，启用TTS")
                     elif self.tts_voice_mode == "text":
                         # 文本模式：使用智能判断
                         should_use_tts = self._should_use_tts(message)
@@ -304,12 +304,12 @@ class QQTTsHandler:
                             await asyncio.sleep(0.5)
                     return True
                 else:
-                    result = await self.qq_net.onebot_client.send_private_message(user_id, message)
+                    await self.qq_net.onebot_client.send_private_message(user_id, message)
                     logger.debug(f"[QQNet] 发送私聊消息: user={user_id}")
                     return True
 
             # 列表格式消息(富文本)
-            result = await self.qq_net.onebot_client.send_private_message(user_id, message)
+            await self.qq_net.onebot_client.send_private_message(user_id, message)
             logger.debug(f"[QQNet] 发送私聊消息: user={user_id}")
             return True
         except Exception as e:
@@ -404,9 +404,9 @@ class QQTTsHandler:
 
                 # 发送语音消息
                 if is_group:
-                    result = await self.qq_net.onebot_client.send_group_message(target_id, voice_message)
+                    await self.qq_net.onebot_client.send_group_message(target_id, voice_message)
                 else:
-                    result = await self.qq_net.onebot_client.send_private_message(target_id, voice_message)
+                    await self.qq_net.onebot_client.send_private_message(target_id, voice_message)
 
                 logger.info(f"[QQNet] TTS语音片段已发送: target={target_id}, text={text[:30]}...")
 

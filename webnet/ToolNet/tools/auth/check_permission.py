@@ -4,7 +4,7 @@
 
 import json
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
 from webnet.ToolNet.base import BaseTool
 
@@ -44,9 +44,9 @@ class CheckPermissionTool(BaseTool):
         """执行权限检查"""
         try:
             # 占位实现 - 权限检查暂时允许执行
-            user_id = args.get('user_id')
-            permission = args.get('permission')
-            list_mode = args.get('list_mode', False)
+            args.get('user_id')
+            args.get('permission')
+            args.get('list_mode', False)
             
             return json.dumps({
                 "success": True,

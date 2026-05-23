@@ -3,10 +3,9 @@ M-Link 消息流监控模块
 提供消息流转追踪和性能统计
 """
 
-import asyncio
-import time
 import logging
-from typing import Dict, List, Optional, Any
+import time
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

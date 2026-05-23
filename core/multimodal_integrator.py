@@ -3,8 +3,8 @@ StoryMaker/Amphion多模态库集成
 提供多模态生成的一致性管理接口
 """
 import logging
-from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ class MultimodalIntegrator:
     def multimodal_store(self):
         """获取多模态记忆存储"""
         if self._multimodal_store is None:
-            from memory.multimodal_memory_store import MultiModalMemoryStore, ModalityType
+            from memory.multimodal_memory_store import MultiModalMemoryStore
             self._multimodal_store = MultiModalMemoryStore()
         return self._multimodal_store
 
@@ -277,7 +277,6 @@ class MultimodalIntegrator:
         Returns:
             记忆列表
         """
-        from memory.multimodal_memory_store import ModalityType
         memories = self.multimodal_store.search_by_semantic(
             query,
             limit=limit

@@ -4,20 +4,21 @@
 """
 
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
 try:
-    from fastapi import APIRouter, HTTPException, Depends, Header
-    from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+    from fastapi import APIRouter, Depends, Header, HTTPException
+    from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
     from pydantic import BaseModel
     FASTAPI_AVAILABLE = True
 except ImportError:
     FASTAPI_AVAILABLE = False
     APIRouter = object
     HTTPException = Exception
-    Depends = lambda x: x
+    def Depends(x):
+        return x
     HTTPBearer = None
 
 

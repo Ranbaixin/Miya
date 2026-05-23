@@ -4,10 +4,9 @@ AstrBot 平台适配器
 将 AstrBot 的平台适配器集成到弥娅系统。
 """
 
-import asyncio
 import logging
-from typing import Dict, List, Any, Optional, Callable
-from abc import ABC, abstractmethod
+from abc import ABC
+from typing import Any, Callable, Dict, Optional
 
 logger = logging.getLogger(__name__)
 

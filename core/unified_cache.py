@@ -5,21 +5,20 @@
 提供TTL过期、LRU驱逐、持久化、异步/同步双模式支持。
 """
 import asyncio
+import contextlib
 import hashlib
 import json
 import logging
 import threading
 import time
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections import OrderedDict
-from dataclasses import dataclass, field
-from datetime import datetime
+from dataclasses import dataclass
 from functools import wraps
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from core.constants import CacheTTL, Encoding
-
+from core.constants import CacheTTL
 
 logger = logging.getLogger(__name__)
 
@@ -119,9 +118,7 @@ class BaseCacheLayer(ABC):
 
     def _check_ttl(self, entry: CacheEntry) -> bool:
         """检查TTL是否过期"""
-        if entry.is_expired():
-            return False
-        return True
+        return not entry.is_expired()
 
     def _evict_lru(self, count: int = 1) -> int:
         """LRU驱逐"""
@@ -297,9 +294,9 @@ class BaseCacheLayer(ABC):
 
         if self.config.async_mode:
             async with self._lock:
-                return [k for k in self._cache.keys() if fnmatch.fnmatch(k, pattern)]
+                return [k for k in self._cache if fnmatch.fnmatch(k, pattern)]
         else:
-            return [k for k in self._cache.keys() if fnmatch.fnmatch(k, pattern)]
+            return [k for k in self._cache if fnmatch.fnmatch(k, pattern)]
 
     def get_stats(self) -> Dict[str, Any]:
         """获取统计信息"""
@@ -347,10 +344,8 @@ class BaseCacheLayer(ABC):
         """停止清理任务"""
         if self._cleanup_task:
             self._cleanup_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._cleanup_task
-            except asyncio.CancelledError:
-                pass
             self._cleanup_task = None
             logger.info(f"缓存清理任务已停止: {self.name}")
 

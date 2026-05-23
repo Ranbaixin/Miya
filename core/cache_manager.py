@@ -2,19 +2,17 @@
 智能缓存管理系统
 """
 
-import time
-import hashlib
-import pickle
-import json
-from typing import Any, Optional, Callable, Dict, List, Tuple, Union
-from functools import wraps
-import logging
-from dataclasses import dataclass, field
-from collections import OrderedDict
-from datetime import datetime, timedelta
 import asyncio
-from enum import Enum
+import hashlib
+import logging
+import pickle
 import threading
+import time
+from collections import OrderedDict
+from dataclasses import dataclass, field
+from enum import Enum
+from functools import wraps
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -440,9 +438,8 @@ class CacheManager:
         if self._cleanup_task and not self._cleanup_task.done():
             self._cleanup_task.cancel()
         
-        if self._storage is not None:
-            if hasattr(self._storage, 'close'):
-                self._storage.close()
+        if self._storage is not None and hasattr(self._storage, 'close'):
+            self._storage.close()
 
 
 # 缓存装饰器

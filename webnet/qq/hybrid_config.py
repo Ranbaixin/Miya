@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 弥娅QQ端混合配置加载器
 
@@ -11,11 +10,14 @@
 5. 保持向后兼容性
 """
 
-import os
-import yaml
+import builtins
+import contextlib
 import logging
+import os
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Dict
+
+import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -235,10 +237,8 @@ class QQHybridConfig:
             # 8. 缓存默认配置
             default_config = self._get_default_config()
             if self.cache_manager:
-                try:
+                with contextlib.suppress(builtins.BaseException):
                     self.cache_manager.set_config("qq_hybrid_config", default_config)
-                except:
-                    pass
 
     def _parse_qq_list(self, list_str: str) -> list:
         """解析逗号分隔的QQ列表"""

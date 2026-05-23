@@ -1,7 +1,8 @@
 import enum
 
-from astrbot.core.config import AstrBotConfig
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
+
+from astrbot.core.config import AstrBotConfig
 
 from . import HandlerFilter
 
@@ -22,10 +23,9 @@ class PermissionTypeFilter(HandlerFilter):
 
     def filter(self, event: AstrMessageEvent, cfg: AstrBotConfig) -> bool:
         """过滤器"""
-        if self.permission_type == PermissionType.ADMIN:
-            if not event.is_admin():
-                # event.stop_event()
-                # raise ValueError(f"您 (ID: {event.get_sender_id()}) 没有权限操作管理员指令。")
-                return False
+        if self.permission_type == PermissionType.ADMIN and not event.is_admin():
+            # event.stop_event()
+            # raise ValueError(f"您 (ID: {event.get_sender_id()}) 没有权限操作管理员指令。")
+            return False
 
         return True

@@ -76,7 +76,7 @@ def _build_patterns() -> dict:
 
     # 动态正则（数值+单位）
     dyn = _CONFIG.get("dynamic_patterns", {})
-    for ptag, regex_str in dyn.items():
+    for _ptag, regex_str in dyn.items():
         if regex_str:
             patterns[regex_str] = None  # _parse_dynamic 处理
 
@@ -86,9 +86,7 @@ def _build_patterns() -> dict:
 def _make_day_fn(offset: int):
     def fn(now: datetime):
         start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        if offset < 0:
-            start += timedelta(days=offset)
-        elif offset > 0:
+        if offset < 0 or offset > 0:
             start += timedelta(days=offset)
         end = start + timedelta(days=1)
         return start, end

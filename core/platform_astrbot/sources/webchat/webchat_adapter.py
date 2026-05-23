@@ -5,10 +5,12 @@ from collections.abc import Callable, Coroutine
 from pathlib import Path
 from typing import Any
 
-from astrbot import logger
-from astrbot.core import db_helper
 from astrbot.core.db.po import PlatformMessageHistory
 from astrbot.core.message.message_event_result import MessageChain
+from astrbot.core.platform.astr_message_event import MessageSesion
+
+from astrbot import logger
+from astrbot.core import db_helper
 from astrbot.core.platform import (
     AstrBotMessage,
     MessageMember,
@@ -16,7 +18,6 @@ from astrbot.core.platform import (
     Platform,
     PlatformMetadata,
 )
-from astrbot.core.platform.astr_message_event import MessageSesion
 from core.astrbot_compat.utils import get_astrbot_data_path
 
 from ...register import register_platform_adapter

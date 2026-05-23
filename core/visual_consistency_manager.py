@@ -2,15 +2,15 @@
 视觉一致性管理器
 基于StoryMaker和IP-Adapter原理，维持角色脸部、发型、服装跨帧一致性
 """
-import base64
 import hashlib
 import json
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
 from enum import Enum
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 from core.constants import Encoding
 
 logger = logging.getLogger(__name__)
@@ -196,7 +196,7 @@ class VisualConsistencyManager:
         if character_id not in self.character_references:
             return [None] * num_frames
 
-        ref = self.character_references[character_id]
+        self.character_references[character_id]
         level = consistency_level or self.default_consistency_level
         frames = []
 
@@ -230,7 +230,7 @@ class VisualConsistencyManager:
         hash2 = hashlib.md5(image2).hexdigest()
 
         # 计算汉明距离
-        hamming = sum(c1 != c2 for c1, c2 in zip(hash1, hash2))
+        hamming = sum(c1 != c2 for c1, c2 in zip(hash1, hash2, strict=False))
         max_hamming = len(hash1) * 4  # 每个字符最多4位差异
 
         consistency = 1.0 - (hamming / max_hamming)

@@ -4,10 +4,10 @@ MIYA Core - 统一核心
 整合所有 MIYA 系统模块
 """
 
-import logging
 import asyncio
-from typing import Dict, Any, List, Optional
+import logging
 from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -79,8 +79,8 @@ class MIYACore:
 
     async def _init_providers(self):
         try:
-            from core.providers_miya import ProviderManager
             from core.providers_config import get_default_providers
+            from core.providers_miya import ProviderManager
 
             self.provider_manager = ProviderManager()
             default_providers = get_default_providers()
@@ -171,7 +171,7 @@ class MIYACore:
         logger.info(f"  📦 Providers: {self.state.providers_loaded}")
         logger.info(f"  💬 Platforms: {len(self.state.platforms_active)}")
         logger.info(f"  ⭐ Plugins: {self.state.plugins_loaded}")
-        logger.info(f"  📊 Dashboard: http://localhost:6185")
+        logger.info("  📊 Dashboard: http://localhost:6185")
 
         try:
             while self.state.running:

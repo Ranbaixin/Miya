@@ -3,7 +3,6 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from astrbot.api import FunctionTool
 from astrbot.core.agent.run_context import ContextWrapper
 from astrbot.core.agent.tool import ToolExecResult
 from astrbot.core.astr_agent_context import AstrAgentContext
@@ -11,6 +10,8 @@ from astrbot.core.computer.computer_client import get_booter
 from astrbot.core.skills.neo_skill_sync import NeoSkillSyncManager
 from astrbot.core.tools.computer_tools.util import check_admin_permission
 from astrbot.core.tools.registry import builtin_tool
+
+from astrbot.api import FunctionTool
 
 _SHIPYARD_NEO_TOOL_CONFIG = {
     "provider_settings.computer_use_runtime": "sandbox",

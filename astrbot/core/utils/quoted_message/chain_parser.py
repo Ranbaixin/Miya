@@ -17,6 +17,7 @@ from astrbot.core.message.components import (
     Video,
 )
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
+
 from astrbot.core.utils.string_utils import normalize_and_dedupe_strings
 
 from .image_refs import looks_like_image_file_name
@@ -385,10 +386,7 @@ def _extract_text_forward_ids_and_images_from_forward_nodes(
                     parsed = json.loads(raw_content)
                 except Exception:
                     parsed = None
-                if isinstance(parsed, list):
-                    chain = parsed
-                else:
-                    chain = [{"type": "text", "data": {"text": raw_content}}]
+                chain = parsed if isinstance(parsed, list) else [{"type": "text", "data": {"text": raw_content}}]
 
         parsed_segments = _parse_onebot_segments(chain, settings=settings)
         node_text = parsed_segments["text"]

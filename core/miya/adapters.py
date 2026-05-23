@@ -6,7 +6,7 @@
 
 import asyncio
 import logging
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("miya.adapters")
 
@@ -108,7 +108,7 @@ class AdapterManager:
 
     async def _create_adapter(self, adapter_type: str, config: Dict) -> None:
         """创建适配器"""
-        adapter_info = AVAILABLE_ADAPTERS[adapter_type]
+        AVAILABLE_ADAPTERS[adapter_type]
 
         try:
             # 尝试导入

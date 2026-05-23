@@ -8,11 +8,10 @@ import wave
 from typing import Any
 
 import jwt
+from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
 from quart import websocket
 
 from astrbot import logger
-from core.astrbot_compat import sp
-from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
 from astrbot.core.platform.sources.webchat.message_parts_helper import (
     build_webchat_message_parts,
     create_attachment_part_from_existing_file,
@@ -20,8 +19,9 @@ from astrbot.core.platform.sources.webchat.message_parts_helper import (
     webchat_message_parts_have_content,
 )
 from astrbot.core.platform.sources.webchat.webchat_queue_mgr import webchat_queue_mgr
-from core.astrbot_compat.utils import get_astrbot_data_path, get_astrbot_temp_path
 from astrbot.core.utils.datetime_utils import to_utc_isoformat
+from core.astrbot_compat import sp
+from core.astrbot_compat.utils import get_astrbot_data_path, get_astrbot_temp_path
 
 from .chat import (
     BotMessageAccumulator,
@@ -604,13 +604,12 @@ class LiveChatRoute(Route):
                     should_save = bool(
                         message_accumulator.has_content() or refs or agent_stats
                     )
-                elif (streaming and msg_type == "complete") or not streaming:
-                    if chain_type not in (
-                        "tool_call",
-                        "tool_call_result",
-                        "agent_stats",
-                    ):
-                        should_save = True
+                elif ((streaming and msg_type == "complete") or not streaming) and chain_type not in (
+                    "tool_call",
+                    "tool_call_result",
+                    "agent_stats",
+                ):
+                    should_save = True
 
                 if should_save:
                     saved_record = await flush_pending_bot_message()

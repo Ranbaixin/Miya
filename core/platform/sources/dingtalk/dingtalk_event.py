@@ -1,7 +1,8 @@
 from typing import Any
 
-from astrbot import logger
 from astrbot.api.event import AstrMessageEvent, MessageChain
+
+from astrbot import logger
 
 
 class DingtalkMessageEvent(AstrMessageEvent):

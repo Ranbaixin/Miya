@@ -6,14 +6,11 @@ MIYA Dashboard Routes
 """
 
 import logging
-import json
-import asyncio
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict
 
-from core.star import get_star_manager
-from core.platform_adapter import get_platform_adapter_manager, PlatformType
+from core.platform_adapter import PlatformType, get_platform_adapter_manager
 from core.providers import get_provider_config_loader
-from hub.memory_manager import get_memory_manager
+from core.star import get_star_manager
 
 logger = logging.getLogger(__name__)
 
@@ -61,9 +58,9 @@ async def auth_check() -> Dict:
 async def get_config() -> Dict:
     """获取配置"""
     try:
-        from core.text_loader import get_system_texts
-        from core.personality_config_loader import load_personality_config
         from config.settings import Settings
+        from core.personality_config_loader import load_personality_config
+        from core.text_loader import get_system_texts
 
         settings = Settings()
         return {
@@ -162,7 +159,7 @@ async def list_providers() -> Dict:
 async def add_provider(provider_config: Dict) -> Dict:
     """添加提供商"""
     try:
-        loader = get_provider_config_loader()
+        get_provider_config_loader()
         return {"success": True}
     except Exception as e:
         logger.error(f"[Dashboard] 添加提供商失败: {e}")

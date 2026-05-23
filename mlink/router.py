@@ -3,6 +3,7 @@
 实现消息路由和路径评分（支持广播和过滤）
 """
 from typing import Dict, List, Optional
+
 from .message import Message
 
 
@@ -150,10 +151,7 @@ class Router:
             return True
 
         # 检查消息元数据
-        if message.metadata and message.metadata.get('broadcast', False):
-            return True
-
-        return False
+        return bool(message.metadata and message.metadata.get('broadcast', False))
 
     def _apply_filters(self, message: Message, nodes: List[str]) -> List[str]:
         """

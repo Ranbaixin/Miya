@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 测试混合配置系统
 """
 
+import logging
 import os
 import sys
-import logging
 from pathlib import Path
 
 # 设置日志
@@ -184,7 +183,7 @@ def test_hybrid_config_loader():
         
         # 检查详细配置
         connection = full_config.get('connection', {})
-        multimedia = full_config.get('multimedia', {})
+        full_config.get('multimedia', {})
         image_recognition = full_config.get('image_recognition', {})
         
         logger.info(f"WebSocket地址: {full_config.get('onebot_ws_url')}")
@@ -194,7 +193,7 @@ def test_hybrid_config_loader():
         
         # 验证配置值
         if full_config.get('onebot_ws_url') and not (
-            full_config['onebot_ws_url'].startswith('ws://') or 
+            full_config['onebot_ws_url'].startswith('ws://') or
             full_config['onebot_ws_url'].startswith('wss://')
         ):
             logger.warning(f"WebSocket地址格式可能不正确: {full_config['onebot_ws_url']}")

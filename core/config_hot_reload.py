@@ -10,20 +10,18 @@
 """
 
 import asyncio
-import json
+import copy
 import logging
 import time
-import copy
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
+from core.config_event_system import ConfigEvent
 from core.constants import Encoding
-from core.config_event_system import ConfigEventPublisher, ConfigEvent
-from core.config_updater import ConfigUpdater
 
 try:
+    from watchdog.events import FileModifiedEvent, FileSystemEventHandler
     from watchdog.observers import Observer
-    from watchdog.events import FileSystemEventHandler, FileModifiedEvent
     WATCHDOG_AVAILABLE = True
 except ImportError:
     WATCHDOG_AVAILABLE = False
@@ -189,7 +187,7 @@ class ConfigHotReload:
             callback: 回调函数，接收ConfigEvent对象
         """
         self._all_subscribers.append(callback)
-        logger.debug(f"[配置热更新] 新增全局订阅者")
+        logger.debug("[配置热更新] 新增全局订阅者")
 
     def unsubscribe_event(
         self,
@@ -197,10 +195,9 @@ class ConfigHotReload:
         callback: Callable[[ConfigEvent], None]
     ) -> None:
         """取消订阅特定类型的事件"""
-        if event_type in self._event_subscribers:
-            if callback in self._event_subscribers[event_type]:
-                self._event_subscribers[event_type].remove(callback)
-                logger.debug(f"[配置热更新] 移除订阅者: event_type={event_type}")
+        if event_type in self._event_subscribers and callback in self._event_subscribers[event_type]:
+            self._event_subscribers[event_type].remove(callback)
+            logger.debug(f"[配置热更新] 移除订阅者: event_type={event_type}")
 
     def unsubscribe_all_events(
         self,
@@ -209,7 +206,7 @@ class ConfigHotReload:
         """取消订阅所有事件"""
         if callback in self._all_subscribers:
             self._all_subscribers.remove(callback)
-            logger.debug(f"[配置热更新] 移除全局订阅者")
+            logger.debug("[配置热更新] 移除全局订阅者")
 
     async def _publish_event(self, event: ConfigEvent) -> None:
         """发布事件到所有订阅者
@@ -506,7 +503,6 @@ class ConfigHotReload:
 
     def _deep_copy_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """深度复制配置"""
-        import copy
         return copy.deepcopy(config)
 
     def _update_personality_config(self, config: Dict[str, Any]) -> None:
@@ -692,7 +688,7 @@ class ConfigHotReload:
                             tts_instance.set_engine(engine)
                         logger.info(f"[配置热更新] TTS引擎已切换到: {engine}")
                     else:
-                        logger.warning(f"[配置热更新] 未找到TTS引擎实例，无法切换引擎")
+                        logger.warning("[配置热更新] 未找到TTS引擎实例，无法切换引擎")
                 except Exception as tts_error:
                     logger.warning(f"[配置热更新] TTS引擎切换失败: {tts_error}")
 
@@ -718,7 +714,7 @@ class ConfigHotReload:
                             tts_instance.set_voice(voice)
                         logger.info(f"[配置热更新] TTS音色已切换到: {voice}")
                     else:
-                        logger.warning(f"[配置热更新] 未找到TTS引擎实例，无法切换音色")
+                        logger.warning("[配置热更新] 未找到TTS引擎实例，无法切换音色")
                 except Exception as voice_error:
                     logger.warning(f"[配置热更新] TTS音色切换失败: {voice_error}")
 
@@ -863,7 +859,7 @@ class ConfigHotReload:
 
                     # 更新所有活跃终端的超时设置
                     if hasattr(self.context.terminal_manager, 'active_terminals'):
-                        for terminal_id, terminal_info in self.context.terminal_manager.active_terminals.items():
+                        for _terminal_id, terminal_info in self.context.terminal_manager.active_terminals.items():
                             if 'process' in terminal_info and hasattr(terminal_info['process'], 'timeout'):
                                 terminal_info['process'].timeout = timeout
                         logger.debug(f"[配置热更新] 已更新{len(self.context.terminal_manager.active_terminals)}个活跃终端的超时")
@@ -961,7 +957,7 @@ class ConfigHotReload:
                             try:
                                 # 取消旧的心跳任务
                                 self.context.iot_manager.heartbeat_task.cancel()
-                                logger.debug(f"[配置热更新] 已取消旧的心跳任务")
+                                logger.debug("[配置热更新] 已取消旧的心跳任务")
 
                                 # 重新启动心跳定时器
                                 if hasattr(self.context.iot_manager, 'start_heartbeat'):
@@ -976,7 +972,7 @@ class ConfigHotReload:
 
                     # 更新所有IoT设备的心跳配置
                     if hasattr(self.context.iot_manager, 'devices'):
-                        for device_id, device_info in self.context.iot_manager.devices.items():
+                        for _device_id, device_info in self.context.iot_manager.devices.items():
                             if isinstance(device_info, dict) and 'heartbeat_interval' in device_info:
                                 device_info['heartbeat_interval'] = heartbeat_interval
                         logger.debug(f"[配置热更新] 已更新{len(self.context.iot_manager.devices)}个IoT设备的心跳间隔")
@@ -1060,7 +1056,6 @@ class ConfigHotReload:
         Args:
             changes: 配置变更字典
         """
-        import time
 
         try:
             # 创建配置更新事件

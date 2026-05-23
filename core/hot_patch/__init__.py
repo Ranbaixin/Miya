@@ -7,13 +7,13 @@
 - 支持环境变量自定义补丁目录
 """
 
+import importlib
+import logging
 import os
 import sys
-import logging
-import importlib
-from pathlib import Path
-from typing import Dict, Optional, List
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +126,7 @@ class HotPatchManager:
     def _find_modules(self, patch_path: str) -> List[str]:
         """查找补丁中的模块"""
         modules = []
-        for root, dirs, files in os.walk(patch_path):
+        for root, _dirs, files in os.walk(patch_path):
             for file in files:
                 if file.endswith(".py") and file != "__init__.py":
                     rel_path = os.path.relpath(os.path.join(root, file), patch_path)

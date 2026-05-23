@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Provider 注册机制
 
@@ -9,7 +8,7 @@ Provider 注册机制
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, Optional, Type
+from typing import Dict, Optional, Type
 
 logger = logging.getLogger(__name__)
 

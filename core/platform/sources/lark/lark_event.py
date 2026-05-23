@@ -6,6 +6,9 @@ import uuid
 from io import BytesIO
 
 import lark_oapi as lark
+from astrbot.api.event import AstrMessageEvent, MessageChain
+from astrbot.api.message_components import At, File, Json, Plain, Record, Video
+from astrbot.api.message_components import Image as AstrBotImage
 from lark_oapi.api.cardkit.v1 import (
     ContentCardElementRequest,
     ContentCardElementRequestBody,
@@ -27,9 +30,6 @@ from lark_oapi.api.im.v1 import (
 )
 
 from astrbot import logger
-from astrbot.api.event import AstrMessageEvent, MessageChain
-from astrbot.api.message_components import At, File, Json, Plain, Record, Video
-from astrbot.api.message_components import Image as AstrBotImage
 from astrbot.core.utils.astrbot_path import get_astrbot_temp_path
 from astrbot.core.utils.io import download_image_by_url
 from astrbot.core.utils.media_utils import (

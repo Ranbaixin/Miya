@@ -8,8 +8,8 @@ QQ子网缓存管理器
 """
 
 import logging
+from dataclasses import dataclass
 from typing import Any, Dict, Optional
-from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
 

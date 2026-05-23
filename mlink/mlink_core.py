@@ -2,13 +2,12 @@
 M-Link 核心模块
 五流分发与路由（增强版：集成消息队列和监控）
 """
-from typing import Dict, List, Optional
-import asyncio
 import logging
+from typing import Dict, List, Optional
+
 from .message import Message
 from .router import Router
 from .trust_transmit import TrustTransmit
-
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +31,7 @@ class MLinkCore:
         # 流量统计
         self.flow_stats = {
             flow_type: {'sent': 0, 'received': 0}
-            for flow_type in self.FLOW_TYPES.keys()
+            for flow_type in self.FLOW_TYPES
         }
 
         # 消息队列

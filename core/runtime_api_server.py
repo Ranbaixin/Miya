@@ -11,20 +11,21 @@
 """
 
 import asyncio
+import contextlib
 import logging
 import os
 import socket
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Callable
+from typing import Any, Dict, List, Optional
 
 # 尝试导入FastAPI
 try:
+    import uvicorn
     from fastapi import FastAPI, HTTPException, status
     from fastapi.responses import JSONResponse
     from pydantic import BaseModel
-    import uvicorn
 
     FASTAPI_AVAILABLE = True
 except ImportError:
@@ -113,8 +114,8 @@ class RuntimeAPIServer:
             from core.ai_client import AIClientFactory
 
             try:
-                from pathlib import Path
                 import json
+                from pathlib import Path
 
                 config_path = (
                     Path(__file__).parent.parent / "config" / "multi_model_config.json"
@@ -379,7 +380,7 @@ class RuntimeAPIServer:
             if cors_origins_raw
             else ["*"]
         )
-        allow_credentials = False if allow_origins == ["*"] else True
+        allow_credentials = allow_origins != ["*"]
 
         app.add_middleware(
             CORSMiddleware,
@@ -516,8 +517,8 @@ class RuntimeAPIServer:
             """获取弥娅核心系统状态"""
             try:
                 from core.memory_system_initializer import get_memory_system_initializer
-                from webnet.ToolNet.subnet import ToolSubnet
                 from core.prompt_manager import PromptManager
+                from webnet.ToolNet.subnet import ToolSubnet
 
                 # 初始化记忆系统
                 try:
@@ -640,8 +641,8 @@ class RuntimeAPIServer:
         async def get_miya_models():
             """获取AI模型信息"""
             try:
-                from pathlib import Path
                 import json
+                from pathlib import Path
 
                 config_path = (
                     Path(__file__).parent.parent / "config" / "multi_model_config.json"
@@ -945,8 +946,6 @@ class RuntimeAPIServer:
         """停止API服务器"""
         if self._server_task:
             self._server_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._server_task
-            except asyncio.CancelledError:
-                pass
             logger.info("[Runtime API停止]")

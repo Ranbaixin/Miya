@@ -3,10 +3,10 @@
 
 本工具整合 Undefined 记忆系统和弥娅原生记忆系统
 """
-from typing import Dict, Any
 import logging
-from webnet.ToolNet.base import BaseTool, ToolContext
+from typing import Any, Dict
 
+from webnet.ToolNet.base import BaseTool, ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,7 @@ class MemoryUpdate(BaseTool):
                 if success:
                     changes = []
                     if content is not None:
-                        changes.append(f"内容已更新")
+                        changes.append("内容已更新")
                     if tags is not None:
                         changes.append(f"标签: {tags}")
 
@@ -101,7 +101,7 @@ class MemoryUpdate(BaseTool):
                     if success:
                         changes = []
                         if content is not None:
-                            changes.append(f"内容已更新")
+                            changes.append("内容已更新")
                         if priority is not None:
                             changes.append(f"优先级: {priority}")
                         if tags is not None:
@@ -162,7 +162,7 @@ class MemoryUpdate(BaseTool):
 
                 changes = []
                 if content is not None:
-                    changes.append(f"内容已更新")
+                    changes.append("内容已更新")
                 if priority is not None:
                     changes.append(f"优先级: {priority}")
                 if tags is not None:

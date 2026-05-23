@@ -3,20 +3,15 @@ QQ交互子网 - 核心子网逻辑
 从原 qq.py 中拆分出来的核心网络逻辑
 """
 
-import asyncio
-import json
 import logging
-import os
 from typing import Any, Callable, Dict, List, Optional, Set
-from datetime import datetime
 
-from .models import QQMessage, QQNotice
 from .client import QQOneBotClient
 from .message_handler import QQMessageHandler
 from .tts_handler import QQTTsHandler
 
 # 注意：IntelligentActiveChatManager 已废弃，使用 core.proactive_chat.ProactiveChatSystem
-from .unified_config import get_qq_config, get_connection_config, get_multimedia_config
+from .unified_config import get_connection_config, get_multimedia_config, get_qq_config
 
 logger = logging.getLogger(__name__)
 

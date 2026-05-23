@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 OpenClaw HTTP 客户端
 
@@ -10,16 +9,14 @@ OpenClaw HTTP 客户端
 - Gateway 状态查询
 """
 
-import json
-import logging
 import asyncio
+import logging
 import uuid
-from datetime import datetime
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, Optional
 
 import httpx
 
-from .config_bridge import get_config_tokens, DEFAULT_GATEWAY_PORT
+from .config_bridge import DEFAULT_GATEWAY_PORT, get_config_tokens
 
 logger = logging.getLogger("openclaw.client")
 

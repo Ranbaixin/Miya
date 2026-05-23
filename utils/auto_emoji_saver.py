@@ -3,16 +3,16 @@
 表情包自动保存服务
 处理用户发送的表情包自动保存到仓库的功能
 """
-import os
 import hashlib
-import tempfile
-import logging
-from pathlib import Path
-from typing import Dict, Optional, Tuple, Any
-from datetime import datetime
 import imghdr
-from PIL import Image
 import io
+import logging
+import os
+import tempfile
+from datetime import datetime
+from typing import Any, Dict, Optional, Tuple
+
+from PIL import Image
 
 logger = logging.getLogger(__name__)
 
@@ -167,7 +167,7 @@ class AutoEmojiSaver:
         # 清理过期的缓存（24小时）
         expired_time = datetime.now().timestamp() - 24 * 3600
         self.image_hash_cache = {
-            h: t for h, t in self.image_hash_cache.items() 
+            h: t for h, t in self.image_hash_cache.items()
             if t.timestamp() > expired_time
         }
         
@@ -235,9 +235,9 @@ class AutoEmojiSaver:
             return None
     
     async def auto_save_emoji(
-        self, 
-        user_id: int, 
-        image_data: bytes, 
+        self,
+        user_id: int,
+        image_data: bytes,
         image_info: Dict[str, Any] = None,
         user_naming: str = None
     ) -> Dict[str, Any]:
@@ -323,7 +323,7 @@ class AutoEmojiSaver:
                     self.user_upload_stats[user_id]['last_upload'] = datetime.now()
                     
                     result['success'] = True
-                    result['message'] = self.config.get('notifications', {}).get('success_message', 
+                    result['message'] = self.config.get('notifications', {}).get('success_message',
                                                                                 '已自动保存你发送的表情包到我的仓库！')
                     result['category'] = category
                     result['filename'] = filename

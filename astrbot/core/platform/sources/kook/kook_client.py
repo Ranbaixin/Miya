@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import contextlib
 import os
 import random
 import time
@@ -11,9 +12,9 @@ import aiofiles
 import aiohttp
 import pydantic
 import websockets
+from astrbot.core.platform.message_type import MessageType
 
 from astrbot import logger
-from astrbot.core.platform.message_type import MessageType
 
 from .kook_config import KookConfig
 from .kook_types import (
@@ -147,10 +148,8 @@ class KookClient:
     async def connect(self, resume=False):
         """连接WebSocket"""
         if self.ws:
-            try:
+            with contextlib.suppress(Exception):
                 await self.ws.close()
-            except Exception:
-                pass
             self.ws = None
         self._stop_event.clear()
         try:
@@ -179,10 +178,8 @@ class KookClient:
         except Exception as e:
             logger.error(f"[KOOK] WebSocket 连接失败: {e}")
             if self.ws:
-                try:
+                with contextlib.suppress(Exception):
                     await self.ws.close()
-                except Exception:
-                    pass
                 self.ws = None
             return False
 
@@ -477,10 +474,8 @@ class KookClient:
 
         if self.heartbeat_task:
             self.heartbeat_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self.heartbeat_task
-            except asyncio.CancelledError:
-                pass
 
         if self.ws:
             try:

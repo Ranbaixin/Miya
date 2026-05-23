@@ -14,8 +14,8 @@
 - 故障隔离：执行失败不影响系统
 """
 import logging
-from typing import Dict, Any, Optional
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 from webnet.ToolNet.base import BaseTool, ToolContext
 
@@ -184,7 +184,7 @@ class ModelManagementTool(BaseTool):
         if not model_info:
             return f"❌ 未找到模型: {model_key}\n\n可用模型: {', '.join(models_config.keys())}"
 
-        result = f"📊 模型详细信息\n\n"
+        result = "📊 模型详细信息\n\n"
         result += f"【{model_key}】\n"
         result += f"  模型名称: {model_info.get('name', 'N/A')}\n"
         result += f"  提供商: {model_info.get('provider', 'N/A')}\n"

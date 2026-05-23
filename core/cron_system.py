@@ -14,12 +14,14 @@
 """
 
 import asyncio
+import contextlib
 import logging
 import uuid
-from typing import Any, Callable, Dict, List, Optional
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
+
 from croniter import croniter
 
 logger = logging.getLogger(__name__)
@@ -486,10 +488,8 @@ class CronScheduler:
         # 停止调度循环
         if self._scheduler_task:
             self._scheduler_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._scheduler_task
-            except asyncio.CancelledError:
-                pass
 
         # 保存任务状态
         await self._save_tasks()

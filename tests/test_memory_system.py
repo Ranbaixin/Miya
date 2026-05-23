@@ -1,16 +1,14 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 Test Miya memory system functionality
 """
 
 import asyncio
 import sys
-import os
 
 sys.path.append(".")
 
-from memory.core import get_memory_core, MemoryLevel, MemorySource
+from memory.core import MemoryLevel, MemorySource, get_memory_core
 
 
 async def test_memory_system():
@@ -118,7 +116,7 @@ async def test_memory_system():
         # Test user profile
         print("\n5. Testing user profile function...")
         profile = await core.get_user_profile("user_001")
-        print(f"   [OK] User profile generated successfully:")
+        print("   [OK] User profile generated successfully:")
         print(f"     - Total memories: {profile['total_memories']}")
         print(f"     - Distribution by level: {profile['by_level']}")
         print(f"     - Distribution by tag: {profile['by_tag']}")
@@ -171,7 +169,7 @@ async def test_memory_system():
         # Test statistics
         print("\n9. Testing statistics information...")
         stats = await core.get_statistics()
-        print(f"   [OK] Statistics information retrieved successfully:")
+        print("   [OK] Statistics information retrieved successfully:")
         print(f"     - Total stored: {stats['stats']['total_stored']}")
         print(f"     - Total retrieved: {stats['stats']['total_retrieved']}")
         print(f"     - Total updated: {stats['stats']['total_updated']}")
@@ -182,7 +180,7 @@ async def test_memory_system():
         # Test expiration handling
         print("\n10. Testing expiration handling...")
         # Create a short-term memory that will expire quickly
-        expiring_id = await core.store(
+        await core.store(
             content="This memory will expire soon",
             level=MemoryLevel.SHORT_TERM,
             user_id="user_001",
@@ -191,7 +189,7 @@ async def test_memory_system():
         # Set expiration time to past (for testing)
         from datetime import datetime, timedelta
 
-        past_time = (datetime.now() - timedelta(seconds=10)).isoformat()
+        (datetime.now() - timedelta(seconds=10)).isoformat()
         # Directly modify memory in memory (simplified test)
         print("   [OK] Expiration handling mechanism ready")
 

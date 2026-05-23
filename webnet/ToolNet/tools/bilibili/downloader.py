@@ -3,11 +3,8 @@ B站视频下载模块
 使用B站API获取视频信息和下载链接
 """
 
-import asyncio
 import logging
-import re
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Optional
 
 import httpx

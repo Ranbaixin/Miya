@@ -2,8 +2,9 @@
 联系人查询工具 - 查询好友/群列表
 """
 
-from typing import Dict, Any
 import logging
+from typing import Any, Dict
+
 from webnet.ToolNet.base import BaseTool, ToolContext
 
 logger = logging.getLogger(__name__)

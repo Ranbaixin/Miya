@@ -5,15 +5,15 @@ OpenAI Provider 实现
 """
 
 import logging
-from typing import List, Dict, Optional, Any, AsyncIterator
+from typing import AsyncIterator, Dict, List, Optional
+
 from openai import AsyncOpenAI
 
 from .bridge import (
     BaseProvider,
-    ProviderConfig,
     ChatMessage,
     ChatResponse,
-    ProviderType,
+    ProviderConfig,
 )
 
 logger = logging.getLogger(__name__)

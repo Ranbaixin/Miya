@@ -1,5 +1,6 @@
 """LifeNet 获取总结工具"""
-from typing import Dict, Any
+from typing import Any, Dict
+
 from webnet.ToolNet.base import BaseTool, ToolContext
 
 

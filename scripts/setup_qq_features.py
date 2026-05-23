@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 QQ功能安装和配置脚本
 自动安装依赖、检查配置、创建必要目录
 """
 
-import os
-import sys
-import subprocess
-import shutil
-import platform
 import logging
+import os
+import platform
+import subprocess
+import sys
 from pathlib import Path
 
 # 配置日志
@@ -61,7 +59,7 @@ def install_dependencies():
     for dep in base_deps:
         try:
             logger.info(f"安装 {dep}...")
-            subprocess.run([sys.executable, '-m', 'pip', 'install', dep], 
+            subprocess.run([sys.executable, '-m', 'pip', 'install', dep],
                           check=True, capture_output=True, text=True)
             success_count += 1
             logger.info(f"  ✓ {dep}")
@@ -105,7 +103,7 @@ def check_tesseract():
                 
         elif system in ['linux', 'darwin']:  # Linux 或 macOS
             try:
-                subprocess.run(['tesseract', '--version'], 
+                subprocess.run(['tesseract', '--version'],
                               check=True, capture_output=True)
                 logger.info("Tesseract已安装 ✓")
             except (subprocess.CalledProcessError, FileNotFoundError):
@@ -152,7 +150,7 @@ def copy_config_files():
     logger.info("复制配置文件...")
     
     project_root = Path(__file__).parent.parent
-    config_source = project_root / 'config' / 'qq_config.yaml'
+    project_root / 'config' / 'qq_config.yaml'
     config_dest = project_root / 'config' / 'qq_config.yaml'
     
     # 检查是否已有配置文件

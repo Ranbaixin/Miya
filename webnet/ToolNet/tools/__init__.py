@@ -7,27 +7,27 @@ ToolNet 工具包 - 弥娅统一工具服务
 > - AI 索引友好，易于发现和使用
 """
 
-from .core import *
-from .network import *
-from .office import *
-
-# 终端模块已迁移至 Open-ClaudeCode，不再导入
-from .visualization import *
-from .social import *
-from .reporting import *
 from .auth import *
 from .basic import *
-from .life import *
-from .memory import *
-from .message import *
-from .scheduler import *
+from .bilibili import *
+from .cognitive import *
+from .core import *
 
 # 跨终端模块已迁移至 Open-ClaudeCode，不再导入
 from .entertainment import *
 from .group import *
 from .knowledge import *
-from .cognitive import *
-from .bilibili import *
+from .life import *
+from .memory import *
+from .message import *
+from .network import *
+from .office import *
+from .reporting import *
+from .scheduler import *
+from .social import *
+
+# 终端模块已迁移至 Open-ClaudeCode，不再导入
+from .visualization import *
 
 __all__ = [
     # 核心服务

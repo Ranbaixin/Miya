@@ -5,9 +5,9 @@ from collections import defaultdict
 from typing import Any, TypeVar, overload
 
 from apscheduler.schedulers.background import BackgroundScheduler
+from astrbot.core.db.po import Preference
 
 from astrbot.core.db import BaseDatabase
-from astrbot.core.db.po import Preference
 
 from .astrbot_path import get_astrbot_data_path
 
@@ -49,10 +49,7 @@ class SharedPreferences:
         """获取指定范围和键的偏好设置"""
         if scope_id is not None and key is not None:
             result = await self.db_helper.get_preference(scope, scope_id, key)
-            if result:
-                ret = result.value["val"]
-            else:
-                ret = default
+            ret = result.value["val"] if result else default
             return ret
 
     async def range_get_async(

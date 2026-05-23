@@ -12,6 +12,9 @@ import botpy.errors
 import botpy.message
 import botpy.types
 import botpy.types.message
+from astrbot.api.event import AstrMessageEvent, MessageChain
+from astrbot.api.message_components import File, Image, Plain, Record, Video
+from astrbot.api.platform import AstrBotMessage, PlatformMetadata
 from botpy import Client
 from botpy.http import Route
 from botpy.types import message
@@ -25,12 +28,9 @@ from tenacity import (
 )
 
 from astrbot.api import logger
-from astrbot.api.event import AstrMessageEvent, MessageChain
-from astrbot.api.message_components import File, Image, Plain, Record, Video
-from astrbot.api.platform import AstrBotMessage, PlatformMetadata
-from core.astrbot_compat.utils import get_astrbot_temp_path
 from astrbot.core.utils.io import download_image_by_url, file_to_base64
 from astrbot.core.utils.tencent_record_helper import wav_to_tencent_silk
+from core.astrbot_compat.utils import get_astrbot_temp_path
 
 
 def _patch_qq_botpy_formdata() -> None:
@@ -45,7 +45,7 @@ def _patch_qq_botpy_formdata() -> None:
         from botpy.http import _FormData  # type: ignore
 
         if not hasattr(_FormData, "_is_processed"):
-            setattr(_FormData, "_is_processed", False)
+            _FormData._is_processed = False
     except Exception:
         logger.debug("[QQOfficial] Skip botpy FormData patch.")
 
@@ -656,10 +656,7 @@ class QQOfficialMessageEvent(AstrMessageEvent):
                         logger.error(f"处理语音时出错: {e}")
                         record_file_path = None
             elif isinstance(i, Video) and not video_file_source:
-                if i.file.startswith("file:///"):
-                    video_file_source = i.file[8:]
-                else:
-                    video_file_source = i.file
+                video_file_source = i.file[8:] if i.file.startswith("file:///") else i.file
             elif isinstance(i, File) and not file_source:
                 file_name = i.name
                 if i.file_:

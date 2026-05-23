@@ -3,10 +3,11 @@
 CreateSave - 为当前游戏创建新存档
 """
 
-from typing import Dict, Any
-from webnet.ToolNet.base import BaseTool, ToolContext
-from webnet.EntertainmentNet.game_mode.game_memory_manager import get_game_memory_manager
+from typing import Any, Dict
+
 from webnet.EntertainmentNet.game_mode import get_game_mode_manager
+from webnet.EntertainmentNet.game_mode.game_memory_manager import get_game_memory_manager
+from webnet.ToolNet.base import BaseTool, ToolContext
 
 
 class CreateSave(BaseTool):
@@ -66,7 +67,7 @@ class CreateSave(BaseTool):
                 # 存档后状态改为 PAUSED，允许再次调用 load_game_save
                 mode_manager.set_game_state(chat_id, GameState.PAUSED)
 
-                self.logger.info(f"[CreateSave] 存档完成，游戏状态已设置为 PAUSED（允许加载存档）")
+                self.logger.info("[CreateSave] 存档完成，游戏状态已设置为 PAUSED（允许加载存档）")
 
                 return f"""✅ **存档创建成功**
 

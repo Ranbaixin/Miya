@@ -2,7 +2,8 @@
 消息表情回复工具 handler
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
+
 from webnet.ToolNet.tools.entertainment.react_emoji import ReactEmoji
 
 

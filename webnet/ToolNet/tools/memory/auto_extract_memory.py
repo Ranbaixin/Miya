@@ -4,11 +4,11 @@
 此工具由弥娅自动调用，用于从对话中提取重要信息并存储为长期记忆
 """
 
-import asyncio
-from typing import Dict, Any
 import logging
-from webnet.ToolNet.base import BaseTool, ToolContext
 from datetime import datetime
+from typing import Any, Dict
+
+from webnet.ToolNet.base import BaseTool, ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ class AutoExtractMemory(BaseTool):
         try:
             # 方法1: 写入统一记忆系统（优先使用 MiyaMemoryCore）
             try:
-                from memory import get_memory_core, MemoryLevel, MemorySource
+                from memory import MemoryLevel, MemorySource, get_memory_core
 
                 core = await get_memory_core()
 

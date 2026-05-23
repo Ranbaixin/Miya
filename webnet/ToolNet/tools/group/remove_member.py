@@ -1,8 +1,9 @@
 """
 移除成员工具
 """
-from typing import Dict, Any
 import logging
+from typing import Any, Dict
+
 from webnet.ToolNet.base import BaseTool
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,6 @@ class RemoveMemberTool(BaseTool):
 
     async def execute(self, args: Dict[str, Any], context) -> str:
         """执行移除成员（占位实现）"""
-        user_id = args.get("user_id")
-        group_id = args.get("group_id")
+        args.get("user_id")
+        args.get("group_id")
         return "移除成员功能占位实现"

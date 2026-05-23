@@ -14,14 +14,12 @@ M-Link兼容的工具子网架构
 4. 支持热插拔子网
 """
 import logging
-from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
-from core.constants import LogLevel
-from .registry import ToolRegistry, ToolContext, BaseTool
-
+from .registry import ToolContext, ToolRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -309,7 +307,7 @@ class MLinkToolSubnet:
         # 2. M-Link传输
         if self.enable_mlink:
             # 创建M-Link消息
-            mlink_message = MLinkMessage(
+            MLinkMessage(
                 flow_type=FlowType.DATA,
                 content={
                     'tool_name': tool_name,

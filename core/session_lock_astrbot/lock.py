@@ -1,6 +1,7 @@
 """Session Lock"""
 
 import asyncio
+import contextlib
 from typing import Dict, Optional
 
 
@@ -22,10 +23,8 @@ class SessionLock:
 
     def release(self, session_id: str):
         if session_id in self._locks:
-            try:
+            with contextlib.suppress(RuntimeError):
                 self._locks[session_id].release()
-            except RuntimeError:
-                pass
 
     def is_locked(self, session_id: str) -> bool:
         if session_id in self._locks:

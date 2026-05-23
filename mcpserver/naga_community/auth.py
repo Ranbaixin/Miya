@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 娜迦网络社区认证模块 (NagaCAS)
 
@@ -13,12 +12,12 @@
 - 并发刷新互斥锁
 """
 
+import asyncio
+import contextlib
 import json
 import logging
-import asyncio
-import re
 from pathlib import Path
-from typing import Dict, Optional, Any
+from typing import Any, Dict, Optional
 
 import httpx
 
@@ -118,10 +117,8 @@ class NagaAuth:
         self._access_token = None
         self._refresh_token = None
         self._user_info = None
-        try:
+        with contextlib.suppress(Exception):
             AUTH_SESSION_FILE.unlink(missing_ok=True)
-        except Exception:
-            pass
 
     # ===== HTTP 客户端 =====
 

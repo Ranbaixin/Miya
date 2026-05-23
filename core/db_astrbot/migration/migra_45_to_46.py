@@ -1,6 +1,7 @@
-from astrbot.api import logger, sp
 from astrbot.core.astrbot_config_mgr import AstrBotConfigManager
 from astrbot.core.umop_config_router import UmopConfigRouter
+
+from astrbot.api import logger, sp
 
 
 async def migrate_45_to_46(acm: AstrBotConfigManager, ucr: UmopConfigRouter) -> None:

@@ -66,12 +66,12 @@ async def init_miya_identity_anchors():
 
         print(f"Total: {len(identity_anchors)} identity anchors\n")
 
-        from memory import store_important, get_memory_core
+        from memory import get_memory_core, store_important
 
         success_count = 0
         for i, anchor in enumerate(identity_anchors, 1):
             try:
-                memory_id = await store_important(
+                await store_important(
                     content=anchor.get("fact", anchor.get("content", "")),
                     user_id="system",
                     tags=anchor.get("tags", []),

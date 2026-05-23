@@ -3,9 +3,7 @@
 统一使用弥娅多引擎搜索（tavily/baidu/bing_cn）
 """
 
-from typing import Dict, Any
 import logging
-import os
 
 logger = logging.getLogger(__name__)
 

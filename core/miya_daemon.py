@@ -21,18 +21,14 @@ from __future__ import annotations
 import asyncio
 import logging
 import signal
-import sys
 from datetime import datetime
-from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 from .unified_platform import (
     BasePlatform,
+    PlatformEvent,
     PlatformRegistry,
     get_registry,
-    PlatformStatus,
-    PlatformHealth,
-    PlatformEvent,
 )
 
 logger = logging.getLogger("Miya.Daemon")
@@ -95,20 +91,20 @@ class MiyaDaemon:
     ) -> Optional[BasePlatform]:
         """根据平台ID创建对应的平台实例"""
         from .unified_platform_impl import (
-            QQOfficialPlatform,
-            TelegramPlatform,
-            DiscordPlatform,
-            OneBotPlatform,
-            GenericPlatform,
-            WebChatPlatform,
-            LarkPlatform,
-            KOOKPlatform,
-            SlackPlatform,
-            LINEPlatform,
             DingTalkPlatform,
+            DiscordPlatform,
+            GenericPlatform,
+            KOOKPlatform,
+            LarkPlatform,
+            LINEPlatform,
+            OneBotPlatform,
+            QQOfficialPlatform,
             SatoriPlatform,
-            WeComPlatform,
+            SlackPlatform,
+            TelegramPlatform,
+            WebChatPlatform,
             WeChatOfficialPlatform,
+            WeComPlatform,
         )
 
         platform_map: Dict[str, type] = {
@@ -240,8 +236,8 @@ class MiyaDaemon:
     async def _save_state(self):
         """保存状态（关闭前持久化工作记忆、谛听、话题追踪）"""
         try:
-            from memory.working_memory import get_working_memory
             from memory.diteng_listener import get_diting
+            from memory.working_memory import get_working_memory
 
             try:
                 wm = get_working_memory()

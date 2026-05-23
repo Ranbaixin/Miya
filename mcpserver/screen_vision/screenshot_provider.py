@@ -225,6 +225,7 @@ def compress_screenshot_data_url(
 ) -> str:
     """缩放截图到 max_width，转 JPEG 压缩。典型 8MB → 200KB，缩小 30-40 倍。"""
     import io
+
     from PIL import Image
 
     _header, b64data = data_url.split(",", 1)

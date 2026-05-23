@@ -2,8 +2,8 @@
 记忆-情绪耦合回路
 实现记忆与情绪的双向影响机制
 """
-from typing import Dict, List, Optional
 from datetime import datetime
+from typing import Dict, List
 
 
 class MemoryEmotion:

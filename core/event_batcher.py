@@ -17,9 +17,9 @@ import logging
 import threading
 import time
 from collections import defaultdict, deque
-from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Set
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -222,10 +222,9 @@ class EventBatcher:
     def unsubscribe(self, event_type: str, subscriber: Callable):
         """取消订阅"""
         with self._lock:
-            if event_type in self._subscribers:
-                if subscriber in self._subscribers[event_type]:
-                    self._subscribers[event_type].remove(subscriber)
-                    logger.debug(f"[事件批处理] 取消订阅: {event_type}")
+            if event_type in self._subscribers and subscriber in self._subscribers[event_type]:
+                self._subscribers[event_type].remove(subscriber)
+                logger.debug(f"[事件批处理] 取消订阅: {event_type}")
 
     async def flush_all(self):
         """刷新所有待处理的事件队列"""

@@ -1,8 +1,9 @@
 """
 删除知识工具
 """
-from typing import Dict, Any
 import logging
+from typing import Any, Dict
+
 from webnet.ToolNet.base import BaseTool
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,6 @@ class DeleteKnowledgeTool(BaseTool):
 
     async def execute(self, args: Dict[str, Any], context) -> str:
         """执行删除知识（占位实现）"""
-        knowledge_id = args.get("knowledge_id")
-        title = args.get("title")
+        args.get("knowledge_id")
+        args.get("title")
         return "删除知识功能占位实现"

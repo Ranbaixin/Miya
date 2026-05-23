@@ -7,10 +7,10 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from abc import ABC, abstractmethod
-from datetime import datetime
-from typing import Optional, Callable, Awaitable
+from typing import Awaitable, Callable, Optional
 
 logger = logging.getLogger("Miya.Reconnect")
 
@@ -148,10 +148,8 @@ async def run_reconnect_loop(
         )
 
         if on_reconnecting:
-            try:
+            with contextlib.suppress(Exception):
                 await on_reconnecting(attempt + 1, delay)
-            except Exception:
-                pass
 
         await asyncio.sleep(delay)
 
@@ -161,26 +159,20 @@ async def run_reconnect_loop(
                 logger.info(f"重连成功 (尝试 {attempt + 1})")
                 policy.reset()
                 if on_reconnected:
-                    try:
+                    with contextlib.suppress(Exception):
                         await on_reconnected(attempt + 1)
-                    except Exception:
-                        pass
                 return True
         except Exception as e:
             logger.warning(f"重连尝试 {attempt + 1} 失败: {e}")
             if on_error:
-                try:
+                with contextlib.suppress(Exception):
                     await on_error(attempt + 1, e)
-                except Exception:
-                    pass
 
         attempt += 1
 
     logger.error(f"重连失败，已达最大尝试次数 {policy.max_attempts}")
     policy.reset()
     if on_give_up:
-        try:
+        with contextlib.suppress(Exception):
             await on_give_up(attempt)
-        except Exception:
-            pass
     return False

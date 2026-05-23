@@ -5,8 +5,8 @@ MIYA Dashboard API Server
 """
 
 import logging
-from quart import Quart, request, jsonify
-from typing import Dict, Any
+
+from quart import Quart, jsonify, request
 
 from core.dashboard import get_dashboard_api
 from core.dashboard import routes as dashboard_routes

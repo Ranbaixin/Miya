@@ -3,12 +3,13 @@
 支持多引擎搜索、结果去重、智能摘要
 """
 
-import requests
-from typing import Dict, List, Optional, Any
-import re
-from urllib.parse import urlencode, quote
 import logging
+import re
+from typing import Any, Dict, List
+
+import requests
 from bs4 import BeautifulSoup
+
 from core.system_config import get_api_url
 
 logger = logging.getLogger(__name__)
@@ -228,7 +229,7 @@ class EnhancedWebSearch:
             for item in soup.select(".result"):
                 title_el = item.select_one(".result__title a")
                 snippet_el = item.select_one(".result__snippet")
-                url_el = item.select_one(".result__url")
+                item.select_one(".result__url")
                 if title_el:
                     results.append(
                         {
@@ -252,20 +253,19 @@ class EnhancedWebSearch:
                 import json
 
                 data = json.loads(data)
-            if isinstance(data, dict):
-                if "RelatedTopics" in data:
-                    for item in data["RelatedTopics"][:10]:
-                        if isinstance(item, dict):
-                            results.append(
-                                {
-                                    "title": item.get("Text", item.get("Result", "")),
-                                    "url": item.get("FirstURL", ""),
-                                    "snippet": item.get("Text", item.get("Result", ""))[
-                                        :200
-                                    ],
-                                    "source": "duckduckgo_api",
-                                }
-                            )
+            if isinstance(data, dict) and "RelatedTopics" in data:
+                for item in data["RelatedTopics"][:10]:
+                    if isinstance(item, dict):
+                        results.append(
+                            {
+                                "title": item.get("Text", item.get("Result", "")),
+                                "url": item.get("FirstURL", ""),
+                                "snippet": item.get("Text", item.get("Result", ""))[
+                                    :200
+                                ],
+                                "source": "duckduckgo_api",
+                            }
+                        )
         except Exception:
             pass
         return results

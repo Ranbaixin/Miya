@@ -24,15 +24,15 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 from datetime import datetime
-from typing import Dict, List, Any, Optional, Set
+from typing import Dict, Optional, Set
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi import APIRouter
 import uvicorn
+from fastapi import APIRouter, FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 
 logger = logging.getLogger("Miya.ManagementAPI")
 
@@ -314,7 +314,5 @@ class ManagementAPI:
             self._server.should_exit = True
         if self._serve_task and not self._serve_task.done():
             self._serve_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._serve_task
-            except asyncio.CancelledError:
-                pass

@@ -5,7 +5,7 @@ AI 提供商管理器 - Providers
 """
 
 import logging
-from typing import Dict, Optional, Any
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger("miya.providers")
 

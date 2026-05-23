@@ -2,9 +2,9 @@ import os
 import shutil
 import zipfile
 
-from core.astrbot_compat import logger
 from astrbot.core.utils.astrbot_path import get_astrbot_plugin_path
 from astrbot.core.utils.io import on_error, remove_dir
+from core.astrbot_compat import logger
 
 from ..star.star import StarMetadata
 from ..updator import RepoZipUpdator

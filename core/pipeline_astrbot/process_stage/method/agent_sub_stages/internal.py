@@ -5,7 +5,6 @@ import base64
 from collections.abc import AsyncGenerator
 from dataclasses import replace
 
-from astrbot.core import db_helper, logger
 from astrbot.core.agent.message import (
     CheckpointData,
     CheckpointMessageSegment,
@@ -34,6 +33,8 @@ from astrbot.core.provider.entities import (
     ProviderRequest,
 )
 from astrbot.core.star.star_handler import EventType
+
+from astrbot.core import db_helper, logger
 from astrbot.core.utils.metrics import Metric
 from astrbot.core.utils.session_lock import session_lock_manager
 

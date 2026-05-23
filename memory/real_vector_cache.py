@@ -3,9 +3,11 @@
 提供本地向量存储功能，使用Milvus Lite
 """
 
+import builtins
+import contextlib
 import logging
-from typing import List, Optional, Dict, Any
 from pathlib import Path
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -44,10 +46,6 @@ class RealVectorCache:
         try:
             from pymilvus import (
                 connections,
-                Collection,
-                CollectionSchema,
-                FieldSchema,
-                DataType,
             )
 
             db_path = Path(self.milvus_db_path)
@@ -79,7 +77,7 @@ class RealVectorCache:
     def _collection_exists(self) -> bool:
         """检查collection是否存在"""
         try:
-            from pymilvus import connections, Collection
+            from pymilvus import Collection, connections
 
             connections.connect(alias="default", uri=f"sqlite:///{self.milvus_db_path}")
             collection = Collection(self.collection_name, using="default")
@@ -91,11 +89,10 @@ class RealVectorCache:
         """创建collection"""
         try:
             from pymilvus import (
-                connections,
                 Collection,
                 CollectionSchema,
-                FieldSchema,
                 DataType,
+                FieldSchema,
             )
 
             fields = [
@@ -139,7 +136,7 @@ class RealVectorCache:
 
         try:
             ids = []
-            for i, (text, vector) in enumerate(zip(texts, vectors)):
+            for i, (text, vector) in enumerate(zip(texts, vectors, strict=False)):
                 meta = metadata[i] if metadata else {}
                 data = {
                     "text": text[:65535],
@@ -197,10 +194,8 @@ class RealVectorCache:
     async def close(self):
         """关闭连接"""
         if self._client:
-            try:
+            with contextlib.suppress(builtins.BaseException):
                 connections.disconnect("default")
-            except:
-                pass
 
 
 def get_real_vector_cache(

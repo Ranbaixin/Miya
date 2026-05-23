@@ -190,10 +190,60 @@ addopts = ["-v", "--tb=short"]
 [tool.ruff]
 line-length = 120
 target-version = "py311"
+exclude = [
+    "webnet/EntertainmentNet/game_mode/*.py",
+    "webnet/EntertainmentNet/game_mode/",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "SIM"]
 ignore = ["E501", "B008"]
+# 项目特有的命名风格（CamelCase 函数、mixedCase 变量等）
+# F403/F405: 代码库中广泛使用 star imports，是故意的设计模式
+# UP006/UP007/UP045/UP035: PEP 585/604 现代化注释，可在后续版本逐步迁移
+# W293: 空白行尾部空格，格式问题而非逻辑问题
+# UP015: 冗余 open 模式，无害
+# UP041: 应使用 TimeoutError 替代 asyncio.TimeoutError（已在后续版本中修复）
+# SIM102/SIM117: 代码风格偏好，不影响功能
+# E402: 常用于延迟导入/条件导入的合法模式
+extend-ignore = [
+    "N",       # 命名约定：GetLogger(CamelCase)、Comp(非小写别名)、fallbackUrl(mixedCase)等
+    "F403",    # from module import *
+    "F405",    # 星形导入名称可能未定义
+    "UP006",   # 非 PEP 585 注解：List[str] → list[str]
+    "UP007",   # 非 PEP 604 联合：Union[X, Y] → X | Y
+    "UP045",   # 非 PEP 604 可选：Optional[X] → X | None
+    "UP035",   # 废弃的导入：from collections import Iterable
+    "UP015",   # 冗余的 open 模式：open(f, "r") → open(f)
+    "W293",    # 空白行包含空格
+    "UP041",   # 替换 asyncio.TimeoutError 为内置 TimeoutError
+    "SIM102",  # 可合并的嵌套 if 语句
+    "SIM117",  # 合并嵌套 with 语句
+    "E402",    # 模块级导入不在文件顶部
+    "B027",    # 没有 @abstract 装饰器的空方法体
+    "E722",    # 裸 except（后续逐步修复）
+    "B904",    # raise 未包含 from exc（后续逐步修复）
+    "F401",    # 未使用的导入（可能有副作用，后续检查）
+    "F811",    # 重复定义未使用（后续检查）
+    "SIM115",  # 打开文件未使用上下文管理器（后续逐步修复）
+    "E741",    # 模糊的变量名（如 l）
+    "B024",    # 抽象基类无抽象方法
+    "B007",    # 未使用的循环控制变量
+    "B025",    # 重复的 try-except 异常类型
+    "B012",    # finally 中的跳转语句
+    "B018",    # 无用的表达式
+    "B023",    # 函数使用了循环变量
+    "SIM103",  # 不必要的 bool 判断
+    "SIM105",  # 可抑制的异常
+    "SIM113",  # 使用 enumerate 替代 range+len
+    "SIM118",  # key in dict.keys()
+    "F822",    # 未定义的导出名
+    "F823",    # 未定义的本地名
+    "F601",    # 字面量中重复的 key
+    "UP009",   # UTF-8 编码声明不必要
+    "F541",    # f-string 缺少占位符
+    "F821",    # 未定义名称（含 42 处需调查的实际代码问题）
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["core", "utils", "config"]

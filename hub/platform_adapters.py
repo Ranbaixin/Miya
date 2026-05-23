@@ -13,11 +13,10 @@
 """
 
 import logging
-from typing import Dict, Any, List
 from datetime import datetime
+from typing import Any, Dict, List
 
-from mlink.message import Message, MessageType, FlowType
-
+from mlink.message import Message, MessageType
 
 logger = logging.getLogger(__name__)
 _adapters_cache = None  # v7.0: 模块级缓存，避免每次消息初始化 18 个适配器
@@ -435,6 +434,7 @@ class WebAdapter(PlatformAdapter):
             系统能力检测结果
         """
         import platform as sys_platform
+
         import psutil
 
         capabilities = {

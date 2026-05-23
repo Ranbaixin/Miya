@@ -7,11 +7,11 @@ import uuid
 from typing import Any
 
 import aiofiles
+from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
+from astrbot.core.provider.provider import EmbeddingProvider, RerankProvider
 from quart import request
 
 from core.astrbot_compat import logger
-from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
-from astrbot.core.provider.provider import EmbeddingProvider, RerankProvider
 from core.astrbot_compat.utils import get_astrbot_temp_path
 
 from ..utils import generate_tsne_visualization
@@ -707,7 +707,7 @@ class KnowledgeBaseRoute(Route):
             # 收集所有文件
             file_list = []
             # 支持 file, file1, file2, ... 或 files[] 格式
-            for key in files.keys():
+            for key in files:
                 if key == "file" or key.startswith("file") or key == "files[]":
                     file_items = files.getlist(key)
                     file_list.extend(file_items)

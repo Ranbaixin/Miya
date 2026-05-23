@@ -3,8 +3,9 @@ from __future__ import annotations
 from collections.abc import Awaitable
 from typing import Any, Protocol
 
-from astrbot import logger
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
+
+from astrbot import logger
 
 from .settings import SETTINGS, QuotedMessageParserSettings
 

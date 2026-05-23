@@ -2,14 +2,13 @@
 模式学习器
 第四阶段核心模块 - 从历史数据中学习模式
 """
+import json
 import logging
-from typing import Dict, List, Optional, Any, Tuple
+from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from collections import defaultdict
-import json
-
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -281,7 +280,6 @@ class PatternLearner:
         Returns:
             匹配的模式列表
         """
-        from pathlib import Path
 
         matches = []
 

@@ -3,9 +3,6 @@ import re
 from collections.abc import AsyncGenerator, Iterable
 from typing import cast
 
-from slack_sdk.web.async_client import AsyncWebClient
-
-from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent, MessageChain
 from astrbot.api.message_components import (
     BaseMessageComponent,
@@ -14,6 +11,9 @@ from astrbot.api.message_components import (
     Plain,
 )
 from astrbot.api.platform import Group, MessageMember
+from slack_sdk.web.async_client import AsyncWebClient
+
+from astrbot.api import logger
 
 
 class SlackMessageEvent(AstrMessageEvent):

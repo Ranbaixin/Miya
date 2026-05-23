@@ -3,10 +3,9 @@
 遵循 Claude Code feature-dev 插件的 7 阶段开发流程
 """
 
-import asyncio
-from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, List
 
 
 class Phase(Enum):
@@ -146,7 +145,7 @@ class FeatureDevWorkflow:
 
     def _format_planning_phase(self, ctx: FeatureContext) -> str:
         """格式化规划阶段"""
-        return f"""## Phase 4: Planning
+        return """## Phase 4: Planning
 
 基于你的回答，我现在将启动 code-architect agent 来设计架构...
 
@@ -160,7 +159,7 @@ class FeatureDevWorkflow:
 
     def _format_implementation_phase(self, ctx: FeatureContext) -> str:
         """格式化实现阶段"""
-        return f"""## Phase 5: Implementation
+        return """## Phase 5: Implementation
 
 架构设计已完成。现在开始实现...
 
@@ -174,7 +173,7 @@ class FeatureDevWorkflow:
 
     def _format_review_phase(self, ctx: FeatureContext) -> str:
         """格式化审查阶段"""
-        return f"""## Phase 6: Review
+        return """## Phase 6: Review
 
 实现已完成。现在启动 code-reviewer agent 进行代码审查...
 

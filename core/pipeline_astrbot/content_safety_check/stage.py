@@ -1,8 +1,9 @@
 from collections.abc import AsyncGenerator
 
-from core.astrbot_compat import logger
 from astrbot.core.message.message_event_result import MessageEventResult
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
+
+from core.astrbot_compat import logger
 
 from ..context import PipelineContext
 from ..stage import Stage, register_stage

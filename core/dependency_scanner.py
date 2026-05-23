@@ -2,17 +2,16 @@
 依赖扫描器
 扫描项目依赖问题
 """
-import logging
-from typing import List, Dict, Optional, Any
-from pathlib import Path
-import re
 import ast
-
+import logging
+import re
+from pathlib import Path
+from typing import List
 
 logger = logging.getLogger(__name__)
 
 
-from core.problem_scanner import BaseScanner, Problem, ProblemType, ProblemSeverity
+from core.problem_scanner import BaseScanner, Problem, ProblemSeverity, ProblemType
 
 
 class DependencyScanner(BaseScanner):
@@ -122,7 +121,7 @@ class DependencyScanner(BaseScanner):
                         type=ProblemType.DEPENDENCY,
                         severity=ProblemSeverity.LOW,
                         title=f"依赖未锁定版本: {line.split('==')[0] if '==' in line else line}",
-                        description=f"建议锁定依赖版本以确保可重现构建",
+                        description="建议锁定依赖版本以确保可重现构建",
                         file_path=str(req_file),
                         line_number=i,
                         suggestions=["使用 == 指定精确版本，或使用 >=, <= 等约束"],
@@ -182,7 +181,7 @@ class DependencyScanner(BaseScanner):
                         type=ProblemType.DEPENDENCY,
                         severity=ProblemSeverity.LOW,
                         title=f"依赖版本范围: {name}@{version}",
-                        description=f"使用了版本范围 (^ 或 ~)，可能导致不同环境安装不同版本",
+                        description="使用了版本范围 (^ 或 ~)，可能导致不同环境安装不同版本",
                         file_path=str(package_file),
                         suggestions=["考虑使用精确版本或 package-lock.json"],
                         auto_fixable=True,
@@ -259,12 +258,10 @@ class DependencyScanner(BaseScanner):
                 if isinstance(node, ast.Import):
                     for alias in node.names:
                         imported_modules.add(alias.name.split('.')[0])
-                elif isinstance(node, ast.ImportFrom):
-                    if node.module:
-                        imported_modules.add(node.module.split('.')[0])
+                elif isinstance(node, ast.ImportFrom) and node.module:
+                    imported_modules.add(node.module.split('.')[0])
 
             # 收集所有使用的模块（简化版）
-            used_modules = set()
             for node in ast.walk(tree):
                 if isinstance(node, ast.Name):
                     # 检查是否是常用模块

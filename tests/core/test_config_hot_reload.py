@@ -1,10 +1,12 @@
 """Config Hot Reload 单元测试"""
 
-import pytest
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, patch
+
+import pytest
+
 from core.config_hot_reload import ConfigHotReload
 
 

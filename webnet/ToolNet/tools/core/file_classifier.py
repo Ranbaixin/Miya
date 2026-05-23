@@ -3,11 +3,11 @@
 支持自动整理下载文件夹
 """
 
-import shutil
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
 import hashlib
 import logging
+import shutil
+from pathlib import Path
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 

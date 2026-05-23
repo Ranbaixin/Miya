@@ -4,12 +4,13 @@ import random
 from collections.abc import AsyncGenerator
 
 import astrbot.core.message.components as Comp
-from core.astrbot_compat import logger
 from astrbot.core.message.components import BaseMessageComponent, ComponentType
 from astrbot.core.message.message_event_result import MessageChain, ResultContentType
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
 from astrbot.core.star.star_handler import EventType
+
 from astrbot.core.utils.path_util import path_Mapping
+from core.astrbot_compat import logger
 
 from ..context import PipelineContext, call_event_hook
 from ..stage import Stage, register_stage
@@ -89,10 +90,7 @@ class RespondStage(Stage):
 
     async def _word_cnt(self, text: str) -> int:
         """分段回复 统计字数"""
-        if all(ord(c) < 128 for c in text):
-            word_count = len(text.split())
-        else:
-            word_count = len([c for c in text if c.isalnum()])
+        word_count = len(text.split()) if all(ord(c) < 128 for c in text) else len([c for c in text if c.isalnum()])
         return word_count
 
     async def _calc_comp_interval(self, comp: BaseMessageComponent) -> float:
@@ -120,9 +118,8 @@ class RespondStage(Stage):
             comp_type = type(comp)
 
             # 检查组件类型是否在字典中
-            if comp_type in self._component_validators:
-                if self._component_validators[comp_type](comp):
-                    return False
+            if comp_type in self._component_validators and self._component_validators[comp_type](comp):
+                return False
 
         # 如果所有组件都为空
         return True
@@ -137,14 +134,7 @@ class RespondStage(Stage):
         if self.only_llm_result and not result.is_model_result():
             return False
 
-        if event.get_platform_name() in [
-            "qq_official",
-            "weixin_official_account",
-            "dingtalk",
-        ]:
-            return False
-
-        return True
+        return event.get_platform_name() not in ["qq_official", "weixin_official_account", "dingtalk"]
 
     def _extract_comp(
         self,

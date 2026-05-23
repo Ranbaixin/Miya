@@ -18,10 +18,10 @@ async def test_dynamic_system():
 
     try:
         # 导入动态消息生成器
+        from config.proactive_chat.config.loader import ProactiveChatConfigLoader
         from config.proactive_chat.dynamic_message_generator import (
             DynamicMessageGenerator,
         )
-        from config.proactive_chat.config.loader import ProactiveChatConfigLoader
 
         print("[OK] 导入模块成功")
 

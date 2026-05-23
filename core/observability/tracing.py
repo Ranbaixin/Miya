@@ -3,17 +3,17 @@ OpenTelemetry tracing setup for MIYA.
 Provides a no-op fallback if OpenTelemetry is not installed.
 """
 
-import os
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
 try:
     from opentelemetry import trace
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor
     from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
     from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
     from opentelemetry.trace import SpanKind, Status, StatusCode
 
     _OPENTELEMETRY_AVAILABLE = True

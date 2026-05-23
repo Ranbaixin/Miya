@@ -13,12 +13,12 @@ from datetime import datetime
 from pathlib import Path
 
 import jwt
+from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
 from quart import request, send_file
 
-from core.astrbot_compat import logger
 from astrbot.core.backup.exporter import AstrBotExporter
 from astrbot.core.backup.importer import AstrBotImporter
-from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
+from core.astrbot_compat import logger
 from core.astrbot_compat.db import BaseDatabase
 from core.astrbot_compat.utils import (
     get_astrbot_backups_path,

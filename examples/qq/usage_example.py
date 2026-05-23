@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 QQ功能使用示例
 展示如何使用新实现的QQ功能
@@ -26,11 +25,11 @@ async def example_image_send():
     """示例：图片发送"""
     logger.info("示例：图片发送功能")
     
-    from webnet.ToolNet.tools.qq.qq_image import QQImageTool
     from webnet.ToolNet.base import ToolContext
+    from webnet.ToolNet.tools.qq.qq_image import QQImageTool
     
-    tool = QQImageTool()
-    context = ToolContext()
+    QQImageTool()
+    ToolContext()
     
     # 示例1：发送本地图片
     example_args = {
@@ -54,11 +53,11 @@ async def example_file_read():
     """示例：文件读取"""
     logger.info("示例：文件读取功能")
     
-    from webnet.ToolNet.tools.qq.qq_file_reader import QQFileReaderTool
     from webnet.ToolNet.base import ToolContext
+    from webnet.ToolNet.tools.qq.qq_file_reader import QQFileReaderTool
     
-    tool = QQFileReaderTool()
-    context = ToolContext()
+    QQFileReaderTool()
+    ToolContext()
     
     # 示例：读取文本文件
     example_args = {
@@ -96,11 +95,11 @@ async def example_image_analysis():
     """示例：图片分析"""
     logger.info("示例：图片分析功能")
     
-    from webnet.ToolNet.tools.qq.qq_image_analyzer import QQImageAnalyzerTool
     from webnet.ToolNet.base import ToolContext
+    from webnet.ToolNet.tools.qq.qq_image_analyzer import QQImageAnalyzerTool
     
-    tool = QQImageAnalyzerTool()
-    context = ToolContext()
+    QQImageAnalyzerTool()
+    ToolContext()
     
     # 示例：分析图片中的文字
     example_args = {
@@ -124,10 +123,11 @@ async def example_active_chat():
     logger.info("示例：主动聊天功能")
     
     from webnet.ToolNet.tools.qq.qq_active_chat import QQActiveChatTool
+
     from webnet.ToolNet.base import ToolContext
     
-    tool = QQActiveChatTool()
-    context = ToolContext()
+    QQActiveChatTool()
+    ToolContext()
     
     # 示例：设置早安消息
     example_args = {
@@ -155,7 +155,7 @@ async def example_enhanced_scheduler():
     try:
         from webnet.ToolNet.tools.core.task_scheduler_enhanced import EnhancedTaskScheduler
         
-        scheduler = EnhancedTaskScheduler()
+        EnhancedTaskScheduler()
         
         # 示例任务配置
         task_config = {

@@ -2,22 +2,20 @@
 自主决策引擎
 第三阶段核心模块 - 让弥娅具备完全自主的决策和执行能力
 """
-import logging
 import asyncio
 import json
-from typing import Dict, List, Optional, Any, Callable
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from enum import Enum
-from pathlib import Path
+import logging
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
 
-from core.system_detector import get_system_detector
-from core.problem_scanner import ProblemScanner, Problem
 from core.auto_fixer import AutoFixer, FixResult
-
+from core.problem_scanner import Problem, ProblemScanner
+from core.system_detector import get_system_detector
 
 logger = logging.getLogger(__name__)
 

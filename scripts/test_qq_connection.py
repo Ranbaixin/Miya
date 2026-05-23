@@ -5,8 +5,8 @@ QQ连接测试脚本
 
 import asyncio
 import logging
-import sys
 import os
+import sys
 from pathlib import Path
 
 # 添加项目根目录到Python路径

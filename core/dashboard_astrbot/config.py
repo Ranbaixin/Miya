@@ -6,9 +6,6 @@ import traceback
 from pathlib import Path
 from typing import Any
 
-from quart import request
-
-from core.astrbot_compat import astrbot_config, file_token_service, logger
 from astrbot.core.config.astrbot_config import AstrBotConfig
 from astrbot.core.config.default import (
     CONFIG_METADATA_2,
@@ -20,14 +17,17 @@ from astrbot.core.config.default import (
 from astrbot.core.config.i18n_utils import ConfigMetadataI18n
 from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
 from astrbot.core.platform.register import platform_cls_map, platform_registry
-from astrbot.core.provider import Provider
 from astrbot.core.provider.register import provider_registry
 from astrbot.core.star.star import StarMetadata, star_registry
+from quart import request
+
+from astrbot.core.provider import Provider
+from astrbot.core.utils.llm_metadata import LLM_METADATAS
+from astrbot.core.utils.webhook_utils import ensure_platform_webhook_config
+from core.astrbot_compat import astrbot_config, file_token_service, logger
 from core.astrbot_compat.utils import (
     get_astrbot_plugin_data_path,
 )
-from astrbot.core.utils.llm_metadata import LLM_METADATAS
-from astrbot.core.utils.webhook_utils import ensure_platform_webhook_config
 
 from .route import Response, Route, RouteContext
 from .util import (
@@ -283,16 +283,15 @@ async def _validate_neo_connectivity(
 
     health_url = f"{endpoint}/health"
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                health_url,
-                timeout=aiohttp.ClientTimeout(total=5),
-            ) as resp:
-                if resp.status != 200:
-                    return (
-                        f"⚠️ Bay 健康检查失败 (HTTP {resp.status})，"
-                        f"请确认 Bay 正在运行: {endpoint}"
-                    )
+        async with aiohttp.ClientSession() as session, session.get(
+            health_url,
+            timeout=aiohttp.ClientTimeout(total=5),
+        ) as resp:
+            if resp.status != 200:
+                return (
+                    f"⚠️ Bay 健康检查失败 (HTTP {resp.status})，"
+                    f"请确认 Bay 正在运行: {endpoint}"
+                )
     except Exception:
         return f"⚠️ 无法连接 Bay ({endpoint})，请确认 Bay 已启动。"
 

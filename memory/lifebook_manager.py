@@ -5,7 +5,7 @@ Legacy lifebook_manager - 已迁移到新版记忆系统
 """
 
 from enum import Enum
-from typing import List, Optional, Dict, Any
+from typing import Dict, List, Optional
 
 
 class MemoryLevel(Enum):

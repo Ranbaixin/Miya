@@ -2,17 +2,16 @@
 配置扫描器
 扫描配置文件问题
 """
-import logging
-from typing import List, Dict, Optional, Any
-from pathlib import Path
 import json
+import logging
 import re
-
+from pathlib import Path
+from typing import Any, List
 
 logger = logging.getLogger(__name__)
 
 
-from core.problem_scanner import BaseScanner, Problem, ProblemType, ProblemSeverity
+from core.problem_scanner import BaseScanner, Problem, ProblemSeverity, ProblemType
 
 
 class ConfigScanner(BaseScanner):
@@ -66,7 +65,7 @@ class ConfigScanner(BaseScanner):
 
             # 查找所有配置文件
             config_files = []
-            for pattern in self._config_patterns.keys():
+            for pattern in self._config_patterns:
                 config_files.extend(path_obj.glob(f"**/*{pattern}"))
 
             # 排除 .git 目录和 node_modules
@@ -150,7 +149,7 @@ class ConfigScanner(BaseScanner):
                         type=ProblemType.SECURITY,
                         severity=ProblemSeverity.HIGH,
                         title=f"敏感信息泄露: {key}",
-                        description=f".env 文件中包含敏感配置项，建议使用环境变量或密钥管理服务",
+                        description=".env 文件中包含敏感配置项，建议使用环境变量或密钥管理服务",
                         file_path=str(env_file),
                         line_number=i,
                         suggestions=["使用密钥管理服务（如 AWS Secrets Manager, HashiCorp Vault）", "确保 .env 在 .gitignore 中"],
@@ -166,7 +165,7 @@ class ConfigScanner(BaseScanner):
                         type=ProblemType.SECURITY,
                         severity=ProblemSeverity.MEDIUM,
                         title=f"可能的硬编码值: {key}",
-                        description=f".env 文件中可能包含硬编码的凭证",
+                        description=".env 文件中可能包含硬编码的凭证",
                         file_path=str(env_file),
                         line_number=i,
                         suggestions=["使用占位符或从密钥管理服务读取"],
@@ -228,7 +227,7 @@ class ConfigScanner(BaseScanner):
                     type=ProblemType.CONFIG,
                     severity=ProblemSeverity.LOW,
                     title=f"多文档 YAML: {yaml_file.name}",
-                    description=f"YAML 文件包含多个文档分隔符 (---)",
+                    description="YAML 文件包含多个文档分隔符 (---)",
                     file_path=str(yaml_file),
                     suggestions=["确认是否需要多个文档", "考虑拆分为单独的文件"],
                     auto_fixable=False,
@@ -303,8 +302,8 @@ class ConfigScanner(BaseScanner):
                             id="",
                             type=ProblemType.CONFIG,
                             severity=ProblemSeverity.MEDIUM,
-                            title=f"可能的 TOML 语法错误",
-                            description=f"TOML 使用等号 (=) 而不是冒号 (:)",
+                            title="可能的 TOML 语法错误",
+                            description="TOML 使用等号 (=) 而不是冒号 (:)",
                             file_path=str(toml_file),
                             line_number=i,
                             suggestions=["将冒号 (:) 替换为等号 (=)"],
@@ -333,10 +332,7 @@ class ConfigScanner(BaseScanner):
             return True
 
         # 检查常见的密码模式
-        if re.match(r'^[A-Za-z0-9+/=]{20,}$', value):
-            return True
-
-        return False
+        return bool(re.match(r'^[A-Za-z0-9+/=]{20,}$', value))
 
     def _check_sensitive_in_dict(
         self,

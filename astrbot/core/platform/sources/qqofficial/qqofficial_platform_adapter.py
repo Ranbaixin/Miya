@@ -12,10 +12,6 @@ from typing import Any, cast
 
 import botpy
 import botpy.message
-from botpy import Client
-from botpy.gateway import BotWebSocket
-
-from astrbot import logger
 from astrbot.api.event import MessageChain
 from astrbot.api.message_components import At, File, Image, Plain, Record, Video
 from astrbot.api.platform import (
@@ -27,6 +23,10 @@ from astrbot.api.platform import (
 )
 from astrbot.core.message.components import BaseMessageComponent
 from astrbot.core.platform.astr_message_event import MessageSesion
+from botpy import Client
+from botpy.gateway import BotWebSocket
+
+from astrbot import logger
 from astrbot.core.utils.astrbot_path import get_astrbot_temp_path
 from astrbot.core.utils.io import download_file
 
@@ -530,10 +530,7 @@ class QQOfficialPlatformAdapter(Platform):
         # abm.tag = "qq_official"
         msg: list[BaseMessageComponent] = []
 
-        if isinstance(message, botpy.message.GroupMessage) or isinstance(
-            message,
-            botpy.message.C2CMessage,
-        ):
+        if isinstance(message, (botpy.message.GroupMessage, botpy.message.C2CMessage)):
             if isinstance(message, botpy.message.GroupMessage):
                 abm.sender = MessageMember(message.author.member_openid, "")
                 abm.group_id = message.group_openid
@@ -551,10 +548,7 @@ class QQOfficialPlatformAdapter(Platform):
             )
             abm.message = msg
 
-        elif isinstance(message, botpy.message.Message) or isinstance(
-            message,
-            botpy.message.DirectMessage,
-        ):
+        elif isinstance(message, (botpy.message.Message, botpy.message.DirectMessage)):
             if isinstance(message, botpy.message.Message):
                 abm.self_id = str(message.mentions[0].id)
             else:

@@ -2,7 +2,7 @@
 行为底线与权限
 定义弥娅的行为边界和安全约束
 """
-from typing import List, Set, Dict
+from typing import Dict
 
 
 class Ethics:

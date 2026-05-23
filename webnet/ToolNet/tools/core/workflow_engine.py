@@ -3,15 +3,14 @@
 支持构建和执行复杂的工作流，包含条件分支、循环、并行等
 """
 
-import logging
-from typing import Dict, List, Optional, Any, Callable
-from dataclasses import dataclass, field
-from enum import Enum
-from datetime import datetime
-import json
-import uuid
 import asyncio
-from pathlib import Path
+import json
+import logging
+import uuid
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +81,7 @@ class WorkflowEngine:
 
     def __init__(self):
         """初始化工作流引擎"""
-        self.workflows: Dict[str, 'Workflow'] = {}
+        self.workflows: Dict[str, Workflow] = {}
         self.executions: Dict[str, WorkflowExecution] = {}
         self.running_executions: Dict[str, asyncio.Task] = {}
 

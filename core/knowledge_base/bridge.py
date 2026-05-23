@@ -5,7 +5,7 @@ Knowledge Base Bridge - 知识库桥接器
 """
 
 import logging
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("miya.knowledge_base.bridge")
 

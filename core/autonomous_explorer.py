@@ -2,13 +2,12 @@
 自主探索模块
 负责主动探索环境、收集信息、做出决策
 """
-import logging
-from typing import Dict, List, Optional, Callable, Tuple
-from dataclasses import dataclass, field
-from enum import Enum
-from datetime import datetime
 import json
-import asyncio
+import logging
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Callable, Dict, List, Optional
 
 
 class CustomJSONEncoder(json.JSONEncoder):
@@ -459,14 +458,14 @@ class AutonomousExplorer:
             return "无探索记录"
         
         parts = [
-            f"# 探索报告",
-            f"",
+            "# 探索报告",
+            "",
             f"**目标**: {plan.goal}",
             f"**状态**: {'完成' if plan.completed else '未完成'}",
             f"**步骤数**: {plan.current_step}/{plan.max_steps}",
             f"**发现数**: {len(plan.findings)}",
-            f"",
-            f"## 关键发现",
+            "",
+            "## 关键发现",
         ]
         
         for finding in plan.findings[:15]:

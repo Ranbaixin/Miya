@@ -19,10 +19,7 @@ def _load_config() -> dict[str, Any]:
     if _CONFIG_CACHE is not None:
         return _CONFIG_CACHE
     try:
-        if _CONFIG_PATH.exists():
-            _CONFIG_CACHE = json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
-        else:
-            _CONFIG_CACHE = {}
+        _CONFIG_CACHE = json.loads(_CONFIG_PATH.read_text(encoding="utf-8")) if _CONFIG_PATH.exists() else {}
     except Exception as e:
         logger.warning("加载 text_config.json 失败: %s", e)
         _CONFIG_CACHE = {}

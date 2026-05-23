@@ -3,7 +3,7 @@ QQ图片分析工具 handler
 """
 
 import logging
-from typing import Dict, Any, Union
+from typing import Any, Dict, Union
 
 from webnet.ToolNet.tools.qq.qq_image_analyzer import QQImageAnalyzerTool
 

@@ -167,15 +167,14 @@ class WecomAIBotAPIClient:
             # 下载图片
             logger.info(f"开始下载加密图片: {image_url}")
 
-            async with aiohttp.ClientSession() as session:
-                async with session.get(image_url, timeout=15) as response:
-                    if response.status != 200:
-                        error_msg = f"图片下载失败，状态码: {response.status}"
-                        logger.error(error_msg)
-                        return False, error_msg
+            async with aiohttp.ClientSession() as session, session.get(image_url, timeout=15) as response:
+                if response.status != 200:
+                    error_msg = f"图片下载失败，状态码: {response.status}"
+                    logger.error(error_msg)
+                    return False, error_msg
 
-                    encrypted_data = await response.read()
-                    logger.info(f"图片下载成功，大小: {len(encrypted_data)} 字节")
+                encrypted_data = await response.read()
+                logger.info(f"图片下载成功，大小: {len(encrypted_data)} 字节")
 
             # 准备解密密钥
             if aes_key_base64 is None:

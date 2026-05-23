@@ -16,10 +16,9 @@ SubnetManager - 子网管理器
 > - CognitiveNet: 认知工具
 """
 import logging
-from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 from datetime import datetime
-
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +58,7 @@ class SubnetManager:
 
         # 建立工具索引
         if hasattr(subnet_instance, 'tools'):
-            for tool_name in subnet_instance.tools.keys():
+            for tool_name in subnet_instance.tools:
                 self.tool_index[tool_name] = subnet_name
             logger.info(f"  - 包含 {len(subnet_instance.tools)} 个工具")
 

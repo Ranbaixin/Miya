@@ -7,15 +7,12 @@ import asyncio
 import json
 import logging
 import os
+from typing import Any, Callable, Dict, List, Optional
+
 import aiohttp
-import mimetypes
-from typing import Any, Callable, Dict, List, Optional, Set
-
 import websockets
-from mlink.message import Message, MessageType
-from core.constants import NetworkTimeout
 
-from .models import QQMessage
+from core.constants import NetworkTimeout
 
 logger = logging.getLogger(__name__)
 
@@ -297,20 +294,18 @@ class QQOneBotClient:
 
     async def download_group_file(self, url: str, save_path: str) -> bool:
         """下载群文件到本地"""
-        import aiohttp
 
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    if response.status == 200:
-                        with open(save_path, "wb") as f:
-                            async for chunk in response.content.iter_chunked(8192):
-                                f.write(chunk)
-                        logger.info(f"[QQ] 群文件已下载: {save_path}")
-                        return True
-                    else:
-                        logger.error(f"[QQ] 文件下载失败，状态码: {response.status}")
-                        return False
+            async with aiohttp.ClientSession() as session, session.get(url) as response:
+                if response.status == 200:
+                    with open(save_path, "wb") as f:
+                        async for chunk in response.content.iter_chunked(8192):
+                            f.write(chunk)
+                    logger.info(f"[QQ] 群文件已下载: {save_path}")
+                    return True
+                else:
+                    logger.error(f"[QQ] 文件下载失败，状态码: {response.status}")
+                    return False
         except Exception as e:
             logger.error(f"[QQ] 群文件下载失败: {e}")
             return False
@@ -668,11 +663,10 @@ class QQOneBotClient:
             raise RuntimeError(f"图片上传失败: {image_path}")
 
         # 构建图片消息
-        from .utils import create_image_message, QQMessageBuilder
-        import os
+        from .utils import QQMessageBuilder
 
         # 提取文件名
-        filename = os.path.basename(image_path)
+        os.path.basename(image_path)
 
         # 使用消息构建器
         builder = QQMessageBuilder()
@@ -706,7 +700,7 @@ class QQOneBotClient:
             raise RuntimeError(f"图片上传失败: {image_path}")
 
         # 构建图片消息
-        from .utils import create_image_message, QQMessageBuilder
+        from .utils import QQMessageBuilder
 
         builder = QQMessageBuilder()
         if caption:

@@ -9,8 +9,6 @@ from typing import Any, cast
 
 from aiocqhttp import CQHttp, Event
 from aiocqhttp.exceptions import ActionFailed
-
-from astrbot.api import logger
 from astrbot.api.event import MessageChain
 from astrbot.api.message_components import *
 from astrbot.api.platform import (
@@ -21,6 +19,8 @@ from astrbot.api.platform import (
     PlatformMetadata,
 )
 from astrbot.core.platform.astr_message_event import MessageSesion
+
+from astrbot.api import logger
 
 from ...register import register_platform_adapter
 from .aiocqhttp_message_event import *
@@ -112,10 +112,7 @@ class AiocqhttpAdapter(Platform):
         message_chain: MessageChain,
     ) -> None:
         is_group = session.message_type == MessageType.GROUP_MESSAGE
-        if is_group:
-            session_id = session.session_id.split("_")[-1]
-        else:
-            session_id = session.session_id
+        session_id = session.session_id.split("_")[-1] if is_group else session.session_id
         await AiocqhttpMessageEvent.send_message(
             bot=self.bot,
             message_chain=message_chain,
@@ -189,9 +186,8 @@ class AiocqhttpAdapter(Platform):
         abm.timestamp = int(time.time())
         abm.message_id = uuid.uuid4().hex
 
-        if "sub_type" in event:
-            if event["sub_type"] == "poke" and "target_id" in event:
-                abm.message.append(Poke(id=str(event["target_id"])))
+        if "sub_type" in event and event["sub_type"] == "poke" and "target_id" in event:
+            abm.message.append(Poke(id=str(event["target_id"])))
 
         return abm
 

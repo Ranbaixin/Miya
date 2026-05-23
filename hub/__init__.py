@@ -8,15 +8,15 @@
 - MemoryManager: 记忆管理器
 """
 
+from .decision import Decision
+from .decision_hub import DecisionHub
+from .emotion import Emotion
 from .memory_emotion import MemoryEmotion
 from .memory_engine import MemoryEngine
-from .emotion import Emotion
-from .decision import Decision
-from .scheduler import Scheduler
-from .decision_hub import DecisionHub
+from .memory_manager import MemoryManager
 from .perception_handler import PerceptionHandler
 from .response_generator import ResponseGenerator
-from .memory_manager import MemoryManager
+from .scheduler import Scheduler
 
 __all__ = [
     "MemoryEmotion",

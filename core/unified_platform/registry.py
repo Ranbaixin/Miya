@@ -13,11 +13,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime
-from typing import Dict, List, Type, Optional, Any, Callable, Awaitable
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Type
 
 from .base import BasePlatform
-from .status import PlatformStatus, PlatformEvent
+from .status import PlatformEvent, PlatformStatus
 
 logger = logging.getLogger("Miya.PlatformRegistry")
 

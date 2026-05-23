@@ -1,9 +1,9 @@
 import traceback
 
+from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
 from quart import request
 
 from core.astrbot_compat import logger
-from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
 from core.astrbot_compat.db import BaseDatabase
 
 from .route import Response, Route, RouteContext

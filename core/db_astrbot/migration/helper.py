@@ -29,9 +29,7 @@ async def check_migration_needed_v4(db_helper: BaseDatabase) -> bool:
         "global",
         "migration_done_v4",
     )
-    if migration_done:
-        return False
-    return True
+    return not migration_done
 
 
 async def do_migration_v4(

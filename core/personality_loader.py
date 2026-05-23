@@ -185,7 +185,7 @@ class PersonalityLoader:
             logger.warning(f"[人格加载器] 人格配置不存在: {name}, 尝试加载 default")
             path = self.config_dir / "_default.yaml"
             if not path.exists():
-                raise FileNotFoundError(f"默认人格配置也不存在: _default.yaml")
+                raise FileNotFoundError("默认人格配置也不存在: _default.yaml")
             load_default = True
 
         try:
@@ -621,7 +621,7 @@ class PersonalityLoader:
         # 核心形态时添加额外指导
         form_name = config.get("full_name", "").lower()
         if form_name in ["镜流", "卡芙卡", "黄泉", "雷电将军"]:
-            lines.append(f"[注意] 保持简短，少用语气词")
+            lines.append("[注意] 保持简短，少用语气词")
 
         # 【v7.0.1】身份锚点 - 从配置文件读取
         # 防止形态切换后身份混淆（尤其薇拉、镜流等队长型角色）

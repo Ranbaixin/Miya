@@ -5,8 +5,8 @@
 """
 
 import uuid
-from typing import Dict
 from datetime import datetime
+from typing import Dict
 
 
 class Identity:

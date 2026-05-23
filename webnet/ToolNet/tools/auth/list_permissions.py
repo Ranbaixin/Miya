@@ -4,7 +4,7 @@
 
 import json
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
 from webnet.ToolNet.base import BaseTool
 

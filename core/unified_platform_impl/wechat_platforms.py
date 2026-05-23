@@ -9,13 +9,9 @@
 from __future__ import annotations
 
 import asyncio
-import json
+import contextlib
 import logging
-import os
-import sys
-import time
-import uuid
-from typing import Dict, Any, Optional, cast
+from typing import Any, Optional, cast
 
 from .webhook_base import WebhookPlatform
 
@@ -91,7 +87,6 @@ class WeComPlatform(WebhookPlatform):
                 return "success"
             try:
                 args = request.query_params
-                from wechatpy.exceptions import InvalidSignatureException
 
                 echo_str = platform._crypto.check_signature(
                     args.get("msg_signature", ""),
@@ -134,8 +129,8 @@ class WeComPlatform(WebhookPlatform):
                     logger.warning("[wecom] 解析消息失败")
                     return "success"
 
-                from wechatpy.enterprise.messages import TextMessage as WxTextMsg
                 from wechatpy.enterprise.messages import ImageMessage as WxImageMsg
+                from wechatpy.enterprise.messages import TextMessage as WxTextMsg
                 from wechatpy.enterprise.messages import VoiceMessage as WxVoiceMsg
 
                 content = ""
@@ -257,7 +252,6 @@ class WeixinOfficialAccountPlatform(WebhookPlatform):
                 return "success"
             try:
                 from wechatpy.utils import check_signature
-                from wechatpy.exceptions import InvalidSignatureException
 
                 args = request.query_params
                 if not args.get("signature"):
@@ -304,8 +298,8 @@ class WeixinOfficialAccountPlatform(WebhookPlatform):
                     logger.warning("[weixin_offacc] 解析消息失败")
                     return "success"
 
-                from wechatpy.messages import TextMessage as WxTextMsg
                 from wechatpy.messages import ImageMessage as WxImageMsg
+                from wechatpy.messages import TextMessage as WxTextMsg
                 from wechatpy.messages import VoiceMessage as WxVoiceMsg
 
                 content = ""
@@ -348,7 +342,6 @@ class WeixinOfficialAccountPlatform(WebhookPlatform):
                         return "success"
                     else:
                         # 被动回复模式：5 秒内需返回
-                        import asyncio as _asyncio
 
                         async def _timed_task():
                             try:
@@ -488,8 +481,7 @@ class WeixinOCPlatform(WebhookPlatform):
         try:
             import aiohttp
 
-            session = await self._ensure_session()
-            headers = {"Authorization": f"Bearer {self._token}"}
+            await self._ensure_session()
 
             logger.info("[weixin_oc] 微信开放平台: 正在验证 token...")
             self._shutdown_event.clear()
@@ -510,10 +502,8 @@ class WeixinOCPlatform(WebhookPlatform):
         self._shutdown_event.set()
         if self._poll_task and not self._poll_task.done():
             self._poll_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._poll_task
-            except asyncio.CancelledError:
-                pass
         self._poll_task = None
 
         if self._http_session and not self._http_session.closed:
@@ -603,7 +593,7 @@ class WeixinOCPlatform(WebhookPlatform):
                 return msgs
         except asyncio.TimeoutError:
             return []
-        except Exception as e:
+        except Exception:
             raise
 
     async def _handle_inbound_message(self, msg: dict):

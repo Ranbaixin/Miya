@@ -28,14 +28,15 @@ from astrbot.api.platform import AstrBotMessage, MessageMember, MessageType
 from astrbot.core.message.components import BaseMessageComponent
 from astrbot.core.message.message_event_result import MessageChain
 from astrbot.core.platform.astr_message_event import MessageSesion
+from astrbot.core.star.context import Context
+from astrbot.core.star.star import star_map
+
 from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
 )
 from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_platform_adapter import (
     AiocqhttpAdapter,
 )
-from astrbot.core.star.context import Context
-from astrbot.core.star.star import star_map
 from core.astrbot_compat.utils import get_astrbot_data_path
 
 

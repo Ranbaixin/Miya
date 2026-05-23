@@ -3,21 +3,20 @@
 支持语义标签、自动分类、智能检索和上下文感知触发
 """
 
-import os
-import json
-import random
-import hashlib
-import mimetypes
-import logging
 import asyncio
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any, Union
-from datetime import datetime, timedelta
+import hashlib
+import json
+import logging
+import mimetypes
+import os
+import random
 from collections import defaultdict
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
-import yaml
 import jieba
 import jieba.analyse
+import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -228,7 +227,7 @@ class SemanticTagger:
         sentiment = self.analyze_sentiment(text)
         context_types = self.get_context_type(text)
 
-        max_sentiment_score = max(sentiment.values()) if sentiment else 0
+        max(sentiment.values()) if sentiment else 0
         sentiment_threshold = 0.3
 
         need_emoji = False
@@ -344,7 +343,7 @@ class SmartEmojiManager:
     def _scan_directory(self, base_dir: str, allowed_formats: set, cache: Dict):
         """扫描目录中的图片文件"""
         try:
-            for root, dirs, files in os.walk(base_dir):
+            for root, _dirs, files in os.walk(base_dir):
                 relative_path = os.path.relpath(root, base_dir)
                 category = "root" if relative_path == "." else relative_path
 
@@ -429,10 +428,10 @@ class SmartEmojiManager:
         logger.info("开始为表情包生成语义标签...")
 
         all_items = {}
-        for cat, items in self.emoji_cache.items():
+        for _cat, items in self.emoji_cache.items():
             for item in items:
                 all_items[item["path"]] = item
-        for cat, items in self.sticker_cache.items():
+        for _cat, items in self.sticker_cache.items():
             for item in items:
                 all_items[item["path"]] = item
 
@@ -459,7 +458,7 @@ class SmartEmojiManager:
 
         category = emoji_info.get("category", "")
         name = emoji_info.get("name", "")
-        path = emoji_info.get("path", "")
+        emoji_info.get("path", "")
 
         text_config = _load_text_config()
         category_tags = text_config.get(
@@ -603,10 +602,10 @@ class SmartEmojiManager:
         stats = {"total": 0, "success": 0, "failed": 0, "skipped": 0}
 
         all_items = {}
-        for cat, items in self.emoji_cache.items():
+        for _cat, items in self.emoji_cache.items():
             for item in items:
                 all_items[item["path"]] = item
-        for cat, items in self.sticker_cache.items():
+        for _cat, items in self.sticker_cache.items():
             for item in items:
                 all_items[item["path"]] = item
 
@@ -748,11 +747,11 @@ class SmartEmojiManager:
         context_types = self.semantic_tagger.get_context_type(query)
 
         all_items = []
-        for cat, items in self.emoji_cache.items():
+        for _cat, items in self.emoji_cache.items():
             for item in items:
                 item["cache_type"] = "emoji"
                 all_items.append(item)
-        for cat, items in self.sticker_cache.items():
+        for _cat, items in self.sticker_cache.items():
             for item in items:
                 item["cache_type"] = "sticker"
                 all_items.append(item)

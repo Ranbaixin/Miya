@@ -9,10 +9,12 @@
 """
 
 import asyncio
+import builtins
+import contextlib
 import logging
-from typing import Optional, Dict, Any, List
-from dataclasses import dataclass
 from asyncio import Queue
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("miya.platform_hot")
 
@@ -121,16 +123,12 @@ class PlatformHotReloadManager:
         inst.status = "stopped"
         if inst.task and not inst.task.done():
             inst.task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await inst.task
-            except asyncio.CancelledError:
-                pass
 
         if hasattr(inst.adapter, "terminate"):
-            try:
+            with contextlib.suppress(builtins.BaseException):
                 await inst.adapter.terminate()
-            except:
-                pass
 
         del self.platforms[platform_type]
         logger.info(f"[平台热重载] 平台已卸载: {platform_type}")

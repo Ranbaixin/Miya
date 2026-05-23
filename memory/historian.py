@@ -12,16 +12,15 @@
 import json
 import logging
 import re
-import asyncio
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 
-from memory import get_memory_core, MemoryItem, MemorySource, MemoryLevel
+from memory import MemoryLevel, MemorySource, get_memory_core
 from memory.cognitive_engine import (
-    get_cognitive_engine,
-    TOPIC_KEYWORDS,
     MEMORY_TRIGGERS,
+    TOPIC_KEYWORDS,
+    get_cognitive_engine,
 )
 
 logger = logging.getLogger(__name__)
@@ -145,13 +144,6 @@ def _load_assistant_self_patterns() -> Dict[str, Any]:
     cfg_patterns = _assistant_self_config.get("patterns", {})
     cfg_importance = _assistant_self_config.get("base_importance", {})
 
-    type_label_map = {
-        "commitment": "弥娅承诺",
-        "opinion": "弥娅观点",
-        "emotion": "弥娅情感",
-        "knowledge": "弥娅知识",
-        "self_awareness": "弥娅自我认知",
-    }
 
     for category, pattern_list in cfg_patterns.items():
         patterns[category] = []
@@ -218,11 +210,7 @@ class Historian:
         if not text or len(text.strip()) < 4:
             return False
 
-        for pattern in IGNORE_PATTERNS:
-            if re.match(pattern, text.strip()):
-                return False
-
-        return True
+        return all(not re.match(pattern, text.strip()) for pattern in IGNORE_PATTERNS)
 
     def _extract_important_info(self, text: str) -> List[Tuple[str, str, List[str]]]:
         """提取用户重要信息
@@ -552,7 +540,7 @@ class Historian:
             await self._ensure_memory_core_initialized()
 
             # 查询短期记忆
-            from memory import MemoryLevel, MemorySource
+            from memory import MemoryLevel
 
             short_term_memories = await self.memory_core.retrieve(
                 query="",

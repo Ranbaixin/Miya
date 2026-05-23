@@ -2,10 +2,12 @@
 arXiv论文搜索工具
 """
 
-from typing import Dict, Any
 import logging
-import httpx
+from typing import Any, Dict
 from urllib.parse import quote
+
+import httpx
+
 from webnet.ToolNet.base import BaseTool, ToolContext
 
 logger = logging.getLogger(__name__)
@@ -47,7 +49,7 @@ class ArxivSearchTool(BaseTool):
         """搜索arXiv"""
         try:
             async with httpx.AsyncClient(timeout=30) as client:
-                url = f"http://export.arxiv.org/api/query"
+                url = "http://export.arxiv.org/api/query"
                 params = {
                     "search_query": f"all:{quote(query)}",
                     "start": 0,

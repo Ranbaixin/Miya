@@ -1,8 +1,9 @@
 """
 获取群信息工具
 """
-from typing import Dict, Any
 import logging
+from typing import Any, Dict
+
 from webnet.ToolNet.base import BaseTool
 
 logger = logging.getLogger(__name__)
@@ -29,5 +30,5 @@ class GetGroupInfoTool(BaseTool):
 
     async def execute(self, args: Dict[str, Any], context) -> str:
         """执行获取群信息（占位实现）"""
-        group_id = args.get("group_id")
+        args.get("group_id")
         return "获取群信息功能占位实现"

@@ -4,12 +4,10 @@ MIYA 系统信息
 提供系统信息查询功能
 """
 
-import sys
 import platform
-import time
+import sys
 from dataclasses import dataclass
-from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 # Python 版本
 PYTHON_VERSION = sys.version.split()[0]

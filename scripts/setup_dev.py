@@ -6,7 +6,6 @@
 
 import subprocess
 import sys
-import os
 from pathlib import Path
 
 
@@ -16,10 +15,10 @@ def run_command(cmd: str, description: str) -> bool:
     print(f"   $ {cmd}")
 
     try:
-        result = subprocess.run(
+        subprocess.run(
             cmd, shell=True, check=True, capture_output=True, text=True
         )
-        print(f"   ✅ 完成")
+        print("   ✅ 完成")
         return True
     except subprocess.CalledProcessError as e:
         print(f"   ❌ 失败: {e}")

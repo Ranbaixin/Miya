@@ -7,9 +7,6 @@ from pathlib import Path
 from typing import cast
 
 import discord
-from discord.types.interactions import ComponentInteractionData
-
-from astrbot import logger
 from astrbot.api.event import AstrMessageEvent, MessageChain
 from astrbot.api.message_components import (
     BaseMessageComponent,
@@ -19,6 +16,9 @@ from astrbot.api.message_components import (
     Reply,
 )
 from astrbot.api.platform import AstrBotMessage, At, PlatformMetadata
+from discord.types.interactions import ComponentInteractionData
+
+from astrbot import logger
 
 from .client import DiscordBotClient
 from .components import DiscordEmbed, DiscordView

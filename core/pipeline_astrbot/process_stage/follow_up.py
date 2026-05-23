@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from dataclasses import dataclass
 
-from astrbot import logger
 from astrbot.core.agent.runners.tool_loop_agent_runner import FollowUpTicket
 from astrbot.core.astr_agent_run_util import AgentRunner
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
+
+from astrbot import logger
 
 _ACTIVE_AGENT_RUNNERS: dict[str, AgentRunner] = {}
 _FOLLOW_UP_ORDER_STATE: dict[str, dict[str, object]] = {}
@@ -219,10 +221,8 @@ async def finalize_follow_up_capture(
     # Best-effort cancellation: monitor task is auxiliary and should not leak.
     if not capture.monitor_task.done():
         capture.monitor_task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await capture.monitor_task
-        except asyncio.CancelledError:
-            pass
 
     if activated:
         await _finish_follow_up_turn(capture.umo, capture.order_seq)

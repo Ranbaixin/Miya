@@ -4,18 +4,17 @@
 优化弥娅系统的启动体验和性能
 """
 
-import subprocess
-import sys
-import os
-import time
-import json
-import shutil
-from pathlib import Path
-import psutil
 import argparse
+import json
 import logging
+import os
+import shutil
+import sys
 from datetime import datetime
-from typing import List, Dict, Optional, Tuple
+from pathlib import Path
+from typing import Dict
+
+import psutil
 
 logger = logging.getLogger(__name__)
 
@@ -349,13 +348,13 @@ class LaunchOptimizer:
         
         # 环境检查
         env = results["environment_check"]
-        print(f"\n🐍 Python环境:")
+        print("\n🐍 Python环境:")
         print(f"  版本: {env['python_version'].split()[0]}")
         print(f"  虚拟环境: {'✅ 已激活' if env.get('venv_active') else '❌ 未激活'}")
         print(f"  关键文件: {sum(env['path_exists'].values())}/{len(env['path_exists'])} 存在")
         
         # 优化结果
-        print(f"\n⚡ 优化结果:")
+        print("\n⚡ 优化结果:")
         print(f"  批处理文件优化: {'✅ 已完成' if results['batch_optimized'] else '⚠️ 无需优化'}")
         
         perf = results["performance_optimizations"]
@@ -363,16 +362,16 @@ class LaunchOptimizer:
         if enabled_optimizations:
             print(f"  性能优化启用: {', '.join(enabled_optimizations)}")
         else:
-            print(f"  性能优化: 暂无可用优化")
+            print("  性能优化: 暂无可用优化")
         
         # 问题和建议
         if results["issues_found"]:
-            print(f"\n⚠️ 发现问题:")
+            print("\n⚠️ 发现问题:")
             for issue in results["issues_found"]:
                 print(f"  • {issue}")
         
         if results["recommendations"]:
-            print(f"\n💡 优化建议:")
+            print("\n💡 优化建议:")
             for rec in results["recommendations"]:
                 print(f"  • {rec}")
         
@@ -406,8 +405,8 @@ def main():
     
     if args.check_only:
         print("\n🔍 运行系统检查...")
-        resources = optimizer.check_system_resources()
-        environment = optimizer.check_python_environment()
+        optimizer.check_system_resources()
+        optimizer.check_python_environment()
         
         print("\n✅ 系统检查完成")
         print(f"日志文件: {optimizer.optimization_log}")
@@ -418,7 +417,7 @@ def main():
         profile_path = optimizer.create_startup_profile()
         
         if profile_path:
-            print(f"\n✅ 快速优化完成")
+            print("\n✅ 快速优化完成")
             print(f"配置文件: {profile_path}")
         
     else:  # 默认全面优化

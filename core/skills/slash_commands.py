@@ -5,11 +5,10 @@ Slash Commands 系统 - Claude Code 风格的命令
 从 text_config.json 加载配置
 """
 
-import re
 import json
-from typing import Dict, List, Callable, Any, Optional
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
 
 
 def _load_commands_from_config() -> Dict[str, Any]:

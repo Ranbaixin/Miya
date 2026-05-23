@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 AI表情包标签生成脚本
 使用多模型视觉分析为所有表情包生成语义标签
@@ -33,7 +32,7 @@ async def main():
     manager = get_smart_emoji_manager()
 
     stats = manager.get_stats()
-    print(f"当前表情包状态:")
+    print("当前表情包状态:")
     print(f"  表情包总数: {stats['total_emojis']}")
     print(f"  已标记标签: {stats['total_tags']}")
     print(f"  可用分类: {', '.join(stats['categories'])}")

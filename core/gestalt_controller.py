@@ -4,9 +4,7 @@
 """
 
 import logging
-from typing import Dict, List, Optional, Any
-from pathlib import Path
-import json
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("Miya.Gestalt")
 
@@ -152,7 +150,7 @@ class GestaltController:
                 logger.error(f"[格式塔] 工具执行失败 {tool_name}: {e}", exc_info=True)
                 return f"❌ 工具执行失败: {str(e)}"
 
-        return f"❌ 工具系统未初始化"
+        return "❌ 工具系统未初始化"
 
     async def _load_agent_tools(self):
         """加载 Agent 工具到统一工具池"""

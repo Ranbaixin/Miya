@@ -3,10 +3,10 @@
 
 本工具整合 Undefined 记忆系统和弥娅原生记忆系统
 """
-from typing import Dict, Any
 import logging
-from webnet.ToolNet.base import BaseTool, ToolContext
+from typing import Any, Dict
 
+from webnet.ToolNet.base import BaseTool, ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +99,7 @@ class MemoryDelete(BaseTool):
 
                 # 模糊搜索
                 similar_ids = [
-                    mid for mid in memory_engine.dream_memory.keys()
+                    mid for mid in memory_engine.dream_memory
                     if memory_id.lower() in mid.lower()
                 ]
                 if similar_ids:

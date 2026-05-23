@@ -3,7 +3,7 @@
 """
 
 import logging
-from typing import Dict, List, Any
+from typing import Any, Dict
 
 logger = logging.getLogger("miya.tools")
 

@@ -4,19 +4,18 @@
 提供完整的弥娅系统故障恢复方案
 """
 
+import argparse
+import json
+import logging
+import os
+import signal
 import subprocess
 import sys
-import os
 import time
-import json
-import shutil
-import logging
-import argparse
-from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict
+
 import psutil
-import signal
 
 logger = logging.getLogger(__name__)
 
@@ -308,10 +307,9 @@ class RecoveryManager:
         all_success = True
         
         # 先停止所有服务
-        for service_name in status["services"].keys():
-            if status["services"][service_name]["process_running"]:
-                if not self.stop_service(service_name):
-                    logger.warning(f"停止服务 {service_name} 失败")
+        for service_name in status["services"]:
+            if status["services"][service_name]["process_running"] and not self.stop_service(service_name):
+                logger.warning(f"停止服务 {service_name} 失败")
         
         # 等待一下
         time.sleep(3)
@@ -465,7 +463,7 @@ class RecoveryManager:
         remaining_issues = len(final_diagnosis["common_issues"])
         
         if remaining_issues == 0:
-            print(f"\n✅ 所有问题已修复！")
+            print("\n✅ 所有问题已修复！")
             all_fixed = True
         else:
             print(f"\n⚠️ 仍有 {remaining_issues} 个问题未解决")
@@ -501,7 +499,7 @@ class RecoveryManager:
         for service_name, service_info in diagnosis["service_check"]["services"].items():
             process_emoji = "✅" if service_info.get("process_running") else "❌"
             port_emoji = "✅" if service_info.get("port_open") else "❌" if service_info.get("port") else "➖"
-            status_emoji = "✅" if (service_info.get("process_running") and 
+            status_emoji = "✅" if (service_info.get("process_running") and
                                    (not service_info.get("port") or service_info.get("port_open"))) else "❌"
             
             guide_content += f"| {service_name} | {process_emoji} | {port_emoji} | {status_emoji} |\n"
@@ -613,25 +611,25 @@ def main():
         print("\n🔧 运行系统诊断...")
         diagnosis = manager.diagnose_issues()
         
-        print(f"\n📊 诊断结果:")
+        print("\n📊 诊断结果:")
         print(f"  系统状态: {diagnosis['service_check']['overall'].upper()}")
         
         if diagnosis["common_issues"]:
-            print(f"\n⚠️ 发现问题:")
+            print("\n⚠️ 发现问题:")
             for issue in diagnosis["common_issues"]:
                 print(f"  • {issue}")
         
         if diagnosis["solutions"]:
-            print(f"\n🔧 解决方案:")
+            print("\n🔧 解决方案:")
             for solution in diagnosis["solutions"]:
                 print(f"  1. {solution}")
         
         if diagnosis["recommendations"]:
-            print(f"\n💡 建议:")
+            print("\n💡 建议:")
             for rec in diagnosis["recommendations"]:
                 print(f"  • {rec}")
         
-        print(f"\n📋 系统信息:")
+        print("\n📋 系统信息:")
         sys_info = diagnosis["system_check"]
         if sys_info:
             print(f"  CPU使用率: {sys_info.get('cpu_percent', 0):.1f}%")
@@ -643,18 +641,18 @@ def main():
         success = manager.apply_quick_fix()
         
         if success:
-            print(f"\n✅ 快速修复完成！")
+            print("\n✅ 快速修复完成！")
         else:
-            print(f"\n⚠️ 快速修复完成，但仍有问题需要手动处理")
+            print("\n⚠️ 快速修复完成，但仍有问题需要手动处理")
     
     elif args.restart_all:
         print("\n🔄 重启所有服务...")
         success = manager.restart_all_services()
         
         if success:
-            print(f"\n✅ 所有服务已重启")
+            print("\n✅ 所有服务已重启")
         else:
-            print(f"\n⚠️ 重启完成，但部分服务可能有问题")
+            print("\n⚠️ 重启完成，但部分服务可能有问题")
     
     elif args.restart_failed:
         print("\n🔧 重启失败的服务...")
@@ -674,7 +672,7 @@ def main():
         if restarted > 0:
             print(f"\n✅ 已重启 {restarted} 个服务")
         else:
-            print(f"\n📋 没有需要重启的服务")
+            print("\n📋 没有需要重启的服务")
     
     elif args.stop_all:
         print("\n🛑 停止所有服务...")
@@ -701,7 +699,7 @@ def main():
             print(f"\n✅ 恢复指南已创建: {guide_path}")
             print("请查看该文件获取详细的恢复步骤")
         else:
-            print(f"\n❌ 创建恢复指南失败")
+            print("\n❌ 创建恢复指南失败")
     
     else:
         # 默认显示帮助
@@ -717,7 +715,7 @@ def main():
         print(f"  python {os.path.basename(__file__)} --status")
         print(f"  python {os.path.basename(__file__)} --quick-fix")
     
-    print(f"\n📋 日志文件: recovery_manager.log")
+    print("\n📋 日志文件: recovery_manager.log")
     print("=" * 60)
 
 if __name__ == "__main__":

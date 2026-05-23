@@ -6,21 +6,18 @@ Telegram 平台适配器
 
 import asyncio
 import logging
-from typing import Any, cast
-
-from telegram import BotCommand, Update
-from telegram.constants import ChatType
-from telegram.error import Forbidden
-from telegram.ext import ApplicationBuilder, ContextTypes, ExtBot, filters
-from telegram.ext import MessageHandler as TelegramMessageHandler
 
 from miya.core.platform import (
+    MiyaMessageEvent,
     Platform,
     PlatformMetadata,
-    MiyaMessageEvent,
-    register_platform_adapter,
     PlatformStatus,
+    register_platform_adapter,
 )
+from telegram import Update
+from telegram.constants import ChatType
+from telegram.ext import ApplicationBuilder, ContextTypes, ExtBot, filters
+from telegram.ext import MessageHandler as TelegramMessageHandler
 
 logger = logging.getLogger("miya.platform.telegram")
 

@@ -3,19 +3,17 @@
 自动修复可修复的问题
 """
 import logging
-from typing import List, Dict, Optional, Any
+import re
+import shutil
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-import shutil
-import asyncio
-import re
-
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 
-from core.problem_scanner import Problem, ProblemType, ProblemSeverity
+from core.problem_scanner import Problem, ProblemSeverity, ProblemType
 
 
 @dataclass
@@ -135,10 +133,7 @@ class AutoFixer:
 
         # 检查是否有对应的修复策略
         strategy = self._fix_strategies.get(problem.type)
-        if not strategy:
-            return False
-
-        return True
+        return strategy
 
     def create_fix_plan(
         self,
@@ -443,10 +438,7 @@ class AutoFixer:
                 return False
 
             # 创建备份的备份（在恢复前）
-            if target.exists():
-                final_backup = self._create_backup_sync(target_path)
-            else:
-                final_backup = None
+            self._create_backup_sync(target_path) if target.exists() else None
 
             # 恢复
             shutil.copy2(backup, target)

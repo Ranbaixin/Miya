@@ -34,14 +34,14 @@ from core.web_api.__init__ import WebAPI, create_web_api
 from core.web_api.models import (
     BlogPostCreate,
     BlogPostUpdate,
-    UserRegister,
-    UserLogin,
     ChatRequest,
-    TerminalChatRequest,
-    SecurityScanRequest,
-    IPBlockRequest,
     GitHubConfig,
-    ToolExecuteRequest
+    IPBlockRequest,
+    SecurityScanRequest,
+    TerminalChatRequest,
+    ToolExecuteRequest,
+    UserLogin,
+    UserRegister,
 )
 
 # 导出所有公开接口

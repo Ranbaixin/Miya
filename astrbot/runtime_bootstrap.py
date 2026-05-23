@@ -3,7 +3,6 @@ import ssl
 from typing import Any
 
 import aiohttp.connector as aiohttp_connector
-
 from astrbot.utils.http_ssl_common import build_ssl_context_with_certifi
 
 logger = logging.getLogger(__name__)

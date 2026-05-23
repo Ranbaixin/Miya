@@ -29,29 +29,29 @@ profile = await memory.get_profile("123")
 ================================================================
 """
 
+import logging
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
+
+from memory.cognitive_engine import CognitiveEngine, get_cognitive_engine
 from memory.core import (
+    JsonBackend,
+    MemoryBackend,
+    MemoryItem,
+    MemoryLevel,
+    MemoryPriority,
+    MemoryQuery,
+    MemorySource,
     MiyaMemoryCore,
     get_memory_core,
     reset_memory_core,
-    MemoryItem,
-    MemoryQuery,
-    MemoryLevel,
-    MemoryPriority,
-    MemorySource,
-    MemoryBackend,
-    JsonBackend,
 )
-from memory.cognitive_engine import CognitiveEngine, get_cognitive_engine
 from memory.memory_enhancer import (
-    MemoryEnhancer,
-    get_memory_enhancer,
     EmotionType,
+    MemoryEnhancer,
     MemoryLink,
+    get_memory_enhancer,
 )
-
-import logging
-from typing import Dict, List, Optional, Any, Union
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -663,10 +663,7 @@ def get_undefined_memory_adapter():
 
         try:
             loop = asyncio.get_event_loop()
-            if loop.is_running():
-                _memory_adapter = MemoryAdapter()
-            else:
-                _memory_adapter = loop.run_until_complete(get_memory_adapter())
+            _memory_adapter = MemoryAdapter() if loop.is_running() else loop.run_until_complete(get_memory_adapter())
         except RuntimeError:
             _memory_adapter = MemoryAdapter()
     return _memory_adapter

@@ -5,8 +5,8 @@
 """
 
 from .excel_processor import ExcelProcessor
-from .pdf_docx_processor import PDFDocxProcessor
 from .invoice_parser import InvoiceParser
+from .pdf_docx_processor import PDFDocxProcessor
 
 __all__ = [
     'ExcelProcessor',

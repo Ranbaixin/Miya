@@ -1,20 +1,18 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 屏幕视觉 MCP 服务 — 让弥娅「看到」用户屏幕
 
 截取用户屏幕，用视觉 LLM 分析内容。
 """
 
-import base64
 import json
 import logging
 import time
 from typing import Any
 
 from .screenshot_provider import (
-    get_screenshot_provider,
     compress_screenshot_data_url,
+    get_screenshot_provider,
 )
 
 logger = logging.getLogger("screen_vision.service")

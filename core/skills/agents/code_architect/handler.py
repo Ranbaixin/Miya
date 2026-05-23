@@ -1,7 +1,6 @@
 """Code architect agent handler"""
 
-from typing import Dict, Any
-import re
+from typing import Any, Dict
 
 
 async def handler(args: Dict[str, Any], context: Dict[str, Any]) -> str:

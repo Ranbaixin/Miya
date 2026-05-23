@@ -3,9 +3,10 @@ AstrBot Subagent Orchestrator
 """
 
 import logging
-from typing import List, Dict, Any, Optional
-from .config import SubAgentConfig, SubAgentOrchestratorConfig
+from typing import Any, Dict, List, Optional
+
 from .agent import SubAgent
+from .config import SubAgentOrchestratorConfig
 
 logger = logging.getLogger(__name__)
 

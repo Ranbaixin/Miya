@@ -4,18 +4,15 @@ AI客户端模块
 整合弥娅人设提示词
 """
 
-import logging
 import json
+import logging
 import re
-from typing import Optional, Dict, List, Any, Callable
-from core.text_loader import get_error_message
 from dataclasses import dataclass
-from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
+
+from core.text_loader import get_error_message
 
 from .prompt_cache import get_global_prompt_cache
-from core.constants import Encoding
-from core.system_config import get_api_url
-
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +37,7 @@ class BaseAIClient:
         self.config = kwargs
         self.tool_registry: Optional[Callable] = None
         self.tool_context: Optional[Dict[str, Any]] = None
-        self.personality = kwargs.get("personality", None)  # 人格实例
+        self.personality = kwargs.get("personality")  # 人格实例
         self._miya_prompt: Optional[str] = None  # 弥娅人设提示词缓存
         self._miya_prompt_full: Optional[str] = None  # 弥娅人设完整版提示词
         self.use_compact_prompt: bool = kwargs.get(
@@ -482,11 +479,12 @@ class BaseAIClient:
             (tool_call, result) 元组
         """
         try:
-            from .tool_adapter import get_tool_adapter
             from core.gestalt_controller import get_gestalt_controller
             from core.terminal_formatter import TerminalFormatter
 
-            adapter = get_tool_adapter()
+            from .tool_adapter import get_tool_adapter
+
+            get_tool_adapter()
 
             # 解析工具参数
             tool_args = self._fix_json_arguments(tool_call.function.arguments)
@@ -751,7 +749,7 @@ class OpenAIClient(BaseAIClient):
 
                     if tool_choice == "required":
                         logger.error(
-                            f"[AIClient] tool_choice='required'但模型未调用工具，可能是工具描述或系统提示词问题"
+                            "[AIClient] tool_choice='required'但模型未调用工具，可能是工具描述或系统提示词问题"
                         )
                     # 过滤思考过程（如 DeepSeek R1 的 reasoning_content）
                     final_content = message.content or ""
@@ -874,12 +872,10 @@ class OpenAIClient(BaseAIClient):
                 else:
                     # 串行执行（使用公共方法）
                     final_detected = False
-                    final_tool_result = None
                     for tool_call in tool_calls:
                         _, result = await self._execute_tool_call(
                             tool_call, self.tool_context
                         )
-                        final_tool_result = result
 
                         # 检查FINAL标记
                         final_marker = self._handle_final_marker(result)
@@ -1120,7 +1116,7 @@ class DeepSeekClient(BaseAIClient):
                     # 如果使用了required但没调用工具，记录详细错误
                     if tool_choice == "required":
                         logger.error(
-                            f"[AIClient] tool_choice='required'但模型未调用工具，可能是工具描述或系统提示词问题"
+                            "[AIClient] tool_choice='required'但模型未调用工具，可能是工具描述或系统提示词问题"
                         )
 
                     # 提取思考过程（DeepSeek R1等模型特有）

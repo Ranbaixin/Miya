@@ -2,14 +2,13 @@
 系统环境检测器
 自动检测操作系统、Linux 发行版、Shell、包管理器等信息
 """
+import logging
 import os
-import sys
 import platform
 import subprocess
-import logging
-from typing import Dict, Optional, List
+import sys
 from dataclasses import dataclass, field
-
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

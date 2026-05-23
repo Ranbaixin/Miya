@@ -4,9 +4,10 @@
 """
 
 import asyncio
-from typing import Dict, List, Optional, Any
-from .web_search import EnhancedWebSearch
 import logging
+from typing import Any, Dict, List
+
+from .web_search import EnhancedWebSearch
 
 logger = logging.getLogger(__name__)
 
@@ -173,8 +174,8 @@ class WebResearcher:
         result: Dict[str, Any]
     ) -> str:
         """分类信息"""
-        title = result.get("title", "").lower()
-        snippet = result.get("snippet", "").lower()
+        result.get("title", "").lower()
+        result.get("snippet", "").lower()
 
         # 根据查询类型分类
         if "定义" in query or "概念" in query:
@@ -214,7 +215,7 @@ class WebResearcher:
             # 提取关键信息
             for item in items:
                 title = item.get("标题", "")
-                snippet = item.get("内容", "")
+                item.get("内容", "")
                 relevance = item.get("相关性", 0)
 
                 if relevance >= 5:  # 高相关性结果
@@ -227,7 +228,7 @@ class WebResearcher:
 
         # 识别信息缺口
         coverage = analysis["信息覆盖度"]
-        total_sources = sum(coverage.values())
+        sum(coverage.values())
 
         if coverage.get("定义概念", 0) < 2:
             analysis["信息缺口"].append("定义和概念信息不足")
@@ -255,9 +256,9 @@ class WebResearcher:
 
         # 用户评价总结
         if competitor_data["用户评价"]:
-            positive = sum(1 for item in competitor_data["用户评价"] 
+            positive = sum(1 for item in competitor_data["用户评价"]
                         if any(kw in item.get("内容", "") for kw in ["好", "优秀", "推荐"]))
-            negative = sum(1 for item in competitor_data["用户评价"] 
+            negative = sum(1 for item in competitor_data["用户评价"]
                         if any(kw in item.get("内容", "") for kw in ["差", "不好", "不推荐"]))
             summary_parts.append(f"**用户反馈**: 正面评价 {positive}条，负面评价 {negative}条")
 

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Provider 管理器
 
@@ -12,7 +11,6 @@ Provider 管理器
 
 import asyncio
 import logging
-import os
 import traceback
 from typing import Any, Dict, List, Optional
 
@@ -139,14 +137,8 @@ class ProviderManager:
     def _dynamic_import(self, provider_type: str) -> None:
         """动态导入 Provider 模块"""
         # 延迟导入
-        if provider_type == "openai_chat_completion":
-            from core.providers.sources.openai_provider import ProviderOpenAI
-        elif provider_type == "deepseek_chat_completion":
-            from core.providers.sources.openai_provider import ProviderOpenAI
-        elif provider_type == "anthropic_chat_completion":
-            from core.providers.sources.openai_provider import ProviderOpenAI
-        elif provider_type in ("siliconflow_chat_completion", "zhipu_chat_completion"):
-            from core.providers.sources.openai_provider import ProviderOpenAI
+        if provider_type == "openai_chat_completion" or provider_type == "deepseek_chat_completion" or provider_type == "anthropic_chat_completion" or provider_type in ("siliconflow_chat_completion", "zhipu_chat_completion"):
+            pass
         # 可扩展更多 Provider
 
     async def reload_provider(self, config: Dict) -> None:

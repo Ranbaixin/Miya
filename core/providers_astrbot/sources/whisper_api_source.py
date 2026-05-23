@@ -3,14 +3,14 @@ import uuid
 
 from openai import NOT_GIVEN, AsyncOpenAI
 
-from core.astrbot_compat import logger
-from core.astrbot_compat.utils import get_astrbot_temp_path
 from astrbot.core.utils.io import download_file
 from astrbot.core.utils.media_utils import convert_audio_to_wav
 from astrbot.core.utils.tencent_record_helper import (
     convert_to_pcm_wav,
     tencent_silk_to_wav,
 )
+from core.astrbot_compat import logger
+from core.astrbot_compat.utils import get_astrbot_temp_path
 
 from ..entities import ProviderType
 from ..provider import STTProvider

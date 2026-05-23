@@ -3,11 +3,10 @@ AgentHub - 统一的 Agent 调度中心
 负责发现、管理和调度所有 Agent
 """
 
-import asyncio
-import logging
 import json
+import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("Miya.AgentHub")
 
@@ -144,10 +143,6 @@ class AgentHub:
                     logger.info(f"[AgentHub] 文件信息已添加到输入: {file_info_parts}")
 
         # 构建消息
-        messages = [
-            {"role": "system", "content": agent.prompt},
-            {"role": "user", "content": enhanced_input},
-        ]
 
         # 执行 Agent - 传递完整 context
         return await runner.run(enhanced_input, context, max_iterations)

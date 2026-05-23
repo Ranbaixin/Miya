@@ -4,9 +4,6 @@ import typing as T
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
-from deprecated import deprecated
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
 from astrbot.core.db.po import (
     ApiKey,
     Attachment,
@@ -26,6 +23,8 @@ from astrbot.core.db.po import (
     Stats,
     WebChatThread,
 )
+from deprecated import deprecated
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 
 @dataclass

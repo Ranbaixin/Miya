@@ -133,7 +133,6 @@ async def emit_event(event_type: str, **kwargs) -> None:
 
 import asyncio
 
-
 __all__ = [
     "Star",
     "StarMetadata",

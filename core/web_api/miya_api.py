@@ -4,10 +4,10 @@
 为弥娅 Dashboard 提供完整的 API 接口
 """
 
-import logging
 import asyncio
+import logging
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Dict
 
 logger = logging.getLogger(__name__)
 
@@ -168,8 +168,10 @@ class MiyaAPI:
             return {"success": True, "forms": ["default", "yae", "kafka"]}
 
         @self.router.post("/api/v1/personality/forms")
-        async def set_personality_form(body: dict = {}):
+        async def set_personality_form(body: dict = None):
             """设置人格表单"""
+            if body is None:
+                body = {}
             form = body.get("form", "default")
             try:
                 if (
@@ -192,8 +194,8 @@ class MiyaAPI:
         @self.router.get("/api/memory/list")
         async def get_memory_list():
             """记忆列表 - 从SQLite数据库读取"""
-            import sqlite3
             import os
+            import sqlite3
 
             all_memories = []
 
@@ -237,8 +239,10 @@ class MiyaAPI:
             }
 
         @self.router.post("/api/memory/add")
-        async def add_memory(request_data: dict = {}):
+        async def add_memory(request_data: dict = None):
             """添加记忆 - 适配前端格式"""
+            if request_data is None:
+                request_data = {}
             try:
                 content = request_data.get("text") or request_data.get("content", "")
                 user_id = request_data.get("user_id") or request_data.get("userId")
@@ -264,8 +268,10 @@ class MiyaAPI:
                 return {"success": False, "message": str(e)}
 
         @self.router.get("/api/memory/search")
-        async def search_memory(request: dict = {}):
+        async def search_memory(request: dict = None):
             """搜索记忆"""
+            if request is None:
+                request = {}
             try:
                 query = request.get("query", "")
                 user_id = request.get("user_id") or request.get("userId")
@@ -326,8 +332,10 @@ class MiyaAPI:
                 return {"success": True, "data": []}
 
         @self.router.post("/api/knowledge_base/create")
-        async def create_knowledge_base(request_data: dict = {}):
+        async def create_knowledge_base(request_data: dict = None):
             """创建知识库"""
+            if request_data is None:
+                request_data = {}
             try:
                 name = request_data.get("name", "")
                 description = request_data.get("description", "")
@@ -349,8 +357,10 @@ class MiyaAPI:
                 return {"success": False, "message": str(e)}
 
         @self.router.post("/api/knowledge_base/query")
-        async def query_knowledge_base(request_data: dict = {}):
+        async def query_knowledge_base(request_data: dict = None):
             """查询知识库"""
+            if request_data is None:
+                request_data = {}
             try:
                 kb_id = request_data.get("kb_id", "")
                 query = request_data.get("query", "")
@@ -367,8 +377,10 @@ class MiyaAPI:
                 return {"success": False, "message": str(e)}
 
         @self.router.post("/api/knowledge_base/query")
-        async def query_knowledge_base(request_data: dict = {}):
+        async def query_knowledge_base(request_data: dict = None):
             """查询知识库"""
+            if request_data is None:
+                request_data = {}
             try:
                 kb_id = request_data.get("kb_id", "")
                 query = request_data.get("query", "")
@@ -410,8 +422,10 @@ class MiyaAPI:
             }
 
         @self.router.post("/api/autonomy/settings")
-        async def save_autonomy_settings(request_data: dict = {}):
+        async def save_autonomy_settings(request_data: dict = None):
             """保存自主决策设置"""
+            if request_data is None:
+                request_data = {}
             try:
                 enabled = request_data.get("enabled", True)
                 logger.info(f"[API] 自主决策设置已更新: enabled={enabled}")
@@ -462,12 +476,14 @@ class MiyaAPI:
             }
 
         @self.router.post("/api/voice/config")
-        async def save_voice_config(request_data: dict = {}):
+        async def save_voice_config(request_data: dict = None):
             """保存语音配置"""
+            if request_data is None:
+                request_data = {}
             try:
                 provider = request_data.get("provider", "siliconflow")
                 voice_id = request_data.get("voice_id", "azure-male-yunyang")
-                speed = request_data.get("speed", 1.0)
+                request_data.get("speed", 1.0)
                 logger.info(
                     f"[API] 语音配置已更新: provider={provider}, voice_id={voice_id}"
                 )
@@ -490,7 +506,7 @@ class MiyaAPI:
         async def get_ltm_user_ids():
             """获取记忆系统中的用户ID列表"""
             try:
-                from memory import get_user_memories, get_memory_stats
+                from memory import get_memory_stats
 
                 stats = await get_memory_stats()
                 users = stats.get("user_ids", []) if isinstance(stats, dict) else []
@@ -554,8 +570,10 @@ class MiyaAPI:
                 return {"status": "ok", "data": {}}
 
         @self.router.post("/api/plug/alkaid/ltm/graph/add")
-        async def add_ltm_graph(request_data: dict = {}):
+        async def add_ltm_graph(request_data: dict = None):
             """添加记忆到图谱"""
+            if request_data is None:
+                request_data = {}
             try:
                 text = request_data.get("text", "")
                 user_id = request_data.get("user_id") or request_data.get("userId")
@@ -607,8 +625,8 @@ class MiyaAPI:
         async def get_platform_list():
             """平台列表"""
             from config.platforms_config import (
-                list_all_platforms,
                 get_enabled_platforms,
+                list_all_platforms,
             )
 
             platforms = list_all_platforms()
@@ -634,8 +652,8 @@ class MiyaAPI:
             """
             try:
                 from config.platforms_config import (
-                    list_all_platforms,
                     get_enabled_platforms,
+                    list_all_platforms,
                 )
 
                 all_platforms = list_all_platforms()
@@ -759,7 +777,7 @@ class MiyaAPI:
                 for model_id, model_conf in models.items():
                     provider = model_conf.get("provider", "unknown")
                     capabilities = model_conf.get("capabilities", [])
-                    model_type = model_conf.get("type", "chat")
+                    model_conf.get("type", "chat")
 
                     task_type = "simple_chat"
                     if (
@@ -797,7 +815,6 @@ class MiyaAPI:
         @self.router.get("/api/chat/sessions")
         async def get_chat_sessions():
             """会话列表"""
-            import uuid
 
             sessions = []
             try:
@@ -983,7 +1000,8 @@ class MiyaAPI:
                 # TTS 本地播放 (fire-and-forget, 桌面/Web 端)
                 if response:
                     try:
-                        import json as _json, os
+                        import json as _json
+                        import os
 
                         config_path = os.path.join(
                             os.path.dirname(
@@ -1012,7 +1030,9 @@ class MiyaAPI:
                                     import concurrent.futures
 
                                     def _play():
-                                        import simpleaudio as sa, wave
+                                        import wave
+
+                                        import simpleaudio as sa
 
                                         with wave.open(audio, "rb") as wf:
                                             sa.WaveObject.from_wave_read(
@@ -1102,8 +1122,8 @@ class MiyaAPI:
             """
             try:
                 from config.platforms_config import (
-                    list_all_platforms,
                     get_enabled_platforms,
+                    list_all_platforms,
                 )
 
                 all_platforms = list_all_platforms()
@@ -1251,7 +1271,7 @@ class MiyaAPI:
                 if not provider_id:
                     return {"status": "error", "message": "缺少提供商ID"}
 
-                config = request_data.get("config", {})
+                request_data.get("config", {})
 
                 return {"status": "ok", "message": f"提供商 {provider_id} 更新成功"}
             except Exception as e:
@@ -1418,11 +1438,13 @@ class MiyaAPI:
                 }
 
         @self.router.post("/api/mcp/call")
-        async def mcp_call(request_data: dict = {}):
+        async def mcp_call(request_data: dict = None):
             """统一 MCP 工具调用接口"""
+            if request_data is None:
+                request_data = {}
             try:
-                import json
                 import os
+
                 from core.mcp_manager import get_mcp_manager
 
                 manager = get_mcp_manager()
@@ -1455,7 +1477,6 @@ class MiyaAPI:
                         Path(manager.mcp_dir) / svc_name / "agent-manifest.json"
                     )
                     if manifest_path.exists():
-                        import json as _json
 
                         manifest = manager._load_manifest(manifest_path)
                         if manifest:
@@ -1476,15 +1497,18 @@ class MiyaAPI:
                     "tool": tool_name,
                 }
             except Exception as e:
-                logger.exception(f"[MiyaAPI] MCP 调用失败")
+                logger.exception("[MiyaAPI] MCP 调用失败")
                 return {"success": False, "error": str(e)}
 
         @self.router.post("/api/mcp/reload")
-        async def mcp_reload(request_data: dict = {}):
+        async def mcp_reload(request_data: dict = None):
             """热重载指定 MCP 服务模块"""
+            if request_data is None:
+                request_data = {}
             try:
-                import sys
                 import importlib
+                import sys
+
                 from core.mcp_manager import get_mcp_manager
 
                 svc_name = str(request_data.get("service", ""))
@@ -1519,7 +1543,7 @@ class MiyaAPI:
                     if manifest_path.exists():
                         import json as _json
 
-                        manifest_data = _json.loads(
+                        _json.loads(
                             manifest_path.read_text(encoding="utf-8")
                         )
                         manifest = manager._load_manifest(manifest_path)
@@ -1531,15 +1555,16 @@ class MiyaAPI:
                     "message": f"已重载 {len(reloaded)} 个模块: {reloaded}",
                 }
             except Exception as e:
-                logger.exception(f"[MiyaAPI] MCP 重载失败")
+                logger.exception("[MiyaAPI] MCP 重载失败")
                 return {"success": False, "error": str(e)}
 
         @self.router.get("/api/skills")
         async def get_skills():
             """技能列表 - 从 skills.yaml 读取"""
             try:
-                import yaml
                 from pathlib import Path
+
+                import yaml
 
                 skills_file = Path("config/skills.yaml")
                 if skills_file.exists():
@@ -1642,11 +1667,13 @@ class MiyaAPI:
                 }
 
         @self.router.post("/api/plugin/install")
-        async def install_plugin(request_data: dict = {}):
+        async def install_plugin(request_data: dict = None):
             """安装插件"""
+            if request_data is None:
+                request_data = {}
             try:
-                from core.plugin_market import get_plugin_market
                 from core.miya_plugin_manager import get_plugin_manager
+                from core.plugin_market import get_plugin_market
 
                 plugin_name = request_data.get("name")
                 download_url = request_data.get("download_url")
@@ -1675,7 +1702,6 @@ class MiyaAPI:
                             break
 
                 import tempfile
-                import asyncio
 
                 with tempfile.TemporaryDirectory() as tmpdir:
                     from pathlib import Path
@@ -1705,8 +1731,10 @@ class MiyaAPI:
                 return {"success": False, "message": str(e)}
 
         @self.router.post("/api/plugin/uninstall")
-        async def uninstall_plugin(request_data: dict = {}):
+        async def uninstall_plugin(request_data: dict = None):
             """卸载插件"""
+            if request_data is None:
+                request_data = {}
             try:
                 from core.miya_plugin_manager import get_plugin_manager
 
@@ -1727,8 +1755,10 @@ class MiyaAPI:
                 return {"success": False, "message": str(e)}
 
         @self.router.post("/api/plugin/on")
-        async def enable_plugin(request_data: dict = {}):
+        async def enable_plugin(request_data: dict = None):
             """启用插件"""
+            if request_data is None:
+                request_data = {}
             try:
                 from core.miya_plugin_manager import get_plugin_manager
 
@@ -1749,8 +1779,10 @@ class MiyaAPI:
                 return {"success": False, "message": str(e)}
 
         @self.router.post("/api/plugin/off")
-        async def disable_plugin(request_data: dict = {}):
+        async def disable_plugin(request_data: dict = None):
             """禁用插件"""
+            if request_data is None:
+                request_data = {}
             try:
                 from core.miya_plugin_manager import get_plugin_manager
 
@@ -1829,12 +1861,15 @@ class MiyaAPI:
                 }
 
         @self.router.post("/api/cron/jobs")
-        async def create_cron_job(request_data: dict = {}):
+        async def create_cron_job(request_data: dict = None):
             """创建定时任务"""
+            if request_data is None:
+                request_data = {}
             try:
-                from hub.scheduler import get_global_scheduler
                 import uuid
                 from datetime import datetime, timedelta
+
+                from hub.scheduler import get_global_scheduler
 
                 scheduler = get_global_scheduler()
 
@@ -1875,8 +1910,10 @@ class MiyaAPI:
                 return {"success": False, "message": str(e)}
 
         @self.router.patch("/api/cron/jobs/{job_id}")
-        async def update_cron_job(job_id: str, request_data: dict = {}):
+        async def update_cron_job(job_id: str, request_data: dict = None):
             """更新定时任务"""
+            if request_data is None:
+                request_data = {}
             try:
                 from hub.scheduler import get_global_scheduler
 
@@ -1942,18 +1979,24 @@ class MiyaAPI:
             }
 
         @self.router.post("/api/session/update-rule")
-        async def update_session_rule(request_data: dict = {}):
+        async def update_session_rule(request_data: dict = None):
             """更新会话规则"""
+            if request_data is None:
+                request_data = {}
             return {"success": True, "message": "规则已更新"}
 
         @self.router.post("/api/session/delete-rule")
-        async def delete_session_rule(request_data: dict = {}):
+        async def delete_session_rule(request_data: dict = None):
             """删除会话规则"""
+            if request_data is None:
+                request_data = {}
             return {"success": True, "message": "规则已删除"}
 
         @self.router.post("/api/session/batch-delete-rule")
-        async def batch_delete_session_rules(request_data: dict = {}):
+        async def batch_delete_session_rules(request_data: dict = None):
             """批量删除会话规则"""
+            if request_data is None:
+                request_data = {}
             return {"success": True, "message": "规则已批量删除"}
 
         @self.router.get("/api/session/groups")
@@ -1966,28 +2009,38 @@ class MiyaAPI:
             }
 
         @self.router.post("/api/session/group/create")
-        async def create_session_group(request_data: dict = {}):
+        async def create_session_group(request_data: dict = None):
             """创建会话分组"""
+            if request_data is None:
+                request_data = {}
             return {"success": True, "message": "分组已创建"}
 
         @self.router.post("/api/session/group/update")
-        async def update_session_group(request_data: dict = {}):
+        async def update_session_group(request_data: dict = None):
             """更新会话分组"""
+            if request_data is None:
+                request_data = {}
             return {"success": True, "message": "分组已更新"}
 
         @self.router.post("/api/session/group/delete")
-        async def delete_session_group(request_data: dict = {}):
+        async def delete_session_group(request_data: dict = None):
             """删除会话分组"""
+            if request_data is None:
+                request_data = {}
             return {"success": True, "message": "分组已删除"}
 
         @self.router.post("/api/session/batch-update-service")
-        async def batch_update_service(request_data: dict = {}):
+        async def batch_update_service(request_data: dict = None):
             """批量更新服务"""
+            if request_data is None:
+                request_data = {}
             return {"success": True, "message": "服务已批量更新"}
 
         @self.router.post("/api/session/batch-update-provider")
-        async def batch_update_provider(request_data: dict = {}):
+        async def batch_update_provider(request_data: dict = None):
             """批量更新提供商"""
+            if request_data is None:
+                request_data = {}
             return {"success": True, "message": "提供商已批量更新"}
 
         # ========== 子代理 ==========
@@ -2003,8 +2056,10 @@ class MiyaAPI:
             }
 
         @self.router.post("/api/subagent/config")
-        async def save_subagent_config(request_data: dict = {}):
+        async def save_subagent_config(request_data: dict = None):
             """保存子代理配置"""
+            if request_data is None:
+                request_data = {}
             return {"success": True, "message": "配置已保存"}
 
         # ========== Trace 追踪 ==========
@@ -2020,8 +2075,10 @@ class MiyaAPI:
             }
 
         @self.router.post("/api/trace/settings")
-        async def save_trace_settings(request_data: dict = {}):
+        async def save_trace_settings(request_data: dict = None):
             """保存追踪设置"""
+            if request_data is None:
+                request_data = {}
             return {"success": True, "message": "追踪设置已保存"}
 
         # ========== API Key 管理 ==========
@@ -2035,10 +2092,12 @@ class MiyaAPI:
             }
 
         @self.router.post("/api/apikey/create")
-        async def create_apikey(request_data: dict = {}):
+        async def create_apikey(request_data: dict = None):
             """创建 API Key"""
             import uuid
 
+            if request_data is None:
+                request_data = {}
             key_id = str(uuid.uuid4())
             return {
                 "success": True,
@@ -2047,13 +2106,17 @@ class MiyaAPI:
             }
 
         @self.router.post("/api/apikey/revoke")
-        async def revoke_apikey(request_data: dict = {}):
+        async def revoke_apikey(request_data: dict = None):
             """撤销 API Key"""
+            if request_data is None:
+                request_data = {}
             return {"success": True, "message": "API Key 已撤销"}
 
         @self.router.post("/api/apikey/delete")
-        async def delete_apikey(request_data: dict = {}):
+        async def delete_apikey(request_data: dict = None):
             """删除 API Key"""
+            if request_data is None:
+                request_data = {}
             return {"success": True, "message": "API Key 已删除"}
 
         # ========== 知识库 Alkaid ==========
@@ -2063,8 +2126,10 @@ class MiyaAPI:
             return {"status": "ok", "data": []}
 
         @self.router.post("/api/plug/alkaid/kb/create_collection")
-        async def create_kb_collection(request_data: dict = {}):
+        async def create_kb_collection(request_data: dict = None):
             """创建知识库集合"""
+            if request_data is None:
+                request_data = {}
             return {"status": "ok", "message": "知识库已创建"}
 
         @self.router.post("/api/plug/alkaid/kb/collection/add_file")
@@ -2083,13 +2148,17 @@ class MiyaAPI:
             return {"status": "ok", "message": "知识库已删除"}
 
         @self.router.post("/api/plug/url_2_kb/add")
-        async def add_url_to_kb(request_data: dict = {}):
+        async def add_url_to_kb(request_data: dict = None):
             """添加 URL 到知识库"""
+            if request_data is None:
+                request_data = {}
             return {"status": "ok", "task_id": "task_001"}
 
         @self.router.post("/api/plug/url_2_kb/status")
-        async def get_url_to_kb_status(request_data: dict = {}):
+        async def get_url_to_kb_status(request_data: dict = None):
             """获取 URL 转知识库状态"""
+            if request_data is None:
+                request_data = {}
             return {"status": "ok", "status": "completed"}
 
         # ========== 统计 ==========
@@ -2308,8 +2377,10 @@ class MiyaAPI:
             return {"success": True, "data": {"items": []}}
 
         @self.router.post("/api/chatui_project/create")
-        async def create_project(request_data: dict = {}):
+        async def create_project(request_data: dict = None):
             """创建项目"""
+            if request_data is None:
+                request_data = {}
             return {"success": True, "data": {"id": "1", "name": "新项目"}}
 
         # ========== 聊天 API (旧版stub - 已由上方完整版取代) ==========
@@ -2387,15 +2458,21 @@ class MiyaAPI:
             return {"success": True, "data": []}
 
         @self.router.post("/api/plugin/uninstall")
-        async def uninstall_plugin(request_data: dict = {}):
+        async def uninstall_plugin(request_data: dict = None):
+            if request_data is None:
+                request_data = {}
             return {"success": True, "message": "插件卸载功能开发中"}
 
         @self.router.post("/api/plugin/on")
-        async def enable_plugin(request_data: dict = {}):
+        async def enable_plugin(request_data: dict = None):
+            if request_data is None:
+                request_data = {}
             return {"success": True}
 
         @self.router.post("/api/plugin/off")
-        async def disable_plugin(request_data: dict = {}):
+        async def disable_plugin(request_data: dict = None):
+            if request_data is None:
+                request_data = {}
             return {"success": True}
 
         @self.router.get("/api/cron/jobs")
@@ -2403,7 +2480,9 @@ class MiyaAPI:
             return {"success": True, "data": []}
 
         @self.router.post("/api/cron/jobs")
-        async def create_cron_job(request_data: dict = {}):
+        async def create_cron_job(request_data: dict = None):
+            if request_data is None:
+                request_data = {}
             return {"success": True, "message": "定时任务创建功能开发中"}
 
         @self.router.get("/api/provider/list")
@@ -2423,15 +2502,21 @@ class MiyaAPI:
             return {"success": True, "data": {}}
 
         @self.router.post("/api/chat/update_session_display_name")
-        async def update_session_name(request_data: dict = {}):
+        async def update_session_name(request_data: dict = None):
+            if request_data is None:
+                request_data = {}
             return {"success": True}
 
         @self.router.post("/api/chat/batch_delete_sessions")
-        async def batch_delete_sessions(request_data: dict = {}):
+        async def batch_delete_sessions(request_data: dict = None):
+            if request_data is None:
+                request_data = {}
             return {"success": True}
 
         @self.router.post("/api/chat/stop")
-        async def stop_chat(request_data: dict = {}):
+        async def stop_chat(request_data: dict = None):
+            if request_data is None:
+                request_data = {}
             return {"success": True}
 
         @self.router.get("/api/memory/stats")
@@ -2461,7 +2546,9 @@ class MiyaAPI:
             }
 
         @self.router.post("/api/persona/switch")
-        async def switch_persona(request_data: dict = {}):
+        async def switch_persona(request_data: dict = None):
+            if request_data is None:
+                request_data = {}
             return {"success": True}
 
         @self.router.get("/api/platform/list")
@@ -2485,7 +2572,9 @@ class MiyaAPI:
             return {"success": True, "data": {}}
 
         @self.router.post("/api/trace/settings")
-        async def update_trace_settings(request_data: dict = {}):
+        async def update_trace_settings(request_data: dict = None):
+            if request_data is None:
+                request_data = {}
             return {"success": True}
 
         @self.router.get("/api/session/list-rule")
@@ -2505,7 +2594,9 @@ class MiyaAPI:
             return {"success": True, "data": {}}
 
         @self.router.post("/api/subagent/config")
-        async def update_subagent_config(request_data: dict = {}):
+        async def update_subagent_config(request_data: dict = None):
+            if request_data is None:
+                request_data = {}
             return {"success": True}
 
         @self.router.get("/api/plug/alkaid/kb/collections")
@@ -2540,8 +2631,10 @@ class MiyaAPI:
             }
 
         @self.router.post("/api/conversation/detail")
-        async def get_conversation_detail(request_data: dict = {}):
+        async def get_conversation_detail(request_data: dict = None):
             """获取会话详情"""
+            if request_data is None:
+                request_data = {}
             conversation_id = request_data.get("conversation_id")
             return {
                 "success": True,
@@ -2553,24 +2646,32 @@ class MiyaAPI:
             }
 
         @self.router.post("/api/conversation/update")
-        async def update_conversation(request_data: dict = {}):
+        async def update_conversation(request_data: dict = None):
             """更新会话"""
+            if request_data is None:
+                request_data = {}
             return {"success": True, "message": "会话已更新"}
 
         @self.router.post("/api/conversation/update_history")
-        async def update_conversation_history(request_data: dict = {}):
+        async def update_conversation_history(request_data: dict = None):
             """更新会话历史"""
+            if request_data is None:
+                request_data = {}
             return {"success": True, "message": "历史已更新"}
 
         @self.router.post("/api/conversation/delete")
-        async def delete_conversation(request_data: dict = {}):
+        async def delete_conversation(request_data: dict = None):
             """删除会话"""
+            if request_data is None:
+                request_data = {}
             conversation_id = request_data.get("conversation_id")
             return {"success": True, "message": f"会话 {conversation_id} 已删除"}
 
         @self.router.post("/api/conversation/export")
-        async def export_conversation(request_data: dict = {}):
+        async def export_conversation(request_data: dict = None):
             """导出会话"""
+            if request_data is None:
+                request_data = {}
             return {"success": True, "data": b""}
 
         # ========== 统计 API ==========
@@ -2634,8 +2735,10 @@ class MiyaAPI:
 
         # ========== AstrBot 兼容配置 ==========
         @self.router.post("/api/config/astrbot/update")
-        async def update_astrbot_config(request_data: dict = {}):
+        async def update_astrbot_config(request_data: dict = None):
             """更新 AstrBot 兼容配置 (映射到弥娅配置)"""
+            if request_data is None:
+                request_data = {}
             try:
                 model = request_data.get("model", "")
                 provider = request_data.get("provider", "")
@@ -2655,8 +2758,10 @@ class MiyaAPI:
 
         # ========== 知识库文档上传 ==========
         @self.router.post("/api/kb/document/upload/url")
-        async def upload_document_by_url(request_data: dict = {}):
+        async def upload_document_by_url(request_data: dict = None):
             """通过 URL 上传文档"""
+            if request_data is None:
+                request_data = {}
             return {
                 "success": True,
                 "task_id": "task_" + str(int(datetime.now().timestamp())),
@@ -2712,8 +2817,8 @@ class MiyaAPI:
         """获取平台信息"""
         try:
             from config.platforms_config import (
-                list_all_platforms,
                 get_enabled_platforms,
+                list_all_platforms,
             )
 
             platforms = list_all_platforms()
@@ -2782,8 +2887,9 @@ class MiyaAPI:
             import concurrent.futures
 
             def _play():
-                import simpleaudio as sa
                 import wave
+
+                import simpleaudio as sa
 
                 with wave.open(audio_path, "rb") as wf:
                     wave_obj = sa.WaveObject.from_wave_read(wf)

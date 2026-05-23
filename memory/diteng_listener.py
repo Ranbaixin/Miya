@@ -9,15 +9,15 @@
 - 消息策略分析（是否回复、回复策略、意图分类）
 """
 
-import logging
-import time
 import asyncio
 import json
+import logging
 import re
-from dataclasses import dataclass, field, asdict
-from typing import Dict, List, Optional, Tuple
+import time
 from collections import defaultdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +137,7 @@ class DiTingListener:
         if not self._persist_file.exists():
             return
         try:
-            from memory.session_decay import get_phase, SessionPhase, get_decay_config
+            from memory.session_decay import SessionPhase, get_decay_config, get_phase
 
             config = get_decay_config()
             hot_seconds = config.get("hot_window_minutes", 30) * 60
@@ -455,7 +455,7 @@ class DiTingListener:
         duration = last_time - first_time
 
         # 提取关键词
-        all_content = " ".join(s.content for s in snippets)
+        " ".join(s.content for s in snippets)
         keywords = set()
         for s in snippets:
             for word in s.content:
@@ -568,10 +568,10 @@ class DiTingListener:
                 logger.warning("[谛听-策略] 无法获取模型配置，使用默认策略")
                 return MessageStrategy()
 
-            from core.ai_client import AIClientFactory
-
             # 从环境变量获取 API key
             import os
+
+            from core.ai_client import AIClientFactory
 
             api_key = ""
             if hasattr(model_config, "env_key") and model_config.env_key:
@@ -647,7 +647,7 @@ class DiTingListener:
             )
 
         except asyncio.TimeoutError:
-            logger.warning(f"[谛听-策略] 分析超时，使用默认策略")
+            logger.warning("[谛听-策略] 分析超时，使用默认策略")
             return MessageStrategy()
         except Exception as e:
             logger.warning(f"[谛听-策略] 分析失败: {e}，使用默认策略")

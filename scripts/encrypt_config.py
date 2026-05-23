@@ -12,11 +12,12 @@
     3. 生成加密密钥:
        python encrypt_config.py --generate-key
 """
+import argparse
+import base64
 import os
 import sys
-import base64
-import argparse
 from pathlib import Path
+
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -143,7 +144,7 @@ class ConfigEncryptor:
         with open(output_path, 'w', encoding='utf-8') as f:
             f.writelines(encrypted_lines)
         
-        print(f"\n加密完成!")
+        print("\n加密完成!")
         print(f"  - 共加密 {sensitive_count} 个敏感配置项")
         print(f"  - 输出文件: {output_path}")
     
@@ -188,7 +189,7 @@ class ConfigEncryptor:
         with open(output_path, 'w', encoding='utf-8') as f:
             f.writelines(decrypted_lines)
         
-        print(f"\n解密完成!")
+        print("\n解密完成!")
         print(f"  - 共解密 {decrypted_count} 个配置项")
         print(f"  - 输出文件: {output_path}")
 

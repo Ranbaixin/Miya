@@ -6,9 +6,9 @@ AstrBot 数据库兼容层
 
 import asyncio
 import sqlite3
-from pathlib import Path
-from typing import Any, Optional, List, Tuple, Dict
 from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from . import logger
 
@@ -133,7 +133,7 @@ class BaseDatabase:
         where_params: tuple = (),
     ) -> int:
         """更新数据"""
-        set_clause = ", ".join([f"{k} = ?" for k in data.keys()])
+        set_clause = ", ".join([f"{k} = ?" for k in data])
         query = f"UPDATE {table_name} SET {set_clause} WHERE {where}"
         params = tuple(data.values()) + where_params
         cursor = await self.execute(query, params)

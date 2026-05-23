@@ -2,11 +2,12 @@ import inspect
 import traceback
 import typing as T
 
-from astrbot import logger
 from astrbot.core.message.message_event_result import CommandResult, MessageEventResult
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
 from astrbot.core.star.star import star_map
 from astrbot.core.star.star_handler import EventType, star_handlers_registry
+
+from astrbot import logger
 
 
 async def call_handler(

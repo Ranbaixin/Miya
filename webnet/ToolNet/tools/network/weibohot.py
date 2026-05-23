@@ -2,9 +2,11 @@
 热搜查询工具 - 微博热搜
 """
 
-from typing import Dict, Any
 import logging
+from typing import Any, Dict
+
 import httpx
+
 from webnet.ToolNet.base import BaseTool, ToolContext
 
 logger = logging.getLogger(__name__)
@@ -58,7 +60,7 @@ class WeiboHotTool(BaseTool):
                         lines = ["【微博热搜榜】"]
                         for i, item in enumerate(realtime[:limit]):
                             word = item.get("word", "")
-                            num = item.get("num", 0)
+                            item.get("num", 0)
                             if word:
                                 lines.append(f"{i + 1}. {word}")
 

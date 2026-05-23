@@ -1,8 +1,8 @@
 import asyncio
+import contextlib
 import json
 import re
 
-from astrbot import logger
 from astrbot.api.event import MessageChain
 from astrbot.api.message_components import At, AtAll, Image, Plain
 from astrbot.api.platform import (
@@ -15,6 +15,8 @@ from astrbot.api.platform import (
 )
 from astrbot.core.message.components import BaseMessageComponent, File, Record, Video
 from astrbot.core.platform.astr_message_event import MessageSesion
+
+from astrbot import logger
 
 from .kook_client import KookClient
 from .kook_config import KookConfig
@@ -202,10 +204,8 @@ class KookPlatformAdapter(Platform):
 
         if self._main_task and not self._main_task.done():
             self._main_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._main_task
-            except asyncio.CancelledError:
-                pass
 
         logger.info("[KOOK] 资源清理完成")
 
@@ -252,21 +252,20 @@ class KookPlatformAdapter(Platform):
                 role_mention_counter += 1
                 role_id = 0
                 role_mention_name = mention_target
-                if mention_role_part is not None:
-                    if len(mention_role_part) > role_mention_counter:
-                        role_mention_name = mention_role_part[role_mention_counter].name
-                        role_id = mention_role_part[role_mention_counter].role_id
-                        if (
-                            bot_nickname == role_mention_name
-                            or bot_username == role_mention_name
-                        ):
-                            components.append(
-                                At(
-                                    qq=bot_id,
-                                    name=role_mention_name,  # 保留角色名称
-                                )
+                if mention_role_part is not None and len(mention_role_part) > role_mention_counter:
+                    role_mention_name = mention_role_part[role_mention_counter].name
+                    role_id = mention_role_part[role_mention_counter].role_id
+                    if (
+                        bot_nickname == role_mention_name
+                        or bot_username == role_mention_name
+                    ):
+                        components.append(
+                            At(
+                                qq=bot_id,
+                                name=role_mention_name,  # 保留角色名称
                             )
-                            continue
+                        )
+                        continue
                 if not mention_target.isdigit() and role_id == 0:
                     continue
 
@@ -319,10 +318,7 @@ class KookPlatformAdapter(Platform):
                         ).strip()
                     break
         if not components:
-            if message_str:
-                components = [Plain(text=message_str)]
-            else:
-                components = []
+            components = [Plain(text=message_str)] if message_str else []
 
         return components, message_str
 

@@ -1,6 +1,7 @@
 """日志系统，统一将标准 logging 输出转发到 loguru。"""
 
 import asyncio
+import contextlib
 import logging
 import os
 import sys
@@ -9,9 +10,9 @@ from asyncio import Queue
 from collections import deque
 from typing import TYPE_CHECKING
 
+from astrbot.core.config.default import VERSION
 from loguru import logger as _raw_loguru_logger
 
-from astrbot.core.config.default import VERSION
 from astrbot.core.utils.astrbot_path import get_astrbot_data_path
 
 CACHED_SIZE = 500
@@ -141,10 +142,8 @@ class LogBroker:
     def publish(self, log_entry: dict) -> None:
         self.log_cache.append(log_entry)
         for q in self.subscribers:
-            try:
+            with contextlib.suppress(asyncio.QueueFull):
                 q.put_nowait(log_entry)
-            except asyncio.QueueFull:
-                pass
 
 
 class LogQueueHandler(logging.Handler):
@@ -286,10 +285,8 @@ class LogManager:
     def _remove_sink(cls, sink_id: int | None) -> None:
         if sink_id is None:
             return
-        try:
+        with contextlib.suppress(ValueError):
             _loguru.remove(sink_id)
-        except ValueError:
-            pass
 
     @classmethod
     def _add_file_sink(

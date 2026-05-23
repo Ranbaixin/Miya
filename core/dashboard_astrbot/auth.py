@@ -82,7 +82,7 @@ class AuthRoute(Route):
     def generate_jwt(self, username):
         payload = {
             "username": username,
-            "exp": datetime.datetime.now(datetime.timezone.utc)
+            "exp": datetime.datetime.now(datetime.UTC)
             + datetime.timedelta(days=7),
         }
         jwt_token = self.config["dashboard"].get("jwt_secret", None)

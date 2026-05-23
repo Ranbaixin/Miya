@@ -3,19 +3,19 @@
 """
 
 import asyncio
-import time
-import json
-import yaml
-import os
-import threading
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Callable, Set
-from dataclasses import dataclass, field
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler, FileModifiedEvent
-import logging
-from enum import Enum
+import contextlib
 import hashlib
+import json
+import logging
+import threading
+import time
+from dataclasses import dataclass, field
+from enum import Enum
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
+
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
 
 logger = logging.getLogger(__name__)
 
@@ -376,10 +376,8 @@ class ConfigHotReloader:
         
         if self._task:
             self._task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._task
-            except asyncio.CancelledError:
-                pass
         
         # 停止所有观察者
         for observer in self.observers:
@@ -474,7 +472,7 @@ class HotReloadableConfig:
     def _on_config_change(self, change: ConfigChange):
         """配置变更处理"""
         if change.path == self.config_path and change.new_value is not None:
-            old_config = self.current_config.copy()
+            self.current_config.copy()
             self.current_config = self._load_config()
             
             # 通知变更处理器
@@ -507,7 +505,7 @@ class HotReloadableConfig:
     async def save(self):
         """保存配置到文件"""
         try:
-            config_path_obj = Path(self.config_path)
+            Path(self.config_path)
             
             if self.config_path.endswith('.json'):
                 with open(self.config_path, 'w', encoding='utf-8') as f:

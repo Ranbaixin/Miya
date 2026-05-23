@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 MIYA 统一配置入口
 
 整合所有核心配置，提供统一访问
 """
 
-import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
-from dataclasses import dataclass
 
 # 项目根目录
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -63,7 +61,7 @@ class Config:
         """加载所有配置"""
         # 从 system_config 加载
         try:
-            from core.system_config import get_constant, get_api_url
+            from core.system_config import get_constant
 
             self._config = MIYAConfig(
                 project_root=PROJECT_ROOT,
@@ -76,7 +74,7 @@ class Config:
                 api_port=int(get_constant("API_PORT", "8765")),
                 web_port=int(get_constant("WEB_PORT", "8000")),
             )
-        except Exception as e:
+        except Exception:
             # 使用默认值
             self._config = MIYAConfig(
                 project_root=PROJECT_ROOT,

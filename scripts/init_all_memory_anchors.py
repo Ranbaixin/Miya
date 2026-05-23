@@ -9,10 +9,10 @@
   python scripts/init_all_memory_anchors.py --identity  # 只初始化身份锚点
 """
 
+import argparse
 import asyncio
 import json
 import sys
-import argparse
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -104,7 +104,7 @@ async def init_identity_anchors():
 async def main():
     parser = argparse.ArgumentParser(description="弥娅记忆锚点初始化")
     parser.add_argument("--identity", action="store_true", help="只初始化身份锚点")
-    args = parser.parse_args()
+    parser.parse_args()
 
     print("=" * 60)
     print("弥娅记忆锚点初始化")

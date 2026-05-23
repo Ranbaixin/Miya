@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import os
 import sys
 import time
@@ -7,13 +8,6 @@ from collections.abc import Awaitable, Callable
 from typing import Any, cast
 
 import quart
-from requests import Response
-from wechatpy.enterprise import WeChatClient, parse_message
-from wechatpy.enterprise.crypto import WeChatCrypto
-from wechatpy.enterprise.messages import ImageMessage, TextMessage, VoiceMessage
-from wechatpy.exceptions import InvalidSignatureException
-from wechatpy.messages import BaseMessage
-
 from astrbot.api.event import MessageChain
 from astrbot.api.message_components import Image, Plain, Record
 from astrbot.api.platform import (
@@ -24,8 +18,15 @@ from astrbot.api.platform import (
     PlatformMetadata,
     register_platform_adapter,
 )
-from astrbot.core import logger
 from astrbot.core.platform.astr_message_event import MessageSesion
+from requests import Response
+from wechatpy.enterprise import WeChatClient, parse_message
+from wechatpy.enterprise.crypto import WeChatCrypto
+from wechatpy.enterprise.messages import ImageMessage, TextMessage, VoiceMessage
+from wechatpy.exceptions import InvalidSignatureException
+from wechatpy.messages import BaseMessage
+
+from astrbot.core import logger
 from astrbot.core.utils.astrbot_path import get_astrbot_temp_path
 from astrbot.core.utils.media_utils import convert_audio_to_wav
 from astrbot.core.utils.webhook_utils import log_webhook_info
@@ -479,8 +480,6 @@ class WecomPlatformAdapter(Platform):
 
     async def terminate(self) -> None:
         self.server.shutdown_event.set()
-        try:
+        with contextlib.suppress(Exception):
             await self.server.server.shutdown()
-        except Exception as _:
-            pass
         logger.info("企业微信 适配器已被关闭")

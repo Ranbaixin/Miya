@@ -13,10 +13,10 @@ MCP (Model Context Protocol) 支持模块
 import asyncio
 import json
 import logging
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Callable
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -251,7 +251,7 @@ class MCPToolRegistry:
 
     def get_all_status(self) -> List[Dict[str, Any]]:
         """获取所有服务器状态"""
-        return [self.get_server_status(name) for name in self.servers.keys()]
+        return [self.get_server_status(name) for name in self.servers]
 
     async def shutdown(self):
         """关闭所有 MCP 连接"""

@@ -4,11 +4,11 @@
 参考 AstrBot 的内置命令
 """
 
-import logging
 import asyncio
+import logging
 import shlex
-from typing import Dict, List, Callable, Optional, Any
 from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger("miya.commands")
 
@@ -161,6 +161,7 @@ def ping_command(context: Dict, *args):
 )
 def status_command(context: Dict, *args):
     import platform
+
     import psutil
 
     lines = [
@@ -220,7 +221,7 @@ def clear_command(context: Dict, *args):
 )
 def sysprompt_command(context: Dict, *args):
     if args:
-        return f"系统提示词已更新"
+        return "系统提示词已更新"
     return "请提供新的系统提示词"
 
 

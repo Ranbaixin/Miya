@@ -3,16 +3,17 @@
 基于Pydantic的配置验证和管理
 """
 
-import os
 import json
-import yaml
+import os
 from pathlib import Path
-from typing import Optional, Any, Union, Dict, List
-from pydantic import BaseModel, Field, validator, root_validator
+from typing import Any, Dict, List, Optional, Union
+
+import yaml
+from pydantic import BaseModel, Field, root_validator, validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from ..types import TerminalType, AIConfig as AIConfigType, ErrorCode
 from ..error_handler import ConfigError
+from ..types import ErrorCode, TerminalType
 
 
 # ==================== 基础配置模型 ====================
@@ -140,7 +141,7 @@ class WebConfig(BaseModel):
         if v == "change-me-in-production":
             import warnings
 
-            warnings.warn("使用默认密钥，请在生产环境中修改")
+            warnings.warn("使用默认密钥，请在生产环境中修改", stacklevel=2)
         return v
 
 

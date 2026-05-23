@@ -10,11 +10,11 @@ import asyncio
 import logging
 import os
 import shutil
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
 
-from .base import SingingEngine, SongInfo, LearnTask, LearnStatus
-from .music_source import MusicSource, SongResult, LocalFileSource, NeteaseMusicSource
-from .separator import VocalSeparator, DemucsSeparator, FFmpegSeparator
+from .base import LearnStatus, LearnTask, SingingEngine, SongInfo
+from .music_source import MusicSource
+from .separator import VocalSeparator
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +145,7 @@ class BuiltinSingingEngine(SingingEngine):
                 )
             else:
                 uvr5_cfg = {
-                    k: config.get(k, None)
+                    k: config.get(k)
                     for k in (
                         "uvr5_python",
                         "uvr5_cli",
@@ -153,7 +153,7 @@ class BuiltinSingingEngine(SingingEngine):
                         "uvr5_device",
                         "uvr5_timeout",
                     )
-                    if config.get(k, None) is not None
+                    if config.get(k) is not None
                 }
                 demucs_cfg = {
                     "demucs_python": config.get(
@@ -166,7 +166,7 @@ class BuiltinSingingEngine(SingingEngine):
                     "demucs_timeout": config.get("demucs_timeout", 300),
                 }
 
-                from .separator import DemucsSeparator, UVR5Separator, FFmpegSeparator
+                from .separator import DemucsSeparator, FFmpegSeparator, UVR5Separator
 
                 self.separator = FFmpegSeparator()
                 self.separator.initialize({})
@@ -402,7 +402,7 @@ class BuiltinSingingEngine(SingingEngine):
 
         try:
             import pedalboard
-            from pedalboard import Compressor, HighpassFilter, Gain, Reverb
+            from pedalboard import Compressor, Gain, HighpassFilter, Reverb
 
             board = pedalboard.Pedalboard(
                 [
@@ -425,10 +425,7 @@ class BuiltinSingingEngine(SingingEngine):
             )
             data = data.T if data.ndim > 1 and data.shape[1] > 1 else data.flatten()
             effected = board(data, sr)
-            if effected.ndim == 1:
-                effected = effected.reshape(-1, 1)
-            else:
-                effected = effected.T
+            effected = effected.reshape(-1, 1) if effected.ndim == 1 else effected.T
 
             peak = np.max(np.abs(effected))
             if peak > 0.95:
@@ -558,6 +555,7 @@ class BuiltinSingingEngine(SingingEngine):
             full_vocal = os.path.join(os.path.dirname(vocal_path), "Vocals_full.wav")
             if not os.path.exists(full_vocal):
                 import subprocess
+
                 from .separator import _find_ffmpeg
 
                 subprocess.run(
@@ -681,7 +679,7 @@ class BuiltinSingingEngine(SingingEngine):
             return vocal_path
 
         try:
-            from scipy.signal import stft, istft
+            from scipy.signal import istft, stft
 
             channel = data[:, 0]
 
@@ -711,10 +709,7 @@ class BuiltinSingingEngine(SingingEngine):
 
             rms_before = np.sqrt(np.mean(channel**2))
             rms_after = np.sqrt(np.mean(cleaned**2))
-            if rms_before > 0:
-                reduction = 1 - rms_after / rms_before
-            else:
-                reduction = 0.0
+            reduction = 1 - rms_after / rms_before if rms_before > 0 else 0.0
             logger.info(
                 f"[净化] RMS {rms_before:.4f} → {rms_after:.4f} "
                 f"(reduction={reduction:.1%})"
@@ -732,7 +727,7 @@ class BuiltinSingingEngine(SingingEngine):
             return out_path
 
         try:
-            from scipy.signal import stft, istft
+            from scipy.signal import istft, stft
 
             cleaned = np.zeros_like(data)
             for ch in range(data.shape[1]):

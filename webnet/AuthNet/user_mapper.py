@@ -8,9 +8,9 @@
 """
 
 import json
-from pathlib import Path
-from typing import Dict, Any, Optional
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 
 class UserMapper:
@@ -28,7 +28,6 @@ class UserMapper:
     
     def save_users(self, users_data: Dict[str, Any]):
         """保存用户数据"""
-        import json
         self.users_file.write_text(
             json.dumps(users_data, indent=2, ensure_ascii=False),
             encoding='utf-8'

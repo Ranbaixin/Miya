@@ -5,9 +5,9 @@
 
 import json
 import logging
-from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional, List
+from typing import Dict, List, Optional
+
 from memory.lifebook import get_lifebook
 
 logger = logging.getLogger(__name__)

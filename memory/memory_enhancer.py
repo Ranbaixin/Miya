@@ -12,15 +12,13 @@
 日期: 2026-04-28
 """
 
-import asyncio
 import json
 import logging
-import hashlib
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Set, Tuple
 from collections import defaultdict
+from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
+from typing import Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
 
@@ -485,18 +483,18 @@ class MemoryEnhancer:
         to_remove = set()
 
         # 按用户分组
-        user_memories: Dict[str, List["MemoryItem"]] = defaultdict(list)
+        user_memories: Dict[str, List[MemoryItem]] = defaultdict(list)
         for mem in memories:
             if mem.level.value == "long_term":
                 user_memories[mem.user_id].append(mem)
 
         # 遍历每个用户的记忆
-        for user_id, user_mems in user_memories.items():
+        for _user_id, user_mems in user_memories.items():
             for i, mem1 in enumerate(user_mems):
                 if mem1.id in to_remove:
                     continue
 
-                for j, mem2 in enumerate(user_mems[i + 1 :]):
+                for _j, mem2 in enumerate(user_mems[i + 1 :]):
                     if mem2.id in to_remove:
                         continue
 

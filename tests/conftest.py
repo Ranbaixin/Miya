@@ -2,15 +2,16 @@
 pytest配置和全局fixtures
 """
 
-import pytest
 import asyncio
-import tempfile
 import json
-import yaml
-from pathlib import Path
-import sys
 import os
-from unittest.mock import AsyncMock, MagicMock, patch
+import sys
+import tempfile
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+import yaml
 
 # 添加项目根目录到路径
 root_dir = Path(__file__).parent.parent
@@ -249,8 +250,8 @@ def capture_stdout():
 @pytest.fixture
 def capture_logs():
     """捕获日志"""
-    import logging
     import io
+    import logging
 
     class LogCapture:
         def __init__(self, logger_name: str = None, level: int = logging.DEBUG):
@@ -268,10 +269,7 @@ def capture_logs():
             self.ch.setFormatter(formatter)
 
             # 添加到logger
-            if self.logger_name:
-                logger = logging.getLogger(self.logger_name)
-            else:
-                logger = logging.getLogger()
+            logger = logging.getLogger(self.logger_name) if self.logger_name else logging.getLogger()
 
             logger.addHandler(self.ch)
             logger.setLevel(self.level)
@@ -280,10 +278,7 @@ def capture_logs():
 
         def __exit__(self, exc_type, exc_val, exc_tb):
             # 清理handler
-            if self.logger_name:
-                logger = logging.getLogger(self.logger_name)
-            else:
-                logger = logging.getLogger()
+            logger = logging.getLogger(self.logger_name) if self.logger_name else logging.getLogger()
 
             logger.removeHandler(self.ch)
 
@@ -391,7 +386,6 @@ def skip_if_no_api_key(api_key_env_var: str = "AI_API_KEY"):
     """如果没有API密钥则跳过测试"""
 
     def decorator(test_func):
-        import os
 
         @pytest.mark.skipif(
             not os.getenv(api_key_env_var), reason=f"需要设置环境变量 {api_key_env_var}"

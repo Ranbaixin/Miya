@@ -3,7 +3,6 @@ import inspect
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from typing import TYPE_CHECKING
 
-from core.astrbot_compat import astrbot_config, logger
 from astrbot.core.agent.runners.coze.coze_agent_runner import CozeAgentRunner
 from astrbot.core.agent.runners.dashscope.dashscope_agent_runner import (
     DashscopeAgentRunner,
@@ -29,6 +28,8 @@ from astrbot.core.persona_error_reply import (
     set_persona_custom_error_message_on_event,
 )
 
+from core.astrbot_compat import astrbot_config, logger
+
 if TYPE_CHECKING:
     from astrbot.core.agent.runners.base import BaseAgentRunner
     from astrbot.core.provider.entities import LLMResponse
@@ -38,6 +39,7 @@ from astrbot.core.provider.entities import (
     ProviderRequest,
 )
 from astrbot.core.star.star_handler import EventType
+
 from astrbot.core.utils.config_number import coerce_int_config
 from astrbot.core.utils.metrics import Metric
 

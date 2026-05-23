@@ -8,13 +8,12 @@ import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from rank_bm25 import BM25Okapi
-
 from astrbot.core.knowledge_base.kb_db_sqlite import KBSQLiteDatabase
 from astrbot.core.knowledge_base.retrieval.tokenizer import (
     load_stopwords,
     tokenize_text,
 )
+from rank_bm25 import BM25Okapi
 
 if TYPE_CHECKING:
     from astrbot.core.db.vec_db.faiss_impl import FaissVecDB
@@ -137,7 +136,7 @@ class SparseRetriever:
                     "kb_id": kb_id,
                     "text": doc["text"],
                 }
-                for doc, chunk_md in zip(result, chunk_mds)
+                for doc, chunk_md in zip(result, chunk_mds, strict=False)
             ]
             chunks.extend(result)
             top_k_sparse += kb_options.get(kb_id, {}).get("top_k_sparse", 50)

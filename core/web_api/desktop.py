@@ -3,13 +3,16 @@
 提供终端命令执行、文件管理、系统信息、进程管理等API接口。
 """
 
+import builtins
+import contextlib
 import logging
 import platform
-import psutil
 import subprocess
-from typing import Dict, Any
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+import psutil
 
 from core.text_loader import get_permission
 
@@ -113,14 +116,11 @@ class DesktopRoutes:
                         status_code=403, detail="访问被拒绝：路径超出项目范围"
                     )
 
-                if recursive:
-                    files = list(base_path.rglob("*"))
-                else:
-                    files = list(base_path.iterdir())
+                files = list(base_path.rglob("*")) if recursive else list(base_path.iterdir())
 
                 file_list = []
                 for f in files:
-                    try:
+                    with contextlib.suppress(builtins.BaseException):
                         file_list.append(
                             {
                                 "name": f.name,
@@ -132,8 +132,6 @@ class DesktopRoutes:
                                 ).isoformat(),
                             }
                         )
-                    except:
-                        pass
 
                 return {
                     "success": True,
@@ -293,7 +291,7 @@ class DesktopRoutes:
                 for proc in psutil.process_iter(
                     ["pid", "name", "username", "cpu_percent", "memory_percent"]
                 ):
-                    try:
+                    with contextlib.suppress(builtins.BaseException):
                         processes.append(
                             {
                                 "pid": proc.info["pid"],
@@ -303,8 +301,6 @@ class DesktopRoutes:
                                 "memory_percent": proc.info["memory_percent"],
                             }
                         )
-                    except:
-                        pass
 
                 # 按CPU使用率排序
                 processes.sort(key=lambda x: x.get("cpu_percent", 0), reverse=True)

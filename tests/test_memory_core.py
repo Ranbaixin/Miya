@@ -3,8 +3,8 @@
 """
 
 import asyncio
-import sys
 import os
+import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -16,12 +16,12 @@ async def test_1_init():
     print("[TEST 1] Initialization")
     print("=" * 60)
 
-    from memory.core import MiyaMemoryCore, get_memory_core, reset_memory_core
+    from memory.core import get_memory_core, reset_memory_core
 
     reset_memory_core()
 
     core = await get_memory_core("data/test_memory_v31")
-    print(f"[OK] Core initialized")
+    print("[OK] Core initialized")
     print(f"[OK] Data dir: {core.data_dir}")
 
     stats = await core.get_statistics()
@@ -153,7 +153,7 @@ async def test_5_profile(core):
     print("=" * 60)
 
     profile = await core.get_user_profile("user_001")
-    print(f"[OK] Profile:")
+    print("[OK] Profile:")
     print(f"     - total: {profile['total_memories']}")
     print(f"     - by_level: {profile['by_level']}")
     print(f"     - by_tag: {profile['by_tag']}")
@@ -168,13 +168,13 @@ async def test_6_adapter():
     print("=" * 60)
 
     from memory.adapter import MiyaMemoryNet, reset_memory_net
-    from memory.core import reset_memory_core as reset_core
+
 
     reset_memory_net()
 
     net = MiyaMemoryNet()
     await net.initialize()
-    print(f"[OK] Adapter initialized")
+    print("[OK] Adapter initialized")
 
     # 添加对话
     msg_id = await net.add_conversation(
@@ -240,15 +240,12 @@ async def test_8_convenience():
     print("=" * 60)
 
     from memory import (
+        get_memory_stats,
+        get_user_memories,
+        reset_memory_adapter,
+        search_memory,
         store_dialogue,
         store_important,
-        store_auto,
-        search_memory,
-        get_user_memories,
-        get_dialogue_history,
-        get_user_profile,
-        get_memory_stats,
-        reset_memory_adapter,
     )
 
     reset_memory_adapter()

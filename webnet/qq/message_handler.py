@@ -4,16 +4,18 @@ QQ交互子网 - 消息处理逻辑
 """
 
 import asyncio
+import contextlib
 import logging
 import re
 import time
-from typing import Dict, List, Optional, Any, Set, Union
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Set, Union
 
-from .models import QQMessage, ReplySegment, FileSegment
+from core.text_loader import get_text
+
 from .image_handler import QQImageHandler
 from .message_parser import QQMessageParser
-from core.text_loader import get_text
+from .models import FileSegment, QQMessage, ReplySegment
 
 logger = logging.getLogger(__name__)
 
@@ -547,16 +549,15 @@ class QQMessageHandler:
         for segment in message:
             if isinstance(segment, str):
                 text_parts.append(segment)
-            elif isinstance(segment, dict):
-                if segment.get("type") == "text":
-                    text_parts.append(segment.get("data", {}).get("text", ""))
+            elif isinstance(segment, dict) and segment.get("type") == "text":
+                text_parts.append(segment.get("data", {}).get("text", ""))
 
         return "".join(text_parts)
 
     def _is_at_bot(self, message: Union[str, List[Dict[str, Any]]]) -> bool:
         """检测消息是否@了机器人"""
         if not self.bot_qq:
-            logger.warning(f"[QQNet] bot_qq 未设置，无法检测@消息")
+            logger.warning("[QQNet] bot_qq 未设置，无法检测@消息")
             return False
 
         logger.debug(f"[QQNet] 检测@消息: bot_qq={self.bot_qq}, message={message}")
@@ -598,10 +599,8 @@ class QQMessageHandler:
                 if seg_type == "at":
                     at_qq = segment.get("data", {}).get("qq")
                     if at_qq is not None:
-                        try:
+                        with contextlib.suppress(ValueError, TypeError):
                             at_list.append(int(at_qq))
-                        except (ValueError, TypeError):
-                            pass
 
         if at_list:
             logger.info(f"[QQNet] 从消息段提取到@列表: {at_list}")
@@ -740,13 +739,13 @@ class QQMessageHandler:
                 seg_type = segment.get("type")
                 logger.info(f"[QQMessageHandler] segment type: {seg_type}")
                 if seg_type == "image":
-                    logger.info(f"[QQMessageHandler] 检测到图片段落")
+                    logger.info("[QQMessageHandler] 检测到图片段落")
                     return True
 
         # 检查原始消息字符串
         raw_message = event.get("raw_message", "")
         if isinstance(raw_message, str) and "[CQ:image" in raw_message:
-            logger.info(f"[QQMessageHandler] 检测到图片在 raw_message")
+            logger.info("[QQMessageHandler] 检测到图片在 raw_message")
             return True
 
         return False
@@ -765,7 +764,7 @@ class QQMessageHandler:
                 f"[QQMessageHandler] handle_image_message 返回: {enhanced_message}"
             )
             if enhanced_message:
-                logger.info(f"[QQMessageHandler] 图片消息处理完成")
+                logger.info("[QQMessageHandler] 图片消息处理完成")
                 return enhanced_message
             else:
                 # 即使图片处理失败，也返回基本消息
@@ -1166,7 +1165,7 @@ class QQMessageHandler:
                     ]
                     image_files = []
 
-                    for root, dirs, files in os.walk(data_dir):
+                    for root, _dirs, files in os.walk(data_dir):
                         for file in files:
                             file_path = Path(file)
                             if file_path.suffix.lower() in image_extensions:
@@ -1190,7 +1189,7 @@ class QQMessageHandler:
                 emoji_files = []
                 emoji_files_map = {}  # 文件名（不含扩展名）到完整路径的映射
 
-                for root, dirs, files in os.walk(emoji_dir_path):
+                for root, _dirs, files in os.walk(emoji_dir_path):
                     for file in files:
                         file_path = os.path.join(root, file)
                         # 检查是否为图片文件
@@ -1261,7 +1260,7 @@ class QQMessageHandler:
 
             # 读取图片文件
             with open(image_path, "rb") as f:
-                image_data = f.read()
+                f.read()
 
             # 构建图片消息段
             image_message = {
@@ -1307,7 +1306,7 @@ class QQMessageHandler:
                     return True
                 else:
                     logger.warning(
-                        f"[QQNet-本地表情] OneBot客户端不可用，无法发送私聊表情包"
+                        "[QQNet-本地表情] OneBot客户端不可用，无法发送私聊表情包"
                     )
                     return False
             else:
@@ -1334,11 +1333,11 @@ class QQMessageHandler:
                     return True
                 else:
                     logger.warning(
-                        f"[QQNet-本地表情] OneBot客户端不可用，无法发送群聊表情包"
+                        "[QQNet-本地表情] OneBot客户端不可用，无法发送群聊表情包"
                     )
                     return False
 
-            logger.warning(f"[QQNet-本地表情] 发送失败: 未处理的消息类型")
+            logger.warning("[QQNet-本地表情] 发送失败: 未处理的消息类型")
             return False
 
         except Exception as e:
@@ -1368,7 +1367,7 @@ class QQMessageHandler:
             emoji_name = self._extract_emoji_name_from_text(message_text)
 
             if not emoji_name:
-                logger.info(f"[QQNet-表情包请求] 未提取到表情包名称，发送随机表情包")
+                logger.info("[QQNet-表情包请求] 未提取到表情包名称，发送随机表情包")
                 success = await self._send_emoji_response(group_id, sender_id)
                 if success:
                     return get_text("emoji_responses.sent_random")

@@ -1,10 +1,10 @@
 import traceback
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
+from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
 from quart import jsonify, request
 
 from core.astrbot_compat import logger
-from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
 
 from .route import Response, Route, RouteContext
 
@@ -30,7 +30,7 @@ class CronRoute(Route):
             if isinstance(v, datetime):
                 # Attach UTC
                 if v.tzinfo is None:
-                    v = v.replace(tzinfo=timezone.utc)
+                    v = v.replace(tzinfo=UTC)
                 data[k] = v.isoformat()
         # expose note explicitly for UI (prefer payload.note then description)
         payload = data.get("payload") or {}

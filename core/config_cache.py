@@ -8,18 +8,18 @@
 4. 提供多级缓存支持
 """
 
-import asyncio
+import contextlib
+import hashlib
 import json
 import logging
-import hashlib
 import time
-from pathlib import Path
-from typing import Any, Dict, Optional, Callable, List
 from collections import OrderedDict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Callable, Dict, Optional
 
-from .config_hot_reload import ConfigHotReload, WATCHDOG_AVAILABLE
-from .unified_cache import BaseCacheLayer, get_cache, CacheConfig
+from .config_hot_reload import WATCHDOG_AVAILABLE, ConfigHotReload
+from .unified_cache import BaseCacheLayer, CacheConfig, get_cache
 
 logger = logging.getLogger(__name__)
 
@@ -40,10 +40,7 @@ class ConfigCacheEntry:
         age = current_time - self.load_time
         
         # 基础过期检查
-        if max_age and age > max_age:
-            return True
-            
-        return False
+        return bool(max_age and age > max_age)
     
     def touch(self):
         """更新访问统计"""
@@ -370,10 +367,8 @@ class ConfigCacheLayer:
         
         # 从统一缓存移除
         if self._unified_cache:
-            try:
+            with contextlib.suppress(Exception):
                 await self._unified_cache.delete(cache_key)
-            except Exception:
-                pass
         
         self.stats["invalidations"] += 1
         logger.debug(f"[配置缓存] 手动使缓存失效: {file_path}")
@@ -385,10 +380,8 @@ class ConfigCacheLayer:
         self._cache.clear()
         
         if self._unified_cache:
-            try:
+            with contextlib.suppress(Exception):
                 await self._unified_cache.clear()
-            except Exception:
-                pass
         
         logger.info("[配置缓存] 所有缓存已清空")
     

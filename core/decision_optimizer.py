@@ -2,17 +2,16 @@
 决策优化器
 优化决策策略，学习最佳实践
 """
-import logging
-from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from enum import Enum
-from collections import defaultdict
 import json
+import logging
+from collections import defaultdict
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-from core.autonomous_engine import AutonomousEngine, Decision, RiskLevel, DecisionType
-
+from core.autonomous_engine import AutonomousEngine, DecisionType, RiskLevel
 
 logger = logging.getLogger(__name__)
 
@@ -160,10 +159,7 @@ class DecisionOptimizer:
         ext = path.suffix if path.suffix else "no_ext"
         
         # 获取目录
-        if len(path.parts) > 1:
-            dir_name = path.parts[-2]
-        else:
-            dir_name = "root"
+        dir_name = path.parts[-2] if len(path.parts) > 1 else "root"
         
         return f"{dir_name}/*{ext}"
     
@@ -258,8 +254,8 @@ class DecisionOptimizer:
         
         # 查找匹配的模式
         for pattern in self.patterns:
-            if (pattern.problem_type == problem_type and 
-                pattern.severity == severity and 
+            if (pattern.problem_type == problem_type and
+                pattern.severity == severity and
                 pattern.file_pattern == file_pattern and
                 pattern.confidence >= self.min_confidence_threshold):
                 return pattern.recommended_action

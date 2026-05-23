@@ -8,9 +8,9 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 from collections import deque
+from dataclasses import dataclass
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

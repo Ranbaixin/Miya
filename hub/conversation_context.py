@@ -5,10 +5,9 @@
 """
 
 import logging
-import re
-from typing import Dict, List, Optional, Set
 from collections import defaultdict
 from pathlib import Path
+from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -170,7 +169,8 @@ class ConversationContextManager:
         try:
             import json
             import time
-            from memory.session_decay import get_phase, SessionPhase
+
+            from memory.session_decay import SessionPhase, get_phase
 
             with open(self._persist_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -262,9 +262,10 @@ class ConversationContextManager:
         last_active = self._last_active_time.get(session_id, 0)
         if last_active > 0:
             import time
+
             from memory.session_decay import (
-                get_phase,
                 SessionPhase,
+                get_phase,
                 get_phase_description,
             )
 
@@ -383,7 +384,7 @@ class ConversationContextManager:
         from memory.cognitive_engine import TOPIC_KEYWORDS
 
         topic_count = 0
-        for topic, keywords in TOPIC_KEYWORDS.items():
+        for _topic, keywords in TOPIC_KEYWORDS.items():
             if any(kw in user_input for kw in keywords):
                 topic_count += 1
 
@@ -407,13 +408,7 @@ class ConversationContextManager:
             "分析",
             "解释",
         ]
-        if (
-            any(word in user_input for word in discussion_words)
-            and len(user_input) > 20
-        ):
-            return True
-
-        return False
+        return bool(any(word in user_input for word in discussion_words) and len(user_input) > 20)
 
     async def get_lifebook_summary(self) -> str:
         """
@@ -423,7 +418,6 @@ class ConversationContextManager:
             摘要文本，如果没有则返回空字符串
         """
         try:
-            from core.memory_engine import MemoryEngine
 
             if not self.memory_net:
                 return ""

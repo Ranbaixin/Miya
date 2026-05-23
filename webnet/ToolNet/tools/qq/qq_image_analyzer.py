@@ -2,14 +2,12 @@
 QQ图片分析工具 - 简化版
 """
 
+import io
 import logging
-import os
-import tempfile
 from typing import Optional
 
 import httpx
 from PIL import Image
-import io
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +98,7 @@ class QQImageAnalyzerTool:
             fmt = img.format or "未知"
             size_kb = len(image_data) / 1024
 
-            result = f"📐 图片信息\n"
+            result = "📐 图片信息\n"
             result += f"尺寸: {width} × {height} 像素\n"
             result += f"格式: {fmt}\n"
             result += f"大小: {size_kb:.1f} KB\n"

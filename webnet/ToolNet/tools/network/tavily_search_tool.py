@@ -6,7 +6,8 @@ Tavily AI 搜索工具 - ToolNet 集成
 
 import logging
 import os
-from typing import Dict, Any
+from typing import Any, Dict
+
 from webnet.ToolNet.base import BaseTool, ToolContext
 from webnet.ToolNet.tools.network.tavily_search import TavilyAISearch
 
