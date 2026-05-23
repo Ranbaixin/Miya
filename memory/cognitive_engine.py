@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from memory import MemoryItem, MemoryLevel, MemoryQuery, get_memory_core
+from memory.core import MemoryItem, MemoryLevel, MemoryQuery, get_memory_core
 from memory.temporal_parser import extract_temporal_keywords, parse_temporal
 
 logger = logging.getLogger("Miya.CognitiveEngine")
@@ -50,9 +50,7 @@ ANCHOR_KEYWORDS = MEMORY_ANCHOR_CONFIG.get("anchor_keywords", [])
 ANCHOR_TAGS = MEMORY_ANCHOR_CONFIG.get("anchor_tags", [])
 PERSONAL_PATTERNS = MEMORY_ANCHOR_CONFIG.get("personal_patterns", [])
 PERSONAL_QUERY_KEYWORDS = MEMORY_ANCHOR_CONFIG.get("personal_query_keywords", [])
-KEYWORD_EXTRACTION_PATTERNS = MEMORY_ANCHOR_CONFIG.get(
-    "keyword_extraction_patterns", {}
-)
+KEYWORD_EXTRACTION_PATTERNS = MEMORY_ANCHOR_CONFIG.get("keyword_extraction_patterns", {})
 
 
 class CognitiveEngine:
@@ -79,9 +77,7 @@ class CognitiveEngine:
         self.embedding_client = embedding_client
 
         # 记忆关联度学习
-        self._co_occurrence: Dict[
-            str, Dict[str, int]
-        ] = {}  # memory_id -> {related_id: count}
+        self._co_occurrence: Dict[str, Dict[str, int]] = {}  # memory_id -> {related_id: count}
         self._access_frequency: Dict[str, int] = {}  # memory_id -> access count
         self._last_retrieved_ids: List[str] = []  # 上次检索到的记忆ID列表
 
@@ -96,9 +92,7 @@ class CognitiveEngine:
                 if i != j:
                     if mid1 not in self._co_occurrence:
                         self._co_occurrence[mid1] = {}
-                    self._co_occurrence[mid1][mid2] = (
-                        self._co_occurrence[mid1].get(mid2, 0) + 1
-                    )
+                    self._co_occurrence[mid1][mid2] = self._co_occurrence[mid1].get(mid2, 0) + 1
 
         # 限制共现关系表大小
         if len(self._co_occurrence) > 500:
@@ -186,12 +180,8 @@ class CognitiveEngine:
 
         # 【新增】从配置文件加载的关键词提取模式
         my_pattern = KEYWORD_EXTRACTION_PATTERNS.get("my_patterns", r"我的(\w{2,})")
-        what_pattern = KEYWORD_EXTRACTION_PATTERNS.get(
-            "what_patterns", r"(\w{2,})是什么"
-        )
-        when_pattern = KEYWORD_EXTRACTION_PATTERNS.get(
-            "when_patterns", r"(\w{2,})的时候"
-        )
+        what_pattern = KEYWORD_EXTRACTION_PATTERNS.get("what_patterns", r"(\w{2,})是什么")
+        when_pattern = KEYWORD_EXTRACTION_PATTERNS.get("when_patterns", r"(\w{2,})的时候")
 
         # 提取 "我的XXX" 模式
         my_patterns = re.findall(my_pattern, text)
@@ -329,9 +319,7 @@ class CognitiveEngine:
 
         # 5. 语义相似度（使用embedding）
         if current_input and self.embedding_client:
-            semantic_score = await self._get_embedding_similarity(
-                current_input, memory.content
-            )
+            semantic_score = await self._get_embedding_similarity(current_input, memory.content)
             score += semantic_score * 0.35  # 35%权重给语义相似度
 
         return min(1.0, score)
@@ -421,9 +409,7 @@ class CognitiveEngine:
         need_anchor_search = any(kw in user_input_lower for kw in anchor_keywords)
 
         # 检查是否是询问个人信息的模式（从配置文件加载）
-        is_personal_query = any(
-            pattern in user_input_lower for pattern in PERSONAL_PATTERNS
-        )
+        is_personal_query = any(pattern in user_input_lower for pattern in PERSONAL_PATTERNS)
 
         if need_anchor_search or is_personal_query:
             logger.info("[认知引擎] 检测到个人信息查询，优先搜索记忆锚点")
@@ -440,9 +426,7 @@ class CognitiveEngine:
                     anchor_results = await self.memory_core.retrieve(anchor_query)
                     if anchor_results:
                         # 记忆锚点优先级最高，直接返回
-                        logger.info(
-                            f"[认知引擎] 找到 {len(anchor_results)} 条记忆锚点 (标签: {tag})"
-                        )
+                        logger.info(f"[认知引擎] 找到 {len(anchor_results)} 条记忆锚点 (标签: {tag})")
                         return anchor_results[:limit]
 
             # 如果标签搜索没有找到，尝试内容搜索
@@ -456,13 +440,9 @@ class CognitiveEngine:
                     content_results = await self.memory_core.retrieve(content_query)
                     if content_results:
                         # 过滤出包含关键词的记忆
-                        filtered_results = [
-                            m for m in content_results if keyword in m.content
-                        ]
+                        filtered_results = [m for m in content_results if keyword in m.content]
                         if filtered_results:
-                            logger.info(
-                                f"[认知引擎] 找到 {len(filtered_results)} 条记忆 (内容匹配: {keyword})"
-                            )
+                            logger.info(f"[认知引擎] 找到 {len(filtered_results)} 条记忆 (内容匹配: {keyword})")
                             return filtered_results[:limit]
 
         # 3. 如果标签搜索无结果，尝试内容搜索（关键词直接匹配记忆内容）
@@ -496,9 +476,7 @@ class CognitiveEngine:
         # 3. 计算相关度并排序（加入关联度学习）
         scored_memories = []
         for memory in all_memories:
-            relevance = await self._calculate_relevance(
-                memory, current_topics, keywords, user_input
-            )
+            relevance = await self._calculate_relevance(memory, current_topics, keywords, user_input)
             # 关联度提升
             boost = self._get_relevance_boost(memory.id, [m.id for m in all_memories])
             relevance += boost
@@ -596,9 +574,7 @@ class CognitiveEngine:
 
         # 2. 标签重叠度
         if mem1.tags and mem2.tags:
-            tag_overlap = len(set(mem1.tags) & set(mem2.tags)) / max(
-                len(mem1.tags), len(mem2.tags)
-            )
+            tag_overlap = len(set(mem1.tags) & set(mem2.tags)) / max(len(mem1.tags), len(mem2.tags))
             similarity += tag_overlap * 0.3
 
         # 3. 用户/群组相关性
@@ -632,9 +608,7 @@ class CognitiveEngine:
         # 确保内存核心已初始化
         await self._ensure_memory_core_initialized()
 
-        memories = await self.retrieve(
-            user_input, conversation_history, limit, user_id, group_id
-        )
+        memories = await self.retrieve(user_input, conversation_history, limit, user_id, group_id)
 
         if not memories:
             return ""
@@ -652,9 +626,7 @@ class CognitiveEngine:
             by_date = {}
             for memory in memories:
                 date_str = memory.created_at[:10]  # YYYY-MM-DD
-                time_str = (
-                    memory.created_at[11:16] if len(memory.created_at) > 10 else ""
-                )
+                time_str = memory.created_at[11:16] if len(memory.created_at) > 10 else ""
                 if date_str not in by_date:
                     by_date[date_str] = []
                 entry = f"[{time_str}]" if time_str else ""
@@ -663,9 +635,7 @@ class CognitiveEngine:
                     role_tag = f"{getattr(memory, 'sender_name', '') or '用户'}说: "
                 elif memory.role == "assistant":
                     role_tag = "弥娅说: "
-                by_date[date_str].append(
-                    f"    {entry} {role_tag}{memory.content[:120]}"
-                )
+                by_date[date_str].append(f"    {entry} {role_tag}{memory.content[:120]}")
 
             for date_str, entries in sorted(by_date.items()):
                 lines.append(f"【{date_str}】")
@@ -682,9 +652,7 @@ class CognitiveEngine:
 
         return "\n".join(lines)
 
-    async def should_remember(
-        self, user_input: str, ai_response: str
-    ) -> tuple[bool, str, float]:
+    async def should_remember(self, user_input: str, ai_response: str) -> tuple[bool, str, float]:
         """判断是否应该记忆这段对话
 
         Args:
