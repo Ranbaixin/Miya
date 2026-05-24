@@ -1,31 +1,41 @@
 {
+  "_comment": "弥娅多模型配置模板 - 复制为 multi_model_config.json 后填入你的 API Key",
+  "active": "deepseek_v4_flash_official",
+  "vision_preferences": {
+    "timeout": 90,
+    "http_client_timeout": 90,
+    "model_defaults": {
+      "enabled": true,
+      "cost_per_call": 0.0,
+      "max_tokens": 500,
+      "priority": 10,
+      "error_count": 0,
+      "success_count": 0,
+      "avg_response_time": 0.0
+    },
+    "simple_fallback": {
+      "timeout": 2,
+      "priority": 1
+    },
+    "model_preferences": {
+      "primary": "zhipu_glm_46v_flash",
+      "secondary": "siliconflow_qwen_vl",
+      "fallback": "simple_analysis",
+      "disabled_models": []
+    }
+  },
   "models": {
     "deepseek_v4_flash_official": {
       "name": "deepseek-v4-flash",
       "provider": "openai",
       "base_url": "https://api.deepseek.com/v1",
-      "api_key": "sk-deepseek-api-key-here",
-      "description": "DeepSeek V4 Flash 官方 - 最新快速通用模型",
+      "env_key": "DEEPSEEK_API_KEY",
+      "description": "DeepSeek V3 官方 - 快速响应的通用模型",
       "capabilities": [
         "simple_chat",
         "chinese_understanding",
         "tool_calling",
-        "multimodal"
-      ],
-      "cost_per_1k_tokens": {
-        "input": 0.00014,
-        "output": 0.00028
-      },
-      "latency": "fast",
-      "quality": "excellent"
-    },
-    "deepseek_v4_flash_official": {
-      "name": "deepseek-v4-flash",
-      "provider": "openai",
-      "base_url": "https://api.deepseek.com/v1",
-      "api_key": "sk-deepseek-api-key-here",
-      "description": "DeepSeek V4 Pro 官方 - 最新高性能通用模型",
-      "capabilities": [
+        "multimodal",
         "complex_reasoning",
         "code_analysis",
         "creative_writing",
@@ -42,7 +52,7 @@
       "name": "Qwen/Qwen2.5-7B-Instruct",
       "provider": "openai",
       "base_url": "https://api.siliconflow.cn/v1",
-      "api_key": "sk-siliconflow-api-key-here",
+      "env_key": "SILICONFLOW_API_KEY",
       "description": "Qwen 2.5 7B - 快速通用模型（硅基流动）",
       "capabilities": [
         "simple_chat",
@@ -61,7 +71,7 @@
       "name": "Qwen/Qwen2.5-72B-Instruct",
       "provider": "openai",
       "base_url": "https://api.siliconflow.cn/v1",
-      "api_key": "sk-siliconflow-api-key-here",
+      "env_key": "SILICONFLOW_API_KEY",
       "description": "Qwen 2.5 72B - 高性能通用模型（硅基流动）",
       "capabilities": [
         "complex_reasoning",
@@ -80,44 +90,89 @@
       "name": "Pro/moonshotai/Kimi-K2.6",
       "provider": "siliconflow",
       "base_url": "https://api.siliconflow.cn/v1",
-      "api_key": "siliconflow-api-key-here",
+      "env_key": "SILICONFLOW_API_KEY",
       "description": "Kimi K2.6 原生多模态模型 (1T MoE, 32B激活, 硅基流动)",
       "capabilities": [
         "image_description",
         "vision_understanding",
-        "simple_chat"
+        "multimodal",
+        "complex_reasoning",
+        "code_analysis",
+        "task_planning",
+        "tool_calling",
+        "agent_mode"
       ],
-      "cost_per_1k_tokens": {
-        "input": 0.0,
-        "output": 0.0
-      },
-      "latency": "fast",
-      "quality": "good"
-    },
-    "siliconflow_qwen_vl": {
-      "name": "Qwen/Qwen3-VL-32B-Instruct",
-      "provider": "openai",
-      "base_url": "https://api.siliconflow.cn/v1",
-      "api_key": "sk-siliconflow-api-key-here",
-      "description": "Qwen3-VL-32B - 视觉理解模型（硅基流动）",
       "type": "vision",
-      "capabilities": [
-        "image_description",
-        "vision_understanding",
-        "ocr"
-      ],
       "cost_per_1k_tokens": {
-        "input": 0.00126,
-        "output": 0.00126
+        "input": 0.003,
+        "output": 0.006
       },
       "latency": "medium",
       "quality": "excellent"
+    },
+    "siliconflow_qwen_vl": {
+      "name": "glm-4.5v",
+      "provider": "zhipu",
+      "base_url": "https://open.bigmodel.cn/api/paas/v4",
+      "env_key": "ZHIPU_API_KEY",
+      "description": "GLM-4.5V 视觉模型（智谱）",
+      "capabilities": [
+        "image_description",
+        "vision_understanding",
+        "multimodal"
+      ],
+      "type": "vision",
+      "cost_per_1k_tokens": {
+        "input": 0.001,
+        "output": 0.001
+      },
+      "latency": "medium",
+      "quality": "excellent"
+    },
+    "claude_sonnet": {
+      "name": "claude-sonnet-4-20250514",
+      "provider": "anthropic",
+      "base_url": "https://api.anthropic.com/v1",
+      "env_key": "ANTHROPIC_API_KEY",
+      "description": "Claude Sonnet 4 - 官方 Claude 模型",
+      "capabilities": [
+        "complex_reasoning",
+        "code_analysis",
+        "tool_calling",
+        "agent_mode",
+        "computer_use"
+      ],
+      "type": "anthropic",
+      "cost_per_1k_tokens": {
+        "input": 0.015,
+        "output": 0.075
+      },
+      "latency": "fast",
+      "quality": "excellent"
+    },
+    "claude_haiku": {
+      "name": "claude-haiku-3-20240307",
+      "provider": "anthropic",
+      "base_url": "https://api.anthropic.com/v1",
+      "env_key": "ANTHROPIC_API_KEY",
+      "description": "Claude Haiku 3 - 快速轻量",
+      "capabilities": [
+        "simple_chat",
+        "fast_response"
+      ],
+      "type": "anthropic",
+      "cost_per_1k_tokens": {
+        "input": 0.0008,
+        "output": 0.0024
+      },
+      "latency": "fast",
+      "quality": "good"
     },
     "internlm_7b": {
       "name": "internlm/internlm2_5-7b-chat",
       "provider": "openai",
       "base_url": "https://api.siliconflow.cn/v1",
-      "api_key": "sk-siliconflow-api-key-here",
+      "env_key": "SILICONFLOW_API_KEY",
       "description": "InternLM 2.5 7B - 书生浦语（硅基流动）",
       "capabilities": [
         "simple_chat",
@@ -135,7 +190,7 @@
       "name": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
       "provider": "openai",
       "base_url": "https://api.siliconflow.cn/v1",
-      "api_key": "sk-siliconflow-api-key-here",
+      "env_key": "SILICONFLOW_API_KEY",
       "description": "DeepSeek R1 Distill 7B - 轻量级推理（硅基流动）",
       "capabilities": [
         "complex_reasoning",
@@ -147,13 +202,14 @@
         "output": 0.00024
       },
       "latency": "fast",
-      "quality": "excellent"
+      "quality": "excellent",
+      "disabled": true
     },
     "llama_3_1_8b": {
       "name": "meta-llama/Llama-3.1-8B-Instruct",
       "provider": "openai",
       "base_url": "https://api.siliconflow.cn/v1",
-      "api_key": "sk-siliconflow-api-key-here",
+      "env_key": "SILICONFLOW_API_KEY",
       "description": "Llama 3.1 8B - Meta开源（硅基流动）",
       "capabilities": [
         "simple_chat",
@@ -171,7 +227,7 @@
       "name": "google/gemma-2-9b-it",
       "provider": "openai",
       "base_url": "https://api.siliconflow.cn/v1",
-      "api_key": "sk-siliconflow-api-key-here",
+      "env_key": "SILICONFLOW_API_KEY",
       "description": "Gemma 2 9B - Google开源（硅基流动）",
       "capabilities": [
         "simple_chat",
@@ -189,7 +245,7 @@
       "name": "BAAI/bge-large-zh-v1.5",
       "provider": "openai",
       "base_url": "https://api.siliconflow.cn/v1",
-      "api_key": "sk-siliconflow-api-key-here",
+      "env_key": "SILICONFLOW_API_KEY",
       "description": "BGE Large Zh v1.5 - 中文语义向量模型（硅基流动）",
       "type": "embedding",
       "capabilities": [
@@ -209,7 +265,7 @@
       "name": "Qwen/Qwen3-Embedding-8B",
       "provider": "openai",
       "base_url": "https://api.siliconflow.cn/v1",
-      "api_key": "sk-siliconflow-api-key-here",
+      "env_key": "SILICONFLOW_API_KEY",
       "description": "Qwen3-Embedding-8B - 高质量语义向量模型（硅基流动）",
       "type": "embedding",
       "capabilities": [
@@ -230,7 +286,7 @@
       "name": "deepseek-embedding",
       "provider": "openai",
       "base_url": "https://api.deepseek.com/v1",
-      "api_key": "sk-deepseek-api-key-here",
+      "env_key": "DEEPSEEK_API_KEY",
       "description": "DeepSeek Embedding - 语义向量模型",
       "type": "embedding",
       "capabilities": [
@@ -246,75 +302,69 @@
       "quality": "excellent"
     }
   },
+  "embedding_config": {
+    "enabled": false,
+    "primary": "qwen3_embedding_8b",
+    "fallback": "siliconflow_bge_large",
+    "auto_generate_on_store": true,
+    "auto_generate_levels": ["long_term", "semantic", "knowledge"],
+    "batch_size": 32
+  },
   "routing_strategy": {
     "simple_chat": {
-      "primary": "qwen_7b",
-      "secondary": "llama_3_1_8b",
-      "fallback": "deepseek_v4_flash_official",
-      "cost_priority": 1.0,
-      "speed_priority": 0.9,
-      "quality_priority": 0.7
+      "primary": "deepseek_v4_flash_official",
+      "secondary": "qwen_72b",
+      "fallback": "qwen_7b"
     },
-    "deep_conversation": {
-      "primary": "deepseek_v4_pro_official",
-      "secondary": "deepseek_r1_distill_7b",
-      "fallback": "qwen_72b",
-      "cost_priority": 0.5,
-      "speed_priority": 0.4,
-      "quality_priority": 1.0
+    "complex_reasoning": {
+      "primary": "deepseek_v4_flash_official",
+      "secondary": "qwen_72b",
+      "fallback": "qwen_72b"
     },
     "code_analysis": {
-      "primary": "zhipu_glm_46v_flash",
-      "secondary": "deepseek_v4_flash_official",
-      "fallback": "deepseek_r1_distill_7b",
-      "cost_priority": 0.6,
-      "speed_priority": 0.7,
-      "quality_priority": 0.9
+      "primary": "deepseek_v4_flash_official",
+      "secondary": "qwen_72b",
+      "fallback": "qwen_72b"
     },
     "code_generation": {
-      "primary": "zhipu_glm_46v_flash",
-      "secondary": "deepseek_v4_flash_official",
-      "fallback": "gemma_2_9b",
-      "cost_priority": 0.2,
-      "speed_priority": 0.8,
-      "quality_priority": 0.85
+      "primary": "deepseek_v4_flash_official",
+      "secondary": "qwen_72b",
+      "fallback": "gemma_2_9b"
     },
     "tool_calling": {
-      "primary": "qwen_72b",
-      "secondary": "deepseek_v4_flash_official",
-      "fallback": "deepseek_v4_flash_official",
-      "cost_priority": 0.7,
-      "speed_priority": 0.6,
-      "quality_priority": 0.95
+      "primary": "deepseek_v4_flash_official",
+      "secondary": "qwen_72b",
+      "fallback": "deepseek_v4_flash_official"
     },
     "creative_writing": {
-      "primary": "deepseek_v4_pro_official",
+      "primary": "deepseek_v4_flash_official",
       "secondary": "qwen_72b",
-      "fallback": "deepseek_v4_flash_official",
-      "cost_priority": 0.5,
-      "speed_priority": 0.4,
-      "quality_priority": 1.0
+      "fallback": "deepseek_v4_flash_official"
     },
     "chinese_understanding": {
       "primary": "deepseek_v4_flash_official",
       "secondary": "qwen_72b",
-      "fallback": "deepseek_v4_flash_official",
-      "cost_priority": 0.1,
-      "speed_priority": 0.9,
-      "quality_priority": 0.85
+      "fallback": "deepseek_v4_flash_official"
     },
     "summarization": {
       "primary": "llama_3_1_8b",
       "secondary": "qwen_7b",
-      "fallback": "deepseek_v4_flash_official",
-      "cost_priority": 0.2,
-      "speed_priority": 0.8,
-      "quality_priority": 0.9
+      "fallback": "deepseek_v4_flash_official"
     },
     "image_description": {
-      "primary": "siliconflow_qwen_vl",
-      "secondary": "zhipu_glm_46v_flash",
+      "primary": "zhipu_glm_46v_flash",
+      "secondary": "siliconflow_qwen_vl",
       "fallback": "simple_analysis"
+    },
+    "agent_mode": {
+      "primary": "claude_sonnet",
+      "secondary": "claude_haiku",
+      "fallback": "qwen_72b"
+    },
+    "computer_use": {
+      "primary": "claude_sonnet",
+      "secondary": "claude_haiku",
+      "fallback": "deepseek_v4_flash_official"
     }
   },
   "budget_control": {
@@ -329,5 +379,23 @@
     "enable_parallel_execution": true,
     "max_parallel_models": 3,
     "consensus_threshold": 0.7
+  },
+  "collaboration": {
+    "enabled": true,
+    "complexity_thresholds": {
+      "single_max": 2,
+      "chain_max": 3,
+      "parallel_max": 4
+    },
+    "token_budget": {
+      "single": 2000,
+      "chain": 6000,
+      "parallel": 10000,
+      "role": 15000
+    }
+  },
+  "system_defaults": {
+    "soul_model": "deepseek_v4_flash_official",
+    "description": "系统各模块使用的默认模型"
   }
 }

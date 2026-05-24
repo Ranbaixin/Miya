@@ -48,7 +48,7 @@ skills:
       description: "渲染工具"
       path: "webnet/ToolNet/tools/render"
     - name: "social"
-      description: "社交工具"
+      description: "社交平台"
       path: "webnet/ToolNet/tools/social"
     - name: "memory"
       description: "记忆管理"
@@ -56,9 +56,6 @@ skills:
     - name: "qq"
       description: "QQ多媒体"
       path: "webnet/ToolNet/tools/qq"
-    - name: "bilibili"
-      description: "B站相关"
-      path: "webnet/ToolNet/tools/bilibili"
     - name: "terminal"
       description: "终端工具"
       path: "webnet/ToolNet/tools/terminal"
@@ -74,9 +71,6 @@ skills:
     - name: "knowledge"
       description: "知识库"
       path: "webnet/ToolNet/tools/knowledge"
-    - name: "social"
-      description: "社交平台"
-      path: "webnet/ToolNet/tools/social"
 
   # Agent配置 (对应Undefined的6个Agent)
   agents:
@@ -190,8 +184,3 @@ skills:
   permission:
     enabled: false  # 占位实现
     default_policy: "allow"
-    
-  # callable.json 机制 (Agent间调用)
-  callable:
-    enabled: false
-    config_path: "config/callable.json"

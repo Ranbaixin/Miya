@@ -55,66 +55,6 @@ def get_value(key: str, default: Any = None) -> Any:
 # ---------- 模块配置 ----------
 
 
-def get_cognitive_config() -> dict[str, Any]:
-    return get_section("cognitive_memory", {})
-
-
-def get_queue_config() -> dict[str, Any]:
-    return get_section("queue_manager", {})
-
-
-def get_hot_reload_config() -> dict[str, Any]:
-    return get_section("skills_hot_reload", {})
-
-
-def get_auto_pipeline_config() -> dict[str, Any]:
-    return get_section("auto_pipeline", {})
-
-
-def get_intro_gen_config() -> dict[str, Any]:
-    return get_section("agent_intro_gen", {})
-
-
-def get_self_update_config() -> dict[str, Any]:
-    return get_section("self_update", {})
-
-
-def get_security_config() -> dict[str, Any]:
-    return get_section("security", {})
-
-
-def get_chatbot_keywords() -> list:
-    return get_section("chatbot_keywords", {}).get("auto_respond", [])
-
-
-def get_emotion_keywords() -> dict[str, list]:
-    return get_section("emotion_keywords", {})
-
-
-def get_working_memory_config() -> dict[str, Any]:
-    return get_section("working_memory", {})
-
-
-def get_lifebook_config() -> dict[str, Any]:
-    return get_section("lifebook", {})
-
-
-def get_historian_config() -> dict[str, Any]:
-    return get_section("historian", {})
-
-
-def get_cognitive_engine_config() -> dict[str, Any]:
-    return get_section("cognitive_engine", {})
-
-
-def get_search_strategy_config() -> dict[str, Any]:
-    return get_section("search_strategy", {})
-
-
-def get_conversation_context_config() -> dict[str, Any]:
-    return get_section("conversation_context", {})
-
-
 def get_emoji_config() -> dict[str, Any]:
     return get_section("emoji_settings", {})
 

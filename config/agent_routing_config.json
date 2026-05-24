@@ -6,18 +6,18 @@
         "routing_rules": {
             "info_agent": {
                 "keywords": [
-                    "天气", "热搜", "新闻", "查询", "搜索", 
+                    "天气", "热搜", "新闻", "查询",  
                     "天气怎么样", "微博热搜", "抖音热搜", "百度热搜", 
                     "论文", "qq等级", "ping", "whois"
                 ],
-                "description": "信息查询助手 - 天气、新闻、搜索等"
+                "description": "信息查询助手 - 天气、新闻、热搜等"
             },
             "web_agent": {
                 "keywords": [
                     "搜索", "网络", "网页", "爬取", "链接", "网址", 
-                    "查一下", "帮我找"
+                    "查一下"
                 ],
-                "description": "网络搜索助手"
+                "description": "网络搜索助手 - 网页搜索、爬虫"
             },
             "entertainment_agent": {
                 "keywords": [
