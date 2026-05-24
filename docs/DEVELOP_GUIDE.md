@@ -417,3 +417,67 @@ ruff format .          # 代码格式化
 - 提交前运行 `pre-commit` 钩子
 - 配置：`.pre-commit-config.yaml`
 - Pylint 检查：`.pylintrc`
+
+---
+
+## 构建与发布流水线
+
+### 产物概览
+
+| 产物 | 路径 | 说明 |
+|------|------|------|
+| 独立后端 | `release/Miya/Miya.exe` | Python 守护进程，API 服务 |
+| 桌面便携版 | `miya_frontend/release/Miya 1.0.0.exe` | Electron 前端 + 后端，双击即用 |
+| 桌面解压版 | `miya_frontend/release/win-unpacked/` | 已解压的 Electron 应用（调试用） |
+
+### 一键构建
+
+```bash
+# 仅构建独立后端
+python build_release.py --clean
+
+# 构建桌面应用（后端 + Electron 前端）
+python build_release.py --clean --desktop
+```
+
+### 流水线步骤
+
+```
+[0] 清理 → 删除 dist/ build/ release/
+[1] 编译 → PyInstaller (Miya.spec) → dist/Miya/
+[2] 组装 → 复制 dist/Miya/ → release/Miya/ + 创建启动脚本 + .env 安全处理
+[3] 同步 → release/Miya/ → miya_frontend/resources/backend/ (miya-backend.exe)
+[4] 构建 → npm run build (Vite) + npx electron-builder --win portable
+[5] 清理 → 删除中间产物 dist/ build/
+```
+
+### 关键配置
+
+| 文件 | 作用 |
+|------|------|
+| `Miya.spec` | PyInstaller 编译配置 (入口、排除模块、数据文件) |
+| `miya_frontend/package.json` | Electron-builder 配置 (extraResources、图标、目标) |
+| `miya_frontend/vite.config.ts` | Vite 构建配置 (别名、Electron 插件) |
+| `miya_frontend/electron/main.ts` | Electron 主进程 (窗口管理、后端启动) |
+| `miya_frontend/electron/modules/backend.ts` | 后端 spawn 逻辑 |
+
+### 已知问题与解决方案
+
+| 问题 | 原因 | 解决 |
+|------|------|------|
+| ToolNet 初始化失败 `No module named 'unittest'` | PyInstaller excludes 了 `unittest`，但 `pyparsing.testing` 需要它 | `Miya.spec` excludes 移除 `unittest`，保留 `test` |
+| `config/permissions.json` 找不到 | CWD 设为 `resources/backend/`，但配置文件在 `_internal/config/` | `backend.ts` 将 spawn CWD 设为 `resources/backend/_internal/` |
+| Claude Code Engine `ws` 缺失 | Rollup 打包的外部依赖未跟随 | 复制 `claude-code-engine/node_modules/ws` 到 `resources/claude-code-engine/dist/node_modules/` |
+| 独立版的 config/ 是 junction，复制后失效 | Windows mklink /J 使用绝对路径 | `build_release.py` 改用 `shutil.copytree` 创建真实目录副本 |
+| NSIS 安装包失败 | 2.3GB 的 7z 文件 mmap 失败 | 改用 `electron-builder --win portable` |
+| DeepSeek API 401 认证失败 | `.env` 中密钥为占位符（安全设计） | 发布前替换 `_internal/config/.env` 中的 `DEEPSEEK_API_KEY` |
+
+### 分发
+
+```bash
+# 独立后端 — 压缩 release/Miya/ 为 ZIP/7z
+# 接收者解压后编辑 _internal/config/.env 即可运行
+
+# 桌面应用 — 直接分发 miya_frontend/release/Miya 1.0.0.exe
+# 接收者双击运行，首次启动后在 _internal/config/.env 填入 API key
+```

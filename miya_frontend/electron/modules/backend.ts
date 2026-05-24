@@ -87,20 +87,27 @@ export function startBackend(): void {
     const ext = process.platform === 'win32' ? '.exe' : ''
     cmd = join(backendDir, `miya-backend${ext}`)
     args = []
-    cwd = backendDir
+    // CWD 设为 _internal/ 以确保相对路径 (config/*.json 等) 正确解析
+    cwd = join(backendDir, '_internal')
   }
   else {
     // 开发模式：尝试 venv Python → 系统 Python → 跳过
     cwd = join(__dirname, '..', '..')
     let pythonPath = resolveVenvPython(cwd)
     if (!existsSync(pythonPath)) {
-      // 尝试系统全局 Python 3.11
-      const sysPython = process.platform === 'win32'
-        ? 'D:/Python/python3.11.9/python.exe'
-        : 'python3'
-      if (existsSync(sysPython)) {
-        pythonPath = sysPython
-        console.log('[Backend] 使用系统 Python:', sysPython)
+      const pythonFallbacks = process.platform === 'win32'
+        ? [
+          join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python311', 'python.exe'),
+          'C:/Python/python3.11.9/python.exe',
+          'D:/Python/python3.11.9/python.exe',
+          'C:/Python311/python.exe',
+          'python',
+        ]
+        : ['python3', 'python']
+
+      pythonPath = pythonFallbacks.find(p => existsSync(p)) || ''
+      if (pythonPath) {
+        console.log('[Backend] 使用 Python:', pythonPath)
       }
       else {
         console.warn('[Backend] 未找到 Python 解释器，跳过后端启动')
@@ -109,7 +116,7 @@ export function startBackend(): void {
       }
     }
     cmd = pythonPath
-    args = ['run/miya_demo.py']
+    args = ['run/daemon.py']
   }
 
   console.log(`[Backend] Starting from ${cwd}`)

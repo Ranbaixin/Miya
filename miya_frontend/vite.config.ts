@@ -1,9 +1,12 @@
 import process from 'node:process'
+import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import unocss from 'unocss/vite'
 import { defineConfig } from 'vite'
 import electron from 'vite-plugin-electron/simple'
 
+const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const isWebOnly = !!process.env.WEB_ONLY
 
 // https://vite.dev/config/
@@ -18,9 +21,6 @@ export default defineConfig({
         vite: {
           build: {
             rollupOptions: {
-              // Keep native/electron-side deps as runtime externals.
-              // This avoids Rolldown trying to bundle `electron-updater` internals
-              // (e.g. its `lodash.isequal` import), which can fail on some installs.
               external: ['electron', 'electron-updater', 'lodash.isequal', '@lydell/node-pty'],
             },
           },
@@ -31,7 +31,7 @@ export default defineConfig({
       },
     }),
   ],
-  resolve: { alias: { '@': '/src' } },
+  resolve: { alias: { '@': resolve(__dirname, 'src') } },
   optimizeDeps: {
     include: [
       'primevue/accordion',

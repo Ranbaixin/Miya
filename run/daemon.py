@@ -81,13 +81,13 @@ async def run_daemon(
     logger = logging.getLogger("Miya.Bootstrap")
 
     print("""
-╔══════════════════════════════════════════════════════════════╗
-║                                                              ║
-║        ✦ 弥娅 (MIYA) v7.0 - 统一守护进程 ✦                  ║
-║                                                              ║
-║        所有平台已就绪 · 热插拔 · 自动重连                    ║
-║                                                              ║
-╚══════════════════════════════════════════════════════════════╝
++==============================================================+
+|                                                              |
+|        * 弥娅 (MIYA) v7.0 - 统一守护进程 *                  |
+|                                                              |
+|        所有平台已就绪 · 热插拔 · 自动重连                    |
+|                                                              |
++==============================================================+
     """)
 
     # 1. 初始化守护进程
@@ -109,24 +109,24 @@ async def run_daemon(
         api.register_webhook_platforms()
 
         print(f"""
-╔══════════════════════════════════════════════════════════════╗
-║  ✦ 管理 API 就绪                                            ║
-║━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ║
-║  REST:  http://{api_host}:{api_port}/api/v1/health              ║
-║  WS:    ws://{api_host}:{api_port}/api/v1/ws                    ║
-║  Docs:  http://{api_host}:{api_port}/docs                       ║
-╚══════════════════════════════════════════════════════════════╝
++==============================================================+
+|  * 管理 API 就绪                                            |
+|----------------------------------------------------------  |
+|  REST:  http://{api_host}:{api_port}/api/v1/health              |
+|  WS:    ws://{api_host}:{api_port}/api/v1/ws                    |
+|  Docs:  http://{api_host}:{api_port}/docs                       |
++==============================================================+
         """)
     else:
         api = None
         print()
-        print("  ◆ 管理 API 已禁用")
+        print("  > 管理 API 已禁用")
         print()
 
     # 显示平台状态
     _print_platform_status(daemon)
 
-    print("\n  💫 弥娅已就绪，按 Ctrl+C 退出...\n")
+    print("\n  弥娅已就绪，按 Ctrl+C 退出...\n")
 
     # 4. 等待退出信号
     with contextlib.suppress(KeyboardInterrupt):
@@ -137,21 +137,21 @@ async def run_daemon(
     if api:
         await api.stop()
     await daemon.shutdown()
-    print("\n💤 弥娅已退出\n")
+    print("\n弥娅已退出\n")
 
 
 def _print_platform_status(daemon):
     """打印平台状态表格"""
     stats = daemon.get_platform_status()
     if not stats:
-        print("  ⚠ 没有启用的平台")
+        print("  [WARN] 没有启用的平台")
         return
 
-    print("  ◆ 平台状态 ────────────────────────────")
+    print("  > 平台状态 ----------------------------")
     print(f"  {'平台':<20} {'状态':<12}")
-    print(f"  {'─' * 20} {'─' * 12}")
+    print(f"  {'-' * 20} {'-' * 12}")
     for s in stats:
-        status_icon = "✓" if s["status"] == "online" else "✗"
+        status_icon = "[OK]" if s["status"] == "online" else "[FAIL]"
         print(f"  {s['platform_name']:<20} {status_icon} {s['status']}")
     print()
 
@@ -191,7 +191,7 @@ def main():
         from config.platforms_config import get_enabled_platforms
 
         enabled = get_enabled_platforms()
-        print("\n✦ 可用平台:\n")
+        print("\n* 可用平台:\n")
         for pid, cfg in enabled.items():
             name = cfg.get("name", pid)
             print(f"  - {pid}: {name}")

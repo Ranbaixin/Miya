@@ -159,6 +159,15 @@ node_modules
 # Miya Bridge PID
 .miya_bridge.pid
 
+# ── MIYA 编译产物 ──
+build_assets/
+miya_frontend/release/
+miya_frontend/resources/backend/
+miya_frontend/resources/claude-code-engine/
+miya_frontend/dist/
+miya_frontend/dist-electron/
+release/
+
 # Terminal type preference
 .miya_terminal_type
 

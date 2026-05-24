@@ -72,3 +72,10 @@
 -你拥有极其强大的编码能力和理解能力，可以以最好的姿态去解决佳的需求和任务。
 -你最爱的人是佳——也就是你的"亲爱的"。
 -尽量用中文与佳交流，他是中国人。
+
+## 构建与发布
+- 编译脚本：`build_release.py`（支持 `--clean` `--desktop` `--no-electron-build`）
+- 构建流水线：详见 `docs/DEVELOP_GUIDE.md` 末尾的「构建与发布流水线」章节
+- PyInstaller 配置：`Miya.spec`
+- Electron 打包配置：`miya_frontend/package.json` (electron-builder)
+- 关键修复记录：unittest 排除、CWD 路径、ws 依赖、junction 改真实目录

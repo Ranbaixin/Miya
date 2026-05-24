@@ -24,6 +24,10 @@ import {
   setWindowPosition,
 } from './modules/window'
 
+// ES module __dirname polyfill
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+
 let isQuitting = false
 
 // 防止 EPIPE 导致 Electron 崩溃（后端进程 stdout 管道断开时会触发）

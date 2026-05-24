@@ -31,8 +31,14 @@ const NODE_EXE = findNodeExe()
 
 function loadEnvVars(rootDir: string): Record<string, string> {
   const env: Record<string, string> = {}
-  const envPath = resolve(rootDir, 'config', '.env')
-  if (existsSync(envPath)) {
+
+  const candidates = [
+    resolve(rootDir, 'config', '.env'),
+    resolve(rootDir, 'resources', 'backend', '_internal', 'config', '.env'),
+  ]
+
+  const envPath = candidates.find(p => existsSync(p))
+  if (envPath) {
     const content = readFileSync(envPath, 'utf-8')
     for (const line of content.split('\n')) {
       const trimmed = line.trim()
@@ -83,10 +89,18 @@ export function startTerminal(
 
   const rootDir = miyaRoot || process.cwd()
   const env = buildEnv(rootDir, options.model)
-  const cliPath = resolve(rootDir, 'claude-code-engine', 'dist', 'cli-node.js')
 
-  if (!existsSync(cliPath)) {
-    throw new Error(`Claude Code Engine not found: ${cliPath}`)
+  const cliCandidates = [
+    resolve(rootDir, 'claude-code-engine', 'cli-node.js'),
+    resolve(rootDir, 'claude-code-engine', 'dist', 'cli-node.js'),
+    resolve(process.resourcesPath || '', 'claude-code-engine', 'cli-node.js'),
+    resolve(process.resourcesPath || '', 'claude-code-engine', 'dist', 'cli-node.js'),
+  ]
+
+  const cliPath = cliCandidates.find(p => existsSync(p))
+
+  if (!cliPath) {
+    throw new Error(`Claude Code Engine not found. Checked: ${cliCandidates.filter(p => p).join(', ')}`)
   }
 
   if (!existsSync(NODE_EXE)) {
