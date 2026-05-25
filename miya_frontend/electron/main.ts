@@ -528,8 +528,13 @@ app.whenReady().then(async () => {
     }
   })
 
-  // Start backend services
-  startBackend()
+  // Start backend services (skip if MIYA_NO_BACKEND is set)
+  if (!process.env.MIYA_NO_BACKEND) {
+    startBackend()
+  }
+  else {
+    console.log('[Main] MIYA_NO_BACKEND=1, 跳过自动启动后端')
+  }
 })
 
 app.on('before-quit', () => {

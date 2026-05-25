@@ -122,7 +122,8 @@ if not exist "miya_frontend\node_modules\" (
 )
 
 echo Starting Electron desktop app...
-start "MIYA Desktop" cmd /c "cd miya_frontend && npm run dev"
+echo   后端需单独启动 (start.bat 2)
+start "MIYA Desktop" cmd /c "set MIYA_NO_BACKEND=1 && cd miya_frontend && npm run dev"
 echo.
 echo [OK] Desktop app launched
 timeout /t 2 >nul
