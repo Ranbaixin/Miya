@@ -5,22 +5,23 @@
 调度系统：定时器轮询各路队列
 """
 
-import asyncio
-import json
 import logging
 import os
-import re
 import uuid
 from threading import Thread
 
 from plugins.yinmei.core import SharedData
-from plugins.yinmei.core.obs_controller import OBSController, VideoControl, VideoStatus
+from plugins.yinmei.core.obs_controller import OBSController
 from plugins.yinmei.core.nsfw_filter import NSFWFilter
 from plugins.yinmei.core.image_search import ImageSearch
 from plugins.yinmei.core.web_search import WebSearch
 from plugins.yinmei.core.draw_engine import DrawEngine
 from plugins.yinmei.core.sing_engine import SingEngine
 from plugins.yinmei.core.dance_engine import DanceEngine
+from plugins.yinmei.core.emote_engine import EmoteEngine
+from plugins.yinmei.core.auto_swing import AutoSwingEngine
+from plugins.yinmei.core.scene_manager import SceneClothesManager
+from plugins.yinmei.core.bilibili_danmaku import BilibiliDanmaku
 from plugins.yinmei.tools import singleton, StringUtil
 
 logger = logging.getLogger(__name__)
@@ -39,11 +40,17 @@ class LiveStreamHub:
         self._draw = DrawEngine()
         self._sing = SingEngine()
         self._dance = DanceEngine()
+        self._emote = EmoteEngine()
+        self._swing = AutoSwingEngine()
+        self._scene = SceneClothesManager()
+        self._bilibili = BilibiliDanmaku()
 
         self._tts_callback = None
         self._llm_chat_callback = None
         self._emote_callback = None
         self._scheduler = None
+
+        self._talking = False
 
     # ============ 回调注册 (对接 MIYA 现有系统) ============
 
@@ -125,11 +132,15 @@ class LiveStreamHub:
         if self._dance.msg_deal_dance(traceid, query, uid, username):
             return
 
-        # 9. 场景切换
-        if self._handle_scene(traceid, query, uid, username):
+        # 9. 换装
+        if self._scene.msg_deal_clothes(traceid, query, uid, username):
             return
 
-        # 10. 聊天入口
+        # 10. 场景切换
+        if self._scene.msg_deal_scene(traceid, query, uid, username):
+            return
+
+        # 11. 聊天入口
         self._handle_chat(traceid, query, uid, username)
 
     # ============ 命令处理 ============
@@ -170,30 +181,6 @@ class LiveStreamHub:
             return True
 
         return False
-
-    # ============ 场景控制 ============
-
-    def _handle_scene(self, traceid: str, query: str, uid: str, username: str) -> bool:
-        text = ["切换", "进入"]
-        num = StringUtil.is_index_contain_string(text, query)
-        if num > 0:
-            scene_name = re.sub("(。|,|，)", "", query[num:].strip())
-            self.change_scene(scene_name)
-            return True
-        return False
-
-    def change_scene(self, scene_name: str):
-        self._obs.change_scene(scene_name)
-        if scene_name in self._data.song_background:
-            song = self._data.song_background[scene_name]
-            if self._obs.get_video_status("背景音乐") == VideoStatus.PAUSED.value:
-                self._obs.play_video("背景音乐", song)
-                from time import sleep
-
-                sleep(1)
-                self._obs.control_video("背景音乐", VideoControl.PAUSE)
-            else:
-                self._obs.play_video("背景音乐", song)
 
     # ============ 聊天入口 ============
 
@@ -280,6 +267,30 @@ class LiveStreamHub:
 
     # ============ 启动/停止 ============
 
+    def change_scene(self, scene_name: str):
+        return self._scene.change_scene(scene_name)
+
+    def start_bilibili(self):
+        self._bilibili.set_callback(self.process_message)
+        self._bilibili.start()
+
+    def init_scene(self):
+        self._scene.init_scene()
+
+    def on_tts_start(self):
+        """TTS 开始说话时触发——启动自动摇摆"""
+        self._talking = True
+        Thread(target=self._swing.start, daemon=True).start()
+
+    def on_tts_end(self):
+        """TTS 说完话时触发——停止自动摇摆"""
+        self._talking = False
+        self._swing.stop()
+
+    def on_chat_reply(self, reply_text: str):
+        """聊天回复时触发——表情分析"""
+        self._emote.execute_async(reply_text)
+
     def register_scheduler(self, scheduler):
         """注册 APScheduler 实例，注册全部定时任务"""
         self._scheduler = scheduler
@@ -362,16 +373,7 @@ class LiveStreamHub:
         logger.info("吟美直播定时任务注册完成")
 
     def _check_scene_time(self):
-        """白天/黄昏/黑夜场景切换"""
-        import time
-
-        now = time.strftime("%H:%M:%S")
-        if "06:00:00" <= now <= "16:59:59":
-            logger.info("现在是白天")
-        elif "17:00:00" <= now <= "17:59:59":
-            logger.info("现在是黄昏")
-        else:
-            logger.info("现在是晚上")
+        self._scene.check_scene_time()
 
     def shutdown(self):
         """停止所有"""
@@ -379,5 +381,7 @@ class LiveStreamHub:
         self._data.is_creating_song = 2
         self._data.is_drawing = 3
         self._data.is_dance = 2
+        self._swing.stop()
+        self._bilibili.stop()
         self._obs.disconnect()
         logger.info("吟美直播中枢已停止")

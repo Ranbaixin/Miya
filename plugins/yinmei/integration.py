@@ -60,7 +60,11 @@ def install_yinmei_plugin(
     # 2. 创建中枢
     _hub = LiveStreamHub()
 
-    # 3. 注册回调 - 对接 MIYA 现有系统
+    # 3. 初始化场景 + B站弹幕
+    _hub.init_scene()
+    _hub.start_bilibili()
+
+    # 4. 注册回调 - 对接 MIYA 现有系统
     if tts_callback:
         _hub.set_tts_callback(tts_callback)
         logger.info("吟美 TTS 回调已注册")

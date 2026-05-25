@@ -12,7 +12,7 @@
 """
 
 from .tools.singleton_mode import singleton
-from .config.config_loader import YinmeiConfig
+from .config import YinmeiConfig
 from .core.live_stream_hub import LiveStreamHub
 
 __all__ = ["singleton", "YinmeiConfig", "LiveStreamHub"]

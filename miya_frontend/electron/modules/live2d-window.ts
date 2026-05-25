@@ -83,6 +83,12 @@ export function createLive2dWindow(
     console.warn('[Live2D Window] loadURL failed:', err.message)
   })
 
+  live2dWindow.webContents.on('did-finish-load', () => {
+    live2dWindow?.webContents.executeJavaScript(
+      'window.__MIYA_API_PORT__ = 8000'
+    ).catch(() => {})
+  })
+
   live2dWindow.on('closed', () => {
     live2dWindow = null
   })

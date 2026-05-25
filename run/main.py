@@ -51,9 +51,7 @@ def chinese_input(prompt: str) -> str:
             )
 
         # 确保标准输出编码正确
-        if hasattr(sys.stdout, "buffer") and not isinstance(
-            sys.stdout, io.TextIOWrapper
-        ):
+        if hasattr(sys.stdout, "buffer") and not isinstance(sys.stdout, io.TextIOWrapper):
             sys.stdout = io.TextIOWrapper(
                 sys.stdout.buffer,
                 encoding="utf-8",
@@ -117,13 +115,9 @@ class Miya:
         self.system_detector = get_system_detector()
         self.system_info = self.system_detector.detect()
         self.logger.info("✅ 系统检测完成:")
-        self.logger.info(
-            f"   操作系统: {self.system_info.os_name} {self.system_info.os_version}"
-        )
+        self.logger.info(f"   操作系统: {self.system_info.os_name} {self.system_info.os_version}")
         if self.system_info.distro != "unknown":
-            self.logger.info(
-                f"   发行版: {self.system_info.distro} {self.system_info.distro_version}"
-            )
+            self.logger.info(f"   发行版: {self.system_info.distro} {self.system_info.distro_version}")
         self.logger.info(f"   架构: {self.system_info.arch}")
         self.logger.info(f"   Shell: {self.system_info.shell}")
         self.logger.info(f"   Python: {self.system_info.python_version}")
@@ -159,9 +153,7 @@ class Miya:
 
     def _init_databases(self):
         """初始化可选数据库 - 默认禁用（SQLite 已替代）"""
-        self.logger.info(
-            "  [数据库] 外部数据库已禁用（SQLite 已替代 Redis/Milvus/Neo4j）"
-        )
+        self.logger.info("  [数据库] 外部数据库已禁用（SQLite 已替代 Redis/Milvus/Neo4j）")
         self.redis = None
         self.milvus = None
         self.neo4j = None
@@ -260,9 +252,7 @@ class Miya:
         file_handler.setLevel(logging.DEBUG)
 
         # 格式化
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         console_handler.setFormatter(formatter)
         file_handler.setFormatter(formatter)
 
@@ -336,9 +326,7 @@ class Miya:
         try:
             from webnet.webnet import WebNet
 
-            self.web_net = WebNet(
-                memory_engine=self.memory_engine, emotion_manager=self.emotion
-            )
+            self.web_net = WebNet(memory_engine=self.memory_engine, emotion_manager=self.emotion)
             self.logger.info("WebNet 子网初始化成功")
         except Exception as e:
             self.logger.warning(f"WebNet 初始化失败（可选模块）: {e}")
@@ -390,12 +378,8 @@ class Miya:
                 DATA_DIR = str(MIYA_ROOT / "data" / "memory")
 
                 with concurrent.futures.ThreadPoolExecutor() as pool:
-                    self.unified_memory_core = pool.submit(
-                        asyncio.run, get_memory_core(DATA_DIR)
-                    ).result()
-                    self.unified_memory_adapter = pool.submit(
-                        asyncio.run, get_memory_adapter()
-                    ).result()
+                    self.unified_memory_core = pool.submit(asyncio.run, get_memory_core(DATA_DIR)).result()
+                    self.unified_memory_adapter = pool.submit(asyncio.run, get_memory_adapter()).result()
             except RuntimeError:
                 # 没有运行中的loop，可以直接使用asyncio.run
                 MIYA_ROOT = Path(__file__).parent.parent.resolve()
@@ -421,9 +405,7 @@ class Miya:
                 try:
                     if self.memory_net.conversation_history:
                         session_to_clear = "terminal_default"
-                        await self.memory_net.conversation_history.clear_session(
-                            session_to_clear
-                        )
+                        await self.memory_net.conversation_history.clear_session(session_to_clear)
                         self.logger.info("已清除之前的终端对话历史（新会话开始）")
                 except Exception as e:
                     self.logger.warning(f"清除对话历史失败: {e}")
@@ -495,23 +477,15 @@ class Miya:
                             max_tokens=int(os.getenv("AI_MAX_TOKENS", "2000")),
                         )
 
-                        if (
-                            client
-                            and hasattr(client, "client")
-                            and client.client is not None
-                        ):
+                        if client and hasattr(client, "client") and client.client is not None:
                             model_clients[model_key] = client
-                            self.logger.info(
-                                f"  [多模型] {model_key}: {model_config.name} ({model_config.base_url})"
-                            )
+                            self.logger.info(f"  [多模型] {model_key}: {model_config.name} ({model_config.base_url})")
                     except Exception as e:
                         self.logger.warning(f"  [多模型] {model_key} 初始化失败: {e}")
 
                 if model_clients:
                     self.model_pool = pool
-                    self.logger.info(
-                        f"模型池初始化成功，已加载 {len(model_clients)} 个模型"
-                    )
+                    self.logger.info(f"模型池初始化成功，已加载 {len(model_clients)} 个模型")
 
                     default_client = next(iter(model_clients.values()), None)
                     if default_client:
@@ -567,9 +541,7 @@ class Miya:
         try:
             from core.web_api import create_web_api
 
-            self.web_api = create_web_api(
-                web_net=self.web_net, decision_hub=self.decision_hub
-            )
+            self.web_api = create_web_api(web_net=self.web_net, decision_hub=self.decision_hub)
 
             if self.web_api:
                 self.logger.info("Web API 路由器初始化成功")
@@ -616,6 +588,17 @@ class Miya:
                             )
                             app.include_router(self.web_api.router)
 
+                            # 安装吟美虚拟主播插件
+                            try:
+                                from plugins.yinmei.integration import install_yinmei_plugin
+
+                                install_yinmei_plugin(app, enable_scheduler=False)
+                                self.logger.info("[Miya] 吟美虚拟主播插件已加载")
+                            except ImportError:
+                                self.logger.debug("[Miya] 吟美插件未安装")
+                            except Exception as e:
+                                self.logger.warning(f"[Miya] 吟美插件加载失败: {e}")
+
                             uvicorn.run(
                                 app,
                                 host="0.0.0.0",
@@ -628,18 +611,12 @@ class Miya:
                         return False
                     except OSError as e:
                         if e.errno == 10048 and attempt < max_retries - 1:  # 地址已在用
-                            self.logger.warning(
-                                f"端口 {current_api_port} 绑定失败，尝试下一个端口..."
-                            )
+                            self.logger.warning(f"端口 {current_api_port} 绑定失败，尝试下一个端口...")
                             # 更新端口并重新检查
                             from utils.port_utils import find_available_port
 
-                            current_api_port = find_available_port(
-                                current_api_port + 1, host="0.0.0.0"
-                            )
-                            self.logger.info(
-                                f"端口切换到 {current_api_port}，前端将自动检测该端口"
-                            )
+                            current_api_port = find_available_port(current_api_port + 1, host="0.0.0.0")
+                            self.logger.info(f"端口切换到 {current_api_port}，前端将自动检测该端口")
                         else:
                             self.logger.error(f"无法启动服务器: {e}")
                             raise
@@ -648,9 +625,7 @@ class Miya:
                         raise
                 return False
 
-            server_thread = threading.Thread(
-                target=run_server, args=(api_port,), daemon=False
-            )
+            server_thread = threading.Thread(target=run_server, args=(api_port,), daemon=False)
             server_thread.start()
 
             import time
@@ -684,9 +659,7 @@ class Miya:
             self.grag_memory = None
             self.neo4j_client = None
 
-    async def process_input_async(
-        self, user_input: str, user_id: str = "default"
-    ) -> str:
+    async def process_input_async(self, user_input: str, user_id: str = "default") -> str:
         """
         处理用户输入（使用统一跨平台架构）
 
@@ -761,16 +734,12 @@ class Miya:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            response = loop.run_until_complete(
-                self.process_input_async(user_input, user_id)
-            )
+            response = loop.run_until_complete(self.process_input_async(user_input, user_id))
             return response
         finally:
             loop.close()
 
-    async def _miya_ai_callback(
-        self, input_text: str, from_terminal: str = "master"
-    ) -> str:
+    async def _miya_ai_callback(self, input_text: str, from_terminal: str = "master") -> str:
         """
         弥娅AI回调 - 用于主终端控制器和弥娅接管模式
 
@@ -791,9 +760,7 @@ class Miya:
             "sender_name": from_terminal,
         }
 
-        message = Message(
-            msg_type="text", content=perception_data, source=from_terminal
-        )
+        message = Message(msg_type="text", content=perception_data, source=from_terminal)
 
         # 使用DecisionHub处理
         response = await self.decision_hub.process_perception_cross_platform(message)
@@ -911,15 +878,11 @@ def main():
                                 loop = asyncio.get_event_loop()
                                 if loop.is_running():
                                     asyncio.create_task(
-                                        miya.decision_hub.handle_session_end(
-                                            "default", platform="terminal"
-                                        )
+                                        miya.decision_hub.handle_session_end("default", platform="terminal")
                                     )
                                 else:
                                     loop.run_until_complete(
-                                        miya.decision_hub.handle_session_end(
-                                            "default", platform="terminal"
-                                        )
+                                        miya.decision_hub.handle_session_end("default", platform="terminal")
                                     )
                                 print("对话历史已保存")
                             except Exception as e:
@@ -944,25 +907,17 @@ def main():
                         for emotion, intensity in status["emotion"]["current"].items():
                             print(f"    {emotion}: {intensity:.2f}")
                         print("\n【记忆统计】")
-                        print(
-                            f"  潮汐记忆: {status['memory_stats'].get('tide_count', 0)}条"
-                        )
-                        print(
-                            f"  长期记忆: {status['memory_stats'].get('longterm_count', 0)}条"
-                        )
+                        print(f"  潮汐记忆: {status['memory_stats'].get('tide_count', 0)}条")
+                        print(f"  长期记忆: {status['memory_stats'].get('longterm_count', 0)}条")
                         print("\n【感知状态】")
                         print(f"  全局激活: {status['perception']['global_active']}")
                         print(f"  外部感知: {status['perception']['external_active']}")
                         print(f"  内部感知: {status['perception']['internal_active']}")
                         print("\n【信任统计】")
                         print(f"  平均信任: {status['trust_stats']['avg_score']:.2f}")
-                        print(
-                            f"  总交互: {status['trust_stats']['total_interactions']}"
-                        )
+                        print(f"  总交互: {status['trust_stats']['total_interactions']}")
                         print("\n【系统健康】")
-                        print(
-                            f"  熵值: {status['entropy_health']['current_entropy']:.3f}"
-                        )
+                        print(f"  熵值: {status['entropy_health']['current_entropy']:.3f}")
                         print(f"  健康状态: {status['entropy_health']['status']}")
                         print()
                         continue
@@ -994,12 +949,8 @@ def main():
                             personality = report["personality"]
                             print("\n【人格状态】")
                             vectors = personality.get("vectors", {})
-                            print(
-                                f"  形态: {personality.get('current_form', {}).get('name', '未知')}"
-                            )
-                            print(
-                                f"  专属称呼: {personality.get('current_title', '佳')}"
-                            )
+                            print(f"  形态: {personality.get('current_form', {}).get('name', '未知')}")
+                            print(f"  专属称呼: {personality.get('current_title', '佳')}")
                             print(f"  状态: {personality.get('state', '未知')}")
                             print("  人格向量:")
                             if vectors:
@@ -1019,16 +970,10 @@ def main():
                             print("\n【情绪状态】")
                             current_emotion = emotion.get("current_emotion", {})
                             if current_emotion:
-                                print(
-                                    f"  主导情绪: {current_emotion.get('dominant', '未知')}"
-                                )
-                                print(
-                                    f"  情绪强度: {current_emotion.get('intensity', 0):.2f}"
-                                )
+                                print(f"  主导情绪: {current_emotion.get('dominant', '未知')}")
+                                print(f"  情绪强度: {current_emotion.get('intensity', 0):.2f}")
                                 print("  当前情绪:")
-                                for emotion_name, intensity in current_emotion.get(
-                                    "current", {}
-                                ).items():
+                                for emotion_name, intensity in current_emotion.get("current", {}).items():
                                     print(f"    {emotion_name}: {intensity:.2f}")
                             print()
                         if report.get("memory"):
@@ -1043,37 +988,24 @@ def main():
                             learning = report.get("learning", {})
                             print("\n【学习统计】")
                             print(f"  学习次数: {learning.get('total_learnings', 0)}次")
-                            print(
-                                f"  改进次数: {learning.get('total_improvements', 0)}次"
-                            )
+                            print(f"  改进次数: {learning.get('total_improvements', 0)}次")
                             if learning.get("learning_history"):
                                 print("  最近学习:")
                                 for item in learning.get("learning_history", [])[:5]:
-                                    print(
-                                        f"    - {item.get('type', '未知')}: {item.get('description', '无描述')}"
-                                    )
+                                    print(f"    - {item.get('type', '未知')}: {item.get('description', '无描述')}")
                             print()
                         continue
 
                     if user_input.lower() in ["yes", "y", "是", "确认"]:
-                        print(
-                            f"{miya.identity.name}: 确认功能已由 Open-ClaudeCode 处理\n"
-                        )
+                        print(f"{miya.identity.name}: 确认功能已由 Open-ClaudeCode 处理\n")
                         continue
 
                     if user_input.lower() in ["取消", "cancel", "no", "n"]:
-                        print(
-                            f"{miya.identity.name}: 取消功能已由 Open-ClaudeCode 处理\n"
-                        )
+                        print(f"{miya.identity.name}: 取消功能已由 Open-ClaudeCode 处理\n")
                         continue
 
-                    if (
-                        user_input.lower().startswith("switch ")
-                        or user_input.lower() == "list terminals"
-                    ):
-                        print(
-                            f"{miya.identity.name}: 终端管理已由 Open-ClaudeCode 处理\n"
-                        )
+                    if user_input.lower().startswith("switch ") or user_input.lower() == "list terminals":
+                        print(f"{miya.identity.name}: 终端管理已由 Open-ClaudeCode 处理\n")
                         continue
 
                 except KeyboardInterrupt:

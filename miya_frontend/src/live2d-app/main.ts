@@ -87,6 +87,7 @@ async function boot(): Promise<void> {
     }
 
     startIPCListener()
+    startYinmeiPolling()
     notifyLive2dReady()
     console.log('[Live2D App] Ready!')
   }
@@ -140,7 +141,51 @@ function notifyLive2dReady(): void {
   catch { /* ignore */ }
 }
 
+let _yinmeiPollTimer: ReturnType<typeof setInterval> | null = null
+
+function startYinmeiPolling(): void {
+  const apiPort = (window as any).__MIYA_API_PORT__ || 8000
+  const pollUrl = `http://127.0.0.1:${apiPort}/api/yinmei/live2d/commands`
+
+  _yinmeiPollTimer = setInterval(async () => {
+    try {
+      const resp = await fetch(pollUrl)
+      if (!resp.ok) return
+      const data = await resp.json()
+      const cmds = data.commands || []
+      if (cmds.length === 0) return
+
+      const ctrl = getControl()
+      if (!ctrl) return
+
+      for (const cmd of cmds) {
+        switch (cmd.type) {
+          case 'emotion':
+            ctrl.setEmotion(cmd.value)
+            break
+          case 'state':
+            ctrl.setState(cmd.value)
+            break
+          case 'mouth':
+            ctrl.setMouth(cmd.value)
+            break
+          case 'action':
+            ctrl.triggerAction(cmd.value)
+            break
+        }
+      }
+    }
+    catch { /* API not ready yet */ }
+  }, 500)
+
+  console.log('[Live2D App] Yinmei polling started:', pollUrl)
+}
+
 window.addEventListener('beforeunload', () => {
+  if (_yinmeiPollTimer) {
+    clearInterval(_yinmeiPollTimer)
+    _yinmeiPollTimer = null
+  }
   destroyStandaloneController()
   if (app) app.destroy(true, { children: true })
 })

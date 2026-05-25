@@ -270,3 +270,30 @@ async def set_mouth(data: dict):
 async def action(action: str = Query(...)):
     live2d_trigger_action(action)
     return {"status": "成功"}
+
+
+# ============ B站弹幕 ============
+
+
+@yinmei_router.get("/bilibili/start")
+async def bilibili_start():
+    hub = get_hub()
+    hub.start_bilibili()
+    return {"status": "成功"}
+
+
+# ============ 自动摇摆 ============
+
+
+@yinmei_router.get("/swing/start")
+async def swing_start():
+    hub = get_hub()
+    hub.on_tts_start()
+    return {"status": "成功"}
+
+
+@yinmei_router.get("/swing/stop")
+async def swing_stop():
+    hub = get_hub()
+    hub.on_tts_end()
+    return {"status": "成功"}

@@ -147,3 +147,9 @@ class SharedData:
         self.vtuber_plugin_name = c.get("vtuber_plugin_name", "winlonebot")
         self.vtuber_plugin_developer = c.get("vtuber_plugin_developer", "winlone")
         self.vtuber_auth_token = c.get("vtuber_auth_token", "")
+
+        # ---- 场景昼夜背景 ----
+        self.scene_backgrounds = c.get("scene_backgrounds", {})
+
+    def get_scene_bg(self, scene: str, time_of_day: str) -> str:
+        return self.scene_backgrounds.get(scene, {}).get(time_of_day, "")
