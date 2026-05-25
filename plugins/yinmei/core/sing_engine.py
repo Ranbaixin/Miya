@@ -54,11 +54,6 @@ class SingEngine:
             music = resp.json()
             sid = music.get("id", 0)
             real_name = music.get("songName", songname)
-            prefix = (
-                f'根据"{songname}"的信息，'
-                if songname.lower().replace(" ", "") != real_name.lower().replace(" ", "")
-                else ""
-            )
 
             if sid == 0:
                 logger.info(f"歌库不存在《{songname}》")
@@ -197,10 +192,7 @@ class SingEngine:
     def _exist_in_queue(self, queue_obj, name: str) -> bool:
         if self._data.SongNowName.get("songname") == name:
             return True
-        for i in range(queue_obj.qsize()):
-            if queue_obj.queue[i].get("songname") == name:
-                return True
-        return False
+        return any(queue_obj.queue[i].get("songname") == name for i in range(queue_obj.qsize()))
 
     def msg_deal(self, traceid: str, query: str, uid: str, username: str) -> bool:
         text = ["唱一下", "唱一首", "唱歌", "点歌", "点播"]
