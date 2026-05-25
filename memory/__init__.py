@@ -149,6 +149,7 @@ async def store_cognition(
     attribution: str = "",
     reflection: str = "",
     user_id: str = "global",
+    group_id: Optional[str] = None,
     metadata: Optional[Dict] = None,
 ) -> str:
     """
@@ -163,14 +164,13 @@ async def store_cognition(
         attribution: 归因分析
         reflection: 反思内容
         user_id: 用户ID
+        group_id: 群ID（群聊时传入，用于按群检索认知记忆）
         metadata: 额外元数据
 
     Returns:
         存储的记忆ID
     """
-    print(
-        f"[store_cognition] 开始存储: thinking长度={len(thinking)}, user_id={user_id}"
-    )
+    print(f"[store_cognition] 开始存储: thinking长度={len(thinking)}, user_id={user_id}")
     if emotions is None:
         emotions = {}
 
@@ -192,6 +192,7 @@ async def store_cognition(
         content=cognition_content,
         level=MemoryLevel.SHORT_TERM,
         user_id=user_id,
+        group_id=group_id,
         source=MemorySource.AUTO_EXTRACT,
         tags=["cognition", "thinking", "emotion_record"],
         priority=0.6,
@@ -263,6 +264,7 @@ async def retrieve_cognition(
         user_id=user_id,
         tags=["cognition"],
         limit=limit,
+        sort_by="created_at",
     )
 
     cognition_list = []
@@ -509,9 +511,7 @@ class MemoryAdapter:
         return self._core
 
     # 兼容旧接口
-    async def add_message(
-        self, session_id: str, role: str, content: str, **kwargs
-    ) -> str:
+    async def add_message(self, session_id: str, role: str, content: str, **kwargs) -> str:
         """添加消息 (旧接口)"""
         user_id = kwargs.get("user_id", "unknown")
         platform = kwargs.get("platform", "qq")
@@ -525,14 +525,10 @@ class MemoryAdapter:
             metadata=kwargs,
         )
 
-    async def get_history(
-        self, session_id: str, limit: int = 20, **kwargs
-    ) -> List[Dict]:
+    async def get_history(self, session_id: str, limit: int = 20, **kwargs) -> List[Dict]:
         """获取历史 (旧接口)"""
         platform = kwargs.get("platform", "unknown")
-        memories = await get_dialogue_history(
-            session_id, platform=platform, limit=limit
-        )
+        memories = await get_dialogue_history(session_id, platform=platform, limit=limit)
 
         return [
             {
@@ -544,9 +540,7 @@ class MemoryAdapter:
             for m in memories
         ]
 
-    async def add_memory(
-        self, fact: str, tags: Optional[List[str]] = None, **kwargs
-    ) -> str:
+    async def add_memory(self, fact: str, tags: Optional[List[str]] = None, **kwargs) -> str:
         """添加记忆 (旧接口)"""
         user_id = kwargs.get("user_id", "global")
         return await store_important(fact, user_id, tags or [])
@@ -568,9 +562,7 @@ class MemoryAdapter:
             for m in memories
         ]
 
-    async def get_all(
-        self, user_id: Optional[str] = None, limit: int = 100
-    ) -> List[Dict]:
+    async def get_all(self, user_id: Optional[str] = None, limit: int = 100) -> List[Dict]:
         """获取所有 (旧接口)"""
         memories = await get_user_memories(user_id, limit=limit)
 
@@ -641,9 +633,7 @@ def get_unified_memory(data_dir="data/memory"):
                 # 直接同步初始化，避免在异步上下文中调用 run_until_complete
                 _unified_memory_sync = MiyaMemoryCore(data_dir)
             else:
-                _unified_memory_sync = loop.run_until_complete(
-                    get_memory_core(data_dir)
-                )
+                _unified_memory_sync = loop.run_until_complete(get_memory_core(data_dir))
         except RuntimeError:
             # 没有事件循环，直接同步初始化
             _unified_memory_sync = MiyaMemoryCore(data_dir)

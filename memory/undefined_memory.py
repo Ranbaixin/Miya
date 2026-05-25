@@ -22,7 +22,7 @@ class UndefinedMemoryAdapter:
 
     def count(self) -> int:
         """获取记忆数量"""
-        return 0
+        return 0  # 适配层，实际数据由 MiyaMemoryCore 管理
 
     async def add_memory(self, content: str, user_id: str, **kwargs) -> str:
         """添加记忆"""
@@ -30,9 +30,7 @@ class UndefinedMemoryAdapter:
 
         return await store_important(content, user_id, tags=kwargs.get("tags", []))
 
-    async def search_memory(
-        self, query: str, user_id: Optional[str] = None, **kwargs
-    ) -> List[Dict]:
+    async def search_memory(self, query: str, user_id: Optional[str] = None, **kwargs) -> List[Dict]:
         """搜索记忆"""
         from memory import search_memory
 
@@ -77,9 +75,16 @@ def get_undefined_memory_backend():
     return get_undefined_memory_adapter()
 
 
+def get_unified_memory_backend():
+    """获取统一记忆后端（新系统兼容别名）"""
+    from memory import search_memory
+
+    return get_undefined_memory_adapter()
+
+
 __all__ = [
     "UndefinedMemoryAdapter",
-    "get_unified_memory_adapter",
     "get_undefined_memory_adapter",
     "get_undefined_memory_backend",
+    "get_unified_memory_backend",
 ]

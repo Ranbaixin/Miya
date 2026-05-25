@@ -398,6 +398,19 @@ class CognitiveEngine:
 
         all_memories = await self.memory_core.retrieve(query)
 
+        # 【修复】当 group_id 过滤返回空结果时，回退到不按群过滤再查一次
+        if not all_memories and group_id:
+            fallback_query = MemoryQuery(
+                query="",
+                tags=current_topics + keywords,
+                limit=limit * 3,
+                user_id=user_id,
+                group_id=None,
+            )
+            all_memories = await self.memory_core.retrieve(fallback_query)
+            if all_memories:
+                logger.info(f"[认知引擎] group_id({group_id})无匹配，回退到全局检索: {len(all_memories)} 条")
+
         # 2.5 【新增】专门搜索记忆锚点（优先级最高）
         # 如果用户输入包含个人信息相关的关键词，优先搜索记忆锚点
         user_input_lower = user_input.lower()
@@ -488,6 +501,9 @@ class CognitiveEngine:
 
         # 4. MMR去重（最大边际相关性）- 减少相似记忆的重复
         results = self._mmr_deduplicate(scored_memories, limit)
+
+        # 4.5 按创建时间倒序排列（统一群聊与私聊记忆的时间线）
+        results.sort(key=lambda m: m.created_at if m.created_at else "", reverse=True)
 
         # 5. 记录共现关系（用于关联度学习）
         retrieved_ids = [m.id for m in results]
@@ -643,9 +659,13 @@ class CognitiveEngine:
                     lines.append(entry)
                 lines.append("")
         else:
+            # 普通查询 → 按时序展示（已按 created_at 降序排列）
             for memory in memories:
-                time_str = memory.created_at[:10]
-                lines.append(f"- {memory.content}")
+                time_str = memory.created_at[11:16] if len(memory.created_at) > 10 else ""
+                date_str = memory.created_at[:10] if len(memory.created_at) >= 10 else ""
+                ts = f"[{date_str} {time_str}]" if date_str else ""
+                content_preview = memory.content.replace("\n", " ")[:150]
+                lines.append(f"- {ts} {content_preview}")
 
         lines.append("")
         lines.append("（这些都是之前对话中记住的重要事情，与当前对话可能相关）")

@@ -232,9 +232,7 @@ class DecisionHub:
         self.knowledge_graph = None
         self._init_knowledge_graph()
 
-        logger.info(
-            "决策层 Hub 初始化完成（门面模式：感知/情绪/记忆/响应处理器 + 辅助模块）"
-        )
+        logger.info("决策层 Hub 初始化完成（门面模式：感知/情绪/记忆/响应处理器 + 辅助模块）")
 
         # 9. 安全服务（防注入）
         self._init_security()
@@ -340,13 +338,9 @@ class DecisionHub:
                 # 2. 回退到 OneBot（兼容）
                 if not sent and self.onebot_client:
                     if chat_type == "group":
-                        sent = await self.onebot_client.send_group_message(
-                            target_id, message
-                        )
+                        sent = await self.onebot_client.send_group_message(target_id, message)
                     else:
-                        sent = await self.onebot_client.send_private_message(
-                            target_id, message
-                        )
+                        sent = await self.onebot_client.send_private_message(target_id, message)
 
                 # 3. 最终回退：打印到控制台
                 if not sent:
@@ -361,9 +355,7 @@ class DecisionHub:
                         "message_type": chat_type,
                         "response": message,
                     }
-                    await self.memory_manager.store_unified_memory(
-                        perception, role="assistant"
-                    )
+                    await self.memory_manager.store_unified_memory(perception, role="assistant")
                 except Exception as e:
                     logger.debug(f"[主动聊天] 记忆存储失败: {e}")
 
@@ -373,9 +365,7 @@ class DecisionHub:
             logger.warning(f"[决策层] 主动聊天系统初始化失败: {e}")
             self.proactive_chat = None
 
-    async def _check_injection(
-        self, perception: dict, content: str
-    ) -> tuple[str | None, str | None]:
+    async def _check_injection(self, perception: dict, content: str) -> tuple[str | None, str | None]:
         """
         检查注入攻击
 
@@ -390,18 +380,12 @@ class DecisionHub:
 
                 platform = perception.get("source", "")
                 if platform in ["qq", "web"]:
-                    user_id = str(
-                        perception.get("user_id", perception.get("user_id", "unknown"))
-                    )
+                    user_id = str(perception.get("user_id", perception.get("user_id", "unknown")))
                     result = self.security_service.check(content, user_id)
                     # 检查是否是危险级别
                     if result.level.value in ["dangerous", "blocked"]:
-                        logger.warning(
-                            f"[决策层-防注入] 技术性注入: level={result.level}, reason={result.reason}"
-                        )
-                        return get_text(
-                            "security.ai_injection_detection.fallback_response"
-                        ), None
+                        logger.warning(f"[决策层-防注入] 技术性注入: level={result.level}, reason={result.reason}")
+                        return get_text("security.ai_injection_detection.fallback_response"), None
             except Exception as e:
                 logger.warning(f"[决策层-防注入] 技术检测失败: {e}")
 
@@ -414,13 +398,9 @@ class DecisionHub:
 
                 platform = perception.get("source", "")
                 if platform in ["qq", "web"]:
-                    is_injection, reason = await self.ai_injection_detector.detect(
-                        content
-                    )
+                    is_injection, reason = await self.ai_injection_detector.detect(content)
                     if is_injection:
-                        logger.warning(
-                            f"[决策层-AI防注入] 检测到角色扮演诱导: {reason}"
-                        )
+                        logger.warning(f"[决策层-AI防注入] 检测到角色扮演诱导: {reason}")
                         # 根据配置决定是阻止还是使用防护提示
                         if self.ai_injection_detector.should_block():
                             return (
@@ -429,9 +409,7 @@ class DecisionHub:
                             )
                         else:
                             # 软防护：允许回复但附加防护提示
-                            protection_prompt = (
-                                self.ai_injection_detector.get_protection_prompt()
-                            )
+                            protection_prompt = self.ai_injection_detector.get_protection_prompt()
                             return None, protection_prompt
             except Exception as e:
                 logger.warning(f"[决策层-AI防注入] 检测失败: {e}")
@@ -489,14 +467,10 @@ class DecisionHub:
             )
 
             self.proactive_chat.update_context(target_id, context, platform)
-            self.proactive_chat.record_message(
-                target_id, chat_type, user_message, platform
-            )
+            self.proactive_chat.record_message(target_id, chat_type, user_message, platform)
 
             # 检查是否需要主动发言
-            result: Optional[
-                ProactiveResult
-            ] = await self.proactive_chat.check_and_respond(
+            result: Optional[ProactiveResult] = await self.proactive_chat.check_and_respond(
                 target_id=target_id, user_message=user_message
             )
 
@@ -511,57 +485,31 @@ class DecisionHub:
                     inst = self.platform_registry.get(platform)
                     if inst and hasattr(inst, "is_online") and inst.is_online:
                         if chat_type == "group" and hasattr(inst, "send_group_message"):
-                            group_id_to_send = (
-                                result.context.target_id
-                                if result.context
-                                else target_id
-                            )
+                            group_id_to_send = result.context.target_id if result.context else target_id
                             logger.info(
                                 f"[决策层] [主动聊天] 发送到群 {group_id_to_send} (via {platform}): {result.message}"
                             )
-                            sent = await inst.send_group_message(
-                                group_id_to_send, result.message
-                            )
+                            sent = await inst.send_group_message(group_id_to_send, result.message)
                         elif hasattr(inst, "send_private_message"):
-                            user_id_to_send = (
-                                result.context.target_id
-                                if result.context
-                                else target_id
-                            )
+                            user_id_to_send = result.context.target_id if result.context else target_id
                             logger.info(
                                 f"[决策层] [主动聊天] 发送到用户 {user_id_to_send} (via {platform}): {result.message}"
                             )
-                            sent = await inst.send_private_message(
-                                user_id_to_send, result.message
-                            )
+                            sent = await inst.send_private_message(user_id_to_send, result.message)
 
                 # 回退到 OneBot（兼容）
                 if not sent and self.onebot_client:
                     if chat_type == "group":
-                        group_id_to_send = (
-                            result.context.target_id if result.context else target_id
-                        )
-                        logger.info(
-                            f"[决策层] [主动聊天] 发送到群 {group_id_to_send}: {result.message}"
-                        )
-                        sent = await self.onebot_client.send_group_message(
-                            group_id_to_send, result.message
-                        )
+                        group_id_to_send = result.context.target_id if result.context else target_id
+                        logger.info(f"[决策层] [主动聊天] 发送到群 {group_id_to_send}: {result.message}")
+                        sent = await self.onebot_client.send_group_message(group_id_to_send, result.message)
                     else:
-                        user_id_to_send = (
-                            result.context.target_id if result.context else target_id
-                        )
-                        logger.info(
-                            f"[决策层] [主动聊天] 发送到用户 {user_id_to_send}: {result.message}"
-                        )
-                        sent = await self.onebot_client.send_private_message(
-                            user_id_to_send, result.message
-                        )
+                        user_id_to_send = result.context.target_id if result.context else target_id
+                        logger.info(f"[决策层] [主动聊天] 发送到用户 {user_id_to_send}: {result.message}")
+                        sent = await self.onebot_client.send_private_message(user_id_to_send, result.message)
 
                 if not sent:
-                    logger.warning(
-                        f"[决策层] [主动聊天] 无法发送到平台 {platform}: {result.message}"
-                    )
+                    logger.warning(f"[决策层] [主动聊天] 无法发送到平台 {platform}: {result.message}")
 
                 return result
 
@@ -604,15 +552,11 @@ class DecisionHub:
 
             if message_type == "group" and group_id:
                 if self.onebot_client:
-                    result = await self.onebot_client.send_group_image(
-                        group_id, emoji_path
-                    )
+                    result = await self.onebot_client.send_group_image(group_id, emoji_path)
                     if result and result.get("status") == "ok":
                         logger.info(f"[决策层] [智能表情包] 发送到群 {group_id}")
             elif user_id and self.onebot_client:
-                result = await self.onebot_client.send_private_image(
-                    user_id, emoji_path
-                )
+                result = await self.onebot_client.send_private_image(user_id, emoji_path)
                 if result and result.get("status") == "ok":
                     logger.info(f"[决策层] [智能表情包] 发送到用户 {user_id}")
 
@@ -703,9 +647,7 @@ class DecisionHub:
         """
         初始化模型协作引擎
         """
-        logger.info(
-            f"[决策层] 协作引擎初始化检查: model_pool={self.model_pool is not None}"
-        )
+        logger.info(f"[决策层] 协作引擎初始化检查: model_pool={self.model_pool is not None}")
         try:
             if self.model_pool:
                 from core.model_collaboration_engine import ModelCollaborationEngine
@@ -734,9 +676,7 @@ class DecisionHub:
         except Exception as e:
             import traceback
 
-            logger.warning(
-                f"[决策层] 模型协作引擎初始化失败: {e}\n{traceback.format_exc()}"
-            )
+            logger.warning(f"[决策层] 模型协作引擎初始化失败: {e}\n{traceback.format_exc()}")
             self.collaboration_engine = None
 
     def _get_advanced_orchestrator(self) -> Optional[Any]:
@@ -765,9 +705,7 @@ class DecisionHub:
                 adapter = get_tool_adapter()
 
                 async def _execute():
-                    return await adapter.execute_tool(
-                        tool_name, params, self.tool_context or {}
-                    )
+                    return await adapter.execute_tool(tool_name, params, self.tool_context or {})
 
                 return asyncio.run(_execute())
 
@@ -782,9 +720,7 @@ class DecisionHub:
             )
             self._advanced_orchestrator_initialized = True
 
-            logger.info(
-                "[决策层] 高级编排器初始化成功（任务规划、自主探索、智能执行、思维链）"
-            )
+            logger.info("[决策层] 高级编排器初始化成功（任务规划、自主探索、智能执行、思维链）")
 
             return self._advanced_orchestrator
 
@@ -807,9 +743,7 @@ class DecisionHub:
         """
         return await self.process_perception_cross_platform(message)
 
-    async def process_perception_cross_platform(
-        self, message: Message
-    ) -> Optional[str]:
+    async def process_perception_cross_platform(self, message: Message) -> Optional[str]:
         """
         处理跨平台感知数据（统一入口）
 
@@ -891,9 +825,7 @@ class DecisionHub:
                     group_name=group_name,
                     message=content,
                 )
-                logger.debug(
-                    f"[决策层] 用户侧写已更新: user_id={user_id}, group_id={group_id}"
-                )
+                logger.debug(f"[决策层] 用户侧写已更新: user_id={user_id}, group_id={group_id}")
             except Exception as e:
                 logger.debug(f"[决策层] 用户侧写更新失败: {e}")
 
@@ -910,9 +842,7 @@ class DecisionHub:
         image_analysis = perception.get("image_analysis")
 
         if has_image and image_analysis and image_analysis.get("success"):
-            logger.info(
-                f"[决策层] 检测到图片消息，分析结果: {image_analysis.get('description', '')[:50]}"
-            )
+            logger.info(f"[决策层] 检测到图片消息，分析结果: {image_analysis.get('description', '')[:50]}")
             # 将图片分析结果添加到上下文中
             perception["_image_analysis"] = image_analysis
 
@@ -944,11 +874,7 @@ class DecisionHub:
                 from memory.working_memory import get_working_memory
 
                 wm = get_working_memory()
-                group_id_str = (
-                    str(group_id)
-                    if (group_id is not None and group_id != 0)
-                    else "private"
-                )
+                group_id_str = str(group_id) if (group_id is not None and group_id != 0) else "private"
                 img_desc = image_analysis.get("description", "")[:300]
                 img_labels = ", ".join(image_analysis.get("labels", [])[:5])
                 wm.add_media_analysis(
@@ -966,16 +892,9 @@ class DecisionHub:
         if not has_image:
             reply_info = perception.get("reply")
             content_check = str(perception.get("raw_message", []))
-            has_reply_image = reply_info and (
-                "image" in str(reply_info).lower()
-                or "引用消息包含图片" in content_check
-            )
+            has_reply_image = reply_info and ("image" in str(reply_info).lower() or "引用消息包含图片" in content_check)
             if has_reply_image:
-                group_id_str = (
-                    str(group_id)
-                    if (group_id is not None and group_id != 0)
-                    else "private"
-                )
+                group_id_str = str(group_id) if (group_id is not None and group_id != 0) else "private"
                 try:
                     wm = get_working_memory()
                     wm.add_media_analysis(
@@ -992,25 +911,17 @@ class DecisionHub:
         # 【新增】检查是否是用户确认/纠正图片识别结果（独立于图片消息）
         # 用户可能发送"是的，这是xxx"或"不是，是yyy"来确认/纠正之前的图片识别
         try:
-            await self._check_and_learn_image_correction(
-                perception, content, user_id, group_id
-            )
+            await self._check_and_learn_image_correction(perception, content, user_id, group_id)
         except Exception as e:
             logger.debug(f"[决策层] 检查图片学习失败: {e}")
 
-        quick_response = await self._handle_quick_commands(
-            content, platform, perception
-        )
+        quick_response = await self._handle_quick_commands(content, platform, perception)
         if quick_response:
-            logger.warning(
-                f"[决策层] ========== 快捷命令拦截成功 ========== {content[:20]} -> {quick_response[:50]}"
-            )
+            logger.warning(f"[决策层] ========== 快捷命令拦截成功 ========== {content[:20]} -> {quick_response[:50]}")
             return quick_response
 
         # 【安全检查】防注入检测
-        injection_result, protection_prompt = await self._check_injection(
-            perception, content
-        )
+        injection_result, protection_prompt = await self._check_injection(perception, content)
         if injection_result:
             logger.warning(f"[决策层] 检测到注入攻击: {injection_result}")
             return injection_result
@@ -1025,10 +936,7 @@ class DecisionHub:
         is_at_bot = perception.get("is_at_bot", False)
         reply_to_bot = perception.get("reply_to_bot", False)
 
-        logger.info(
-            f"[谛听] 检查群聊: group_id={group_id}, is_at_bot={is_at_bot}, "
-            f"reply_to_bot={reply_to_bot}"
-        )
+        logger.info(f"[谛听] 检查群聊: group_id={group_id}, is_at_bot={is_at_bot}, reply_to_bot={reply_to_bot}")
 
         # 群聊关键词列表：叫弥娅名字/亲昵称呼时触发回复 - 从配置获取
         from core.text_loader import get_chatbot_keywords
@@ -1038,9 +946,7 @@ class DecisionHub:
         # 如果是群聊且没有@bot，检查是否包含关键词 或 用户仍在活跃对话中
         if group_id and group_id != 0 and not is_at_bot:
             content_lower = content.lower()
-            matched_keywords = [
-                kw for kw in auto_respond_keywords if kw.lower() in content_lower
-            ]
+            matched_keywords = [kw for kw in auto_respond_keywords if kw.lower() in content_lower]
 
             # 检查用户是否仍在与机器人活跃对话
             from memory.diteng_listener import get_diting
@@ -1067,24 +973,18 @@ class DecisionHub:
                     reply_to_bot=reply_to_bot,
                 )
             elif user_active:
-                logger.info(
-                    f"[决策层] 谛听检测到用户仍在活跃对话中，触发回复 (user={user_id_str})"
-                )
+                logger.info(f"[决策层] 谛听检测到用户仍在活跃对话中，触发回复 (user={user_id_str})")
                 # 【优化】移除串行谛听策略分析，统一由 _generate_response_cross_platform 的并行 Phase 1 处理
                 # 避免重复 AI 调用，节省 3-5 秒延迟
             else:
-                logger.info(
-                    f"[决策层] 群聊消息无关键词且非活跃对话，跳过: {content[:30]}"
-                )
+                logger.info(f"[决策层] 群聊消息无关键词且非活跃对话，跳过: {content[:30]}")
                 return None
 
         # 1. 检查终端命令（委托给感知处理器）
         # 跳过检查标记：用于非终端模式（如QQ、Web）
         if not perception.get("skip_terminal_command", False):
             try:
-                terminal_result = await self.perception_handler.check_terminal_command(
-                    perception
-                )
+                terminal_result = await self.perception_handler.check_terminal_command(perception)
                 if terminal_result:
                     return terminal_result
             except AttributeError:
@@ -1114,9 +1014,7 @@ class DecisionHub:
         # 4. 游戏启动指令拦截（委托给感知处理器）
         if not game_mode:
             try:
-                tool_call_result = (
-                    await self.perception_handler.handle_game_start_commands(perception)
-                )
+                tool_call_result = await self.perception_handler.handle_game_start_commands(perception)
                 if tool_call_result:
                     logger.info(f"[决策层] 直接调用工具: {tool_call_result[:100]}")
                     return tool_call_result
@@ -1158,17 +1056,13 @@ class DecisionHub:
         # 【优化】私聊谛听策略分析移至并行阶段（_generate_response_cross_platform Phase 1）
 
         # 【新增】手动检测定时任务关键词，直接调用工具
-        timer_result = await self._detect_and_process_timer_task(
-            perception, platform, content, user_id, sender_name
-        )
+        timer_result = await self._detect_and_process_timer_task(perception, platform, content, user_id, sender_name)
         if timer_result:
             logger.info(f"[决策层] 定时任务已处理: {timer_result[:50]}")
             # 定时任务有结果，直接返回，不走AI
             return timer_result
 
-        response = await self._generate_response_cross_platform(
-            content, platform, perception
-        )
+        response = await self._generate_response_cross_platform(content, platform, perception)
 
         # 7. 主动聊天系统 v2.0 - 检查是否需要主动发言（全平台支持）
         if response:
@@ -1195,11 +1089,7 @@ class DecisionHub:
         # 5. 情绪染色（委托给情绪控制器）
         # 先设置当前神格形态，让染色更符合神格风格
         if response:
-            current_form = (
-                self.personality.current_form
-                if hasattr(self.personality, "current_form")
-                else "normal"
-            )
+            current_form = self.personality.current_form if hasattr(self.personality, "current_form") else "normal"
             if hasattr(self.emotion, "set_form"):
                 self.emotion.set_form(current_form)
             response = self.emotion.influence_response(response)
@@ -1255,14 +1145,10 @@ class DecisionHub:
         message.content["response"] = response
         message.content["platform"] = platform
 
-        logger.info(
-            f"[决策层-跨平台] 生成响应: {response[:50] if response else '(空)'}"
-        )
+        logger.info(f"[决策层-跨平台] 生成响应: {response[:50] if response else '(空)'}")
         return response
 
-    async def _generate_response_cross_platform(
-        self, content, platform: str, context: dict = None
-    ) -> str:
+    async def _generate_response_cross_platform(self, content, platform: str, context: dict = None) -> str:
         """
         生成响应（跨平台统一）
 
@@ -1301,9 +1187,7 @@ class DecisionHub:
 
         # 如果没有 AI 客户端，使用简化回复
         if not self.ai_client:
-            return await self._fallback_response_cross_platform(
-                content, sender_name, platform
-            )
+            return await self._fallback_response_cross_platform(content, sender_name, platform)
 
         # 【修改】终端模式：禁用单命令快速检测,让AI处理所有自然语言
         # 原因: 单命令检测会绕过AI理解,导致"打开一个终端"等自然语言请求被错误处理
@@ -1316,11 +1200,7 @@ class DecisionHub:
         # 使用类属性来跟踪调用状态，防止递归
         # 注意: V3 仅在 terminal 平台使用，其他平台走普通 AI 流程
         v3_executed = False
-        if (
-            platform == "terminal"
-            and self.ai_client
-            and not getattr(self, "_in_v3_execution", False)
-        ):
+        if platform == "terminal" and self.ai_client and not getattr(self, "_in_v3_execution", False):
             think_keywords = [
                 "打开",
                 "运行",
@@ -1362,11 +1242,7 @@ class DecisionHub:
                     # 静默回退，不影响正常流程
 
         # 【新增】Agent 调度 - 根据用户输入智能选择 Agent（所有平台）
-        if (
-            not v3_executed
-            and self.ai_client
-            and not getattr(self, "_in_agent_execution", False)
-        ):
+        if not v3_executed and self.ai_client and not getattr(self, "_in_agent_execution", False):
             # 【格式塔意识】Agent 工具不再单独调度，融入统一工具池
             # 通过工具调用自动判断是否需要 Agent 工具
 
@@ -1425,9 +1301,7 @@ class DecisionHub:
                 if self.knowledge_graph:
                     keywords = self._extract_keywords_from_input(content)
                     if keywords:
-                        knowledge = await self.knowledge_graph.query_by_keywords(
-                            keywords
-                        )
+                        knowledge = await self.knowledge_graph.query_by_keywords(keywords)
                         if knowledge:
                             from core.knowledge_graph import format_knowledge_for_prompt
 
@@ -1445,9 +1319,7 @@ class DecisionHub:
                     if q_uid:
                         upc = pm.build_user_context(
                             user_id=str(q_uid),
-                            group_id=str(context.get("group_id"))
-                            if context.get("group_id")
-                            else None,
+                            group_id=str(context.get("group_id")) if context.get("group_id") else None,
                         )
                     if context.get("group_id"):
                         gpc = pm.build_group_context(str(context.get("group_id")))
@@ -1481,9 +1353,7 @@ class DecisionHub:
                 try:
                     import json
 
-                    search_config_path = (
-                        Path(__file__).parent.parent / "config" / "text_config.json"
-                    )
+                    search_config_path = Path(__file__).parent.parent / "config" / "text_config.json"
                     search_strategy = {}
                     if search_config_path.exists():
                         with open(search_config_path, "r", encoding="utf-8") as f:
@@ -1494,22 +1364,15 @@ class DecisionHub:
                     if enabled and auto:
                         content_lower = content.lower()
                         skip_keywords = search_strategy.get("skip_search_keywords", [])
-                        should_skip = any(
-                            kw.lower() in content_lower for kw in skip_keywords
-                        )
+                        should_skip = any(kw.lower() in content_lower for kw in skip_keywords)
                         if not should_skip:
                             trigger_kw = search_strategy.get("auto_search_triggers", [])
-                            needs_search = (
-                                any(kw in content_lower for kw in trigger_kw)
-                                or len(content) > 50
-                            )
+                            needs_search = any(kw in content_lower for kw in trigger_kw) or len(content) > 50
                             if needs_search:
                                 try:
                                     import importlib
 
-                                    web_search_mod = importlib.import_module(
-                                        "webnet.ToolNet.tools.network.web_search"
-                                    )
+                                    web_search_mod = importlib.import_module("webnet.ToolNet.tools.network.web_search")
                                     if hasattr(web_search_mod, "EnhancedWebSearch"):
                                         searcher = web_search_mod.EnhancedWebSearch()
                                         search_results = await searcher.search(content)
@@ -1574,13 +1437,9 @@ class DecisionHub:
 
                         wm = get_working_memory()
                         if msg_type == "group" and group_id:
-                            recent_context = wm.build_prompt_context(str(group_id))[
-                                :500
-                            ]
+                            recent_context = wm.build_prompt_context(str(group_id))[:500]
                         elif msg_type == "private" and ctx_uid:
-                            recent_context = wm.build_prompt_context(
-                                f"private_{ctx_uid_str}"
-                            )[:500]
+                            recent_context = wm.build_prompt_context(f"private_{ctx_uid_str}")[:500]
                     except Exception:
                         pass
 
@@ -1607,9 +1466,7 @@ class DecisionHub:
             conv_task = asyncio.create_task(fetch_conversation_context(), name="conv")
             kctx_task = asyncio.create_task(fetch_knowledge_context(), name="kctx")
             persona_task = asyncio.create_task(fetch_user_persona(), name="persona")
-            awareness_task = asyncio.create_task(
-                fetch_awareness_text(), name="awareness"
-            )
+            awareness_task = asyncio.create_task(fetch_awareness_text(), name="awareness")
             search_task = asyncio.create_task(fetch_search_context(), name="search")
             wm_task = asyncio.create_task(fetch_group_chat_context(), name="wm")
             diting_task = asyncio.create_task(fetch_diting_strategy(), name="diting")
@@ -1626,11 +1483,7 @@ class DecisionHub:
                 try:
                     cognitive_engine = get_cognitive_engine()
                     query_user_id = user_id_str if context.get("user_id") else None
-                    query_group_id = (
-                        str(context.get("group_id"))
-                        if context.get("group_id")
-                        else None
-                    )
+                    query_group_id = str(context.get("group_id")) if context.get("group_id") else None
                     cmc = await cognitive_engine.build_context(
                         user_input=content,
                         conversation_history=conversation_context,
@@ -1639,9 +1492,7 @@ class DecisionHub:
                         group_id=query_group_id,
                     )
                     if cmc:
-                        logger.warning(
-                            f"[决策层] 智能记忆检索到相关记忆 (user_id={query_user_id})"
-                        )
+                        logger.warning(f"[决策层] 智能记忆检索到相关记忆 (user_id={query_user_id})")
                 except Exception as e:
                     logger.warning(f"[决策层] 智能记忆检索失败: {e}")
                 return cmc
@@ -1655,12 +1506,10 @@ class DecisionHub:
                         if self.model_pool:
                             try:
                                 multi_config = self.model_pool._config
-                                soul_model_id = multi_config.get(
-                                    "system_defaults", {}
-                                ).get("soul_model", "deepseek_v4_flash_official")
-                                ai_client_for_soul = self.model_pool.create_ai_client(
-                                    soul_model_id
+                                soul_model_id = multi_config.get("system_defaults", {}).get(
+                                    "soul_model", "deepseek_v4_flash_official"
                                 )
+                                ai_client_for_soul = self.model_pool.create_ai_client(soul_model_id)
                             except Exception:
                                 pass
                         personality_info = {}
@@ -1674,9 +1523,7 @@ class DecisionHub:
                                 personality_info = {
                                     "form_name": form.get("name", "默认"),
                                     "form_description": form.get("description", ""),
-                                    "speaking_style": form.get("speaking", {}).get(
-                                        "style", ""
-                                    ),
+                                    "speaking_style": form.get("speaking", {}).get("style", ""),
                                 }
                             except Exception:
                                 pass
@@ -1710,18 +1557,10 @@ class DecisionHub:
                 diting_strategy = await diting_task
                 if diting_strategy:
                     if not diting_strategy.should_respond:
-                        logger.info(
-                            f"[谛听-并行] 策略决定不回复: {diting_strategy.reason}"
-                        )
-                        if (
-                            getattr(diting_strategy, "response_strategy", "")
-                            == "like_only"
-                        ):
+                        logger.info(f"[谛听-并行] 策略决定不回复: {diting_strategy.reason}")
+                        if getattr(diting_strategy, "response_strategy", "") == "like_only":
                             try:
-                                if (
-                                    hasattr(self, "onebot_client")
-                                    and self.onebot_client
-                                ):
+                                if hasattr(self, "onebot_client") and self.onebot_client:
                                     user_id_str = str(context.get("user_id", ""))
                                     await self.onebot_client.send_like(user_id_str)
                             except Exception:
@@ -1730,9 +1569,7 @@ class DecisionHub:
                     context["_message_strategy"] = {
                         "strategy": diting_strategy.response_strategy,
                         "intent": getattr(diting_strategy, "message_intent", "chat"),
-                        "style": getattr(
-                            diting_strategy, "suggested_reply_style", "casual"
-                        ),
+                        "style": getattr(diting_strategy, "suggested_reply_style", "casual"),
                         "confidence": getattr(diting_strategy, "confidence", 0.8),
                     }
             except Exception as e:
@@ -1740,9 +1577,7 @@ class DecisionHub:
 
             # 等待 Phase 2 任务
             cognitive_memory_context = await cog_task
-            soul_result = await run_soul_generator(
-                cognitive_memory=cognitive_memory_context
-            )
+            soul_result = await run_soul_generator(cognitive_memory=cognitive_memory_context)
 
             # 处理 Soul Generator 结果 (共用于两条路径)
             emotion_context_for_collab = ""
@@ -1750,14 +1585,10 @@ class DecisionHub:
                 dominant = soul_result.get("dominant_emotion", "平静")
                 miya_emotions = soul_result.get("emotions", {})
                 if miya_emotions:
-                    top_emotions = sorted(
-                        miya_emotions.items(), key=lambda x: x[1], reverse=True
-                    )[:3]
+                    top_emotions = sorted(miya_emotions.items(), key=lambda x: x[1], reverse=True)[:3]
                     miya_dominant = top_emotions[0][0]
                     miya_intensity = top_emotions[0][1]
-                    emotion_str = " + ".join(
-                        [f"{name}({int(val)}%)" for name, val in top_emotions]
-                    )
+                    emotion_str = " + ".join([f"{name}({int(val)}%)" for name, val in top_emotions])
                 else:
                     miya_dominant = "平静"
                     miya_intensity = 40
@@ -1773,24 +1604,18 @@ class DecisionHub:
                 }
                 from core.soul_generator import SoulDisplay
 
-                SoulDisplay.emotion_analysis(
-                    miya_dominant, miya_intensity, f"多情绪: {emotion_str}"
-                )
+                SoulDisplay.emotion_analysis(miya_dominant, miya_intensity, f"多情绪: {emotion_str}")
                 inner_thought = soul_result.get("analysis", {}).get("reflection", "")
 
                 # 从配置文件加载情感引导文案
                 eg = _get_emotion_guidance()
                 emotion_context_for_collab = eg["header"]
-                emotion_context_for_collab += eg["user_emotion"].format(
-                    dominant=dominant
-                )
+                emotion_context_for_collab += eg["user_emotion"].format(dominant=dominant)
                 emotion_context_for_collab += eg["miya_emotion"].format(
                     miya_dominant=miya_dominant, miya_intensity=miya_intensity
                 )
                 if inner_thought:
-                    emotion_context_for_collab += eg["inner_thought"].format(
-                        inner_thought=inner_thought
-                    )
+                    emotion_context_for_collab += eg["inner_thought"].format(inner_thought=inner_thought)
                 emotion_context_for_collab += eg["footer"]
 
             logger.warning(
@@ -1858,14 +1683,10 @@ class DecisionHub:
                     image_context += f"\n[图片标签] {', '.join(labels)}"
                 image_context += f"\n(分析模型: {model})"
                 # 【重要】告诉AI不要重复调用工具
-                image_context += (
-                    "\n【注意】图片已经分析完成，不要再调用 qq_image_analyzer 工具！"
-                )
+                image_context += "\n【注意】图片已经分析完成，不要再调用 qq_image_analyzer 工具！"
                 logger.info(f"[决策层] 图片分析结果已添加到上下文: {description[:50]}")
             # 【新增】如果检测到引用消息包含图片但没有分析结果，给出提示
-            elif context.get("reply") and "[引用消息包含图片]" in str(
-                context.get("reply")
-            ):
+            elif context.get("reply") and "[引用消息包含图片]" in str(context.get("reply")):
                 # 获取引用消息中的图片URL
                 reply_info = context.get("reply")
                 image_url = None
@@ -1880,13 +1701,9 @@ class DecisionHub:
                         f"\n【重要】图片URL: {image_url}"
                         f"\n【必须】请立即调用 qq_image_analyzer 工具分析这张图片！"
                     )
-                    logger.info(
-                        f"[决策层] 检测到引用消息包含图片，URL: {image_url[:50]}..."
-                    )
+                    logger.info(f"[决策层] 检测到引用消息包含图片，URL: {image_url[:50]}...")
                 else:
-                    image_context = (
-                        "\n[图片消息] 用户引用了一条包含图片的消息，但无法获取图片URL"
-                    )
+                    image_context = "\n[图片消息] 用户引用了一条包含图片的消息，但无法获取图片URL"
                     logger.info("[决策层] 检测到引用消息包含图片但无URL")
 
             prompt_info = self.prompt_manager.build_full_prompt(
@@ -1903,9 +1720,7 @@ class DecisionHub:
                     "available_tools": available_tools,
                     "at_list": perception.get("at_list", []),
                     "bot_qq": context.get("bot_qq"),
-                    "is_creator": self.platform_tools_manager.is_creator(
-                        user_id, self.onebot_client
-                    ),
+                    "is_creator": self.platform_tools_manager.is_creator(user_id, self.onebot_client),
                     "status_prompt": status_prompt,
                     "cognitive_memory": cognitive_memory_context,
                     "protection_prompt": protection_prompt,
@@ -1926,9 +1741,7 @@ class DecisionHub:
                 },
             )
 
-            logger.debug(
-                f"[决策层-跨平台] 系统提示词前200字符: {prompt_info['system'][:200]}"
-            )
+            logger.debug(f"[决策层-跨平台] 系统提示词前200字符: {prompt_info['system'][:200]}")
 
             # 设置工具上下文和 ToolNet（符合 MIYA 框架）
             if self.tool_subnet:
@@ -1962,9 +1775,7 @@ class DecisionHub:
                     "image_analysis": perception.get("image_analysis"),
                     "image_data": perception.get("image_data"),
                 }
-                logger.warning(
-                    f"[决策层] 构建的tool_context keys: {list(tool_context.keys())}"
-                )
+                logger.warning(f"[决策层] 构建的tool_context keys: {list(tool_context.keys())}")
                 logger.debug(
                     f"[决策层] tool_context中 onebot_client={tool_context.get('onebot_client')}, send_like_callback={tool_context.get('send_like_callback')}"
                 )
@@ -1978,24 +1789,15 @@ class DecisionHub:
 
             # 只获取当前平台相关的核心工具，减少 API 负担
             # 避免 101 个工具导致 500 错误
-            platform_tools = self.platform_tools_manager.get_platform_specific_tools(
-                platform
-            )
-            tools_schema = (
-                platform_tools
-                if platform_tools
-                else self.tool_subnet.get_tools_schema()
-            )
+            platform_tools = self.platform_tools_manager.get_platform_specific_tools(platform)
+            tools_schema = platform_tools if platform_tools else self.tool_subnet.get_tools_schema()
 
-            logger.info(
-                f"[决策层-跨平台] 使用平台工具: {platform}, 工具数量: {len(tools_schema)}"
-            )
+            logger.info(f"[决策层-跨平台] 使用平台工具: {platform}, 工具数量: {len(tools_schema)}")
 
             # 使用模型池动态选择模型
             ai_client_to_use = self.ai_client  # 默认使用传入的AI客户端
 
             if self.model_pool:
-
                 # classify_task 可能是同步或异步方法
                 classify_result = self.model_pool.classify_task(content, context)
                 if asyncio.iscoroutine(classify_result):
@@ -2011,8 +1813,7 @@ class DecisionHub:
                         # 使用正确的tool_context，包含onebot_client和send_like_callback
                         tool_ctx_for_collab = (
                             self._temp_tool_context
-                            if hasattr(self, "_temp_tool_context")
-                            and self._temp_tool_context
+                            if hasattr(self, "_temp_tool_context") and self._temp_tool_context
                             else tool_context
                         )
                         logger.warning(
@@ -2029,52 +1830,33 @@ class DecisionHub:
                                 from memory.cognition_cache import get_cognition_cache
 
                                 cache = get_cognition_cache()
-                                cache_context = await cache.get_context_for_ai(
-                                    user_id, limit=2
-                                )
+                                cache_context = await cache.get_context_for_ai(user_id, limit=2)
                                 if cache_context:
                                     emotion_context_for_collab += "\n\n" + cache_context
                                     logger.info("[认知缓存] 已注入认知记忆到协作引擎")
                                 else:
                                     from memory import retrieve_cognition
 
-                                    recent_cognitions = await retrieve_cognition(
-                                        user_id, limit=3
-                                    )
+                                    recent_cognitions = await retrieve_cognition(user_id, limit=3)
                                     if recent_cognitions:
                                         parts = []
                                         for cog in recent_cognitions:
                                             if cog.get("thinking"):
-                                                parts.append(
-                                                    f"- 思考: {cog['thinking'][:150]}"
-                                                )
+                                                parts.append(f"- 思考: {cog['thinking'][:150]}")
                                             if cog.get("inner_thought"):
-                                                parts.append(
-                                                    f"- 想法: {cog['inner_thought'][:80]}"
-                                                )
+                                                parts.append(f"- 想法: {cog['inner_thought'][:80]}")
                                         if parts:
-                                            cognition_text = (
-                                                "\n【近期思维参考】\n"
-                                                + "\n".join(parts)
-                                            )
+                                            cognition_text = "\n【近期思维参考】\n" + "\n".join(parts)
                                             cognition_text += "\n（以上是弥娅近期的思考记录，用于了解自己的连贯状态，不要直接引用输出）"
-                                            emotion_context_for_collab += (
-                                                "\n\n" + cognition_text
-                                            )
-                                            logger.info(
-                                                "[认知记忆] 已注入认知记忆到协作引擎 (db fallback)"
-                                            )
+                                            emotion_context_for_collab += "\n\n" + cognition_text
+                                            logger.info("[认知记忆] 已注入认知记忆到协作引擎 (db fallback)")
                             except Exception as e:
                                 logger.debug(f"[认知记忆] 注入协作引擎失败: {e}")
 
-                            tool_ctx_for_collab["emotion_context"] = (
-                                emotion_context_for_collab
-                            )
+                            tool_ctx_for_collab["emotion_context"] = emotion_context_for_collab
                             # v7.0: 注入认知记忆到协作引擎 context，供 fallback 灵魂生成器使用
                             tool_ctx_for_collab["cognitive_memory"] = (
-                                cognitive_memory_context
-                                if cognitive_memory_context
-                                else ""
+                                cognitive_memory_context if cognitive_memory_context else ""
                             )
 
                         # 将认知记忆直接注入 system prompt，确保 AI 能看见
@@ -2114,14 +1896,10 @@ class DecisionHub:
 
                         # 【新增】协作引擎路径也存储情绪记忆（无论soul_result是否有效都存储）
                         print("[灵魂记忆] ===== 开始协作引擎存储 =====")
-                        logger.info(
-                            f"[灵魂记忆] 协作引擎检查: soul_result={bool(soul_result)}, user_id={user_id}"
-                        )
+                        logger.info(f"[灵魂记忆] 协作引擎检查: soul_result={bool(soul_result)}, user_id={user_id}")
 
                         # 处理emotions格式 - 支持list或dict
-                        _emotions_raw = (
-                            soul_result.get("emotions", []) if soul_result else []
-                        )
+                        _emotions_raw = soul_result.get("emotions", []) if soul_result else []
                         _emotions = {}
                         if isinstance(_emotions_raw, list):
                             for item in _emotions_raw:
@@ -2131,40 +1909,20 @@ class DecisionHub:
                             _emotions = _emotions_raw
 
                         # 获取分析内容
-                        _analysis = (
-                            soul_result.get("analysis", {}) if soul_result else {}
-                        )
+                        _analysis = soul_result.get("analysis", {}) if soul_result else {}
                         _inner_thought = (
                             soul_result.get("inner_thought", "")
                             or _analysis.get("inner_thought", "")
                             or _analysis.get("reflection", "")
                         )
-                        _attribution = soul_result.get(
-                            "attribution", ""
-                        ) or _analysis.get("attribution", "")
-                        _reflection = soul_result.get(
-                            "reflection", ""
-                        ) or _analysis.get("reflection", "")
-                        _dominant = (
-                            soul_result.get("dominant_emotion", "未知")
-                            if soul_result
-                            else "未知"
-                        )
-                        _dominant = (
-                            soul_result.get("dominant_emotion", "未知")
-                            if soul_result
-                            else "未知"
-                        )
+                        _attribution = soul_result.get("attribution", "") or _analysis.get("attribution", "")
+                        _reflection = soul_result.get("reflection", "") or _analysis.get("reflection", "")
+                        _dominant = soul_result.get("dominant_emotion", "未知") if soul_result else "未知"
+                        _dominant = soul_result.get("dominant_emotion", "未知") if soul_result else "未知"
 
                         # 获取AI思考过程
-                        _thinking = (
-                            getattr(collab_result, "reasoning_content", "") or ""
-                        )
-                        if (
-                            not _thinking
-                            and hasattr(collab_result, "thinking")
-                            and collab_result.thinking
-                        ):
+                        _thinking = getattr(collab_result, "reasoning_content", "") or ""
+                        if not _thinking and hasattr(collab_result, "thinking") and collab_result.thinking:
                             _thinking = collab_result.thinking
 
                         # B方案：存储情绪上下文到短期记忆
@@ -2193,9 +1951,7 @@ class DecisionHub:
                             logger.warning(f"[灵魂记忆] store_auto失败: {store_err}")
 
                         # C方案：存入长期记忆，AI自行判断重要性
-                        significant_emotions = [
-                            e for e, i in _emotions.items() if i >= 60
-                        ]
+                        significant_emotions = [e for e, i in _emotions.items() if i >= 60]
                         if significant_emotions:
                             peak_content = f"【情绪记录】与佳互动时感到: {', '.join(significant_emotions)}"
                             await store_auto(
@@ -2211,14 +1967,12 @@ class DecisionHub:
 
                             # 获取AI思考过程 - 从协作引擎结果获取
                             collab_thinking = ""
-                            if (
-                                hasattr(collab_result, "thinking")
-                                and collab_result.thinking
-                            ):
+                            if hasattr(collab_result, "thinking") and collab_result.thinking:
                                 collab_thinking = collab_result.thinking
                             print(f"[DEBUG协作] thinking: {len(collab_thinking)} chars")
 
                             # 直接使用之前从soul_result提取的数据
+                            group_id_str_cog = str(context.get("group_id")) if context.get("group_id") else None
                             await store_cognition(
                                 thinking=collab_thinking,
                                 emotions=_emotions,
@@ -2226,6 +1980,7 @@ class DecisionHub:
                                 attribution=_attribution,
                                 reflection=_reflection,
                                 user_id=str(user_id),
+                                group_id=group_id_str_cog,
                             )
                             print("[DEBUG协作] 协作引擎路径存储完成")
                         except Exception as cog_err:
@@ -2256,9 +2011,7 @@ class DecisionHub:
                 dominant = _soul_result.get("dominant_emotion", "平静")
                 miya_emotions = _soul_result.get("emotions", {})
                 if miya_emotions:
-                    top_emotions = sorted(
-                        miya_emotions.items(), key=lambda x: x[1], reverse=True
-                    )[:3]
+                    top_emotions = sorted(miya_emotions.items(), key=lambda x: x[1], reverse=True)[:3]
                     miya_dominant = top_emotions[0][0]
                     miya_intensity = top_emotions[0][1]
                 else:
@@ -2276,13 +2029,9 @@ class DecisionHub:
                     miya_dominant=miya_dominant, miya_intensity=miya_intensity
                 )
                 if inner_thought:
-                    ai_emotion_context += eg["inner_thought"].format(
-                        inner_thought=inner_thought
-                    )
+                    ai_emotion_context += eg["inner_thought"].format(inner_thought=inner_thought)
                 ai_emotion_context += eg["single_model_footer"]
-                logger.info(
-                    f"[灵魂-单模型] 使用预计算结果: user_emotion={dominant}, miya={miya_dominant}"
-                )
+                logger.info(f"[灵魂-单模型] 使用预计算结果: user_emotion={dominant}, miya={miya_dominant}")
 
             # 【增强】检索认知记忆 - 优先从缓存读取，更可靠
             cognition_context = ""
@@ -2305,20 +2054,12 @@ class DecisionHub:
                         cognition_parts = []
                         for cog in recent_cognitions:
                             if cog.get("thinking"):
-                                cognition_parts.append(
-                                    f"- 思考: {cog['thinking'][:150]}"
-                                )
+                                cognition_parts.append(f"- 思考: {cog['thinking'][:150]}")
                             if cog.get("inner_thought"):
-                                cognition_parts.append(
-                                    f"- 想法: {cog['inner_thought'][:80]}"
-                                )
+                                cognition_parts.append(f"- 想法: {cog['inner_thought'][:80]}")
                         if cognition_parts:
-                            cognition_context = "\n【近期思维参考】\n" + "\n".join(
-                                cognition_parts[:3]
-                            )
-                            logger.info(
-                                f"[认知记忆] 从数据库检索 {len(recent_cognitions)} 条思维记录"
-                            )
+                            cognition_context = "\n【近期思维参考】\n" + "\n".join(cognition_parts[:3])
+                            logger.info(f"[认知记忆] 从数据库检索 {len(recent_cognitions)} 条思维记录")
             except Exception as cog_err:
                 logger.warning(f"[认知记忆] 检索失败: {cog_err}")
 
@@ -2337,9 +2078,7 @@ class DecisionHub:
 
             # 【新增】存储情绪记忆 - 无论_soul_result是否有效都存储
             print("[灵魂记忆] ===== 开始存储流程 =====")
-            logger.info(
-                f"[灵魂记忆] 检查存储: _soul_result={bool(_soul_result)}, user_id={user_id}"
-            )
+            logger.info(f"[灵魂记忆] 检查存储: _soul_result={bool(_soul_result)}, user_id={user_id}")
 
             # 如果_soul_result为空，尝试从AI响应中提取情绪信息
             if not _soul_result:
@@ -2363,12 +2102,8 @@ class DecisionHub:
                     or _analysis.get("reflection", "")
                     or _analysis.get("reflection", "")
                 )
-                _attribution = _soul_result.get("attribution", "") or _analysis.get(
-                    "attribution", ""
-                )
-                _reflection = _soul_result.get("reflection", "") or _analysis.get(
-                    "reflection", ""
-                )
+                _attribution = _soul_result.get("attribution", "") or _analysis.get("attribution", "")
+                _reflection = _soul_result.get("reflection", "") or _analysis.get("reflection", "")
 
                 # 存储灵魂数据供 SSE 输出 (路径 A)
                 self._last_soul_data = {
@@ -2377,11 +2112,7 @@ class DecisionHub:
                     "attribution": _attribution,
                     "reflection": _reflection,
                 }
-                _dominant = (
-                    _soul_result.get("dominant_emotion", "未知")
-                    if _soul_result
-                    else "未知"
-                )
+                _dominant = _soul_result.get("dominant_emotion", "未知") if _soul_result else "未知"
 
                 # 记录提取到的数据
                 logger.info(
@@ -2425,9 +2156,7 @@ class DecisionHub:
             # 检测是否有显著的正面情绪（强度>=60）
             significant_emotions = [e for e, i in _emotions.items() if i >= 60]
             if significant_emotions:
-                peak_content = (
-                    f"【情绪记录】与佳互动时感到: {', '.join(significant_emotions)}"
-                )
+                peak_content = f"【情绪记录】与佳互动时感到: {', '.join(significant_emotions)}"
                 try:
                     await store_auto(
                         peak_content,
@@ -2455,16 +2184,10 @@ class DecisionHub:
                             emotions = _soul_result.get("emotions", {})
                             if isinstance(emotions, list) and emotions:
                                 emotion_label = (
-                                    emotions[0].get("name", "平静")
-                                    if isinstance(emotions[0], dict)
-                                    else "平静"
+                                    emotions[0].get("name", "平静") if isinstance(emotions[0], dict) else "平静"
                                 )
                             elif isinstance(emotions, dict) and emotions:
-                                emotion_label = (
-                                    max(emotions, key=emotions.get)
-                                    if emotions
-                                    else "平静"
-                                )
+                                emotion_label = max(emotions, key=emotions.get) if emotions else "平静"
                     await lifebook.record_interaction(
                         user_message=user_msg_content,
                         lover_response=response,
@@ -2505,9 +2228,7 @@ class DecisionHub:
                     )
 
                     soul_reasoning = _soul_result.get("reasoning", "")
-                    print(
-                        f"[DEBUG] soul_reasoning: {soul_reasoning[:50] if soul_reasoning else 'empty'}"
-                    )
+                    print(f"[DEBUG] soul_reasoning: {soul_reasoning[:50] if soul_reasoning else 'empty'}")
                     # 处理emotions格式
                     _emotions_raw = _soul_result.get("emotions", [])
                     if isinstance(_emotions_raw, list):
@@ -2518,21 +2239,13 @@ class DecisionHub:
                         _emotions = _emotions_raw
                     # 获取分析内容 - 优先从顶层获取
                     _analysis = _soul_result.get("analysis", {})
-                    _inner_thought = _soul_result.get(
-                        "inner_thought", ""
-                    ) or _analysis.get("inner_thought", "")
-                    _attribution = _soul_result.get("attribution", "") or _analysis.get(
-                        "attribution", ""
-                    )
-                    _reflection = _soul_result.get("reflection", "") or _analysis.get(
-                        "reflection", ""
-                    )
+                    _inner_thought = _soul_result.get("inner_thought", "") or _analysis.get("inner_thought", "")
+                    _attribution = _soul_result.get("attribution", "") or _analysis.get("attribution", "")
+                    _reflection = _soul_result.get("reflection", "") or _analysis.get("reflection", "")
 
                     # 存储最后灵魂数据供 SSE 输出
                     self._last_soul_data = {
-                        "emotions": {
-                            item["name"]: item["intensity"] for item in _emotions_raw
-                        }
+                        "emotions": {item["name"]: item["intensity"] for item in _emotions_raw}
                         if isinstance(_emotions_raw, list)
                         else _emotions,
                         "inner_thought": _inner_thought,
@@ -2545,9 +2258,7 @@ class DecisionHub:
 
                 # 获取AI客户端的思考（回复生成过程）
                 ai_reasoning = ""
-                if ai_client_to_use and hasattr(
-                    ai_client_to_use, "last_reasoning_content"
-                ):
+                if ai_client_to_use and hasattr(ai_client_to_use, "last_reasoning_content"):
                     ai_reasoning = ai_client_to_use.last_reasoning_content or ""
 
                 # 存储思考过程供 SSE 输出
@@ -2574,6 +2285,7 @@ class DecisionHub:
                 )
 
                 # 存储到持久化存储
+                group_id_str_tmp = str(context.get("group_id")) if context.get("group_id") else None
                 memory_id = await store_cognition(
                     thinking=thinking_content,
                     emotions=_emotions,
@@ -2581,6 +2293,7 @@ class DecisionHub:
                     attribution=_attribution,
                     reflection=_reflection,
                     user_id=user_id,
+                    group_id=group_id_str_tmp,
                 )
                 print(
                     f"[DEBUG认知] ✅ 已存储 | 内心: {_inner_thought[:30]}... | 情绪: {_emotions} | 归因: {_attribution[:20]}..."
@@ -2622,13 +2335,9 @@ class DecisionHub:
 
         except Exception as e:
             logger.error(f"[决策层-跨平台] AI生成失败: {e}", exc_info=True)
-            return await self._fallback_response_cross_platform(
-                content, sender_name, platform
-            )
+            return await self._fallback_response_cross_platform(content, sender_name, platform)
 
-    async def _fallback_response_cross_platform(
-        self, content: str, sender_name: str, platform: str
-    ) -> str:
+    async def _fallback_response_cross_platform(self, content: str, sender_name: str, platform: str) -> str:
         """
         降级回复（跨平台）
 
@@ -2705,13 +2414,9 @@ class DecisionHub:
         if any(kw in content for kw in status_keywords):
             emotion_state = self.emotion.get_emotion_state()
             existential_state = (
-                self.emotion.get_existential_state()
-                if hasattr(self.emotion, "get_existential_state")
-                else {}
+                self.emotion.get_existential_state() if hasattr(self.emotion, "get_existential_state") else {}
             )
-            memory_stats = (
-                self.memory_engine.get_memory_stats() if self.memory_engine else {}
-            )
+            memory_stats = self.memory_engine.get_memory_stats() if self.memory_engine else {}
             profile = self.personality.get_profile()
 
             # 构建状态信息
@@ -2812,20 +2517,12 @@ class DecisionHub:
                 lines = [
                     get_form_display("current", form=form_name),
                     get_form_display("name", name=form_info.get("name", "常态")),
-                    get_form_display(
-                        "description", desc=form_info.get("description", "")
-                    ),
+                    get_form_display("description", desc=form_info.get("description", "")),
                 ]
                 if profile.get("current_core_form"):
                     core_info = profile.get("core_form_info", {})
-                    lines.append(
-                        get_form_display("core", core=profile["current_core_form"])
-                    )
-                    lines.append(
-                        get_form_display(
-                            "core_description", desc=core_info.get("description", "")
-                        )
-                    )
+                    lines.append(get_form_display("core", core=profile["current_core_form"]))
+                    lines.append(get_form_display("core_description", desc=core_info.get("description", "")))
                 lines.append("")
                 lines.append(get_form_display("available", forms=available_forms))
                 lines.append(get_form_display("available_core", cores=available_cores))
@@ -2860,9 +2557,7 @@ class DecisionHub:
                 return get_text("default_responses.switch_failed")
             from core.text_loader import get_speak_mode_response
 
-            return get_speak_mode_response(
-                "unknown_mode", mode=cmd, available_modes=pcmd.format_speak_modes()
-            )
+            return get_speak_mode_response("unknown_mode", mode=cmd, available_modes=pcmd.format_speak_modes())
 
         elif is_exist_cmd:
             from core.personality_command_config import get_personality_command_config
@@ -2874,11 +2569,7 @@ class DecisionHub:
                 cmd = cmd.replace(c, "")
             cmd = cmd.strip().lower()
             if not cmd:
-                state = (
-                    self.emotion.get_existential_state()
-                    if hasattr(self.emotion, "get_existential_state")
-                    else {}
-                )
+                state = self.emotion.get_existential_state() if hasattr(self.emotion, "get_existential_state") else {}
                 if state:
                     from core.text_loader import get_existential_response
 
@@ -2886,18 +2577,14 @@ class DecisionHub:
                     for k, v in state.get("emotions", {}).items():
                         lines.append(f"  {k}: {v:.2f}")
                     if state.get("active"):
-                        lines.append(
-                            get_existential_response("active", active=state["active"])
-                        )
+                        lines.append(get_existential_response("active", active=state["active"]))
                     return "\n".join(lines)
                 return get_text("default_responses.no_existential_data")
 
             valid_exists = pcmd.get_core_forms()
             if cmd in valid_exists:
                 success = (
-                    self.emotion.activate_existential(cmd)
-                    if hasattr(self.emotion, "activate_existential")
-                    else False
+                    self.emotion.activate_existential(cmd) if hasattr(self.emotion, "activate_existential") else False
                 )
                 if success:
                     from core.text_loader import get_existential_response
@@ -2914,9 +2601,7 @@ class DecisionHub:
             from core.text_loader import get_text
 
             pconfig = get_personality_config()
-            deep_conv_threshold = pconfig.get_response_threshold(
-                "deep_conversation_empathy"
-            )
+            deep_conv_threshold = pconfig.get_response_threshold("deep_conversation_empathy")
             help_threshold = pconfig.get_response_threshold("help_warmth")
 
             if empathy > deep_conv_threshold and warmth > help_threshold:
@@ -2986,9 +2671,7 @@ class DecisionHub:
             # 生成简洁的摘要返回给用户
             summary = self._format_complex_task_result(result)
 
-            logger.info(
-                f"[决策层-高级编排] 复杂任务处理完成: {'成功' if result['success'] else '失败'}"
-            )
+            logger.info(f"[决策层-高级编排] 复杂任务处理完成: {'成功' if result['success'] else '失败'}")
 
             return summary
 
@@ -2996,9 +2679,7 @@ class DecisionHub:
             logger.error(f"[决策层-高级编排] 处理复杂任务失败: {e}", exc_info=True)
             from core.text_loader import get_text
 
-            return get_text(
-                "error_messages.task_failed", "任务执行失败: {error}"
-            ).format(error=str(e))
+            return get_text("error_messages.task_failed", "任务执行失败: {error}").format(error=str(e))
 
     def _format_complex_task_result(self, result: dict) -> str:
         """
@@ -3013,18 +2694,10 @@ class DecisionHub:
         from core.text_loader import get_advanced_response
 
         lines = [
-            get_advanced_response(
-                "task_completed", conclusion=result.get("conclusion", "执行完成")
-            ),
-            get_advanced_response(
-                "execution_time", time=result.get("execution_time", 0)
-            ),
-            get_advanced_response(
-                "steps_completed", count=len(result.get("steps", []))
-            ),
-            get_advanced_response(
-                "findings_count", count=len(result.get("findings", []))
-            ),
+            get_advanced_response("task_completed", conclusion=result.get("conclusion", "执行完成")),
+            get_advanced_response("execution_time", time=result.get("execution_time", 0)),
+            get_advanced_response("steps_completed", count=len(result.get("steps", []))),
+            get_advanced_response("findings_count", count=len(result.get("findings", []))),
         ]
 
         # 添加主要发现
@@ -3047,9 +2720,7 @@ class DecisionHub:
 
     # ========== 会话结束处理 ==========
 
-    async def handle_session_end(
-        self, session_id: str, platform: str = "terminal"
-    ) -> dict:
+    async def handle_session_end(self, session_id: str, platform: str = "terminal") -> dict:
         """
         处理会话结束，使用 SessionManager 保存对话历史到 LifeBook
 
@@ -3102,9 +2773,7 @@ class DecisionHub:
         """
         import re
 
-        logger.debug(
-            f"[决策层-定时任务] 开始检测: 平台={platform}, 用户={user_id}, 内容='{content}'"
-        )
+        logger.debug(f"[决策层-定时任务] 开始检测: 平台={platform}, 用户={user_id}, 内容='{content}'")
 
         # 检测定时任务关键词
         timer_keywords = [
@@ -3123,9 +2792,7 @@ class DecisionHub:
             logger.debug(f"[决策层-定时任务] 未检测到定时任务关键词: '{content}'")
             return None
 
-        logger.info(
-            f"[决策层-定时任务] 检测到定时任务请求: '{content}' (用户: {user_id}, 平台: {platform})"
-        )
+        logger.info(f"[决策层-定时任务] 检测到定时任务请求: '{content}' (用户: {user_id}, 平台: {platform})")
 
         # 如果ToolNet子网不可用，返回提示
         if not self.tool_subnet:
@@ -3266,9 +2933,7 @@ class DecisionHub:
         Returns:
             如果检测到表情包请求并处理成功，返回响应文本；否则返回None
         """
-        logger.debug(
-            f"[决策层-表情包] 开始检测: 平台={platform}, 用户={user_id}, 内容='{content}'"
-        )
+        logger.debug(f"[决策层-表情包] 开始检测: 平台={platform}, 用户={user_id}, 内容='{content}'")
 
         # 检测表情包请求关键词
         emoji_keywords = [
@@ -3297,9 +2962,7 @@ class DecisionHub:
             logger.debug(f"[决策层-表情包] 未检测到表情包请求关键词: '{content}'")
             return None
 
-        logger.info(
-            f"[决策层-表情包] 检测到表情包请求: '{content}' (用户: {user_id}, 平台: {platform})"
-        )
+        logger.info(f"[决策层-表情包] 检测到表情包请求: '{content}' (用户: {user_id}, 平台: {platform})")
 
         # 提取具体表情包名称（如果有）
         emoji_name = None
@@ -3318,9 +2981,7 @@ class DecisionHub:
                     qq_handler = self.qq_net.message_handler
 
                 if not qq_handler:
-                    logger.warning(
-                        "[决策层-表情包] 未找到QQ消息处理器，尝试通过工具调用"
-                    )
+                    logger.warning("[决策层-表情包] 未找到QQ消息处理器，尝试通过工具调用")
                     return await self._process_emoji_via_tools(
                         perception, platform, content, user_id, sender_name, emoji_name
                     )
@@ -3348,15 +3009,11 @@ class DecisionHub:
                 else:
                     # 私聊
                     if hasattr(qq_handler, "_send_emoji_response"):
-                        success = await qq_handler._send_emoji_response(
-                            0, int(user_id) if user_id.isdigit() else 0
-                        )
+                        success = await qq_handler._send_emoji_response(0, int(user_id) if user_id.isdigit() else 0)
                         return get_emoji_sending_response(success)
 
             # 其他平台或通过工具调用
-            return await self._process_emoji_via_tools(
-                perception, platform, content, user_id, sender_name, emoji_name
-            )
+            return await self._process_emoji_via_tools(perception, platform, content, user_id, sender_name, emoji_name)
 
         except Exception as e:
             logger.error(f"[决策层-表情包] 处理表情包请求失败: {e}", exc_info=True)
@@ -3442,9 +3099,7 @@ class DecisionHub:
                     return get_emoji_fallback_response("")
 
         except Exception as e:
-            logger.error(
-                f"[决策层-表情包-工具] 通过工具处理表情包请求失败: {e}", exc_info=True
-            )
+            logger.error(f"[决策层-表情包-工具] 通过工具处理表情包请求失败: {e}", exc_info=True)
             return get_error_message("emoji_unavailable")
 
     async def _handle_quick_commands(
@@ -3466,9 +3121,7 @@ class DecisionHub:
             return None
 
         content_lower = content.lower().strip()
-        logger.info(
-            f"[决策层] 处理命令: {content}, personality: {type(self.personality)}"
-        )
+        logger.info(f"[决策层] 处理命令: {content}, personality: {type(self.personality)}")
 
         user_id = None
         group_id = None
@@ -3543,9 +3196,7 @@ class DecisionHub:
         exist_cmds = command_keywords.get("exist", ["/存在", "/exist"])
         voice_cmds = command_keywords.get("voice", ["/语音", "/voice"])
         text_cmds = command_keywords.get("text", ["/文本", "/text"])
-        local_playback_cmds = command_keywords.get(
-            "local_playback", ["/本地播放", "/localplay"]
-        )
+        local_playback_cmds = command_keywords.get("local_playback", ["/本地播放", "/localplay"])
         tts_engine_cmds = command_keywords.get("tts_engine", ["/tts", "/TTS"])
 
         form_prefixes = [cmd for cmd in form_cmds if cmd.startswith("/")]
@@ -3553,21 +3204,16 @@ class DecisionHub:
         exist_prefixes = [cmd for cmd in exist_cmds if cmd.startswith("/")]
         [cmd for cmd in voice_cmds if cmd.startswith("/")]
         [cmd for cmd in text_cmds if cmd.startswith("/")]
-        [
-            cmd for cmd in local_playback_cmds if cmd.startswith("/")
-        ]
+        [cmd for cmd in local_playback_cmds if cmd.startswith("/")]
 
         is_form_cmd = any(content_lower.startswith(cmd) for cmd in form_prefixes)
         is_speak_cmd = any(content_lower.startswith(cmd) for cmd in speak_prefixes)
         is_exist_cmd = any(content_lower.startswith(cmd) for cmd in exist_prefixes)
         is_voice_cmd = any(content_lower.strip() == cmd for cmd in voice_cmds)
         is_text_cmd = any(content_lower.strip() == cmd for cmd in text_cmds)
-        is_local_playback_cmd = any(
-            content_lower.strip() == cmd for cmd in local_playback_cmds
-        )
+        is_local_playback_cmd = any(content_lower.strip() == cmd for cmd in local_playback_cmds)
         is_tts_engine_cmd = any(
-            content_lower.startswith(cmd + " ") or content_lower.strip() == cmd
-            for cmd in tts_engine_cmds
+            content_lower.startswith(cmd + " ") or content_lower.strip() == cmd for cmd in tts_engine_cmds
         )
 
         status_cmds = command_keywords.get("status", [])
@@ -3592,11 +3238,7 @@ class DecisionHub:
 
             if "vectors" in profile:
                 lines.append(get_status_response("vectors_header").strip())
-                lines.append(
-                    get_status_response(
-                        "awake", value=profile["vectors"].get("awake", 0)
-                    )
-                )
+                lines.append(get_status_response("awake", value=profile["vectors"].get("awake", 0)))
                 lines.append(
                     get_status_response(
                         "speak",
@@ -3604,25 +3246,11 @@ class DecisionHub:
                         mode=profile.get("speak_mode", "casual"),
                     )
                 )
-                lines.append(
-                    get_status_response(
-                        "remember", value=profile["vectors"].get("remember", 0)
-                    )
-                )
-                lines.append(
-                    get_status_response("wait", value=profile["vectors"].get("wait", 0))
-                )
-                lines.append(
-                    get_status_response("pain", value=profile["vectors"].get("pain", 0))
-                )
-                lines.append(
-                    get_status_response("fear", value=profile["vectors"].get("fear", 0))
-                )
-                lines.append(
-                    get_status_response(
-                        "commit", value=profile["vectors"].get("commit", 0)
-                    )
-                )
+                lines.append(get_status_response("remember", value=profile["vectors"].get("remember", 0)))
+                lines.append(get_status_response("wait", value=profile["vectors"].get("wait", 0)))
+                lines.append(get_status_response("pain", value=profile["vectors"].get("pain", 0)))
+                lines.append(get_status_response("fear", value=profile["vectors"].get("fear", 0)))
+                lines.append(get_status_response("commit", value=profile["vectors"].get("commit", 0)))
 
             return "\n".join(lines)
 
@@ -3648,9 +3276,7 @@ class DecisionHub:
             cmd = cmd.strip().lower()
             if not cmd:
                 profile = self.personality.get_profile()
-                chat_form = self.personality.get_form_for_chat(
-                    str(user_id), str(group_id) if group_id else ""
-                )
+                chat_form = self.personality.get_form_for_chat(str(user_id), str(group_id) if group_id else "")
                 current_form = chat_form
                 form_name = get_form_name(current_form)
                 form_info = profile.get("form_info", {})
@@ -3658,9 +3284,7 @@ class DecisionHub:
                 lines = [
                     get_form_display("current", form=form_name),
                     get_form_display("name", name=form_info.get("name", "常态")),
-                    get_form_display(
-                        "description", desc=form_info.get("description", "")
-                    ),
+                    get_form_display("description", desc=form_info.get("description", "")),
                 ]
                 if group_id:
                     lines.append(get_form_display("scope", scope=f"群聊 {group_id}"))
@@ -3668,27 +3292,17 @@ class DecisionHub:
                     lines.append(get_form_display("scope", scope="私聊"))
                 if profile.get("current_core_form"):
                     core_info = profile.get("core_form_info", {})
-                    lines.append(
-                        get_form_display("core", core=profile["current_core_form"])
-                    )
-                    lines.append(
-                        get_form_display(
-                            "core_description", desc=core_info.get("description", "")
-                        )
-                    )
+                    lines.append(get_form_display("core", core=profile["current_core_form"]))
+                    lines.append(get_form_display("core_description", desc=core_info.get("description", "")))
                 lines.append("")
                 lines.append(get_form_display("available", forms=format_forms_list()))
-                lines.append(
-                    get_form_display("available_core", cores=format_core_forms_list())
-                )
+                lines.append(get_form_display("available_core", cores=format_core_forms_list()))
                 return "\n".join(lines)
 
             if self.personality._use_yaml and self.personality._loader:
                 available_forms = self.personality._loader.list_available()
                 if cmd in available_forms:
-                    success = self.personality.set_form_for_chat(
-                        cmd, str(user_id), str(group_id) if group_id else ""
-                    )
+                    success = self.personality.set_form_for_chat(cmd, str(user_id), str(group_id) if group_id else "")
                     if success:
                         self.personality.set_form(cmd)
                     return (
@@ -3701,9 +3315,7 @@ class DecisionHub:
 
                 available_forms = get_available_forms()
                 if cmd in available_forms:
-                    success = self.personality.set_form_for_chat(
-                        cmd, str(user_id), str(group_id) if group_id else ""
-                    )
+                    success = self.personality.set_form_for_chat(cmd, str(user_id), str(group_id) if group_id else "")
                     if success:
                         self.personality.set_form(cmd)
                     return (
@@ -3789,11 +3401,7 @@ class DecisionHub:
                 from core.text_loader import get_singing_text
 
                 return get_singing_text("no_song_name")
-            username = (
-                (perception or {}).get("user_name", "")
-                or (perception or {}).get("sender_name", "")
-                or "亲爱的"
-            )
+            username = (perception or {}).get("user_name", "") or (perception or {}).get("sender_name", "") or "亲爱的"
             return await handle_sing_request(song_name, username=username)
 
         # 4.7. AI 唱歌控制命令（切歌/歌单/停止）
@@ -3825,15 +3433,9 @@ class DecisionHub:
             elif is_list_cmd:
                 songs = []
                 if wf.current_song:
-                    songs.append(
-                        get_singing_text(
-                            "songlist_now", song_name=wf.current_song.song_name
-                        )
-                    )
+                    songs.append(get_singing_text("songlist_now", song_name=wf.current_song.song_name))
                 for s in wf.play_queue:
-                    songs.append(
-                        get_singing_text("songlist_queued", song_name=s.song_name)
-                    )
+                    songs.append(get_singing_text("songlist_queued", song_name=s.song_name))
                 if not songs:
                     return get_singing_text("songlist_empty")
                 return get_singing_text("songlist_header") + "\n" + "\n".join(songs)
@@ -3847,10 +3449,7 @@ class DecisionHub:
 
         # 5. 帮助命令
         help_cmds = command_keywords.get("help", ["帮助", "help", "?", "？"])
-        if any(
-            content_lower == kw or content_lower.startswith(kw + " ")
-            for kw in help_cmds
-        ):
+        if any(content_lower == kw or content_lower.startswith(kw + " ") for kw in help_cmds):
             from core.text_loader import get_command_keywords as _gck
 
             _gck()
@@ -3858,9 +3457,7 @@ class DecisionHub:
             lines.append("快捷命令：状态  形态  帮助  版本  trpg")
             lines.append("语音命令：/语音  /文本  /本地播放")
             lines.append("引擎切换：/tts edge|sovits|api|status")
-            lines.append(
-                "记忆命令：记忆统计  记忆搜索 <词>  记忆最近  记忆标签  我的记忆"
-            )
+            lines.append("记忆命令：记忆统计  记忆搜索 <词>  记忆最近  记忆标签  我的记忆")
             lines.append("子命令：  /stats <queue|memory|session>")
             lines.append("         /admin <list|add|remove>")
             lines.append("         /faq <list>")
@@ -3882,10 +3479,7 @@ class DecisionHub:
 
         # 7. TRPG 命令
         trpg_cmds = command_keywords.get("trpg", ["trpg", "跑团"])
-        if any(
-            content_lower == kw or content_lower.startswith(kw + " ")
-            for kw in trpg_cmds
-        ):
+        if any(content_lower == kw or content_lower.startswith(kw + " ") for kw in trpg_cmds):
             from core.text_loader import get_text
 
             return get_text("default_responses.unknown_command")
@@ -3902,16 +3496,10 @@ class DecisionHub:
             logger.debug(f"[决策层] 记忆命令处理跳过: {e}")
 
         # 9. 子命令系统 — 委托到 CommandHandler
-        stats_cmds = command_keywords.get("stats", {}).get(
-            "keywords", ["/统计", "统计", "stats"]
-        )
-        admin_cmds = command_keywords.get("admin", {}).get(
-            "keywords", ["/管理员", "admin"]
-        )
+        stats_cmds = command_keywords.get("stats", {}).get("keywords", ["/统计", "统计", "stats"])
+        admin_cmds = command_keywords.get("admin", {}).get("keywords", ["/管理员", "admin"])
         faq_cmds = command_keywords.get("faq", {}).get("keywords", ["/faq", "常见问题"])
-        sys_cmds = command_keywords.get("system", {}).get(
-            "keywords", ["/系统", "system"]
-        )
+        sys_cmds = command_keywords.get("system", {}).get("keywords", ["/系统", "system"])
 
         sub_cmd_prefixes = [
             (stats_cmds, "stats"),
@@ -3936,9 +3524,7 @@ class DecisionHub:
             if not check_command_permission():
                 return get_permission_denied_message()
             parts = sub_cmd_rest.split() if sub_cmd_rest else []
-            result = await handle_command(
-                f"{sub_cmd_type} {' '.join(parts)}".strip(), parts
-            )
+            result = await handle_command(f"{sub_cmd_type} {' '.join(parts)}".strip(), parts)
             return result
 
         # 不是快速命令
@@ -4056,22 +3642,14 @@ class DecisionHub:
                     "gpt_sovits": "GPT-SoVITS 遐蝶",
                     "api_tts": "API 云端 TTS",
                 }
-                messages.append(
-                    f"TTS 引擎已切换: {display.get(engine_key, engine_key)}，已自动开启语音模式"
-                )
+                messages.append(f"TTS 引擎已切换: {display.get(engine_key, engine_key)}，已自动开启语音模式")
 
                 if engine_key == "gpt_sovits":
-                    messages.append(
-                        "（需确保 GPT-SoVITS 已启动: http://127.0.0.1:9880）"
-                    )
+                    messages.append("（需确保 GPT-SoVITS 已启动: http://127.0.0.1:9880）")
                 elif engine_key == "api_tts":
-                    key = (
-                        config.get("engines", {}).get("api_tts", {}).get("api_key", "")
-                    )
+                    key = config.get("engines", {}).get("api_tts", {}).get("api_key", "")
                     if not key:
-                        messages.append(
-                            "（⚠️ 未配置 API Key，请在 tts_config.json 中填写）"
-                        )
+                        messages.append("（⚠️ 未配置 API Key，请在 tts_config.json 中填写）")
 
         if changed:
             try:
@@ -4158,9 +3736,7 @@ class DecisionHub:
             logger.warning(f"[决策层] 加载触发关键词失败: {e}")
             return []
 
-    async def _check_and_learn_image_correction(
-        self, perception: dict, content: str, user_id, group_id
-    ):
+    async def _check_and_learn_image_correction(self, perception: dict, content: str, user_id, group_id):
         """使用 AI 检查用户是否在确认/纠正图片识别结果，并学习对应关系"""
         import logging
         import re
@@ -4211,9 +3787,7 @@ class DecisionHub:
         except Exception as e:
             logger.warning(f"[AI学习] 保存失败: {e}")
 
-    async def _check_and_learn_general_correction(
-        self, perception: dict, content: str, user_id
-    ):
+    async def _check_and_learn_general_correction(self, perception: dict, content: str, user_id):
         """通用的确认/纠正学习框架 - 支持多种场景"""
         # 从配置文件加载
         from core.text_loader import get_text_loader
@@ -4262,8 +3836,7 @@ class DecisionHub:
             from memory import store_important
 
             learning_content = (
-                f"[{matched_scenario['tags'][0]}] 用户纠正: {extracted_answer} | "
-                f"原始消息: {content[:100]}"
+                f"[{matched_scenario['tags'][0]}] 用户纠正: {extracted_answer} | 原始消息: {content[:100]}"
             )
 
             await store_important(
@@ -4277,8 +3850,6 @@ class DecisionHub:
                     "original_message": content[:200],
                 },
             )
-            logger.info(
-                f"[决策层] 通用学习完成，场景: {matched_scenario['tags'][0]}, 内容: {extracted_answer}"
-            )
+            logger.info(f"[决策层] 通用学习完成，场景: {matched_scenario['tags'][0]}, 内容: {extracted_answer}")
         except Exception as e:
             logger.warning(f"[决策层] 通用学习失败: {e}")
