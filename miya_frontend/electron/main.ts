@@ -23,6 +23,15 @@ import {
   setFloatingHeight,
   setWindowPosition,
 } from './modules/window'
+import {
+  createLive2dWindow,
+  getLive2dWindow,
+  toggleLive2dVisibility,
+  setLive2dAlwaysOnTop,
+  resetLive2dPosition,
+  setLive2dWindowScale,
+  broadcastLive2dCommand,
+} from './modules/live2d-window'
 
 // ES module __dirname polyfill
 const __filename = fileURLToPath(import.meta.url)
@@ -61,13 +70,16 @@ protocol.registerSchemesAsPrivileged([
 ])
 
 app.on('second-instance', () => {
-  const win = getMainWindow()
-  if (win) {
-    if (win.isMinimized())
-      win.restore()
-    win.show()
-    win.focus()
+  try {
+    const win = getMainWindow()
+    if (win && !win.isDestroyed()) {
+      if (win.isMinimized())
+        win.restore()
+      win.show()
+      win.focus()
+    }
   }
+  catch { /* window destroyed between check and action */ }
 })
 
 app.whenReady().then(async () => {
@@ -205,6 +217,9 @@ app.whenReady().then(async () => {
 
   // Create main window
   const win = createWindow()
+
+  // Create standalone Live2D window (透明无边框独立窗口)
+  createLive2dWindow()
 
   // 透明无边框窗口在 Windows 上 unmaximize 后系统不可靠地还原尺寸，手动保存/还原
   let preMaximizeBounds: Electron.Rectangle | null = null
@@ -409,6 +424,41 @@ app.whenReady().then(async () => {
     app.setLoginItemSettings({ openAtLogin: enabled })
   })
   ipcMain.handle('backend:getLogs', () => getBackendLogs())
+
+  // ── Live2D 独立窗口 ──
+  ipcMain.on('live2d:emotion', (_event, emotion: string) => {
+    broadcastLive2dCommand('live2d:emotion', emotion)
+  })
+  ipcMain.on('live2d:state', (_event, state: string) => {
+    broadcastLive2dCommand('live2d:state', state)
+  })
+  ipcMain.on('live2d:mouth', (_event, params: Record<string, number>) => {
+    broadcastLive2dCommand('live2d:mouth', params)
+  })
+  ipcMain.on('live2d:action', (_event, action: string) => {
+    broadcastLive2dCommand('live2d:action', action)
+  })
+  ipcMain.on('live2d:tracking', (_event, enabled: boolean) => {
+    broadcastLive2dCommand('live2d:tracking', enabled)
+  })
+  ipcMain.on('live2d:clothes', (_event, clothes: string) => {
+    broadcastLive2dCommand('live2d:clothes', clothes)
+  })
+  ipcMain.on('live2d:toggleVisibility', () => {
+    toggleLive2dVisibility()
+  })
+  ipcMain.on('live2d:alwaysOnTop', (_event, enabled: boolean) => {
+    setLive2dAlwaysOnTop(enabled)
+  })
+  ipcMain.on('live2d:resetPosition', () => {
+    resetLive2dPosition()
+  })
+  ipcMain.on('live2d:background', (_event, data: { color: string, alpha: number }) => {
+    broadcastLive2dCommand('live2d:background', data)
+  })
+  ipcMain.on('live2d:windowScale', (_event, scale: number) => {
+    setLive2dWindowScale(scale)
+  })
 
   // ── Terminal (Claude Code Engine) ──
   ipcMain.handle('terminal:start', (_event, options: { model?: string }) => {

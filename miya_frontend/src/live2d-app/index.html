@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MIYA Live2D</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
+    #live2d-canvas { width: 100%; height: 100%; display: block; }
+    .drag-bar { position: fixed; top: 0; left: 0; right: 0; height: 8px; -webkit-app-region: drag; z-index: 100; }
+  </style>
+  <script src="/libraries/live2dcubismcore.min.js"></script>
+</head>
+<body>
+  <div class="drag-bar"></div>
+  <canvas id="live2d-canvas"></canvas>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

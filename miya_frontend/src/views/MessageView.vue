@@ -8,7 +8,7 @@ import BoxContainer from '@/components/BoxContainer.vue'
 import Markdown from '@/components/Markdown.vue'
 import MessageItem from '@/components/MessageItem.vue'
 import { CONFIG } from '@/utils/config'
-import { live2dState, setSoulEmotion } from '@/utils/live2dController'
+import { proxySetSoulEmotion, proxySetState } from '@/utils/live2dProxy'
 import { activeTabId, CURRENT_SESSION_ID, formatRelativeTime, getActiveTab, IS_TEMPORARY_SESSION, latestEmotion, loadCurrentSession, MESSAGES, newSession, saveMessages, switchSession, tabs } from '@/utils/session'
 import { clearSpeakQueue, isPlaying, queueSpeak, stop as stopTTS } from '@/utils/tts'
 import { setMessageViewExpanded } from '@/utils/uiState'
@@ -131,7 +131,7 @@ async function chatStreamInternal(content: string, options?: { skill?: string, i
     } catch {}
   }
 
-  live2dState.value = 'thinking'
+  proxySetState('thinking')
   let compressTimer: ReturnType<typeof setTimeout> | undefined
   let ttsSentenceBuf = ''
 
@@ -179,7 +179,7 @@ async function chatStreamInternal(content: string, options?: { skill?: string, i
     pushContent(responseText || res?.response || JSON.stringify(res))
     message.generating = false
     message.status = undefined
-    live2dState.value = 'idle'
+    proxySetState('idle')
 
     // 存储灵魂数据到消息（仅来自 SSE 流每句专属数据）
     if (Object.keys(soulRaw).length > 0) {
@@ -190,7 +190,7 @@ async function chatStreamInternal(content: string, options?: { skill?: string, i
           intensity: typeof val === 'number' ? Math.round(val) : 50,
         }))
         latestEmotion.value = { emotions: soulData.emotions }
-        setSoulEmotion(soulData.emotions)
+        proxySetSoulEmotion(soulData.emotions)
       }
       if (soulRaw.inner_thought) soulData.innerThought = soulRaw.inner_thought
       if (soulRaw.attribution) soulData.attribution = soulRaw.attribution
@@ -304,7 +304,7 @@ function toggleTTS() {
 }
 
 watch(isPlaying, (playing) => {
-  live2dState.value = playing ? 'talking' : 'idle'
+  proxySetState(playing ? 'talking' : 'idle')
 })
 
 watch(input, () => {

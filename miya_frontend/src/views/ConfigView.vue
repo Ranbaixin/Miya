@@ -9,7 +9,7 @@ import { audioSettings, bgmFileOptions, playBgm, stopBgm } from '@/composables/u
 import { componentColors, COLOR_GROUPS } from '@/composables/useComponentColors'
 
 const router = useRouter()
-type TabKey = 'appearance' | 'model' | 'soul' | 'memory' | 'system' | 'audio' | 'color'
+type TabKey = 'appearance' | 'model' | 'soul' | 'memory' | 'system' | 'audio' | 'color' | 'live2d'
 const activeTab = ref<TabKey>('appearance')
 const backendOnline = ref(false)
 
@@ -25,6 +25,48 @@ const configFiles = ref<Array<{ name: string, path: string, size: number }>>([])
 const editingFile = ref('')
 const editingContent = ref('')
 const editingSaved = ref(false)
+
+// ── Live2D 独立窗口配置 ──
+const live2dCfg = useStorage('miya-live2d-window-config', {
+  bgColor: '#111122',
+  bgAlpha: 0.1,
+  windowScale: 100,
+  alwaysOnTop: true,
+  visible: true,
+})
+
+function setLive2dBg(e?: Event) {
+  if (e) live2dCfg.value.bgColor = (e.target as HTMLInputElement).value
+  const api = window.live2dAPI
+  if (!api) return
+  const hex = live2dCfg.value.bgColor.replace('#', '')
+  api.setBackground?.(`0x${hex}`, live2dCfg.value.bgAlpha)
+}
+
+function setLive2dScale() {
+  const api = window.live2dAPI
+  if (api) api.setWindowScale?.(live2dCfg.value.windowScale)
+}
+
+function setLive2dAlwaysOnTop() {
+  const api = window.live2dAPI
+  if (api) api.setAlwaysOnTop(live2dCfg.value.alwaysOnTop)
+}
+
+function setLive2dVisibility() {
+  const api = window.live2dAPI
+  if (api) api.toggleVisibility()
+}
+
+function resetLive2dPos() {
+  const api = window.live2dAPI
+  if (api) api.resetPosition()
+}
+
+function resetLive2dSize() {
+  live2dCfg.value.windowScale = 100
+  setLive2dScale()
+}
 
 async function loadConfigFiles() {
   try {
@@ -86,20 +128,16 @@ const tabs: { key: TabKey, label: string, icon: string }[] = [
   { key: 'memory', label: '记忆', icon: '◆' },
   { key: 'audio', label: '声音', icon: '♪' },
   { key: 'color', label: '调色', icon: '⬡' },
+  { key: 'live2d', label: 'Live2D', icon: '◉' },
   { key: 'system', label: '系统', icon: '◎' },
 ]
 
 // 外观
-const live2dEnabled = useStorage('miya-live2d-enabled', true)
 const cardScale = useStorage('miya-panel-card-scale', 1.0)
 const verseText = useStorage('miya-verse-text', '雪落无声 — 愿系铃中')
 const showStatus = useStorage('miya-show-status', true)
 const logoBrightness = useStorage('miya-logo-brightness', 1.0)
 const footerBrightness = useStorage('miya-footer-brightness', 1.0)
-const live2dX = computed({ get: () => CONFIG.value.web_live2d.model.x, set: v => CONFIG.value.web_live2d.model.x = v })
-const live2dY = computed({ get: () => CONFIG.value.web_live2d.model.y, set: v => CONFIG.value.web_live2d.model.y = v })
-const live2dSize = computed({ get: () => CONFIG.value.web_live2d.model.size, set: v => CONFIG.value.web_live2d.model.size = v })
-const live2dSsaa = computed({ get: () => CONFIG.value.web_live2d.ssaa, set: v => CONFIG.value.web_live2d.ssaa = v })
 
 const hudColorMode = useStorage('miya-hud-color', 'mixed')
 const COLOR_MODES = [
@@ -215,30 +253,6 @@ function getRouteModel(key: string): string {
       <!-- ═══ 外观 ═══ -->
       <div v-show="activeTab === 'appearance'" class="config-page">
         <h2>外观设置</h2>
-
-        <div class="config-section">
-          <h3>Live2D 时冰</h3>
-          <div class="config-item">
-            <label>启用 Live2D</label>
-            <ToggleSwitch v-model="live2dEnabled" />
-          </div>
-          <div class="config-item">
-            <label>水平位置 (X)</label>
-            <div class="slider-row"><Slider v-model="live2dX" :min="-2" :max="2" :step="0.01" /><span class="slider-val">{{ live2dX.toFixed(2) }}</span></div>
-          </div>
-          <div class="config-item">
-            <label>垂直位置 (Y)</label>
-            <div class="slider-row"><Slider v-model="live2dY" :min="-2" :max="2" :step="0.01" /><span class="slider-val">{{ live2dY.toFixed(2) }}</span></div>
-          </div>
-          <div class="config-item">
-            <label>模型缩放</label>
-            <div class="slider-row"><Slider v-model="live2dSize" :min="0" :max="9000" :step="100" /><span class="slider-val">{{ live2dSize }}</span></div>
-          </div>
-          <div class="config-item">
-            <label>超采样 (SSAA)</label>
-            <div class="slider-row"><Slider v-model="live2dSsaa" :min="1" :max="4" :step="1" /><span class="slider-val">{{ live2dSsaa }}</span></div>
-          </div>
-        </div>
 
         <div class="config-section">
           <h3>背景图片</h3>
@@ -493,6 +507,62 @@ function getRouteModel(key: string): string {
           </div>
         </div>
       </div>
+
+      <!-- ═══ Live2D 独立窗口 ═══ -->
+      <div v-show="activeTab === 'live2d'" class="config-page">
+        <h2>Live2D 独立窗口</h2>
+        <p class="hint" style="margin-top:-0.5rem">控制独立弥娅渲染窗口的显示效果</p>
+
+        <div class="config-section">
+          <h3>窗口背景</h3>
+          <div class="live2d-color-row">
+            <input
+              type="color"
+              :value="live2dCfg.bgColor"
+              class="cp-input"
+              style="width:48px;height:36px;border-radius:6px;border:1px solid rgba(0,229,255,0.2)"
+              @input="setLive2dBg($event)"
+            >
+            <span style="font-size:0.75rem;color:var(--miya-text-dim)">{{ live2dCfg.bgColor }}</span>
+          </div>
+        </div>
+
+        <div class="config-section">
+          <h3>背景透明度</h3>
+          <div class="slider-row">
+            <Slider v-model="live2dCfg.bgAlpha" :min="0" :max="1" :step="0.05" style="flex:1" @update:model-value="setLive2dBg()" />
+            <span class="slider-val">{{ Math.round(live2dCfg.bgAlpha * 100) }}%</span>
+          </div>
+        </div>
+
+        <div class="config-section">
+          <h3>窗口缩放</h3>
+          <div class="slider-row">
+            <Slider v-model="live2dCfg.windowScale" :min="50" :max="200" :step="5" style="flex:1" @update:model-value="setLive2dScale()" />
+            <span class="slider-val">{{ live2dCfg.windowScale }}%</span>
+          </div>
+        </div>
+
+        <div class="config-section">
+          <h3>显示选项</h3>
+          <div class="toggle-row">
+            <span>窗口置顶</span>
+            <ToggleSwitch v-model="live2dCfg.alwaysOnTop" @change="setLive2dAlwaysOnTop()" />
+          </div>
+          <div class="toggle-row">
+            <span>显示 Live2D 窗口</span>
+            <ToggleSwitch v-model="live2dCfg.visible" @change="setLive2dVisibility()" />
+          </div>
+        </div>
+
+        <div class="config-section">
+          <h3>窗口位置</h3>
+          <div style="display:flex;gap:0.5rem">
+            <button class="action-btn" @click="resetLive2dPos()">重置位置</button>
+            <button class="action-btn" @click="resetLive2dSize()">重置大小</button>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 </template>
@@ -591,4 +661,11 @@ function getRouteModel(key: string): string {
 .cp-row { display: flex; align-items: center; gap: 0.4rem; }
 .cp-input { width: 28px; height: 22px; border: 1px solid rgba(0,229,255,0.15); border-radius: 0.2rem; background: transparent; cursor: pointer; padding: 1px; }
 .cp-val { font-size: 0.6rem; color: var(--miya-text-dim); font-family: 'JetBrains Mono', monospace; }
+
+/* Live2D 配置 */
+.live2d-color-row { display: flex; align-items: center; gap: 0.6rem; }
+.slider-row { display: flex; align-items: center; gap: 0.8rem; }
+.slider-row .p-slider { flex: 1; }
+.slider-val { font-size: 0.72rem; color: var(--miya-accent); min-width: 3rem; text-align: right; }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 0.3rem 0; }
 </style>

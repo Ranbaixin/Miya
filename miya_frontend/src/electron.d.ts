@@ -55,6 +55,22 @@ export interface TerminalAPI {
   onExit: (callback: (code: number) => void) => () => void
 }
 
+export interface Live2dAPI {
+  setEmotion: (emotion: string) => void
+  setState: (state: string) => void
+  setMouth: (params: Record<string, number>) => void
+  triggerAction: (action: string) => void
+  setTracking: (enabled: boolean) => void
+  switchClothes: (clothes: string) => void
+  toggleVisibility: () => void
+  setAlwaysOnTop: (enabled: boolean) => void
+  resetPosition: () => void
+  setBackground: (colorHex: string, alpha: number) => void
+  setWindowScale: (scale: number) => void
+  onReady: (callback: () => void) => () => void
+  onModelInfo: (callback: (info: { faceX: number, faceY: number }) => void) => () => void
+}
+
 export interface ElectronAPI {
   minimize: () => void
   maximize: () => void
@@ -82,6 +98,7 @@ export interface ElectronAPI {
 declare global {
   interface Window {
     electronAPI?: ElectronAPI
+    live2dAPI?: Live2dAPI
   }
 }
 

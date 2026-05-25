@@ -19,6 +19,7 @@ const router = createRouter({
     { path: '/openclaw', component: () => import('@/views/OpenClawView.vue') },
     { path: '/screen', component: () => import('@/views/ScreenVisionView.vue') },
     { path: '/terminal', component: () => import('@/views/TerminalView.vue') },
+    { path: '/live2d', component: () => import('@/views/Live2dConfigView.vue') },
     {
       path: '/community',
       children: [

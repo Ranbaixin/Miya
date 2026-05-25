@@ -147,3 +147,29 @@ const electronAPI = {
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)
+
+// ── Live2D 独立窗口 API (主窗口侧 → 发送) ──
+contextBridge.exposeInMainWorld('live2dAPI', {
+  setEmotion: (emotion: string) => ipcRenderer.send('live2d:emotion', emotion),
+  setState: (state: string) => ipcRenderer.send('live2d:state', state),
+  setMouth: (params: Record<string, number>) => ipcRenderer.send('live2d:mouth', params),
+  triggerAction: (action: string) => ipcRenderer.send('live2d:action', action),
+  setTracking: (enabled: boolean) => ipcRenderer.send('live2d:tracking', enabled),
+  switchClothes: (clothes: string) => ipcRenderer.send('live2d:clothes', clothes),
+  toggleVisibility: () => ipcRenderer.send('live2d:toggleVisibility'),
+  setAlwaysOnTop: (enabled: boolean) => ipcRenderer.send('live2d:alwaysOnTop', enabled),
+  resetPosition: () => ipcRenderer.send('live2d:resetPosition'),
+  setBackground: (colorHex: string, alpha: number) => ipcRenderer.send('live2d:background', { color: colorHex, alpha }),
+  setWindowScale: (scale: number) => ipcRenderer.send('live2d:windowScale', scale),
+})
+
+// ── Live2D 窗口侧 IPC 接收 ──
+contextBridge.exposeInMainWorld('live2dIPC', {
+  on: (channel: string, handler: (...args: unknown[]) => void) => {
+    const safeHandler = (_event: Electron.IpcRendererEvent, ...args: unknown[]) => handler(...args)
+    ipcRenderer.on(channel, safeHandler)
+  },
+  send: (channel: string, ...args: unknown[]) => {
+    ipcRenderer.send(channel, ...args)
+  },
+})

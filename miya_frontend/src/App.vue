@@ -11,6 +11,7 @@ import { CONFIG } from '@/utils/config'
 import { useMIYARealtime } from '@/composables/useMIYARealtime'
 import SciFiOverlay from '@/components/SciFiOverlay.vue'
 import FloatingView from '@/views/FloatingView.vue'
+import { isIndependentMode } from '@/utils/live2dProxy'
 
 const isElectron = !!window.electronAPI
 const { connect: connectWS, disconnect: disconnectWS } = useMIYARealtime()
@@ -28,8 +29,9 @@ const STARTUP_LIVE2D = isElectron
   : './models/弥娅/Miya/01.model3.json'
 const live2dSource = ref(STARTUP_LIVE2D)
 
-// Live2D 开关
-const live2dEnabled = useStorage('miya-live2d-enabled', true)
+// Live2D 开关 - 独立窗口模式下隐藏内嵌模型
+const live2dStore = useStorage('miya-live2d-enabled', true)
+const live2dEnabled = computed(() => live2dStore.value && !isIndependentMode())
 
 // 自定义背景
 const customBg = useStorage('miya-bg-image', '')

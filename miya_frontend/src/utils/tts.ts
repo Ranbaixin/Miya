@@ -1,5 +1,6 @@
 import { ref, watch } from 'vue'
 import API from '@/api/core'
+import { proxySetMouth, proxySetState } from '@/utils/live2dProxy'
 
 const audio = ref<HTMLAudioElement | null>(null)
 export const isPlaying = ref(false)
@@ -7,7 +8,67 @@ let maxDurationTimer: number | null = null
 let abortController: AbortController | null = null
 let currentObjectUrl: string | null = null
 
-const MAX_PLAYBACK_DURATION = 30000 // 30秒最大播放时长
+const MAX_PLAYBACK_DURATION = 30000
+
+// ── Live2D 口型同步 ──
+let mouthSyncTimer: number | null = null
+let mouthAudioCtx: AudioContext | null = null
+let mouthAnalyser: AnalyserNode | null = null
+let mouthSource: MediaElementAudioSourceNode | null = null
+
+function startMouthSync(el: HTMLAudioElement): void {
+  try {
+    stopMouthSync()
+    proxySetState('talking')
+
+    mouthAudioCtx = new AudioContext()
+    mouthSource = mouthAudioCtx.createMediaElementSource(el)
+    mouthAnalyser = mouthAudioCtx.createAnalyser()
+    mouthAnalyser.fftSize = 256
+    mouthSource.connect(mouthAnalyser)
+    mouthAnalyser.connect(mouthAudioCtx.destination)
+
+    const dataArray = new Float32Array(mouthAnalyser.frequencyBinCount)
+
+    function tick() {
+      if (!mouthAnalyser) return
+      mouthAnalyser.getFloatTimeDomainData(dataArray)
+      let sum = 0
+      for (let i = 0; i < dataArray.length; i++) sum += Math.abs(dataArray[i])
+      const rms = sum / dataArray.length
+      // ParamMouthOpenY: Cubism 口型张开参数
+      const mouthOpen = Math.min(1, Math.max(0, rms * 5))
+      proxySetMouth({ ParamMouthOpenY: mouthOpen })
+      mouthSyncTimer = window.setTimeout(tick, 30)
+    }
+    tick()
+  }
+  catch {
+    // 降级：使用定时器模拟口型
+    let phase = 0
+    function tick() {
+      phase += 1
+      const v = 0.3 + Math.abs(Math.sin(phase * 0.3)) * 0.7
+      proxySetMouth({ ParamMouthOpenY: v })
+      mouthSyncTimer = window.setTimeout(tick, 60)
+    }
+    tick()
+  }
+}
+
+function stopMouthSync(): void {
+  proxySetState('idle')
+  proxySetMouth({ ParamMouthOpenY: 0 })
+  if (mouthSyncTimer) {
+    clearTimeout(mouthSyncTimer)
+    mouthSyncTimer = null
+  }
+  try { mouthSource?.disconnect() } catch {}
+  try { mouthAudioCtx?.close() } catch {}
+  mouthSource = null
+  mouthAnalyser = null
+  mouthAudioCtx = null
+}
 
 // ── Progressive TTS Queue ──
 const _queue: string[] = []
@@ -102,6 +163,7 @@ async function _streamPlayback(res: Response, signal: AbortSignal): Promise<void
 
   el.onplay = () => {
     isPlaying.value = true
+    startMouthSync(el)
   }
   el.onended = () => {
     cleanup()
@@ -189,6 +251,7 @@ async function _blobPlayback(res: Response, signal: AbortSignal): Promise<void> 
 
   el.onplay = () => {
     isPlaying.value = true
+    startMouthSync(el)
   }
   el.onended = () => {
     cleanup()
@@ -206,6 +269,7 @@ async function _blobPlayback(res: Response, signal: AbortSignal): Promise<void> 
 }
 
 function cleanup() {
+  stopMouthSync()
   if (maxDurationTimer) {
     clearTimeout(maxDurationTimer)
     maxDurationTimer = null
