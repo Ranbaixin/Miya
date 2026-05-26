@@ -847,14 +847,9 @@ class ModelCollaborationEngine:
                 )
                 base_output_prompt = f"推理结果：{reasoning_result}\n\n用户问题：{user_prompt}"
 
-            if ai_emotion_context:
-                output_prompt = ai_emotion_context + "\n\n" + base_output_prompt
-            else:
-                output_prompt = base_output_prompt
-
-            if platform == "terminal":
-                print(TerminalFormatter.chain_step(3, output_model.id, "生成回复"))
-
+            output_prompt = (
+                ai_emotion_context + "\n\n" + base_output_prompt if ai_emotion_context else base_output_prompt
+            )
             response = await self._call_client(
                 client_output,
                 system_prompt=system_prompt,
@@ -975,10 +970,7 @@ class ModelCollaborationEngine:
             thinking_result=thinking_result, message=message
         )
         # 注入情绪上下文
-        if ai_emotion_context:
-            output_prompt = ai_emotion_context + "\n\n" + base_output_prompt
-        else:
-            output_prompt = base_output_prompt
+        output_prompt = ai_emotion_context + "\n\n" + base_output_prompt if ai_emotion_context else base_output_prompt
 
         final_response = await self._call_client(
             output_client,
@@ -1102,10 +1094,9 @@ class ModelCollaborationEngine:
                 draft=draft,
             )
             # 注入情绪上下文
-            if ai_emotion_context:
-                final_reviewer_prompt = ai_emotion_context + "\n\n" + base_reviewer_prompt
-            else:
-                final_reviewer_prompt = base_reviewer_prompt
+            final_reviewer_prompt = (
+                ai_emotion_context + "\n\n" + base_reviewer_prompt if ai_emotion_context else base_reviewer_prompt
+            )
             final_response = await self._call_client(
                 reviewer_client,
                 system_prompt=reviewer_prompt_text,
