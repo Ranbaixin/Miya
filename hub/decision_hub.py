@@ -429,7 +429,7 @@ class DecisionHub:
         except Exception as e:
             logger.warning(f"[决策层] 知识图谱初始化失败: {e}")
 
-    async def _handle_proactive_chat(self, perception: dict, user_message: str):
+    async def _handle_proactive_chat(self, perception: dict, user_message: str, main_response: str = ""):
         """处理主动聊天"""
         if not self.proactive_chat:
             return None
@@ -465,6 +465,17 @@ class DecisionHub:
                 member_count=perception.get("member_count", 0),
                 platform=platform,
             )
+
+            # 【谛听传递】将主回复管线的谛听分析注入主动聊天的 ChatContext
+            msg_strategy = perception.get("_message_strategy")
+            if msg_strategy:
+                context.diting_intent = msg_strategy.get("intent")
+                context.diting_style = msg_strategy.get("style")
+                context.diting_confidence = msg_strategy.get("confidence", 0.0)
+
+            # 【主回复传递】让主动聊天知道弥娅刚才说了什么，避免重复提问
+            if main_response:
+                context.last_miya_reply = main_response
 
             self.proactive_chat.update_context(target_id, context, platform)
             self.proactive_chat.record_message(target_id, chat_type, user_message, platform)
@@ -1066,7 +1077,7 @@ class DecisionHub:
 
         # 7. 主动聊天系统 v2.0 - 检查是否需要主动发言（全平台支持）
         if response:
-            proactive_result = await self._handle_proactive_chat(perception, content)
+            proactive_result = await self._handle_proactive_chat(perception, content, response)
 
             # 【新增】智能表情包发送 - 在主动聊天之后
             if proactive_result and proactive_result.should_respond:
@@ -1572,6 +1583,38 @@ class DecisionHub:
                         "style": getattr(diting_strategy, "suggested_reply_style", "casual"),
                         "confidence": getattr(diting_strategy, "confidence", 0.8),
                     }
+                    # 【谛听传递】将策略分析结果转化为自然语言指引，注入下游
+                    strategy_desc_map = {
+                        "full_reply": "完整自然地回复，正常长度即可",
+                        "brief_reply": "简短回复，一句话或几个字就够了",
+                        "multi_turn": "可以分多条消息回复，表达更丰富",
+                        "emoji_only": "只需要发一个表情即可，不必多言",
+                        "tease_reply": "可以调侃、逗弄对方一下",
+                        "question_back": "用问题回应对方的问题",
+                        "like_only": "不要回复文字，点个赞就好",
+                    }
+                    style_desc_map = {
+                        "normal": "正常对话风格",
+                        "casual": "轻松俏皮的语气",
+                        "serious": "认真专注",
+                        "playful": "调皮可爱",
+                        "tsundere": "傲娇、嘴硬心软",
+                        "gentle": "温柔、柔软温和",
+                        "cold": "冷淡、敷衍",
+                        "lazy": "慵懒、懒洋洋",
+                    }
+                    _strat = diting_strategy.response_strategy
+                    _style = getattr(diting_strategy, "suggested_reply_style", "normal")
+                    _intent = getattr(diting_strategy, "message_intent", "chat")
+                    _strat_desc = strategy_desc_map.get(_strat, "自然回复")
+                    _style_desc = style_desc_map.get(_style, "正常风格")
+                    context["_strategy_guidance"] = (
+                        f"\n\n【回复策略指引 · 谛听分析】\n"
+                        f"- 用户意图：{_intent}\n"
+                        f"- 回复方式：{_strat_desc}\n"
+                        f"- 回复语气：{_style_desc}\n"
+                        f"（请根据以上指引调整你的回复风格，但不要生硬地复述这些指令）"
+                    )
             except Exception as e:
                 logger.warning(f"[谛听-并行] 结果处理失败: {e}")
 
@@ -1742,6 +1785,12 @@ class DecisionHub:
             )
 
             logger.debug(f"[决策层-跨平台] 系统提示词前200字符: {prompt_info['system'][:200]}")
+
+            # 【谛听传递】将策略指引注入 system prompt（协作引擎和单模型路径均生效）
+            strategy_guidance = context.get("_strategy_guidance", "")
+            if strategy_guidance:
+                prompt_info["system"] = strategy_guidance + "\n" + prompt_info["system"]
+                logger.info(f"[谛听-传递] 策略指引已注入 system prompt ({len(strategy_guidance)} 字符)")
 
             # 设置工具上下文和 ToolNet（符合 MIYA 框架）
             if self.tool_subnet:

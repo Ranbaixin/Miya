@@ -43,9 +43,7 @@ def load_config() -> dict:
                 logger.info("[主动聊天] 从 config/proactive_chat.yaml 加载配置成功")
                 return _normalize_config(raw_config["proactive_chat"])
             else:
-                logger.warning(
-                    "[主动聊天] config/proactive_chat.yaml 中无 proactive_chat 配置，使用默认配置"
-                )
+                logger.warning("[主动聊天] config/proactive_chat.yaml 中无 proactive_chat 配置，使用默认配置")
                 return get_default_config()
         else:
             logger.warning("[主动聊天] config/proactive_chat.yaml 不存在，使用默认配置")
@@ -97,9 +95,7 @@ def _normalize_config(raw: dict) -> dict:
     # 情绪感知
     emotion_perc = raw.get("emotion_perception", {})
     emotion_cfg = {
-        "enabled": emotion_perc.get(
-            "enabled", default["triggers"]["emotion"]["enabled"]
-        ),
+        "enabled": emotion_perc.get("enabled", default["triggers"]["emotion"]["enabled"]),
         "use_ai": emotion_perc.get("use_ai", True),
         "emotion_keywords": emotion_perc.get("emotion_keywords", {}),
         "emotion_responses": emotion_perc.get("emotion_responses", {}),
@@ -140,11 +136,7 @@ def _normalize_config(raw: dict) -> dict:
         time_slots = time_aware.get("time_slots", {})
         for slot_name, slot_data in time_slots.items():
             greetings[slot_name] = {
-                "messages": [
-                    t
-                    for topic in slot_data.get("topics", [])
-                    for t in topic.get("templates", [])
-                ]
+                "messages": [t for topic in slot_data.get("topics", []) for t in topic.get("templates", [])]
             }
     time_cfg = {
         "enabled": time_aware.get("enabled", default["triggers"]["time"]["enabled"]),
@@ -166,9 +158,7 @@ def _normalize_config(raw: dict) -> dict:
         "limits": {
             "global_cooldown": 300,
             "max_daily_per_target": max_daily,
-            "max_hourly_per_target": raw.get(
-                "max_hourly_messages", default["limits"]["max_hourly_per_target"]
-            ),
+            "max_hourly_per_target": raw.get("max_hourly_messages", default["limits"]["max_hourly_per_target"]),
             "duplicate_window": 60,
             "quiet_hours": quiet_hours,
             "quiet_hours_enabled": True,
@@ -257,6 +247,12 @@ class ChatContext:
     last_group_msg_time: Optional[str] = None
     last_at_miya: Optional[str] = None
     is_reply_to_miya: bool = False
+    # 谛听策略分析（来自主回复管线，供主动聊天复用）
+    diting_intent: Optional[str] = None  # 用户意图: greeting/chat/question/share/complaint 等
+    diting_style: Optional[str] = None  # 建议回复风格: normal/casual/gentle/playful 等
+    diting_confidence: float = 0.0  # 谛听判断置信度
+    # 主回复内容（避免主动聊天重复提问）
+    last_miya_reply: Optional[str] = None  # 弥娅刚才对这条消息的回复
 
 
 @dataclass
@@ -413,9 +409,7 @@ class ProactiveChatSystem:
         now = datetime.now()
         # 清理过期记录（保留30分钟内的）
         self._sent_messages_history[target_id] = [
-            (msg, t)
-            for msg, t in self._sent_messages_history[target_id]
-            if (now - t).total_seconds() < 1800
+            (msg, t) for msg, t in self._sent_messages_history[target_id] if (now - t).total_seconds() < 1800
         ]
 
         # 简化比对：检查前20个字符
@@ -472,9 +466,7 @@ class ProactiveChatSystem:
             if dominant:
                 parts.append(f"核心心魂：{dominant}")
             if core and core_info:
-                parts.append(
-                    f"{core_info.get('name', '')}显照·{core_info.get('description', '')}"
-                )
+                parts.append(f"{core_info.get('name', '')}显照·{core_info.get('description', '')}")
 
             return " | ".join(parts)
         except Exception:
@@ -538,9 +530,7 @@ class ProactiveChatSystem:
         except Exception:
             return ""
 
-    async def _generate_ai_message(
-        self, trigger_type: str, context: dict, target_id: int = 0
-    ) -> Optional[str]:
+    async def _generate_ai_message(self, trigger_type: str, context: dict, target_id: int = 0) -> Optional[str]:
         """统一 AI 消息生成器
 
         Args:
@@ -601,15 +591,31 @@ class ProactiveChatSystem:
             if memory_context:
                 final_prompt = f"【当前对话】\n{memory_context}\n\n{prompt}"
 
+            # 【谛听传递】注入主回复管线的意图分析，避免主动聊天 AI 从零判断
+            cached_ctx = self._context_cache.get(target_id) if target_id else None
+            if cached_ctx and cached_ctx.diting_intent:
+                diting_hint = f"\n\n【已分析的用户状态（来自主回复管线）】\n- 用户意图: {cached_ctx.diting_intent}\n"
+                if cached_ctx.diting_style:
+                    diting_hint += f"- 建议风格: {cached_ctx.diting_style}\n"
+                diting_hint += f"- 分析置信度: {cached_ctx.diting_confidence:.0%}\n"
+                diting_hint += "（以上信息供参考，请据此判断是否需要主动发言及发言内容）"
+                final_prompt = final_prompt + diting_hint
+
+            # 【主回复感知】让主动聊天 AI 知道弥娅刚才回了什么，避免重复提问
+            if cached_ctx and cached_ctx.last_miya_reply:
+                reply_awareness = (
+                    f"\n\n【弥娅刚才已回复】\n{cached_ctx.last_miya_reply}\n"
+                    "（不要重复问主回复已经问过的问题，也不要重复说已经说过的内容）"
+                )
+                final_prompt = final_prompt + reply_awareness
+
             use_tools = trigger_type == "ai"
             response = await self.ai_client.chat(
                 messages=[AIMessage(role="user", content=final_prompt)],
                 tools=[] if not use_tools else None,
                 tool_choice="none" if not use_tools else "auto",
             )
-            message = (
-                response.strip() if isinstance(response, str) else str(response).strip()
-            )
+            message = response.strip() if isinstance(response, str) else str(response).strip()
             if message.upper() == "SKIP" or not message:
                 return None
             return message
@@ -681,9 +687,7 @@ class ProactiveChatSystem:
             use_ai = self._check_in_config.get("use_ai", True)
 
         if use_ai and self.ai_client:
-            ai_msg = await self._generate_ai_message(
-                trigger_type, ai_context, target_id
-            )
+            ai_msg = await self._generate_ai_message(trigger_type, ai_context, target_id)
             if ai_msg:
                 return ai_msg
 
@@ -740,9 +744,7 @@ class ProactiveChatSystem:
                                 platform = ctx.platform if ctx else "terminal"
 
                                 try:
-                                    await self._send_callback(
-                                        result.message, target, chat_type, platform
-                                    )
+                                    await self._send_callback(result.message, target, chat_type, platform)
                                     logger.info(
                                         f"[主动聊天] [后台] [{result.trigger_type}] "
                                         f"target={target_id} -> {result.message[:30]}"
@@ -750,9 +752,7 @@ class ProactiveChatSystem:
                                 except Exception as e:
                                     logger.error(f"[主动聊天] 发送回调失败: {e}")
                     except Exception as e:
-                        logger.warning(
-                            f"[主动聊天] 后台检查 target={target_id} 失败: {e}"
-                        )
+                        logger.warning(f"[主动聊天] 后台检查 target={target_id} 失败: {e}")
                         continue
 
             except asyncio.CancelledError:
@@ -780,9 +780,7 @@ class ProactiveChatSystem:
             return self._ai_config.get("enabled", False)
         return False
 
-    def update_context(
-        self, target_id: int, context: ChatContext, platform: str = "terminal"
-    ):
+    def update_context(self, target_id: int, context: ChatContext, platform: str = "terminal"):
         context.platform = platform
         self._context_cache[target_id] = context
         self._user_last_interaction[target_id] = datetime.now()
@@ -816,9 +814,7 @@ class ProactiveChatSystem:
             self._group_msg_timestamps.setdefault(target_id, []).append(now)
             # 只保留窗口内的消息
             self._group_msg_timestamps[target_id] = [
-                t
-                for t in self._group_msg_timestamps[target_id]
-                if (now - t).total_seconds() < active_window
+                t for t in self._group_msg_timestamps[target_id] if (now - t).total_seconds() < active_window
             ]
             recent_count = len(self._group_msg_timestamps[target_id])
             ctx.group_activity_level = min(1.0, recent_count / 5.0)
@@ -920,9 +916,7 @@ class ProactiveChatSystem:
         # 每小时限制
         if target_id in self._hourly_count:
             self._hourly_count[target_id] = [
-                t
-                for t in self._hourly_count[target_id]
-                if (now - t).total_seconds() < 3600
+                t for t in self._hourly_count[target_id] if (now - t).total_seconds() < 3600
             ]
             if len(self._hourly_count[target_id]) >= self._max_hourly:
                 return False
@@ -949,9 +943,7 @@ class ProactiveChatSystem:
         # 清理过期缓存
         now = datetime.now()
         self._message_cache = {
-            k: v
-            for k, v in self._message_cache.items()
-            if (now - v).total_seconds() < self._duplicate_window * 2
+            k: v for k, v in self._message_cache.items() if (now - v).total_seconds() < self._duplicate_window * 2
         }
 
         return False
@@ -1018,14 +1010,10 @@ class ProactiveChatSystem:
         parts = []
 
         platform = context.platform or "terminal"
-        parts.append(
-            f"平台: {platform} ({'私聊' if context.chat_type != 'group' else '群聊'})"
-        )
+        parts.append(f"平台: {platform} ({'私聊' if context.chat_type != 'group' else '群聊'})")
 
         if context.chat_type == "group":
-            parts.append(
-                f"群活跃度: {context.group_activity_level:.2f} (0=死水, 1=沸腾)"
-            )
+            parts.append(f"群活跃度: {context.group_activity_level:.2f} (0=死水, 1=沸腾)")
             if context.last_at_miya:
                 parts.append(f"最近@弥娅: {context.last_at_miya}")
             if context.is_reply_to_miya:
@@ -1034,9 +1022,7 @@ class ProactiveChatSystem:
         parts.append(f"上次互动: {context.last_active or '未知'}")
         return "\n".join(parts)
 
-    async def check_and_respond(
-        self, target_id: int, user_message: Optional[str] = None
-    ) -> Optional[ProactiveResult]:
+    async def check_and_respond(self, target_id: int, user_message: Optional[str] = None) -> Optional[ProactiveResult]:
         """检查是否需要主动发言"""
         if not self._enabled:
             return None
@@ -1083,9 +1069,7 @@ class ProactiveChatSystem:
 
         # 2. 情绪感知触发
         if self.is_trigger_enabled("emotion") and context.detected_emotion:
-            result = await self._check_emotion_trigger(
-                target_id, context, user_message or ""
-            )
+            result = await self._check_emotion_trigger(target_id, context, user_message or "")
             if result:
                 return result
 
@@ -1113,26 +1097,22 @@ class ProactiveChatSystem:
             if result:
                 return result
 
+        # AI 判断本轮不需要主动发言，记录检查时间避免短时间重复评估
+        self._last_trigger_time[target_id] = datetime.now()
         return None
 
-    async def _check_context_trigger(
-        self, target_id: int, context: ChatContext
-    ) -> Optional[ProactiveResult]:
+    async def _check_context_trigger(self, target_id: int, context: ChatContext) -> Optional[ProactiveResult]:
         """上下文触发 - 行为期望跟进（AI 优先）"""
         expectations_config = self._context_config.get("expectations", {})
         if not expectations_config.get("enabled", True):
             return None
 
-        user_expectation = context.user_expectation or self._last_expectation.get(
-            target_id
-        )
+        user_expectation = context.user_expectation or self._last_expectation.get(target_id)
         if not user_expectation:
             return None
 
         follow_responses = expectations_config.get("follow_responses", {})
-        fallback_msgs = follow_responses.get(
-            user_expectation, follow_responses.get("default", [])
-        )
+        fallback_msgs = follow_responses.get(user_expectation, follow_responses.get("default", []))
 
         if not self._check_trigger_type_cooldown(target_id, "context"):
             return None
@@ -1207,9 +1187,7 @@ class ProactiveChatSystem:
             context.detected_emotion = None
 
             if self._log_triggers:
-                logger.info(
-                    f"[主动聊天] [情绪触发] target={target_id}, emotion={emotion}: {message}"
-                )
+                logger.info(f"[主动聊天] [情绪触发] target={target_id}, emotion={emotion}: {message}")
 
             return ProactiveResult(
                 should_respond=True,
@@ -1231,9 +1209,7 @@ class ProactiveChatSystem:
             return None
 
         if self._log_triggers:
-            logger.info(
-                f"[主动聊天] [关键词触发] target={target_id}, matched={matched}"
-            )
+            logger.info(f"[主动聊天] [关键词触发] target={target_id}, matched={matched}")
 
         fallback_msgs = self._keyword_config.get("responses", [])
         if not fallback_msgs:
@@ -1267,9 +1243,7 @@ class ProactiveChatSystem:
 
         return None
 
-    async def _check_time_trigger(
-        self, target_id: int, context: ChatContext
-    ) -> Optional[ProactiveResult]:
+    async def _check_time_trigger(self, target_id: int, context: ChatContext) -> Optional[ProactiveResult]:
         """时间触发 - 多时段问候（AI 优先）"""
         now = datetime.now()
         hour = now.hour
@@ -1326,9 +1300,7 @@ class ProactiveChatSystem:
 
         return None
 
-    async def _check_check_in_trigger(
-        self, target_id: int, context: ChatContext
-    ) -> Optional[ProactiveResult]:
+    async def _check_check_in_trigger(self, target_id: int, context: ChatContext) -> Optional[ProactiveResult]:
         """主动关怀触发（AI 优先）"""
         check_in_config = self._check_in_config
         check_interval = check_in_config.get("check_interval", 3600)
@@ -1382,9 +1354,7 @@ class ProactiveChatSystem:
 
         return None
 
-    async def _check_ai_trigger(
-        self, target_id: int, context: ChatContext
-    ) -> Optional[ProactiveResult]:
+    async def _check_ai_trigger(self, target_id: int, context: ChatContext) -> Optional[ProactiveResult]:
         """AI触发"""
         if not self.ai_client:
             return None
@@ -1403,20 +1373,14 @@ class ProactiveChatSystem:
             group_name = context.group_name or "未知群"
             member_count = context.member_count
             last_active = context.last_active or "未知"
-            recent_topics = (
-                ", ".join(context.recent_topics) if context.recent_topics else "无"
-            )
+            recent_topics = ", ".join(context.recent_topics) if context.recent_topics else "无"
 
             persona = self._build_persona_context()
             memory_context = self._build_memory_context(target_id)
             rich_context = await self._build_rich_context(target_id)
-            scene_context = (
-                self._build_deep_context(context) if self._scene_enabled else ""
-            )
+            scene_context = self._build_deep_context(context) if self._scene_enabled else ""
 
-            memory_empty = self._load_text_config(
-                "scene.memory_empty", "（无近期对话记录）"
-            )
+            memory_empty = self._load_text_config("scene.memory_empty", "（无近期对话记录）")
             scene_private = self._load_text_config("scene.scene_private", "私聊场景")
             group_warning = (
                 self._load_text_config("scene.group_warning", "")
@@ -1469,13 +1433,9 @@ class ProactiveChatSystem:
             persona = self._build_persona_context()
             memory_context = self._build_memory_context(target_id)
             rich_context = await self._build_rich_context(target_id)
-            scene_context = (
-                self._build_deep_context(context) if self._scene_enabled else ""
-            )
+            scene_context = self._build_deep_context(context) if self._scene_enabled else ""
 
-            memory_empty = self._load_text_config(
-                "scene.memory_empty", "（无近期对话记录）"
-            )
+            memory_empty = self._load_text_config("scene.memory_empty", "（无近期对话记录）")
             scene_private = self._load_text_config("scene.scene_private", "私聊场景")
             group_warning = (
                 self._load_text_config("scene.group_warning", "")
@@ -1511,9 +1471,7 @@ class ProactiveChatSystem:
             )
 
             # response 直接是字符串，不需要 .get() 解析
-            message = (
-                response.strip() if isinstance(response, str) else str(response).strip()
-            )
+            message = response.strip() if isinstance(response, str) else str(response).strip()
 
             if message.upper() == "SKIP" or not message:
                 return None
