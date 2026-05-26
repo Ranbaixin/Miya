@@ -3,10 +3,10 @@
 //   Web API (:8000) + Management API (:9800) + WebSocket
 // ============================================================
 
-const CORE = 'http://localhost:8000';
-const MGMT = 'http://localhost:9800';
-const MGMT_WS = 'ws://localhost:9800/api/v1/ws';
-const API_KEY = 'changeme';
+const CORE = typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_CORE_URL || 'http://localhost:8000';
+const MGMT = typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_MGMT_URL || 'http://localhost:9800';
+const MGMT_WS = typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_MGMT_WS_URL || 'ws://localhost:9800/api/v1/ws';
+const API_KEY = typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_KEY || '';
 
 function hdrs(extra?: HeadersInit): Record<string, string> {
   const base: Record<string, string> = { 'Content-Type': 'application/json', 'X-Undefined-API-Key': API_KEY };
@@ -35,7 +35,7 @@ export async function fetchDashboard() {
   const r = await req<any>(CORE, '/api/status');
   if (r) return r;
   return {
-    identity: { name: '弥娅·阿尔缪斯', version: '7.0.0', uuid: 'edc00845' },
+    identity: { name: '弥娅·阿尔缪斯', version: '8.0.0', uuid: 'edc00845' },
     subsystems: { mlink: true, memorynet: true, toolnet: true, webnet: true, qqnet: true, tts: true, scheduler: true, proactive: true },
     models: [], agents: [],
     emotion: { dominant_emotion: '温暖', intensity: 85, emotions: { '温暖': 85, '依恋': 70, '幸福': 60 }, inner_thought: '', attribution: '', reflection: '', relationship_impact: [] },

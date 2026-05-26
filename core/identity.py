@@ -8,6 +8,8 @@ import uuid
 from datetime import datetime
 from typing import Dict
 
+from core.version import VERSION
+
 
 class Identity:
     """身份系统"""
@@ -16,7 +18,7 @@ class Identity:
         self.uuid = str(uuid.uuid4())
         self.name = "弥娅·阿尔缪斯"
         self.full_name = "Miya Almus"
-        self.version = "6.0.0"
+        self.version = VERSION
         self.birth_time = datetime.now()
         self.awake_time = None
 

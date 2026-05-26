@@ -23,7 +23,7 @@ const IdentityPanel: React.FC<IdentityProps> = ({ identity: propIdentity, curren
   const defaultIdentity = {
     uuid: '961404ba-c8d2-4c78-95db-24fd5a6c51bd',
     name: '弥娅·阿尔缪斯',
-    version: '4.3.0',
+    version: '8.0.0',
     birth_time: '2024-01-01T00:00:00',
     awake_time: '2026-04-17T20:05:25',
     awake_duration: 0,

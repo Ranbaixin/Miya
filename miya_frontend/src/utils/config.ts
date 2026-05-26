@@ -3,7 +3,7 @@ import API from '@/api/core'
 
 export const DEFAULT_CONFIG = {
   system: {
-    version: '5.1.0',
+    version: '8.0.0',
     ai_name: '弥娅',
     active_character: '弥娅',
     voice_enabled: true,

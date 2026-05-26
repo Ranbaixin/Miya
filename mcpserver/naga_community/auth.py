@@ -16,6 +16,7 @@ import asyncio
 import contextlib
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -24,7 +25,7 @@ import httpx
 logger = logging.getLogger("naga_community.auth")
 
 # === 常量 ===
-NAGA_BUSINESS_URL = "http://62.234.131.204:30031"
+NAGA_BUSINESS_URL = os.getenv("NAGA_BUSINESS_URL", "http://62.234.131.204:30031")
 MIYA_DATA_DIR = Path.home() / ".miya" / "naga_community"
 AUTH_SESSION_FILE = MIYA_DATA_DIR / "auth_session.json"
 
@@ -182,13 +183,9 @@ class NagaAuth:
                     if method.upper() == "GET":
                         response = await client.get(url, headers=headers, params=params)
                     elif method.upper() == "POST":
-                        response = await client.post(
-                            url, headers=headers, json=json_data
-                        )
+                        response = await client.post(url, headers=headers, json=json_data)
                     elif method.upper() == "PUT":
-                        response = await client.put(
-                            url, headers=headers, json=json_data
-                        )
+                        response = await client.put(url, headers=headers, json=json_data)
                     elif method.upper() == "DELETE":
                         response = await client.delete(url, headers=headers)
 
@@ -274,19 +271,14 @@ class NagaAuth:
 
         # refresh_token 优先从 Set-Cookie 提取，其次从响应体
         self._refresh_token = (
-            response.cookies.get("refresh_token", "")
-            or data.get("refresh_token", "")
-            or data.get("refreshToken", "")
+            response.cookies.get("refresh_token", "") or data.get("refresh_token", "") or data.get("refreshToken", "")
         )
 
         if not self._access_token:
             return {"success": False, "error": "登录响应中缺少 access_token"}
 
         self._save_session()
-        logger.info(
-            f"[NagaAuth] 登录成功: {username}, "
-            f"refresh_token={'已获取' if self._refresh_token else '未获取'}"
-        )
+        logger.info(f"[NagaAuth] 登录成功: {username}, refresh_token={'已获取' if self._refresh_token else '未获取'}")
 
         return {
             "success": True,

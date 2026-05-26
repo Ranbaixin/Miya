@@ -116,16 +116,16 @@ class WebConfig(BaseModel):
     debug: bool = Field(default=False, description="调试模式")
     cors_origins: List[str] = Field(default=["*"], description="CORS允许的源")
     api_prefix: str = Field(default="/api", description="API前缀")
-    secret_key: str = Field(default="change-me-in-production", description="密钥")
+    secret_key: str = Field(default="", description="密钥（必填，请通过环境变量 SECRET_KEY 设置）")
     access_token_expire_minutes: int = Field(default=30, ge=1, le=1440, description="访问令牌过期时间（分钟）")
 
     @validator("secret_key")
     def validate_secret_key(cls, v):
         """验证密钥"""
-        if v == "change-me-in-production":
-            import warnings
-
-            warnings.warn("使用默认密钥，请在生产环境中修改", stacklevel=2)
+        if not v or v == "change-me-in-production":
+            raise ValueError(
+                "secret_key 未设置或使用了不安全默认值。请设置环境变量 SECRET_KEY（建议使用 openssl rand -hex 32 生成）"
+            )
         return v
 
 

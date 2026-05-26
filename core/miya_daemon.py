@@ -49,7 +49,7 @@ class MiyaDaemon:
          └── Management API (可选)
     """
 
-    VERSION = "7.0.0"
+    VERSION = "8.0.0"
 
     def __init__(self, auto_register: bool = True):
         self._started = False
@@ -86,9 +86,7 @@ class MiyaDaemon:
             self._registry.register(platform.__class__, config)
             logger.info(f"注册平台: {platform_id} ({platform.platform_name})")
 
-    def _create_platform(
-        self, platform_id: str, config: Dict[str, Any]
-    ) -> Optional[BasePlatform]:
+    def _create_platform(self, platform_id: str, config: Dict[str, Any]) -> Optional[BasePlatform]:
         """根据平台ID创建对应的平台实例"""
         from .unified_platform_impl import (
             DingTalkPlatform,
@@ -274,9 +272,7 @@ class MiyaDaemon:
         """注册系统信号处理器"""
         for sig in (signal.SIGINT, signal.SIGTERM):
             try:
-                asyncio.get_event_loop().add_signal_handler(
-                    sig, lambda: asyncio.create_task(self.stop())
-                )
+                asyncio.get_event_loop().add_signal_handler(sig, lambda: asyncio.create_task(self.stop()))
             except NotImplementedError:
                 # Windows 不支持 add_signal_handler，使用传统方式
                 signal.signal(sig, lambda s, f: asyncio.create_task(self.stop()))
@@ -291,9 +287,7 @@ class MiyaDaemon:
         if PlatformEvent.DISCONNECTED.value in event_type:
             logger.info(f"[{pid}] 平台已断开")
         elif PlatformEvent.RECONNECTING.value in event_type:
-            logger.info(
-                f"[{pid}] 正在重连 (第 {event.get('data', {}).get('attempt', '?')} 次)"
-            )
+            logger.info(f"[{pid}] 正在重连 (第 {event.get('data', {}).get('attempt', '?')} 次)")
         elif PlatformEvent.RECONNECT_FAILED.value in event_type:
             logger.error(f"[{pid}] 重连失败，已达最大尝试次数")
 
@@ -317,9 +311,7 @@ class MiyaDaemon:
 
     def get_daemon_status(self) -> Dict[str, Any]:
         """获取守护进程状态"""
-        uptime = (
-            (datetime.now() - self.start_time).total_seconds() if self.start_time else 0
-        )
+        uptime = (datetime.now() - self.start_time).total_seconds() if self.start_time else 0
         return {
             "version": self.VERSION,
             "started": self._started,

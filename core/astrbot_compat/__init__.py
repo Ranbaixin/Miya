@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 # 版本信息
-VERSION = "6.0.0"
+VERSION = "8.0.0"
 
 # 日志系统 - 使用 loguru 作为后端
 try:
@@ -63,9 +63,7 @@ except ImportError:
     if not logger.handlers:
         handler = logging.StreamHandler(sys.stdout)
         handler.setLevel(logging.DEBUG)
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 

@@ -28,7 +28,7 @@ except ImportError:
 class MiyaDashboard:
     """弥娅 Dashboard - WebUI 管理界面"""
 
-    VERSION = "6.0.0"
+    VERSION = "8.0.0"
 
     def __init__(self, core_lifecycle, shutdown_event, webui_dir: str = None):
         from core.miya_config import get_miya_config

@@ -48,7 +48,10 @@ class Metric:
         """
         if os.environ.get("ASTRBOT_DISABLE_METRICS", "0") == "1":
             return
-        base_url = "https://tickstats.soulter.top/api/metric/90a6c2a1"
+        base_url = os.environ.get(
+            "TICKSTATS_METRIC_URL",
+            "https://tickstats.soulter.top/api/metric/90a6c2a1",
+        )
         kwargs["v"] = VERSION
         kwargs["os"] = sys.platform
         payload = {"metrics_data": kwargs}

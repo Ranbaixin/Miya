@@ -2,29 +2,45 @@ import { type IPty, spawn } from '@lydell/node-pty'
 import { resolve } from 'node:path'
 import { readFileSync, existsSync } from 'node:fs'
 import { execSync } from 'node:child_process'
+import { platform, homedir } from 'node:os'
 
 function findNodeExe(): string {
   try {
-    const result = execSync('where node', { timeout: 5000, encoding: 'utf-8' })
-    const paths = result.trim().split('\r\n')
-    for (const p of paths) {
-      if (existsSync(p)) return p
+    if (platform() === 'win32') {
+      const result = execSync('where node', { timeout: 5000, encoding: 'utf-8' })
+      const paths = result.trim().split('\r\n')
+      for (const p of paths) {
+        if (existsSync(p)) return p
+      }
+    } else {
+      const result = execSync('which node || type -p node 2>/dev/null', { timeout: 5000, encoding: 'utf-8', shell: true })
+      const paths = result.trim().split('\n')
+      for (const p of paths) {
+        if (existsSync(p)) return p
+      }
     }
   }
   catch { /* fall through */ }
 
-  const fallbacks = [
-    'D:\\node.exe',
-    'C:\\Program Files\\nodejs\\node.exe',
-    process.env.NODE_EXE,
-    process.env.NODE,
-  ]
+  const isWin = platform() === 'win32'
+  const fallbacks = isWin
+    ? [
+        resolve(homedir(), 'AppData', 'Roaming', 'fnm', 'node-versions', 'v22', 'installation', 'node.exe'),
+        'C:\\Program Files\\nodejs\\node.exe',
+        'D:\\node.exe',
+      ]
+    : [
+        resolve(homedir(), '.nvm', 'versions', 'node', 'v22', 'bin', 'node'),
+        resolve(homedir(), '.local', 'share', 'fnm', 'node-versions', 'v22', 'installation', 'bin', 'node'),
+        '/usr/local/bin/node',
+        '/usr/bin/node',
+      ]
 
-  for (const fb of fallbacks) {
+  for (const fb of [process.env.NODE_EXE, process.env.NODE, ...fallbacks]) {
     if (fb && existsSync(fb)) return fb
   }
 
-  return 'node'
+  return isWin ? 'node.exe' : 'node'
 }
 
 const NODE_EXE = findNodeExe()

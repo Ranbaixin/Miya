@@ -9,10 +9,11 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from core.version import VERSION
+
 logger = logging.getLogger(__name__)
 
 
-VERSION = "6.0.0"
 NAME = "MIYA"
 DESCRIPTION = "MIYA AI Virtual Entity"
 

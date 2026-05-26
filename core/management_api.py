@@ -44,7 +44,7 @@ class ManagementAPI:
         self.daemon = daemon
         self.host = host
         self.port = port
-        self.app = FastAPI(title="Miya Management API", version="7.0.0")
+        self.app = FastAPI(title="Miya Management API", version="8.0.0")
         self._ws_clients: Set[WebSocket] = set()
         self._server: Optional[uvicorn.Server] = None
         self._serve_task: Optional[asyncio.Task] = None
@@ -251,19 +251,13 @@ class ManagementAPI:
 
         if action == "start_platform" and platform_id:
             success = await self.daemon.start_platform(platform_id)
-            await ws.send_json(
-                {"type": "action_result", "action": action, "success": success}
-            )
+            await ws.send_json({"type": "action_result", "action": action, "success": success})
         elif action == "stop_platform" and platform_id:
             success = await self.daemon.stop_platform(platform_id)
-            await ws.send_json(
-                {"type": "action_result", "action": action, "success": success}
-            )
+            await ws.send_json({"type": "action_result", "action": action, "success": success})
         elif action == "restart_platform" and platform_id:
             success = await self.daemon.restart_platform(platform_id)
-            await ws.send_json(
-                {"type": "action_result", "action": action, "success": success}
-            )
+            await ws.send_json({"type": "action_result", "action": action, "success": success})
         elif action == "get_status":
             await ws.send_json(
                 {
@@ -273,9 +267,7 @@ class ManagementAPI:
                 }
             )
         else:
-            await ws.send_json(
-                {"type": "error", "message": f"Unknown action: {action}"}
-            )
+            await ws.send_json({"type": "error", "message": f"Unknown action: {action}"})
 
     async def broadcast_event(self, event: Dict):
         """向所有 WebSocket 客户端广播事件"""

@@ -15,7 +15,7 @@ logger = get_logger("Miya.InitialLoader")
 class MiyaInitialLoader:
     """弥娅初始化加载器 - 初始化并启动所有核心组件和 Dashboard"""
 
-    VERSION = "6.0.0"
+    VERSION = "8.0.0"
 
     def __init__(self, log_broker: LogBroker):
         self.log_broker = log_broker
