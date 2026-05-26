@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from core.text_loader import get_text
+from core.model_pool_manager import TaskType
 
 # 导入辅助模块
 from hub.conversation_context import ConversationContextManager
@@ -42,6 +43,24 @@ logger = logging.getLogger(__name__)
 
 
 _emotion_guidance_cache = None
+_strategy_descriptions_cache = None
+
+
+def _load_strategy_descriptions() -> dict:
+    """加载策略描述映射（带缓存）"""
+    global _strategy_descriptions_cache
+    if _strategy_descriptions_cache is not None:
+        return _strategy_descriptions_cache
+    try:
+        import json
+
+        config_path = Path(__file__).parent.parent / "config" / "text_config.json"
+        with open(config_path, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+        _strategy_descriptions_cache = cfg.get("strategy_descriptions", {})
+    except Exception:
+        _strategy_descriptions_cache = {}
+    return _strategy_descriptions_cache
 
 
 def _get_emotion_guidance() -> dict:
@@ -76,6 +95,44 @@ def _get_emotion_guidance() -> dict:
             "single_model_footer": "请根据上述情感自然回应，展现你真实的情感。\n注意：内心独白仅供你参考理解自己的感受，请不要在回复中直接引用或输出内心独白内容。\n禁止在回复中使用小括号()描述动作，如（微笑）、（点头）等。",
         }
     return _emotion_guidance_cache
+
+
+def _build_integrated_status(
+    strategy_guidance: str,
+    emotion_context: str,
+    diting_strategy: str,
+    diting_style: str,
+    diting_intent: str,
+) -> str:
+    """融合谛听策略与灵魂情绪为一幅完整的弥娅状态画像
+
+    只提供原始感知数据，让 AI 自主融合策略与情绪。
+    """
+    parts = ["\n\n【弥娅当前状态 · 综合感知】\n"]
+
+    sdesc = _load_strategy_descriptions()
+    strategy_desc_map = sdesc.get("response_strategies", {})
+    style_desc_map = sdesc.get("reply_styles", {})
+
+    if diting_intent:
+        strat_desc = strategy_desc_map.get(diting_strategy, diting_strategy)
+        style_desc = style_desc_map.get(diting_style, diting_style)
+        parts.append(
+            f"◆ 对你的感知（谛听）\n　你在表达：{diting_intent}\n　参考方式：{strat_desc}\n　参考语气：{style_desc}"
+        )
+
+    if emotion_context:
+        simplified = (
+            emotion_context.replace("【情感指引】", "")
+            .replace("请根据上述情感自然回应，展现你真实的情感。", "")
+            .replace("注意：内心独白仅供你参考理解自己的感受，请不要在回复中直接引用或输出内心独白内容。", "")
+            .strip()
+        )
+        if simplified:
+            parts.append(f"◆ 我的真实感受（灵魂）\n{simplified}")
+
+    parts.append("（以上是谛听和灵魂感知到的完整画面，请自主融合后自然回应）")
+    return "\n".join(parts)
 
 
 class DecisionHub:
@@ -376,8 +433,6 @@ class DecisionHub:
         # 1. 先检查技术性注入
         if self.security_service:
             try:
-                from core.text_loader import get_text
-
                 platform = perception.get("source", "")
                 if platform in ["qq", "web"]:
                     user_id = str(perception.get("user_id", perception.get("user_id", "unknown")))
@@ -1584,25 +1639,9 @@ class DecisionHub:
                         "confidence": getattr(diting_strategy, "confidence", 0.8),
                     }
                     # 【谛听传递】将策略分析结果转化为自然语言指引，注入下游
-                    strategy_desc_map = {
-                        "full_reply": "完整自然地回复，正常长度即可",
-                        "brief_reply": "简短回复，一句话或几个字就够了",
-                        "multi_turn": "可以分多条消息回复，表达更丰富",
-                        "emoji_only": "只需要发一个表情即可，不必多言",
-                        "tease_reply": "可以调侃、逗弄对方一下",
-                        "question_back": "用问题回应对方的问题",
-                        "like_only": "不要回复文字，点个赞就好",
-                    }
-                    style_desc_map = {
-                        "normal": "正常对话风格",
-                        "casual": "轻松俏皮的语气",
-                        "serious": "认真专注",
-                        "playful": "调皮可爱",
-                        "tsundere": "傲娇、嘴硬心软",
-                        "gentle": "温柔、柔软温和",
-                        "cold": "冷淡、敷衍",
-                        "lazy": "慵懒、懒洋洋",
-                    }
+                    sdesc = _load_strategy_descriptions()
+                    strategy_desc_map = sdesc.get("response_strategies", {})
+                    style_desc_map = sdesc.get("reply_styles", {})
                     _strat = diting_strategy.response_strategy
                     _style = getattr(diting_strategy, "suggested_reply_style", "normal")
                     _intent = getattr(diting_strategy, "message_intent", "chat")
@@ -1786,11 +1825,19 @@ class DecisionHub:
 
             logger.debug(f"[决策层-跨平台] 系统提示词前200字符: {prompt_info['system'][:200]}")
 
-            # 【谛听传递】将策略指引注入 system prompt（协作引擎和单模型路径均生效）
+            # 【弥娅综合感知】谛听策略 + 灵魂情绪 融合为统一画像
             strategy_guidance = context.get("_strategy_guidance", "")
-            if strategy_guidance:
-                prompt_info["system"] = strategy_guidance + "\n" + prompt_info["system"]
-                logger.info(f"[谛听-传递] 策略指引已注入 system prompt ({len(strategy_guidance)} 字符)")
+            msg_strategy = context.get("_message_strategy", {})
+            if strategy_guidance or emotion_context_for_collab:
+                integrated = _build_integrated_status(
+                    strategy_guidance,
+                    emotion_context_for_collab,
+                    msg_strategy.get("strategy", "full_reply"),
+                    msg_strategy.get("style", "normal"),
+                    msg_strategy.get("intent", "chat"),
+                )
+                prompt_info["system"] = integrated + "\n" + prompt_info["system"]
+                logger.info(f"[弥娅-感知] 综合状态指引已注入 system prompt ({len(integrated)} 字符)")
 
             # 设置工具上下文和 ToolNet（符合 MIYA 框架）
             if self.tool_subnet:
@@ -1853,6 +1900,13 @@ class DecisionHub:
                     task_type = await classify_result
                 else:
                     task_type = classify_result
+
+                # 【谛听覆盖】亲密/分享场景不应被技术关键词误导为 code_analysis
+                diting_intent = context.get("_message_strategy", {}).get("intent", "")
+                personal_intents = {"share", "chat", "love", "comfort", "tease", "confession"}
+                if diting_intent in personal_intents and task_type != TaskType.SIMPLE_CHAT:
+                    logger.info(f"[决策层] 谛听覆盖任务分类: {task_type.value} → simple_chat (intent={diting_intent})")
+                    task_type = TaskType.SIMPLE_CHAT
 
                 # 尝试使用协作引擎处理
                 if self.collaboration_engine and self.collaboration_engine.enabled:

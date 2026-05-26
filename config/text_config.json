@@ -2602,5 +2602,25 @@
             "scene_private": "私聊场景",
             "group_warning": "重要：这是群聊场景。只有当话题正在讨论、需要回应、或者群里确实需要你的出现时才发言。避免在不恰当的时候插话。\n\n"
         }
+    },
+    "strategy_descriptions": {
+        "response_strategies": {
+            "full_reply": "自然完整地回复",
+            "brief_reply": "简短回应，一两句即可",
+            "multi_turn": "可以分多条消息表达",
+            "tease_reply": "带一点调侃和俏皮地回应",
+            "question_back": "用问句回过去",
+            "like_only": "不用说话，点个赞就好",
+            "emoji_only": "发个表情就好"
+        },
+        "reply_styles": {
+            "gentle": "温柔",
+            "casual": "轻松俏皮",
+            "normal": "自然日常",
+            "playful": "调皮可爱",
+            "tsundere": "傲娇",
+            "cold": "冷淡",
+            "lazy": "慵懒"
+        }
     }
 }

@@ -118,9 +118,7 @@ class CollaborationResult:
 
 def _load_collaboration_config() -> Dict:
     try:
-        config_path = (
-            Path(__file__).parent.parent / "config" / "multi_model_config.json"
-        )
+        config_path = Path(__file__).parent.parent / "config" / "multi_model_config.json"
         if config_path.exists():
             with open(config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
@@ -217,26 +215,14 @@ class ModelCollaborationEngine:
 
         # 消息文本
         msgs = self.config.get("messages", {})
-        self.msg_error_client_unavailable = msgs.get(
-            "error_client_unavailable", "[错误] AI 客户端不可用"
-        )
-        self.msg_error_call_failed = msgs.get(
-            "error_call_failed", "[AI 调用失败: {error}]"
-        )
+        self.msg_error_client_unavailable = msgs.get("error_client_unavailable", "[错误] AI 客户端不可用")
+        self.msg_error_call_failed = msgs.get("error_call_failed", "[AI 调用失败: {error}]")
         self.msg_empty_response = msgs.get("empty_response", "[空响应]")
-        self.msg_fallback_analysis = msgs.get(
-            "fallback_analysis", "分析阶段跳过（无可用模型）"
-        )
-        self.msg_fallback_creation = msgs.get(
-            "fallback_creation", "创作阶段跳过（无可用模型）"
-        )
-        self.msg_reasoning_single = msgs.get(
-            "reasoning_single", "单模型处理: {model_id}"
-        )
+        self.msg_fallback_analysis = msgs.get("fallback_analysis", "分析阶段跳过（无可用模型）")
+        self.msg_fallback_creation = msgs.get("fallback_creation", "创作阶段跳过（无可用模型）")
+        self.msg_reasoning_single = msgs.get("reasoning_single", "单模型处理: {model_id}")
         self.msg_reasoning_chain = msgs.get("reasoning_chain", "链式协作: {models}")
-        self.msg_reasoning_parallel = msgs.get(
-            "reasoning_parallel", "并行投票: {models}"
-        )
+        self.msg_reasoning_parallel = msgs.get("reasoning_parallel", "并行投票: {models}")
         self.msg_reasoning_role = msgs.get("reasoning_role", "角色分工: {models}")
         self.msg_reasoning_degraded = msgs.get("reasoning_degraded", "降级: {error}")
 
@@ -303,9 +289,7 @@ class ModelCollaborationEngine:
                 "persona_prompt": "",
             }
 
-    async def _generate_emotion_context(
-        self, message: str, context: Optional[Dict]
-    ) -> str:
+    async def _generate_emotion_context(self, message: str, context: Optional[Dict]) -> str:
         """
         生成情绪上下文（统一方法，消除重复代码）
 
@@ -430,9 +414,7 @@ class ModelCollaborationEngine:
         # 终端输出：协作开始
         print(TerminalFormatter.separator("协作引擎"))
         print(TerminalFormatter.collaboration_start(mode.value, complexity.value))
-        print(
-            f"{TerminalFormatter.DIM}  任务: {task_type} | 平台: {platform}{TerminalFormatter.RESET}"
-        )
+        print(f"{TerminalFormatter.DIM}  任务: {task_type} | 平台: {platform}{TerminalFormatter.RESET}")
 
         try:
             if mode == CollaborationMode.SINGLE:
@@ -520,9 +502,7 @@ class ModelCollaborationEngine:
 
         return result
 
-    async def _assess_complexity(
-        self, message: str, task_type: str, platform: str
-    ) -> ComplexityLevel:
+    async def _assess_complexity(self, message: str, task_type: str, platform: str) -> ComplexityLevel:
         score = 1
 
         msg_len = len(message) if message else 0
@@ -558,9 +538,7 @@ class ModelCollaborationEngine:
         score = max(score_min, min(score_max, score))
         return ComplexityLevel(score)
 
-    def _select_mode(
-        self, complexity: ComplexityLevel, task_type: str, platform: str
-    ) -> CollaborationMode:
+    def _select_mode(self, complexity: ComplexityLevel, task_type: str, platform: str) -> CollaborationMode:
         terminal_keys = self.platform_keywords.get("terminal", ["terminal"])
         qq_keys = self.platform_keywords.get("qq", ["qq"])
 
@@ -621,7 +599,6 @@ class ModelCollaborationEngine:
         # 思考过程
         from core.terminal_formatter import TerminalFormatter
 
-
         # 仅在终端模式下显示详细步骤，QQ等其他平台不显示
         if platform == "terminal":
             print(TerminalFormatter.chain_step(1, model_config.id, "思考分析"))
@@ -635,9 +612,7 @@ class ModelCollaborationEngine:
             final_user_prompt = ai_emotion_context
 
         # 正式回复
-        response = await self._call_client(
-            client, system_prompt or "", final_user_prompt, tools
-        )
+        response = await self._call_client(client, system_prompt or "", final_user_prompt, tools)
 
         # 获取AI的思考过程
         ai_thinking = ""
@@ -753,11 +728,7 @@ class ModelCollaborationEngine:
 
         response = self._clean_thinking_content(response)
 
-        models_used = (
-            [m.id for m in chain_models[:3]]
-            if len(chain_models) >= 3
-            else [m.id for m in chain_models]
-        )
+        models_used = [m.id for m in chain_models[:3]] if len(chain_models) >= 3 else [m.id for m in chain_models]
         return CollaborationResult(
             response=response,
             mode=CollaborationMode.CHAIN,
@@ -792,16 +763,12 @@ class ModelCollaborationEngine:
         """阶段1：思考——使用当前人格的视角进行分析"""
         client_1 = self._create_client(model_1, factory, None, context)
         persona_info = self._get_persona_info()
-        thinking_system_prompt = (
-            f"你是{persona_info['persona_name']}。{persona_info['persona_description']}"
-        )
+        thinking_system_prompt = f"你是{persona_info['persona_name']}。{persona_info['persona_description']}"
         thinking_prompt = self.thinking_prompt_template.format(
             task_type=task_type,
             message=message,
             persona_name=persona_info["persona_name"],
-            persona_prompt=persona_info["persona_prompt"][:500]
-            if persona_info["persona_prompt"]
-            else "",
+            persona_prompt=persona_info["persona_prompt"][:500] if persona_info["persona_prompt"] else "",
         )
 
         # v7.0: 注入情绪上下文到思考阶段，让思考模型理解当前情感基调
@@ -810,11 +777,7 @@ class ModelCollaborationEngine:
             thinking_prompt += f"\n\n【当前情感上下文】\n{emotion_ctx}"
 
         if platform == "terminal":
-            print(
-                TerminalFormatter.chain_step(
-                    1, model_1.id, f"思考分析({persona_info['persona_name']})"
-                )
-            )
+            print(TerminalFormatter.chain_step(1, model_1.id, f"思考分析({persona_info['persona_name']})"))
 
         return await self._call_client(
             client_1,
@@ -837,9 +800,7 @@ class ModelCollaborationEngine:
         if len(chain_models) >= 3:
             model_2 = chain_models[1]
             client_2 = self._create_client(model_2, factory, None, context)
-            reasoning_prompt = self.reasoning_prompt_template.format(
-                thinking_result=thinking_result, message=message
-            )
+            reasoning_prompt = self.reasoning_prompt_template.format(thinking_result=thinking_result, message=message)
             if platform == "terminal":
                 print(TerminalFormatter.chain_step(2, model_2.id, "推理揣摩"))
             reasoning_result = await self._call_client(
@@ -884,15 +845,12 @@ class ModelCollaborationEngine:
                     self.output_prompt_template[:100],
                     fmt_err,
                 )
-                base_output_prompt = (
-                    f"推理结果：{reasoning_result}\n\n用户问题：{user_prompt}"
-                )
+                base_output_prompt = f"推理结果：{reasoning_result}\n\n用户问题：{user_prompt}"
 
-            output_prompt = (
-                base_output_prompt + ai_emotion_context
-                if ai_emotion_context
-                else base_output_prompt
-            )
+            if ai_emotion_context:
+                output_prompt = ai_emotion_context + "\n\n" + base_output_prompt
+            else:
+                output_prompt = base_output_prompt
 
             if platform == "terminal":
                 print(TerminalFormatter.chain_step(3, output_model.id, "生成回复"))
@@ -909,18 +867,12 @@ class ModelCollaborationEngine:
                 self.msg_empty_response,
             ]:
                 logger.warning("[协作引擎] 第三阶段模型响应为空，使用推理结果")
-                response = (
-                    reasoning_result if reasoning_result else self.msg_empty_response
-                )
+                response = reasoning_result if reasoning_result else self.msg_empty_response
 
             return response
         except Exception as e:
             logger.error("[协作引擎] 第三阶段执行失败: %s", e)
-            return (
-                reasoning_result
-                if reasoning_result
-                else self.msg_error_call_failed.format(error=e)
-            )
+            return reasoning_result if reasoning_result else self.msg_error_call_failed.format(error=e)
 
     async def _execute_parallel(
         self,
@@ -1023,11 +975,10 @@ class ModelCollaborationEngine:
             thinking_result=thinking_result, message=message
         )
         # 注入情绪上下文
-        output_prompt = (
-            base_output_prompt + ai_emotion_context
-            if ai_emotion_context
-            else base_output_prompt
-        )
+        if ai_emotion_context:
+            output_prompt = ai_emotion_context + "\n\n" + base_output_prompt
+        else:
+            output_prompt = base_output_prompt
 
         final_response = await self._call_client(
             output_client,
@@ -1048,9 +999,7 @@ class ModelCollaborationEngine:
             mode=CollaborationMode.PARALLEL,
             complexity=ComplexityLevel.COMPLEX,
             models_used=[parallel_model_ids[0], parallel_model_ids[1]],
-            token_estimate=self._estimate_tokens(
-                message, thinking_result + final_response
-            ),
+            token_estimate=self._estimate_tokens(message, thinking_result + final_response),
             reasoning=f"思考-输出分离: {parallel_model_ids[0]}思考 → {parallel_model_ids[1]}输出",
             thinking=thinking_result,
         )
@@ -1064,9 +1013,7 @@ class ModelCollaborationEngine:
             mode=CollaborationMode.PARALLEL,
             complexity=ComplexityLevel.COMPLEX,
             models_used=models_used,
-            token_estimate=sum(
-                self._estimate_tokens(message, resp) for _, resp in model_responses
-            ),
+            token_estimate=sum(self._estimate_tokens(message, resp) for _, resp in model_responses),
             reasoning=self.msg_reasoning_parallel.format(
                 models=", ".join(models_used),
             ),
@@ -1129,9 +1076,7 @@ class ModelCollaborationEngine:
         creator_config = roles.get("creator")
         if creator_config and _get_api_key(creator_config):
             print(TerminalFormatter.role_step("creator", creator_config.id))
-            creator_client = self._create_client(
-                creator_config, factory, tools, context
-            )
+            creator_client = self._create_client(creator_config, factory, tools, context)
             draft = await self._call_client(
                 creator_client,
                 system_prompt=system_prompt or creator_prompt_text,
@@ -1151,19 +1096,16 @@ class ModelCollaborationEngine:
         reviewer_config = roles.get("reviewer")
         if reviewer_config and _get_api_key(reviewer_config):
             print(TerminalFormatter.role_step("reviewer", reviewer_config.id))
-            reviewer_client = self._create_client(
-                reviewer_config, factory, None, context
-            )
+            reviewer_client = self._create_client(reviewer_config, factory, None, context)
             base_reviewer_prompt = reviewer_template.format(
                 message=message,
                 draft=draft,
             )
             # 注入情绪上下文
-            final_reviewer_prompt = (
-                base_reviewer_prompt + ai_emotion_context
-                if ai_emotion_context
-                else base_reviewer_prompt
-            )
+            if ai_emotion_context:
+                final_reviewer_prompt = ai_emotion_context + "\n\n" + base_reviewer_prompt
+            else:
+                final_reviewer_prompt = base_reviewer_prompt
             final_response = await self._call_client(
                 reviewer_client,
                 system_prompt=reviewer_prompt_text,
@@ -1174,9 +1116,7 @@ class ModelCollaborationEngine:
             final_response = draft
 
         models_used = [
-            config.id
-            for config in [analyst_config, creator_config, reviewer_config]
-            if config and _get_api_key(config)
+            config.id for config in [analyst_config, creator_config, reviewer_config] if config and _get_api_key(config)
         ]
 
         return CollaborationResult(
@@ -1226,8 +1166,7 @@ class ModelCollaborationEngine:
         arbiter_client = self._create_client(arbiter_config, factory, None, context)
 
         comparison_text = self.comparison_separator.join(
-            self.comparison_format.format(model_id=mid, response=resp)
-            for mid, resp in model_responses
+            self.comparison_format.format(model_id=mid, response=resp) for mid, resp in model_responses
         )
 
         arbiter_prompt = self.arbiter_user_template.format(
@@ -1291,9 +1230,7 @@ class ModelCollaborationEngine:
                 reasoning=f"回退单模型失败: {str(e)[:100]}",
             )
 
-    def _get_role_models(
-        self, task_type: str, platform: str
-    ) -> Dict[str, Optional[ModelConfig]]:
+    def _get_role_models(self, task_type: str, platform: str) -> Dict[str, Optional[ModelConfig]]:
         mapping = self.role_mapping.get(task_type, self.default_role_assignment)
 
         roles = {}
@@ -1309,13 +1246,9 @@ class ModelCollaborationEngine:
     def _get_endpoint(self, platform: str) -> str:
         return self.endpoint_map.get(platform, self.default_endpoint)
 
-    def _create_client(
-        self, model_config: ModelConfig, factory=None, tools=None, context=None
-    ):
+    def _create_client(self, model_config: ModelConfig, factory=None, tools=None, context=None):
         # 【优化】使用缓存避免重复创建 HTTP 连接
-        cache_key = (
-            f"{model_config.provider}:{model_config.name}:{model_config.base_url}"
-        )
+        cache_key = f"{model_config.provider}:{model_config.name}:{model_config.base_url}"
         if cache_key in self._client_cache:
             client = self._client_cache[cache_key]
             if tools:
@@ -1392,10 +1325,13 @@ class ModelCollaborationEngine:
 
         first_line = lines[0].strip()
         # 检测英文/代码风格前缀：以 [ 开头且不含中文
-        if first_line.startswith("[") and not re.search(r"[\u4e00-\u9fff]", first_line) or re.match(r"^[A-Za-z][a-z]+\s", first_line) and not re.search(
-            r"[\u4e00-\u9fff]", first_line
-        ) or re.match(r"^[`#/\-]+", first_line) and not re.search(
-            r"[\u4e00-\u9fff]", first_line
+        if (
+            first_line.startswith("[")
+            and not re.search(r"[\u4e00-\u9fff]", first_line)
+            or re.match(r"^[A-Za-z][a-z]+\s", first_line)
+            and not re.search(r"[\u4e00-\u9fff]", first_line)
+            or re.match(r"^[`#/\-]+", first_line)
+            and not re.search(r"[\u4e00-\u9fff]", first_line)
         ):
             lines.pop(0)
             while lines and not lines[0].strip():
