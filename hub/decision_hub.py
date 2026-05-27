@@ -3678,7 +3678,7 @@ class DecisionHub:
             "文字游戏": "visual_novel",
         }
 
-        game_id = game_map.get(arg, None)
+        game_id = game_map.get(arg)
 
         result = await engine.start_game(game_id=game_id, auto_speak=auto_speak)
         msg = result.get("message", "已启动")

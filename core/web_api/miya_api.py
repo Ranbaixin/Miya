@@ -912,7 +912,7 @@ class MiyaAPI:
                 user_id = request_data.get("user_id") or session_id
                 platform = request_data.get("platform", "web")
 
-                image_data = request_data.get("image_data", None)
+                image_data = request_data.get("image_data")
                 print(
                     f"[DEBUG chat/send] user_id={user_id}, platform={platform}, message={message[:30]}, has_image={bool(image_data)}"
                 )
@@ -945,7 +945,7 @@ class MiyaAPI:
 
                 from mlink.message import Message
 
-                usg_id = request_data.get("usg_id", None)
+                usg_id = request_data.get("usg_id")
                 lookup_id = usg_id or user_id
 
                 perception = {

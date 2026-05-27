@@ -7,11 +7,11 @@
   python scripts/test_visual_novel.py --dry
 
   # 2. 用测试图片跑真实视觉分析（需要设置 MIYA_TEST_PIC_PATH）
-  set MIYA_TEST_PIC_PATH=D:\screenshots\galgame_screen.png
+  set MIYA_TEST_PIC_PATH=D:/screenshots/galgame_screen.png
   python scripts/test_visual_novel.py --vision
 
   # 3. 跑全部
-  set MIYA_TEST_PIC_PATH=D:\screenshots\galgame_screen.png
+  set MIYA_TEST_PIC_PATH=D:/screenshots/galgame_screen.png
   python scripts/test_visual_novel.py --all
 """
 
@@ -243,12 +243,8 @@ async def main():
     for name, r in results.items():
         s = r.get("status", "?")
         extra = ""
-        if s == "skipped":
+        if s in ("skipped", "error"):
             extra = f" — {r.get('reason', '')}"
-        elif s == "error":
-            extra = f" — {r.get('reason', '')}"
-        elif s == "ok":
-            extra = ""
         logger.info("  %-12s: %s%s", name, s, extra)
 
 
