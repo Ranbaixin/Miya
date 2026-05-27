@@ -6,6 +6,13 @@
       "env": {},
       "disabled": false,
       "autoApprove": []
+    },
+    "game-play": {
+      "command": "python",
+      "args": ["-c", "import asyncio; from mcpserver.game_play.service import GamePlayService; asyncio.run(GamePlayService().serve())"],
+      "env": {},
+      "disabled": true,
+      "autoApprove": []
     }
   }
 }

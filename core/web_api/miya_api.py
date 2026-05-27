@@ -912,7 +912,29 @@ class MiyaAPI:
                 user_id = request_data.get("user_id") or session_id
                 platform = request_data.get("platform", "web")
 
-                print(f"[DEBUG chat/send] user_id={user_id}, platform={platform}, message={message[:30]}")
+                image_data = request_data.get("image_data", None)
+                print(
+                    f"[DEBUG chat/send] user_id={user_id}, platform={platform}, message={message[:30]}, has_image={bool(image_data)}"
+                )
+
+                # 吟美虚拟主播命令拦截
+                if message in ("/主播 on", "/主播 off"):
+                    try:
+                        from plugins.yinmei.core.live_stream_hub import LiveStreamHub
+
+                        hub = LiveStreamHub()
+                        if message == "/主播 on":
+                            hub.enable()
+                            return {
+                                "success": True,
+                                "response": "虚拟主播已开启",
+                                "content": "沉浸式AI虚拟主播系统已就绪",
+                            }
+                        else:
+                            hub.disable()
+                            return {"success": True, "response": "虚拟主播已关闭", "content": "虚拟主播系统已休眠"}
+                    except Exception as e:
+                        print(f"[yinmei] 命令拦截异常: {e}")
 
                 if not self.decision_hub:
                     return {
@@ -923,16 +945,48 @@ class MiyaAPI:
 
                 from mlink.message import Message
 
+                usg_id = request_data.get("usg_id", None)
+                lookup_id = usg_id or user_id
+
                 perception = {
                     "platform": platform,
                     "content": message,
-                    "user_id": user_id,
-                    "sender_name": f"{platform}用户-{user_id[:8]}" if user_id else f"{platform}用户",
+                    "user_id": lookup_id,
+                    "usg_id": lookup_id,
+                    "sender_name": f"{platform}用户-{lookup_id[:8]}" if lookup_id else f"{platform}用户",
                     "message_type": "private",
                 }
 
+                # 处理悬浮球截图：base64 → 视觉模型分析 → 注入上下文
+                if image_data:
+                    try:
+                        from core.game_play.engine import get_game_play_engine
+                        from core.text_loader import get_text
+
+                        engine = get_game_play_engine()
+                        await engine.initialize()
+                        analysis = await engine._call_vision(
+                            get_text(
+                                "screen_vision.describe_prompt",
+                                "用中文描述当前屏幕上的内容。",
+                            ),
+                            image_data,
+                            message or get_text("screen_vision.describe_default_query", "描述当前画面"),
+                        )
+                        if analysis:
+                            perception["_image_analysis"] = {
+                                "success": True,
+                                "description": analysis,
+                                "labels": [],
+                                "model": "vision",
+                            }
+                            perception["image_analysis"] = perception["_image_analysis"]
+                            logger.info(f"[WebChat] 悬浮球截图分析: {analysis[:80]}...")
+                    except Exception as e:
+                        logger.warning(f"[WebChat] 截图分析失败: {e}")
+
                 # 注入 is_owner 标记（桌面端超管权限）
-                check_id = str(user_id) if user_id else ""
+                check_id = str(lookup_id) if lookup_id else ""
                 if check_id:
                     try:
                         from core.unified_permission import get_permission_engine

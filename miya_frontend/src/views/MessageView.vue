@@ -143,6 +143,7 @@ async function chatStreamInternal(content: string, options?: { skill?: string, i
     platform: 'desktop',
     user_id: CONFIG.value.ui?.owner_id || '1523878699',
     usg_id: CONFIG.value.ui?.desktop_usg_id || 'desktop_user',
+    image_data: (options?.images?.length ?? 0) > 0 ? options!.images![0] : undefined,
   }).then((res: any) => {
     // 解析响应 (可能是 SSE 或 JSON)
     let responseText = ''

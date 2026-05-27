@@ -23,6 +23,9 @@ class SharedData:
         self.mode: list = c.get("mode", ["api"])
         self.port: int = c.get("port", 1800)
 
+        # ---- 主开关 ----
+        self.yinmei_enabled = True
+
         # ---- LLM 聊天 ----
         self.QuestionList = queue.Queue()
         self.QuestionName = queue.Queue()

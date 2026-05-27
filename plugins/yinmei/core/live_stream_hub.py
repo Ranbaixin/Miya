@@ -97,6 +97,18 @@ class LiveStreamHub:
 
     def process_message(self, traceid: str, query: str, uid: str, username: str):
         """处理来自任意平台的输入消息"""
+
+        # 主开关命令 — 无论开关状态都允许
+        if query == "/主播 on" or query == "/主播 off":
+            self._handle_power_toggle(traceid, query, uid, username)
+            return
+
+        if not self._data.yinmei_enabled:
+            # 关闭模式下：只保留表情分析 + 聊天，跳过主播功能
+            self._emote.execute_async(query)
+            self._handle_chat(traceid, query, uid, username)
+            return
+
         query = self._nsfw.filter_text(query)
         logger.info(f"[{traceid}]消息捕获 [{username}]: {query}")
 
@@ -144,6 +156,22 @@ class LiveStreamHub:
         self._handle_chat(traceid, query, uid, username)
 
     # ============ 命令处理 ============
+
+    def _handle_power_toggle(self, traceid: str, query: str, uid: str, username: str):
+        if query == "/主播 on":
+            self.enable()
+            logger.info(f"[{traceid}] 虚拟主播已开启")
+        elif query == "/主播 off":
+            self.disable()
+            logger.info(f"[{traceid}] 虚拟主播已关闭")
+
+    def enable(self):
+        self._data.yinmei_enabled = True
+        self._bilibili.start()
+
+    def disable(self):
+        self._data.yinmei_enabled = False
+        self._bilibili.stop()
 
     def _handle_command(self, traceid: str, query: str, uid: str, username: str) -> bool:
         if query == "\\stop":

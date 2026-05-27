@@ -86,8 +86,7 @@ class MemoryCommandHandler:
                 break
 
         if not action:
-            action = "search"
-            query = cmd
+            return None
 
         try:
             if action == "stats":

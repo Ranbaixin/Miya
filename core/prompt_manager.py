@@ -52,18 +52,12 @@ class PromptManager:
                 # 加载提示词相关配置
                 prompt_cfg = self.text_config.get("prompt_manager", {})
                 if prompt_cfg:
-                    self.user_prompt_template = prompt_cfg.get(
-                        "user_prompt_template", self.user_prompt_template
-                    )
-                    self.memory_context_enabled = prompt_cfg.get(
-                        "memory_context_enabled", self.memory_context_enabled
-                    )
+                    self.user_prompt_template = prompt_cfg.get("user_prompt_template", self.user_prompt_template)
+                    self.memory_context_enabled = prompt_cfg.get("memory_context_enabled", self.memory_context_enabled)
                     self.memory_context_max_count = prompt_cfg.get(
                         "memory_context_max_count", self.memory_context_max_count
                     )
-                    self.sender_identity_prefix = prompt_cfg.get(
-                        "sender_identity_prefix", self.sender_identity_prefix
-                    )
+                    self.sender_identity_prefix = prompt_cfg.get("sender_identity_prefix", self.sender_identity_prefix)
 
                 logger.info("[PromptManager] 文本配置加载成功")
             else:
@@ -148,9 +142,7 @@ class PromptManager:
         self.user_prompt_template = template
         return True
 
-    def generate_user_prompt(
-        self, user_input: str, context: Optional[Dict] = None
-    ) -> str:
+    def generate_user_prompt(self, user_input: str, context: Optional[Dict] = None) -> str:
         """
         生成用户提示词
 
@@ -168,9 +160,7 @@ class PromptManager:
             user_display = context["sender_name"]
             if context.get("user_id"):
                 user_display = f"{user_display} (QQ: {context['user_id']})"
-            sender_prefix = self.sender_identity_prefix.replace(
-                "{sender_name}", user_display
-            )
+            sender_prefix = self.sender_identity_prefix.replace("{sender_name}", user_display)
 
         prompt = sender_prefix + self.user_prompt_template.format(user_input=user_input)
 
@@ -183,9 +173,7 @@ class PromptManager:
                 platform = context["platform"]
                 if platform == "terminal":
                     context_parts.append("【当前环境：终端模式】")
-                    context_parts.append(
-                        "你现在在终端环境中，拥有完全的命令行控制权，可以直接执行系统命令。"
-                    )
+                    context_parts.append("你现在在终端环境中，拥有完全的命令行控制权，可以直接执行系统命令。")
                     context_parts.append("【工具调用判断标准】：")
                     context_parts.append(
                         "- 只有当用户明确要求执行系统操作时才调用工具（如：'查看当前目录'、'打开浏览器'、'运行脚本'等）"
@@ -196,20 +184,12 @@ class PromptManager:
                     context_parts.append(
                         "- 只有以英文命令词开头的输入才考虑调用工具（如：ls, pwd, cd, ps, python, git, npm等）"
                     )
-                    context_parts.append(
-                        "- 中文输入如果不是明确要求执行操作，优先用自然语言回复"
-                    )
+                    context_parts.append("- 中文输入如果不是明确要求执行操作，优先用自然语言回复")
                     context_parts.append("【重要】示例：")
-                    context_parts.append(
-                        "- 用户说'ls' → 调用 terminal_command(command='ls')"
-                    )
-                    context_parts.append(
-                        "- 用户说'猜猜我是谁' → 直接回复，不要调用工具"
-                    )
+                    context_parts.append("- 用户说'ls' → 调用 terminal_command(command='ls')")
+                    context_parts.append("- 用户说'猜猜我是谁' → 直接回复，不要调用工具")
                     context_parts.append("- 用户说'你好' → 直接回复，不要调用工具")
-                    context_parts.append(
-                        "- 用户说'查看当前目录' → 调用 terminal_command(command='ls')"
-                    )
+                    context_parts.append("- 用户说'查看当前目录' → 调用 terminal_command(command='ls')")
                     context_parts.append("")
                     context_parts.append("【记忆管理规则】：")
                     context_parts.append(
@@ -234,9 +214,7 @@ class PromptManager:
                         group_name = context.get("group_name", "")
                         context_parts.append("【当前环境：QQ群聊】")
                         if group_name:
-                            context_parts.append(
-                                f"当前所在群聊：{group_name} (群号: {group_id})"
-                            )
+                            context_parts.append(f"当前所在群聊：{group_name} (群号: {group_id})")
                         else:
                             context_parts.append(f"当前所在群号: {group_id}")
                         context_parts.append(
@@ -247,9 +225,7 @@ class PromptManager:
                         context_parts.append("注意：这是私聊环境，只有你和用户两人。")
                     else:
                         context_parts.append("【当前环境：QQ平台】")
-                    context_parts.append(
-                        "你现在在QQ平台上，可以发送消息、点赞等，但不能执行系统命令。"
-                    )
+                    context_parts.append("你现在在QQ平台上，可以发送消息、点赞等，但不能执行系统命令。")
                 elif platform == "pc_ui":
                     context_parts.append("【当前环境：PC界面】")
                     context_parts.append("你现在在PC界面中，可以操作文件、打开应用等。")
@@ -282,13 +258,9 @@ class PromptManager:
                         tools_desc = []
                         for tool in available_tools:
                             if isinstance(tool, dict):
-                                tools_desc.append(
-                                    f"- {tool.get('name')}: {tool.get('description')}"
-                                )
+                                tools_desc.append(f"- {tool.get('name')}: {tool.get('description')}")
                                 if tool.get("examples"):
-                                    tools_desc.append(
-                                        f"  示例: {'; '.join(tool.get('examples', []))}"
-                                    )
+                                    tools_desc.append(f"  示例: {'; '.join(tool.get('examples', []))}")
                             else:
                                 tools_desc.append(f"- {tool}")
                         if tools_desc:
@@ -303,12 +275,8 @@ class PromptManager:
                 bot_qq = context.get("bot_qq")
                 filtered_at_list = [qq for qq in at_list if qq != bot_qq]
                 if filtered_at_list:
-                    context_parts.append(
-                        f"消息中@的用户QQ号：{', '.join(map(str, filtered_at_list))}"
-                    )
-                    context_parts.append(
-                        "提示：如果要给这些用户点赞，直接使用qq_like工具，目标QQ号就是上面的号码"
-                    )
+                    context_parts.append(f"消息中@的用户QQ号：{', '.join(map(str, filtered_at_list))}")
+                    context_parts.append("提示：如果要给这些用户点赞，直接使用qq_like工具，目标QQ号就是上面的号码")
 
             # 添加工具执行结果（如果有）
             if context.get("tool_result"):
@@ -337,9 +305,7 @@ class PromptManager:
                     context_parts.append("简短回应。表示知道了。")
                 elif "❌" in tool_result:
                     context_parts.append(f"操作执行失败：{tool_result}")
-                    context_parts.append(
-                        "请用关心、温暖的语气安慰用户，并表示愿意帮助解决问题。"
-                    )
+                    context_parts.append("请用关心、温暖的语气安慰用户，并表示愿意帮助解决问题。")
 
             if context_parts:
                 prompt += f"\n\n{' '.join(context_parts)}"
@@ -387,25 +353,19 @@ class PromptManager:
                     system_prompt = template.render(**additional_context)
                     logger.debug("[PromptManager] Jinja2模板渲染成功")
                 except Exception as e:
-                    logger.warning(
-                        f"[PromptManager] Jinja2模板渲染失败: {e}, 回退到简单替换"
-                    )
+                    logger.warning(f"[PromptManager] Jinja2模板渲染失败: {e}, 回退到简单替换")
                     # 回退到简单字符串替换
                     for key, value in additional_context.items():
                         placeholder = "{" + key + "}"
                         if placeholder in system_prompt:
-                            system_prompt = system_prompt.replace(
-                                placeholder, str(value)
-                            )
+                            system_prompt = system_prompt.replace(placeholder, str(value))
             else:
                 # 简单字符串替换
                 for key, value in additional_context.items():
                     placeholder = "{" + key + "}"
                     if placeholder in system_prompt:
                         system_prompt = system_prompt.replace(placeholder, str(value))
-                        logger.debug(
-                            f"[PromptManager] 替换占位符 {placeholder} = {value}"
-                        )
+                        logger.debug(f"[PromptManager] 替换占位符 {placeholder} = {value}")
 
         # 添加防护提示（如果有注入风险）
         if additional_context and additional_context.get("protection_prompt"):
@@ -420,9 +380,7 @@ class PromptManager:
         if self.memory_context_enabled and memory_context:
             memory_text = self._format_memory_context(memory_context)
             user_prompt = memory_text + "\n\n" + user_prompt
-            logger.info(
-                f"[PromptManager] 已添加记忆上下文，长度: {len(memory_context)} 条记录"
-            )
+            logger.info(f"[PromptManager] 已添加记忆上下文，长度: {len(memory_context)} 条记录")
             logger.debug(f"[PromptManager] 记忆上下文内容: {memory_text[:200]}")
         else:
             logger.info(
@@ -471,18 +429,12 @@ class PromptManager:
                 import json
                 from pathlib import Path
 
-                config_path = (
-                    Path(__file__).parent.parent / "config" / "text_config.json"
-                )
+                config_path = Path(__file__).parent.parent / "config" / "text_config.json"
                 if config_path.exists():
                     with open(config_path, "r", encoding="utf-8") as f:
                         full_config = json.load(f)
-                    templates = full_config.get("search_strategy", {}).get(
-                        "prompt_templates", {}
-                    )
-                    search_prefix = templates.get(
-                        "search_context_prefix", search_prefix
-                    )
+                    templates = full_config.get("search_strategy", {}).get("prompt_templates", {})
+                    search_prefix = templates.get("search_context_prefix", search_prefix)
             except Exception:
                 pass
 
@@ -502,11 +454,13 @@ class PromptManager:
             if group_chat_context:
                 extra_context += group_chat_context + "\n"
 
+            screen_context = additional_context.get("screen_context", "")
+            if screen_context:
+                extra_context += "\n[弥娅看向屏幕] " + screen_context + "\n"
+
             if extra_context:
                 user_prompt = extra_context + user_prompt
-                logger.info(
-                    "[PromptManager] 已添加消息上下文（感知/搜索/引用/文件/媒体/图片/群聊）"
-                )
+                logger.info("[PromptManager] 已添加消息上下文（感知/搜索/引用/文件/媒体/图片/群聊）")
 
         return {"system": system_prompt, "user": user_prompt}
 
@@ -612,9 +566,7 @@ class PromptManager:
             with open(json_path, "r", encoding=Encoding.UTF8) as f:
                 config = json.load(f)
 
-            self.user_prompt_template = config.get(
-                "user_prompt_template", self.user_prompt_template
-            )
+            self.user_prompt_template = config.get("user_prompt_template", self.user_prompt_template)
             self.memory_context_enabled = config.get("memory_context_enabled", False)
             self.memory_context_max_count = config.get("memory_context_max_count", 5)
 

@@ -476,6 +476,26 @@ class WebAPI:
             import asyncio
             import json
 
+            # 吟美虚拟主播命令拦截
+            if request.message in ("/主播 on", "/主播 off"):
+                try:
+                    from plugins.yinmei.core.live_stream_hub import LiveStreamHub
+
+                    hub = LiveStreamHub()
+                    if request.message == "/主播 on":
+                        hub.enable()
+                        msg = "虚拟主播已开启"
+                    else:
+                        hub.disable()
+                        msg = "虚拟主播已关闭"
+                except Exception:
+                    msg = "虚拟主播命令执行失败"
+
+                async def toggle_sse():
+                    yield f"data: {json.dumps({'content': msg, 'done': True})}\n\n"
+
+                return StreamingResponse(toggle_sse(), media_type="text/event-stream")
+
             session_id = request.session_id or "default"
             platform = request.platform or "web"
 
@@ -511,6 +531,34 @@ class WebAPI:
                         "sendg_name": sendg_name,
                         "message_type": "private",
                     }
+
+                    # 处理悬浮球截图：base64 → 视觉模型分析 → 注入上下文
+                    if request.image_data:
+                        try:
+                            from core.game_play.engine import get_game_play_engine
+                            from core.text_loader import get_text
+
+                            engine = get_game_play_engine()
+                            await engine.initialize()
+                            analysis = await engine._call_vision(
+                                get_text(
+                                    "screen_vision.describe_prompt",
+                                    "用中文描述当前屏幕上的内容。",
+                                ),
+                                request.image_data,
+                                request.message or get_text("screen_vision.describe_default_query", "描述当前画面"),
+                            )
+                            if analysis:
+                                perception["_image_analysis"] = {
+                                    "success": True,
+                                    "description": analysis,
+                                    "labels": [],
+                                    "model": "vision",
+                                }
+                                perception["image_analysis"] = perception["_image_analysis"]
+                                logger.info(f"[WebChat] 悬浮球截图分析: {analysis[:80]}...")
+                        except Exception as e:
+                            logger.warning(f"[WebChat] 截图分析失败: {e}")
 
                     # 注入 is_owner 标记（桌面端超管权限）
                     try:

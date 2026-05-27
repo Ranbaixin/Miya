@@ -165,7 +165,6 @@ class DecisionHub:
         memory_engine=None,
         scheduler=None,
         onebot_client=None,
-        game_mode_adapter=None,
         identity=None,
         model_pool=None,
         miya_instance=None,
@@ -187,7 +186,6 @@ class DecisionHub:
             memory_engine: 记忆引擎
             scheduler: 调度器
             onebot_client: OneBot 客户端
-            game_mode_adapter: 游戏模式适配器
             identity: 身份系统
             model_pool: 多模型管理器
             miya_instance: Miya 实例
@@ -200,7 +198,6 @@ class DecisionHub:
         self.prompt_manager = prompt_manager
         self.memory_net = memory_net
         self.decision_engine = decision_engine
-        self.game_mode_adapter = game_mode_adapter
         self.tool_subnet = tool_subnet
         self.memory_engine = memory_engine
         self.scheduler = scheduler
@@ -250,7 +247,6 @@ class DecisionHub:
         self.perception_handler = PerceptionHandler(
             terminal_tool=self.terminal_tool,
             auth_subnet=self.auth_subnet,
-            game_mode_adapter=self.game_mode_adapter,
             onebot_client=self.onebot_client,
         )
 
@@ -1062,42 +1058,15 @@ class DecisionHub:
             logger.info("[决策层] 检测到拍一拍，标记后让 AI 生成回复")
             perception["tool_context"] = "（拍一拍交互）"
 
-        # 2. 获取游戏模式状态（委托给感知处理器）
-        try:
-            game_mode = self.perception_handler.get_game_mode(perception)
-        except AttributeError:
-            # PerceptionHandler 没有 get_game_mode 方法，跳过检查
-            game_mode = None
+        # 存储记忆（委托给记忆管理器）
+        await self.memory_manager.store_user_message(perception)
 
-        # 3. 判断是否需要响应（委托给感知处理器）
-        try:
-            if not self.perception_handler.should_respond(perception, game_mode):
-                return None
-        except AttributeError:
-            # PerceptionHandler 没有 should_respond 方法，默认响应
-            pass
+        # 【会话连续性】记录用户活跃时间戳（同步写盘，绕过异步 history 写的不确定性）
+        from memory.user_activity_tracker import record_activity
 
-        # 4. 游戏启动指令拦截（委托给感知处理器）
-        if not game_mode:
-            try:
-                tool_call_result = await self.perception_handler.handle_game_start_commands(perception)
-                if tool_call_result:
-                    logger.info(f"[决策层] 直接调用工具: {tool_call_result[:100]}")
-                    return tool_call_result
-            except AttributeError:
-                # PerceptionHandler 没有 handle_game_start_commands 方法，跳过检查
-                pass
-
-        # 5. 存储记忆（委托给记忆管理器）
-        if not game_mode:
-            await self.memory_manager.store_user_message(perception)
-
-            # 【会话连续性】记录用户活跃时间戳（同步写盘，绕过异步 history 写的不确定性）
-            from memory.user_activity_tracker import record_activity
-
-            uid = perception.get("user_id", "")
-            if uid:
-                record_activity(str(uid), str(perception.get("content", ""))[:100])
+        uid = perception.get("user_id", "")
+        if uid:
+            record_activity(str(uid), str(perception.get("content", ""))[:100])
 
         # 6. 生成响应（委托给响应生成器）
         raw_content = perception.get("content", "")
@@ -1788,6 +1757,20 @@ class DecisionHub:
                     image_context = "\n[图片消息] 用户引用了一条包含图片的消息，但无法获取图片URL"
                     logger.info("[决策层] 检测到引用消息包含图片但无URL")
 
+            # 【陪玩】注入屏幕画面上下文
+            screen_context = ""
+            try:
+                from core.game_play.engine import get_game_play_engine
+
+                engine = get_game_play_engine()
+                if engine._state.active and engine._state.vision_enabled:
+                    summary = await engine.get_screen_summary()
+                    if summary:
+                        screen_context = summary
+                        logger.debug(f"[决策层] 陪玩画面: {summary[:60]}...")
+            except Exception:
+                pass
+
             prompt_info = self.prompt_manager.build_full_prompt(
                 user_input=content,
                 memory_context=conversation_context,
@@ -1814,6 +1797,8 @@ class DecisionHub:
                     "files_context": files_context,
                     "media_context": media_context,
                     "image_context": image_context,
+                    # 【陪玩】屏幕画面上下文
+                    "screen_context": screen_context,
                     # 【谛听】群聊上下文摘要
                     "group_chat_context": group_chat_context,
                     # 【意识感知】时间、地点、活动感知
@@ -1866,7 +1851,6 @@ class DecisionHub:
                     "send_like_callback": getattr(self.onebot_client, "send_like", None)
                     if self.onebot_client
                     else None,
-                    "game_mode_adapter": self.game_mode_adapter,
                     # 【关键】传递图片分析结果
                     "image_analysis": perception.get("image_analysis"),
                     "image_data": perception.get("image_data"),
@@ -3630,8 +3614,77 @@ class DecisionHub:
             result = await handle_command(f"{sub_cmd_type} {' '.join(parts)}".strip(), parts)
             return result
 
+        # 10. 游戏陪玩命令
+        game_play_cmds = command_keywords.get("game_play", ["/游戏", "/陪玩"])
+        gp_prefixes = [cmd for cmd in game_play_cmds if cmd.startswith("/")]
+        is_game_play_cmd = any(content_lower.startswith(cmd) for cmd in gp_prefixes)
+        if is_game_play_cmd:
+            if not check_command_permission():
+                return get_permission_denied_message()
+            arg = ""
+            for p in gp_prefixes:
+                if content_lower.startswith(p):
+                    arg = content_lower[len(p) :].strip()
+                    break
+            return await self._handle_game_play_command(arg)
+
         # 不是快速命令
         return None
+
+    async def _handle_game_play_command(self, arg: str) -> str:
+        """处理游戏陪玩命令: /游戏 [游戏名|stop|状态]"""
+        from core.game_play.engine import get_game_play_engine
+
+        engine = get_game_play_engine()
+        await engine.initialize()
+
+        arg = arg.strip()
+
+        # /游戏 stop / /陪玩 关
+        if arg in ("stop", "关", "停", "关闭", "结束"):
+            result = await engine.stop_game()
+            return result.get("message", "已停止")
+
+        # /游戏 状态
+        if arg in ("状态", "status"):
+            status = engine.get_status()
+            if not status["active"]:
+                return "游戏陪玩未启动。输入 /游戏 来启动~"
+            lines = [
+                f"当前模式: {status.get('game_name', '通用')}",
+                f"截图次数: {status.get('screenshot_count', 0)}",
+                f"语音: {'开' if status.get('voice_enabled') else '关'}",
+                f"视觉: {'开' if status.get('vision_enabled') else '关'}",
+            ]
+            return "\n".join(lines)
+
+        # 游戏名映射（支持 "游戏名" 或 "游戏名 auto"）
+        auto_speak = False
+        if arg.endswith(" auto") or arg.endswith(" -auto"):
+            auto_speak = True
+            arg = arg.replace(" auto", "").replace(" -auto", "").strip()
+        elif arg == "auto":
+            auto_speak = True
+            arg = ""
+
+        game_map = {
+            "黑神话": "black_myth_wukong",
+            "悟空": "black_myth_wukong",
+            "黑神话悟空": "black_myth_wukong",
+            "视觉小说": "visual_novel",
+            "galgame": "visual_novel",
+            "gal": "visual_novel",
+            "adv": "visual_novel",
+            "文字游戏": "visual_novel",
+        }
+
+        game_id = game_map.get(arg, None)
+
+        result = await engine.start_game(game_id=game_id, auto_speak=auto_speak)
+        msg = result.get("message", "已启动")
+        if auto_speak:
+            msg += " (自动模式：主动观察+TTS提醒)"
+        return msg
 
     async def _handle_tts_commands(
         self,

@@ -192,6 +192,7 @@ async def status():
     data = get_data()
     return {
         "ai_name": data.Ai_Name,
+        "enabled": data.yinmei_enabled,
         "is_ai_ready": data.is_ai_ready,
         "is_tts_ready": data.is_tts_ready,
         "is_singing": data.is_singing,
@@ -244,8 +245,9 @@ def live2d_trigger_action(action: str):
 
 @yinmei_router.get("/live2d/commands")
 async def get_commands():
+    data = get_data()
     cmds = get_live2d_commands()
-    return {"status": "成功", "commands": cmds}
+    return {"status": "成功", "enabled": data.yinmei_enabled, "commands": cmds}
 
 
 @yinmei_router.get("/live2d/emotion")
@@ -297,3 +299,17 @@ async def swing_stop():
     hub = get_hub()
     hub.on_tts_end()
     return {"status": "成功"}
+
+
+# ============ 主开关 ============
+
+
+@yinmei_router.get("/toggle")
+async def toggle_power(on: bool = Query(...)):
+    hub = get_hub()
+    if on:
+        hub.enable()
+        return {"status": "成功", "enabled": True}
+    else:
+        hub.disable()
+        return {"status": "成功", "enabled": False}

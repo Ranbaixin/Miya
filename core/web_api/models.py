@@ -49,8 +49,9 @@ class ChatRequest(BaseModel):
     message: str
     session_id: str = "default"
     user_id: Optional[str] = None
-    usg_id: Optional[str] = None  # 用户会话组ID
+    usg_id: Optional[str] = None
     platform: Optional[str] = None
+    image_data: Optional[str] = None
 
 
 class TerminalChatRequest(BaseModel):

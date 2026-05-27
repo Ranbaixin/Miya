@@ -142,6 +142,7 @@ function notifyLive2dReady(): void {
 }
 
 let _yinmeiPollTimer: ReturnType<typeof setInterval> | null = null
+let _yinmeiWasEnabled = true
 
 function startYinmeiPolling(): void {
   const apiPort = (window as any).__MIYA_API_PORT__ || 8000
@@ -152,6 +153,19 @@ function startYinmeiPolling(): void {
       const resp = await fetch(pollUrl)
       if (!resp.ok) return
       const data = await resp.json()
+
+      if (!data.enabled) {
+        if (_yinmeiWasEnabled) {
+          console.log('[Live2D App] Streamer disabled, pausing commands')
+          _yinmeiWasEnabled = false
+        }
+        return
+      }
+      if (!_yinmeiWasEnabled) {
+        console.log('[Live2D App] Streamer re-enabled')
+        _yinmeiWasEnabled = true
+      }
+
       const cmds = data.commands || []
       if (cmds.length === 0) return
 

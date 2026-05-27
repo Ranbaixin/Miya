@@ -195,7 +195,6 @@ class Miya:
             memory_engine=self.memory_engine,
             scheduler=self.scheduler,
             onebot_client=None,
-            game_mode_adapter=None,
             identity=self.identity,
             model_pool=getattr(self, "model_pool", None),
             miya_instance=self,

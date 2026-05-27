@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import API from '@/api/core'
+import { MESSAGES } from '@/utils/session'
 
 const router = useRouter()
 const query = ref('')
@@ -11,11 +12,31 @@ const screenshotPreview = ref('')
 const status = ref<'idle' | 'success' | 'error' | 'partial'>('idle')
 const screenshots = ref<string[]>([])
 
+function pushToConversation(text: string) {
+  MESSAGES.value.push({
+    role: 'user',
+    content: query.value
+      ? `【截屏问题】${query.value}\n\n【AI分析结果】${text}`
+      : `【屏幕分析】${text}`,
+    sender: '屏幕视觉',
+  })
+}
+
 async function doLook() {
   if (loading.value) return
   loading.value = true
   result.value = '正在截图并分析...'
   status.value = 'idle'
+
+  // 自动缩窗避免截到自己
+  let wasMinimized = false
+  try {
+    if (window.electronAPI?.minimize) {
+      window.electronAPI.minimize()
+      wasMinimized = true
+      await new Promise(r => setTimeout(r, 800))
+    }
+  } catch {}
 
   try {
     const resp = await API.mcpCall('screen_vision', 'look_screen', {
@@ -27,9 +48,13 @@ async function doLook() {
     if (data?.status === 'success') {
       result.value = data.message
       status.value = 'success'
+      pushToConversation(data.message)
+      router.push('/chat')
     } else if (data?.status === 'partial') {
       result.value = data.message
       status.value = 'partial'
+      pushToConversation(data.message)
+      router.push('/chat')
     } else {
       result.value = data?.message || '分析失败'
       status.value = 'error'
@@ -38,6 +63,8 @@ async function doLook() {
     result.value = e?.message || '请求失败'
     status.value = 'error'
   }
+
+  // 恢复窗口（路由跳转后 Electron 会自动 focus）
   loading.value = false
 }
 
@@ -52,10 +79,11 @@ async function doScreenshot() {
     if (data?.status === 'success') {
       screenshots.value.unshift(data.message)
       if (screenshots.value.length > 10) screenshots.value.pop()
+      pushToConversation(data.message || '截图完成')
+      router.push('/chat')
     }
-    result.value = data?.message || '截图完成'
-  } catch (e: any) {
-    result.value = e?.message || '截图失败'
+  } catch (_e) {
+    /* stay on page to show error */
   }
   loading.value = false
 }

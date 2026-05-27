@@ -4,12 +4,14 @@
 提供系统级别的常量定义，避免分散在各个模块中重复定义。
 包括：日志级别、HTTP状态码、时间常量、游戏模式常量等。
 """
+
 from enum import Enum
 
 
 # ========== 日志级别 ==========
 class LogLevel(str, Enum):
     """日志级别"""
+
     DEBUG = "DEBUG"
     INFO = "INFO"
     WARNING = "WARNING"
@@ -20,6 +22,7 @@ class LogLevel(str, Enum):
 # ========== HTTP 状态码 ==========
 class HTTPStatus(int, Enum):
     """HTTP 状态码"""
+
     OK = 200
     CREATED = 201
     ACCEPTED = 202
@@ -41,6 +44,7 @@ class HTTPStatus(int, Enum):
 # ========== 时间常量（秒）==========
 class TimeConstants:
     """时间常量（单位：秒）"""
+
     SECOND = 1
     MINUTE = 60
     HOUR = 60 * 60
@@ -50,26 +54,10 @@ class TimeConstants:
     YEAR = 365 * 24 * 60 * 60  # 近似值
 
 
-# ========== 游戏模式常量 ==========
-class GameModeType(str, Enum):
-    """游戏模式类型"""
-    TRPG = "trpg"
-    TAVERN = "tavern"
-    CUSTOM = "custom"
-
-
-class GameState(str, Enum):
-    """游戏状态"""
-    LOADING = "loading"
-    IN_PROGRESS = "in_progress"
-    PAUSED = "paused"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
-
-
 # ========== 工具执行状态 ==========
 class ToolExecutionStatus(str, Enum):
     """工具执行状态"""
+
     SUCCESS = "success"
     FAILURE = "failure"
     TIMEOUT = "timeout"
@@ -79,6 +67,7 @@ class ToolExecutionStatus(str, Enum):
 # ========== 记忆类型 ==========
 class MemoryType(str, Enum):
     """记忆类型"""
+
     CONVERSATION = "conversation"
     UNDEFINED = "undefined"
     TIDE = "tide"
@@ -91,6 +80,7 @@ class MemoryType(str, Enum):
 # ========== 消息类型 ==========
 class MessageType(str, Enum):
     """消息类型"""
+
     GROUP = "group"
     PRIVATE = "private"
     SYSTEM = "system"
@@ -99,6 +89,7 @@ class MessageType(str, Enum):
 # ========== 用户角色 ==========
 class UserRole(str, Enum):
     """用户角色"""
+
     SUPERADMIN = "superadmin"
     ADMIN = "admin"
     MEMBER = "member"
@@ -108,6 +99,7 @@ class UserRole(str, Enum):
 # ========== 子网状态 ==========
 class SubnetState(str, Enum):
     """子网状态"""
+
     INITIALIZING = "initializing"
     RUNNING = "running"
     PAUSED = "paused"
@@ -118,23 +110,26 @@ class SubnetState(str, Enum):
 # ========== 工具权限 ==========
 class ToolPermission(str, Enum):
     """工具权限"""
+
     PUBLIC = "public"  # 所有人可用
-    ADMIN = "admin"    # 仅管理员
+    ADMIN = "admin"  # 仅管理员
     SUPERADMIN = "superadmin"  # 仅超级管理员
 
 
 # ========== 缓存过期时间（秒）==========
 class CacheTTL:
     """缓存过期时间"""
-    SHORT = 300          # 5分钟
-    MEDIUM = 3600        # 1小时
-    LONG = 86400         # 1天
-    VERY_LONG = 604800   # 1周
+
+    SHORT = 300  # 5分钟
+    MEDIUM = 3600  # 1小时
+    LONG = 86400  # 1天
+    VERY_LONG = 604800  # 1周
 
 
 # ========== 数据库配置常量 ==========
 class DatabaseConfig:
     """数据库配置常量"""
+
     # Redis
     REDIS_DEFAULT_PORT = 6379
     REDIS_DEFAULT_DB = 0
@@ -154,6 +149,7 @@ class DatabaseConfig:
 # ========== 性能限制常量 ==========
 class PerformanceLimits:
     """性能限制常量"""
+
     # 工具执行
     TOOL_TIMEOUT = 480  # 工具执行超时时间（秒）
     TOOL_MAX_RETRIES = 3  # 工具最大重试次数
@@ -166,12 +162,13 @@ class PerformanceLimits:
 
     # 消息处理
     MAX_MESSAGE_LENGTH = 10000  # 最大消息长度
-    MAX_HISTORY_LENGTH = 50    # 最大历史记录长度
+    MAX_HISTORY_LENGTH = 50  # 最大历史记录长度
 
 
 # ========== 错误码 ==========
 class ErrorCode:
     """错误码定义"""
+
     # 工具错误 (1000-1999)
     TOOL_NOT_FOUND = 1001
     TOOL_EXECUTION_FAILED = 1002
@@ -201,6 +198,7 @@ class ErrorCode:
 # ========== 常用字符串常量 ==========
 class CommonStrings:
     """常用字符串常量"""
+
     SUCCESS_PREFIX = "✅"
     ERROR_PREFIX = "❌"
     WARNING_PREFIX = "⚠️"
@@ -212,15 +210,16 @@ class CommonStrings:
 
 # 特殊字符
 SPECIAL_CHARS = {
-    'at_bot': '@',
-    'ellipsis': '…',
-    'separator': '|',
+    "at_bot": "@",
+    "ellipsis": "…",
+    "separator": "|",
 }
 
 
 # ========== 文件路径常量 ==========
 class FilePath:
     """文件路径常量"""
+
     DATA_DIR = "data"
     LOGS_DIR = "logs"
     CONFIG_DIR = "config"
@@ -239,12 +238,14 @@ class FilePath:
 # ========== 编码常量 ==========
 class Encoding:
     """编码常量"""
+
     UTF8 = "utf-8"
 
 
 # ========== 网络超时常量 ==========
 class NetworkTimeout:
     """网络超时常量"""
+
     # WebSocket
     WEBSOCKET_PING_INTERVAL = 20
     WEBSOCKET_PING_TIMEOUT = 480
@@ -273,6 +274,7 @@ class NetworkTimeout:
 # ========== 限制常量 ==========
 class Limits:
     """限制常量"""
+
     # 消息长度
     QQ_MAX_MESSAGE_LENGTH = 200
     QQ_MAX_API_COUNT = 500
@@ -296,12 +298,14 @@ class Limits:
 # ========== 服务端口 ==========
 class ServicePorts:
     """服务端口常量"""
+
     PC_UI_SERVER = 8888
 
 
 # ========== 重试配置 ==========
 class RetryConfig:
     """重试配置常量"""
+
     DEFAULT_MAX_RETRIES = 2
     TOOL_MAX_RETRIES = 3
 
@@ -309,67 +313,44 @@ class RetryConfig:
 # ========== 导出常量 ==========
 __all__ = [
     # 日志级别
-    'LogLevel',
-
+    "LogLevel",
     # HTTP 状态码
-    'HTTPStatus',
-
+    "HTTPStatus",
     # 时间常量
-    'TimeConstants',
-
-    # 游戏模式
-    'GameModeType',
-    'GameState',
-
+    "TimeConstants",
     # 工具执行
-    'ToolExecutionStatus',
-
+    "ToolExecutionStatus",
     # 记忆类型
-    'MemoryType',
-
+    "MemoryType",
     # 消息类型
-    'MessageType',
-
+    "MessageType",
     # 用户角色
-    'UserRole',
-
+    "UserRole",
     # 子网状态
-    'SubnetState',
-
+    "SubnetState",
     # 工具权限
-    'ToolPermission',
-
+    "ToolPermission",
     # 缓存
-    'CacheTTL',
-
+    "CacheTTL",
     # 数据库
-    'DatabaseConfig',
-
+    "DatabaseConfig",
     # 性能限制
-    'PerformanceLimits',
-
+    "PerformanceLimits",
     # 错误码
-    'ErrorCode',
-
+    "ErrorCode",
     # 常用字符串
-    'CommonStrings',
-    'SPECIAL_CHARS',
-
+    "CommonStrings",
+    "SPECIAL_CHARS",
     # 文件路径
-    'FilePath',
-
+    "FilePath",
     # 编码
-    'Encoding',
-
+    "Encoding",
     # 网络超时
-    'NetworkTimeout',
-
+    "NetworkTimeout",
     # 限制
-    'Limits',
-
+    "Limits",
     # 服务端口
-    'ServicePorts',
-
+    "ServicePorts",
     # 重试配置
-    'RetryConfig',
+    "RetryConfig",
 ]

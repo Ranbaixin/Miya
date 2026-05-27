@@ -73,9 +73,7 @@ class ToolAdapter:
         self.emotion_system = emotion_system
         self.logger.debug("情绪系统已设置")
 
-    def enable_native_mode(
-        self, tool_registry, emotion_system=None, memory_engine=None
-    ):
+    def enable_native_mode(self, tool_registry, emotion_system=None, memory_engine=None):
         """
         启用原生M-Link模式
 
@@ -138,13 +136,9 @@ class ToolAdapter:
                 return result
             fallback_tools = TOOL_FALLBACK_MAP.get(tool_name, [])
             for fallback_tool in fallback_tools:
-                logger.info(
-                    f"[降级机制] 主工具 {tool_name} 失败，尝试降级工具: {fallback_tool}"
-                )
+                logger.info(f"[降级机制] 主工具 {tool_name} 失败，尝试降级工具: {fallback_tool}")
                 try:
-                    result = await self._do_execute_tool(
-                        fallback_tool, args, filtered_context
-                    )
+                    result = await self._do_execute_tool(fallback_tool, args, filtered_context)
                     if self._is_success_result(result):
                         logger.info(f"[降级机制] 降级工具 {fallback_tool} 执行成功")
                         # 添加降级提示
@@ -187,9 +181,6 @@ class ToolAdapter:
             "sender_name",
             "is_at_bot",
             "at_list",
-            "game_mode",
-            "game_mode_manager",
-            "game_mode_adapter",
             "bot_qq",
             "superadmin",
             # 图片相关
@@ -233,9 +224,7 @@ class ToolAdapter:
         result_lower = result.lower()
         return all(not (keyword.lower() in result_lower and "降级" not in result) for keyword in failure_keywords)
 
-    async def _do_execute_tool(
-        self, tool_name: str, args: Dict[str, Any], tool_context: ToolContext
-    ) -> str:
+    async def _do_execute_tool(self, tool_name: str, args: Dict[str, Any], tool_context: ToolContext) -> str:
         """
         执行单个工具
 
@@ -251,9 +240,7 @@ class ToolAdapter:
             # 根据模式选择执行方式
             if self.enable_native and self.mlink_subnet:
                 # 原生模式：使用M-Link子网
-                result = await self.mlink_subnet.execute_tool(
-                    tool_name, args, tool_context
-                )
+                result = await self.mlink_subnet.execute_tool(tool_name, args, tool_context)
             else:
                 # 兼容模式：直接调用注册表
                 tool = self.tool_registry.get_tool(tool_name)
@@ -274,25 +261,23 @@ class ToolAdapter:
 
                     # 新版工具签名: execute(self, args: Dict, context: ToolContext)
                     if (
-                        len(params) == 3
-                        and params[0] == "self"
-                        and params[1] == "args"
-                        and params[2] == "context"
-                    ) or (
-                        len(params) == 2
-                        and params[0] == "args"
-                        and params[1] == "context"
-                    ):
+                        len(params) == 3 and params[0] == "self" and params[1] == "args" and params[2] == "context"
+                    ) or (len(params) == 2 and params[0] == "args" and params[1] == "context"):
                         result = await tool.execute(args, tool_context)
                     # 有self的旧版签名: execute(self, context, **kwargs)
                     elif (
-                        len(params) >= 2
-                        and params[0] == "self"
-                        and params[1] in ("context", "kwargs", "tool_context")
-                    ) or len(params) >= 1 and params[0] in (
-                        "context",
-                        "kwargs",
-                        "tool_context",
+                        (
+                            len(params) >= 2
+                            and params[0] == "self"
+                            and params[1] in ("context", "kwargs", "tool_context")
+                        )
+                        or len(params) >= 1
+                        and params[0]
+                        in (
+                            "context",
+                            "kwargs",
+                            "tool_context",
+                        )
                     ):
                         result = await tool.execute(tool_context, **args)
                     else:
@@ -318,9 +303,7 @@ class ToolAdapter:
             logger.error(f"工具执行失败 {tool_name}: {e}", exc_info=True)
             return f"错误：工具执行失败 - {str(e)}"
 
-    async def execute_tool_batch(
-        self, tool_calls: list, context: Dict[str, Any]
-    ) -> list:
+    async def execute_tool_batch(self, tool_calls: list, context: Dict[str, Any]) -> list:
         """
         批量执行工具
 
@@ -355,9 +338,6 @@ class ToolAdapter:
             "sender_name",
             "is_at_bot",
             "at_list",
-            "game_mode",
-            "game_mode_manager",
-            "game_mode_adapter",
             "bot_qq",
             "superadmin",
             # 图片相关
