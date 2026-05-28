@@ -20,7 +20,7 @@ const logContainer = ref<HTMLElement>()
 
 function addLog(text: string, type: LogEntry['type'] = 'info') {
   const now = new Date()
-  const time = `${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
+  const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
   scanLogs.value.push({ time, text, type })
   nextTick(() => {
     if (logContainer.value) logContainer.value.scrollTop = logContainer.value.scrollHeight
@@ -60,88 +60,61 @@ const showHistory = ref(false)
 // 工具面板折叠
 const expandedCats = ref<Set<string>>(new Set(['侦查']))
 
-// Kali 桌面
-const showKaliDesktop = ref(false)
-const kaliReady = ref(false)
-const kaliLoading = ref(false)
+// Kali xterm 终端
+import { Terminal } from '@xterm/xterm'
+import '@xterm/xterm/css/xterm.css'
 
-async function launchKaliDesktop() {
-  if (kaliReady.value) { showKaliDesktop.value = !showKaliDesktop.value; return }
-  kaliLoading.value = true
-  try {
-    const resp = await fetch('http://localhost:8000/api/security/kali/status')
-    const data = await resp.json()
-    if (data.running) {
-      kaliReady.value = true
-      showKaliDesktop.value = true
-    } else {
-      const startResp = await fetch('http://localhost:8000/api/security/kali/launch', { method: 'POST' })
-      const startData = await startResp.json()
-      if (startData.success) {
-        await new Promise(r => setTimeout(r, 5000))
-        kaliReady.value = true
-        showKaliDesktop.value = true
-      } else {
-        alert('Kali 启动失败: ' + (startData.error || '未知错误'))
-      }
-    }
-  } catch (e) {
-    alert('无法连接 Kali 容器，请确认 Docker 已启动且 miya-kali 容器正在运行')
-  } finally {
-    kaliLoading.value = false
+const showKaliTerminal = ref(false)
+const kaliTermEl = ref<HTMLDivElement>()
+let kaliTerm: Terminal | null = null
+let kaliWs: WebSocket | null = null
+
+function createKaliTerm() {
+  if (!kaliTermEl.value || kaliTerm) return
+  kaliTerm = new Terminal({
+    theme: { background: '#0a0a14', foreground: '#d4d4e8', cursor: '#a78bfa' },
+    fontSize: 13,
+    fontFamily: "'Cascadia Code', 'JetBrains Mono', 'Consolas', monospace",
+    cursorBlink: true, cursorStyle: 'bar',
+  })
+  kaliTerm.open(kaliTermEl.value)
+  kaliTerm.writeln('\x1b[1;32m▸ 正在连接 Kali 终端...\x1b[0m')
+
+  kaliWs = new WebSocket('ws://localhost:8008')
+  kaliWs.binaryType = 'arraybuffer'
+  kaliWs.onopen = () => { kaliTerm?.writeln('') }
+  kaliWs.onmessage = (ev) => { kaliTerm?.write(new Uint8Array(ev.data as ArrayBuffer)) }
+  kaliWs.onclose = () => {
+    kaliTerm?.writeln('\x1b[31m▸ 已断开 — 3秒后自动重连...\x1b[0m')
+    const oldTerm = kaliTerm; kaliTerm = null; kaliWs = null
+    oldTerm?.dispose()
+    setTimeout(() => {
+      if (showKaliTerminal.value) createKaliTerm()
+    }, 3000)
   }
+  kaliWs.onerror = () => { kaliTerm?.writeln('\x1b[31m▸ 连接失败\x1b[0m') }
+
+  kaliTerm.onResize(({ cols, rows }) => {
+    if (kaliWs?.readyState === WebSocket.OPEN) {
+      kaliWs.send('\x00\x00\x01' + JSON.stringify({ type: 'resize', cols, rows }))
+    }
+  })
+  kaliTerm.onData((data) => {
+    if (kaliWs?.readyState === WebSocket.OPEN) kaliWs.send(data)
+  })
 }
 
-// Kali 终端
-const showKaliTerminal = ref(false)
-const kaliTermCmd = ref('')
-const kaliTermLines = ref<string[]>([
-  '  Kali Linux Terminal (miya-kali)',
-  '  输入命令后按回车执行 ────────',
-  '',
-])
-const kaliTermOutput = ref<HTMLElement>()
-
-async function runKaliCmd() {
-  const cmd = kaliTermCmd.value.trim()
-  if (!cmd) return
-  kaliTermLines.value.push(`$ ${cmd}`)
-  kaliTermCmd.value = ''
-  try {
-    const resp = await fetch('http://localhost:8000/api/security/kali/exec', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ command: cmd }),
-    })
-    const data = await resp.json()
-    if (data.success) {
-      const output = (data.stdout || data.stderr || '').split('\n')
-      output.forEach((l: string) => kaliTermLines.value.push(l))
-    } else {
-      kaliTermLines.value.push(`Error: ${data.error || 'unknown'}`)
-    }
-  } catch (e) {
-    kaliTermLines.value.push('Error: 无法连接到后端')
-  }
-  kaliTermLines.value.push('')
-  // 限制行数
-  if (kaliTermLines.value.length > 500) {
-    kaliTermLines.value = kaliTermLines.value.slice(-500)
-  }
-  // 滚动到底部
-  setTimeout(() => {
-    if (kaliTermOutput.value) {
-      kaliTermOutput.value.scrollTop = kaliTermOutput.value.scrollHeight
-    }
-  }, 50)
+function destroyKaliTerm() {
+  kaliWs?.close(); kaliWs = null
+  kaliTerm?.dispose(); kaliTerm = null
 }
 
 async function launchKaliTerminal() {
   showKaliTerminal.value = !showKaliTerminal.value
-  if (showKaliTerminal.value) {
-    kaliTermLines.value = ['  Kali Linux Terminal (miya-kali)', '']
-  }
+  if (showKaliTerminal.value) { await nextTick(); createKaliTerm() }
+  else { destroyKaliTerm() }
 }
+
 function toggleCat(cat: string) {
   if (expandedCats.value.has(cat)) expandedCats.value.delete(cat)
   else expandedCats.value.add(cat)
@@ -171,6 +144,7 @@ async function startScan() {
 
   const t = target.value.trim()
   const strat = strategies[strategy.value]
+  const scanResults: Record<string, any> = {}
 
   addLog(`目标: ${t}  |  策略: ${strat.name}  |  阶段: ${strat.phases.length}/5`, 'phase')
   addLog('', 'info')
@@ -181,20 +155,20 @@ async function startScan() {
       addLog('▸ Phase 1/5 侦察 — 信息收集', 'phase')
       completePhase('recon')
       addLog('  启动端口扫描...', 'info')
-      const portRes = await safeCall('security_port_scan', { target: t })
+      scanResults.port_scan = await safeCall('security_port_scan', { target: t })
       addLog('  ✓ 端口扫描完成', 'ok')
 
       addLog('  启动子域名枚举...', 'info')
-      const subRes = await safeCall('security_subdomain_enum', { domain: t })
+      scanResults.subdomain_enum = await safeCall('security_subdomain_enum', { domain: t })
       addLog('  ✓ 子域名枚举完成', 'ok')
 
       addLog('  启动 DNS 枚举...', 'info')
-      const dnsRes = await safeCall('security_dns_enum', { domain: t })
+      scanResults.dns_enum = await safeCall('security_dns_enum', { domain: t })
       addLog('  ✓ DNS 枚举完成', 'ok')
 
       if (strategy.value === 'full' || strategy.value === 'deep') {
         addLog('  启动 Nmap 扫描...', 'info')
-        const nmapRes = await safeCall('security_nmap_scan', { target: t, mode: 'quick' })
+        scanResults.nmap_scan = await safeCall('security_nmap_scan', { target: t, mode: 'quick' })
         addLog('  ✓ Nmap 扫描完成', 'ok')
       }
       scanProgress.value = 25
@@ -211,15 +185,15 @@ async function startScan() {
       addLog('  → 识别到服务: (从扫描结果提取)', 'ok')
 
       addLog('  自动查询工具推荐...', 'info')
-      const tiRes = await safeCall('security_tool_index', { keyword: t })
+      scanResults.tool_index = await safeCall('security_tool_index', { keyword: t })
       addLog('  ✓ 工具推荐完成', 'ok')
 
       addLog('  自动查询 CVE 漏洞...', 'info')
-      const cveRes = await safeCall('security_vuln_lookup', { keyword: t })
+      scanResults.vuln_lookup = await safeCall('security_vuln_lookup', { keyword: t })
       addLog('  ✓ CVE 查询完成', 'ok')
 
       addLog('  自动搜索 Exploit...', 'info')
-      const splRes = await safeCall('security_sploitus_search', { keyword: t })
+      scanResults.sploitus_search = await safeCall('security_sploitus_search', { keyword: t })
       addLog('  ✓ Exploit 搜索完成', 'ok')
 
       scanProgress.value = 55
@@ -232,11 +206,11 @@ async function startScan() {
       completePhase('exploit')
 
       addLog('  启动目录爆破...', 'info')
-      const dirRes = await safeCall('security_dir_brute', { url: `https://${t}` })
+      scanResults.dir_brute = await safeCall('security_dir_brute', { url: `https://${t}` })
       addLog('  ✓ 目录爆破完成', 'ok')
 
       addLog('  启动 Web 漏洞扫描...', 'info')
-      const vulnRes = await safeCall('security_web_vuln_scanner', { url: `https://${t}` })
+      scanResults.web_vuln_scan = await safeCall('security_web_vuln_scanner', { url: `https://${t}` })
       addLog('  ✓ Web 漏洞扫描完成', 'ok')
 
       scanProgress.value = 75
@@ -264,8 +238,8 @@ async function startScan() {
       addLog('▸ 扫描完成', 'phase')
     }
 
-    // 解析结果
-    parseResults()
+    // 使用真实扫描结果解析
+    parseResults(scanResults)
 
     scanProgress.value = 100
     scanStatus.value = '扫描完成'
@@ -286,25 +260,156 @@ async function startScan() {
   }
 }
 
-async function safeCall(tool: string, args: Record<string, any>): Promise<string> {
+async function safeCall(tool: string, args: Record<string, any>): Promise<any> {
   try {
     const resp = await API.callSecurityTool(tool, args)
-    return typeof resp === 'string' ? resp : JSON.stringify(resp)
+    return resp
   } catch (e: any) {
-    return `执行失败: ${e.message}`
+    return { error: `执行失败: ${e.message}` }
   }
 }
 
 function delay(ms: number) { return new Promise(r => setTimeout(r, ms)) }
 
 // ─── 结果解析 ──────────────────────────────────────
-function parseResults() {
-  // 从扫描日志中提取关键信息
-  const fullLog = scanLogs.value.map(l => l.text).join('\n')
-
-  // 安全评分（基于阶段完成度和日志中的发现）
+function parseResults(scanResults: Record<string, any>) {
   const phaseCount = [...completedPhases.value].length
-  securityScore.value = Math.min(100, Math.round(phaseCount * 15 + Math.random() * 20 + 15))
+  let score = 50
+  const found: any[] = []
+  let scoreBoosts = 0
+
+  function extractText(data: any): string {
+    if (!data) return ''
+    if (typeof data === 'string') return data
+    if (data.result && typeof data.result === 'string') return data.result
+    if (data.stdout) return data.stdout
+    if (data.text) return data.text
+    return JSON.stringify(data)
+  }
+
+  function checkKeyword(text: string, keyword: string): boolean {
+    return text.toLowerCase().includes(keyword.toLowerCase())
+  }
+
+  const allText = Object.values(scanResults).map(extractText).join('\n').toLowerCase()
+
+  // 端口扫描分析
+  const portText = extractText(scanResults.port_scan)
+  if (portText.includes('3306') || portText.includes('mysql')) {
+    found.push({
+      id: 'f-dbport', title: '数据库端口暴露',
+      description: 'MySQL(3306) 等数据库端口可能在公网可见',
+      severity: 'critical', source: '端口扫描',
+      detail: '数据库端口对外开放，存在未授权访问和暴力破解风险。\n建议配置防火墙规则限制访问来源。',
+      recommendations: ['配置防火墙规则', '限制访问来源 IP', '使用 VPN/堡垒机访问'],
+    })
+    score -= 20
+  }
+  if (portText.includes('22/tcp') || portText.includes('ssh')) {
+    found.push({
+      id: 'f-ssh', title: 'SSH 端口对外开放',
+      description: 'SSH(22) 端口暴露在公网',
+      severity: 'high', source: '端口扫描',
+      detail: 'SSH 端口对外开放可能遭受暴力破解攻击。建议: 禁用密码登录、使用密钥认证、更改默认端口。',
+      recommendations: ['禁用密码登录', '使用 SSH 密钥认证', '配置 fail2ban'],
+    })
+    score -= 10
+  }
+  if (portText.includes('21/tcp') || portText.includes('ftp')) {
+    found.push({
+      id: 'f-ftp', title: 'FTP 服务对外',
+      description: 'FTP(21) 建议使用 SFTP 替代',
+      severity: 'medium', source: '端口扫描',
+      detail: 'FTP 使用明文传输，建议迁移到 SFTP 或 FTPS。',
+      recommendations: ['迁移到 SFTP', '使用 FTPS', '限制访问 IP'],
+    })
+    score -= 5
+  }
+
+  // SSL 证书分析
+  const sslText = allText
+  if (sslText.includes('expir') || sslText.includes('到期') || sslText.includes('days') || sslText.includes('天')) {
+    found.push({
+      id: 'f-ssl', title: 'SSL 证书问题',
+      description: 'SSL/TLS 证书可能即将到期或配置不当',
+      severity: 'high', source: 'SSL证书检查',
+      detail: '证书过期将导致用户无法访问 HTTPS 站点。建议检查并续期。',
+      recommendations: ['检查证书到期时间', '启用自动续期 (ACME)', '设置监控告警'],
+    })
+    score -= 10
+  }
+
+  // HTTP 头分析
+  const headerIssues = []
+  if (!allText.includes('content-security-policy')) {
+    headerIssues.push('Content-Security-Policy')
+    score -= 5
+  }
+  if (!allText.includes('strict-transport-security')) {
+    headerIssues.push('HSTS (Strict-Transport-Security)')
+    score -= 3
+  }
+  if (!allText.includes('x-frame-options')) {
+    headerIssues.push('X-Frame-Options')
+    score -= 2
+  }
+  if (!allText.includes('x-content-type-options')) {
+    headerIssues.push('X-Content-Type-Options')
+    score -= 2
+  }
+  if (headerIssues.length > 0) {
+    found.push({
+      id: 'f-headers', title: '安全响应头缺失',
+      description: `缺少以下安全头: ${headerIssues.join(', ')}`,
+      severity: headerIssues.length >= 3 ? 'high' : 'medium',
+      source: 'HTTP头分析',
+      detail: `未配置关键安全响应头，存在 XSS、点击劫持等风险。\n建议在 Web 服务器配置中添加这些响应头。`,
+      recommendations: ['添加安全响应头', '使用 Web 服务器配置', '启用 HTTPS'],
+    })
+  }
+
+  // CVE/漏洞分析
+  const vulnText = extractText(scanResults.vuln_lookup)
+  if (vulnText.includes('cve') || vulnText.includes('CVE')) {
+    const cveCount = (vulnText.match(/CVE-\d{4}-\d+/gi) || []).length
+    if (cveCount > 0) {
+      score -= Math.min(cveCount * 3, 20)
+      scoreBoosts += 5
+    }
+  }
+
+  // Web 漏洞扫描
+  const webVulnText = extractText(scanResults.web_vuln_scan)
+  if (checkKeyword(webVulnText, 'xss') || checkKeyword(webVulnText, 'sql') || checkKeyword(webVulnText, 'injection')) {
+    found.push({
+      id: 'f-webvuln', title: 'Web 应用漏洞',
+      description: '检测到潜在 Web 漏洞 (XSS/SQL注入等)',
+      severity: 'critical', source: 'Web漏洞扫描',
+      detail: 'Web 应用可能存在代码注入漏洞，攻击者可能利用这些漏洞获取敏感数据。',
+      recommendations: ['修复代码注入漏洞', '使用参数化查询', '实施输入验证'],
+    })
+    score -= 25
+  }
+
+  // 目录爆破
+  const dirText = extractText(scanResults.dir_brute)
+  if (checkKeyword(dirText, '.git') || checkKeyword(dirText, '.env') || checkKeyword(dirText, 'backup')) {
+    found.push({
+      id: 'f-sens-dir', title: '敏感目录/文件暴露',
+      description: '检测到敏感路径可访问 (.git, .env, backup 等)',
+      severity: 'critical', source: '目录爆破',
+      detail: '敏感文件和目录暴露在公网，可能导致源码泄露或配置信息泄露。',
+      recommendations: ['限制敏感目录访问', '配置 Web 服务器规则', '删除不必要的文件'],
+    })
+    score -= 20
+  }
+
+  // 基于实际扫描结果计分
+  if (Object.keys(scanResults).filter(k => scanResults[k] && !scanResults[k].error).length > 4) {
+    scoreBoosts += 10
+  }
+
+  securityScore.value = Math.max(0, Math.min(100, 55 + scoreBoosts + (score - 50)))
   securityGrade.value = securityScore.value >= 90 ? 'A+' :
     securityScore.value >= 80 ? 'A' :
     securityScore.value >= 70 ? 'B+' :
@@ -312,44 +417,7 @@ function parseResults() {
     securityScore.value >= 50 ? 'C' :
     securityScore.value >= 40 ? 'D' : 'F'
 
-  // 模拟发现（实际应从 CVE/漏洞扫描结果中解析）
-  findings.value = []
-  if (securityScore.value < 90) {
-    findings.value.push({
-      id: 'f-csp', title: '缺失 Content-Security-Policy 头',
-      description: '未配置 CSP 响应头，存在 XSS 攻击风险',
-      severity: 'high', source: 'HTTP头分析',
-      detail: '攻击者可能通过注入恶意脚本窃取用户数据。\n建议添加: Content-Security-Policy: default-src "self"',
-      recommendations: ['添加 CSP 响应头', '使用 nonce 或 hash 模式', '定期测试 CSP 配置'],
-    })
-  }
-  if (securityScore.value < 80) {
-    findings.value.push({
-      id: 'f-hsts', title: '未启用 HSTS',
-      description: '缺少 Strict-Transport-Security 头',
-      severity: 'medium', source: 'HTTP头分析',
-      detail: '未强制浏览器使用 HTTPS 连接。建议添加: Strict-Transport-Security: max-age=31536000; includeSubDomains',
-      recommendations: ['添加 HSTS 头', '设置合理的 max-age', '考虑 HSTS preload'],
-    })
-  }
-  if (securityScore.value < 70) {
-    findings.value.push({
-      id: 'f-ssl', title: 'SSL 证书即将到期',
-      description: '证书剩余天数不足 30 天',
-      severity: 'high', source: 'SSL证书检查',
-      detail: '证书过期后用户将无法访问 HTTPS 站点。请尽快续期。',
-      recommendations: ['续期 SSL 证书', '启用自动续期 (ACME)', '设置监控告警'],
-    })
-  }
-  if (securityScore.value < 60) {
-    findings.value.push({
-      id: 'f-openport', title: '敏感端口对外开放',
-      description: '检测到数据库/管理端口暴露在公网',
-      severity: 'critical', source: '端口扫描',
-      detail: 'SSH(22), MySQL(3306) 等端口对外开放，存在未授权访问和暴力破解风险。',
-      recommendations: ['配置防火墙规则', '限制访问来源 IP', '使用 VPN/堡垒机访问'],
-    })
-  }
+  findings.value = found
 }
 
 // ─── 单工具执行 ────────────────────────────────────
@@ -377,9 +445,13 @@ const copyReport = () => {
     '',
     ...findings.value.map(f => `## ${f.severity.toUpperCase()} — ${f.title}\n${f.description}\n\n${f.detail}`),
   ].join('\n')
-  navigator.clipboard.writeText(text)
-  scanStatus.value = '已复制到剪贴板'
-  setTimeout(() => scanStatus.value = '', 2000)
+  navigator.clipboard.writeText(text).then(() => {
+    scanStatus.value = '已复制到剪贴板'
+    setTimeout(() => scanStatus.value = '', 2000)
+  }).catch(() => {
+    scanStatus.value = '复制失败'
+    setTimeout(() => scanStatus.value = '', 2000)
+  })
 }
 
 const exportMD = () => {
@@ -419,7 +491,7 @@ const gradeColor = computed(() => {
   return '#ff4444'
 })
 
-onUnmounted(() => {})
+onUnmounted(() => { destroyKaliTerm() })
 </script>
 
 <template>
@@ -431,11 +503,6 @@ onUnmounted(() => {})
       </button>
       <h1 class="sec-title">安全中心</h1>
       <span class="sec-sub">SecurityNet · 弥娅网络安全中枢</span>
-      <button class="kali-btn" :class="{ active: showKaliDesktop, loading: kaliLoading }" @click="launchKaliDesktop">
-        <span v-if="kaliLoading" class="kali-spinner" />
-        <span v-else class="kali-icon">◉</span>
-        Kali {{ kaliReady && showKaliDesktop ? '▲' : '▼' }}
-      </button>
       <button class="kali-btn term" :class="{ active: showKaliTerminal }" @click="launchKaliTerminal">
         <span class="kali-icon">▸</span> 终端
       </button>
@@ -587,32 +654,14 @@ onUnmounted(() => {})
       </div>
     </div>
 
-    <!-- ── Kali 桌面 ── -->
-    <div v-if="showKaliDesktop && kaliReady" class="kali-desktop-panel">
-      <div class="kali-toolbar">
-        <span class="kali-label">▸ Kali Linux Desktop</span>
-        <span class="kali-status">localhost:6080</span>
-        <button class="kali-refresh" @click="kaliReady = false; showKaliDesktop = false; launchKaliDesktop()">⟳ 刷新</button>
-        <button class="kali-close" @click="showKaliDesktop = false">✕</button>
-      </div>
-      <iframe src="http://localhost:6080/vnc.html?autoconnect=1&resize=scale" class="kali-iframe" />
-    </div>
-
-    <!-- ── Kali 终端 ── -->
-    <div v-if="showKaliTerminal" class="kali-terminal-panel">
+    <!-- ── Kali 终端 (xterm.js) ── -->
+    <div v-if="showKaliTerminal" class="kali-term-wrap">
       <div class="kali-toolbar">
         <span class="kali-label">▸ Kali Terminal</span>
-        <span class="kali-status">miya-kali</span>
-        <button class="kali-refresh" @click="kaliTermCmd=''; runKaliCmd()">⟳ 清屏</button>
+        <span class="kali-status">miya-kali · bash</span>
         <button class="kali-close" @click="showKaliTerminal = false">✕</button>
       </div>
-      <div class="kali-term-output" ref="kaliTermOutput">
-        <div v-for="(line, i) in kaliTermLines" :key="i" class="term-line">{{ line }}</div>
-      </div>
-      <div class="kali-term-input-row">
-        <span class="term-prompt">$</span>
-        <input v-model="kaliTermCmd" class="term-input" @keydown.enter="runKaliCmd" placeholder="输入命令..." />
-      </div>
+      <div ref="kaliTermEl" class="kali-xterm-box" />
     </div>
 
     <!-- ── 目标输入对话框 ── -->
@@ -856,42 +905,23 @@ onUnmounted(() => {})
 }
 .nf-icon { font-size: 1rem; }
 
-/* ── Kali Desktop ── */
+/* ── Kali Terminal ── */
 .kali-btn {
   margin-left: auto; padding: 4px 12px; border-radius: 8px; font-size: 0.65rem; cursor: pointer;
-  border: 0.5px solid rgba(0,180,100,0.3); background: rgba(0,180,100,0.08); color: var(--miya-accent);
-  transition: all 0.15s; white-space: nowrap; display: flex; align-items: center; gap: 4px;
-  font-family: 'JetBrains Mono', monospace;
-  &:hover { background: rgba(0,180,100,0.18); border-color: rgba(0,180,100,0.5); }
-  &.active { background: rgba(0,180,100,0.2); border-color: rgba(0,220,140,0.6); color: #44cc88; }
-  &.loading { opacity: 0.7; }
-  &.term { margin-left: 8px; border-color: rgba(167,139,250,0.3); background: rgba(167,139,250,0.08); color: var(--miya-accent); }
-  &.term:hover { background: rgba(167,139,250,0.18); border-color: var(--miya-accent); }
-  &.term.active { background: rgba(167,139,250,0.2); border-color: rgba(180,120,255,0.6); color: #b488ff; }
+  font-family: 'JetBrains Mono', monospace; white-space: nowrap; display: flex; align-items: center; gap: 4px;
+  transition: all 0.15s;
+  &.term { border: .5px solid rgba(167,139,250,.3); background: rgba(167,139,250,.08); color: var(--miya-accent); }
+  &.term:hover { background: rgba(167,139,250,.18); border-color: var(--miya-accent); }
+  &.term.active { background: rgba(167,139,250,.2); border-color: rgba(180,120,255,.6); color: #b488ff; }
 }
 .kali-icon { font-size: 0.7rem; }
-.kali-spinner {
-  display: inline-block; width: 10px; height: 10px; border: 1.5px solid rgba(0,180,100,0.3);
-  border-top-color: #44cc88; border-radius: 50%; animation: spin 0.8s linear infinite;
-}
 
-.kali-desktop-panel {
-  position: fixed; inset: 56px 0 0 0; z-index: 50; background: rgba(5,4,12,0.97);
-  display: flex; flex-direction: column;
-}
-.kali-toolbar {
-  display: flex; align-items: center; gap: 12px; padding: 6px 16px;
-  border-bottom: 0.5px solid rgba(0,180,100,0.2); background: rgba(0,15,5,0.5);
-}
-.kali-label { font-size: 0.7rem; color: #44cc88; font-family: 'JetBrains Mono', monospace; }
-.kali-status { font-size: 0.55rem; color: var(--miya-text-dim); margin-left: 4px; }
-.kali-refresh, .kali-close {
-  margin-left: auto; padding: 3px 10px; border-radius: 4px; font-size: 0.6rem; cursor: pointer;
-  border: 0.5px solid rgba(167,139,250,0.2); background: rgba(10,8,21,0.2); color: var(--miya-text-dim);
-  &:hover { color: var(--miya-accent); border-color: var(--miya-accent); }
-}
-.kali-close { margin-left: 4px; color: #ff6666; border-color: rgba(255,80,80,0.2); }
-.kali-iframe { flex: 1; border: none; width: 100%; }
+.kali-term-wrap { position:fixed; inset:56px 0 0 0; z-index:51; display:flex; flex-direction:column; background:#0a0a14; }
+.kali-toolbar { display:flex; align-items:center; gap:12px; padding:6px 16px; border-bottom:.5px solid rgba(167,139,250,.2); background:rgba(0,0,0,.4); }
+.kali-label { font-size:.7rem; color:var(--miya-accent); font-family:'JetBrains Mono',monospace; }
+.kali-status { font-size:.55rem; color:var(--miya-text-dim); }
+.kali-close { margin-left:auto; padding:3px 10px; border-radius:4px; font-size:.6rem; cursor:pointer; border:.5px solid rgba(255,80,80,.2); background:transparent; color:#ff6666; &:hover{background:rgba(255,80,80,.1)} }
+.kali-xterm-box { flex:1; padding:4px; :deep(.xterm){height:100%} :deep(.xterm-viewport){overflow-y:auto} }
 
 /* ── Modal ── */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; }

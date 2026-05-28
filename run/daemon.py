@@ -2,9 +2,10 @@
 弥娅系统 v7.0 - 统一守护进程入口
 
 启动方式:
-  python run/daemon.py                  # 启动守护进程 + API
-  python run/daemon.py --no-api         # 仅守护进程，不启动 API
-  python run/daemon.py --api-port 9800  # 指定 API 端口
+   python run/daemon.py                  # 启动守护进程 + API + Kali 终端
+   python run/daemon.py --no-api         # 仅守护进程，不启动 API
+   python run/daemon.py --no-kali        # 不启动 Kali 终端代理
+   python run/daemon.py --api-port 9800  # 指定 API 端口
   python run/daemon.py --platforms qqofficial,webchat  # 仅启动指定平台
 
 环境变量:
@@ -73,6 +74,7 @@ async def run_daemon(
     api_port: int = 9800,
     api_host: str = "0.0.0.0",
     platform_ids: list[str] | None = None,
+    kali_enabled: bool = True,
 ):
     """启动弥娅守护进程"""
     from core.management_api import ManagementAPI
@@ -96,6 +98,11 @@ async def run_daemon(
 
     # 2. 启动守护进程
     await daemon.start(platform_ids=platform_ids)
+
+    # 2.5 启动 Kali 终端代理（后台任务）
+    kali_server = None
+    if kali_enabled:
+        kali_server = await _start_kali_proxy()
 
     # 3. 启动管理 API
     if api_enabled:
@@ -134,10 +141,27 @@ async def run_daemon(
 
     # 5. 优雅关闭
     print("\n正在关闭...")
+    if kali_server:
+        kali_server.close()
+        await kali_server.wait_closed()
+        logging.getLogger("Miya.Bootstrap").info("Kali 终端代理已关闭")
     if api:
         await api.stop()
     await daemon.shutdown()
     print("\n弥娅已退出\n")
+
+
+async def _start_kali_proxy():
+    """在本地 8008 端口启动 Kali 终端 WebSocket 代理（后台任务）"""
+    try:
+        from core.kali_term_proxy import websocket_handler
+
+        server = await asyncio.start_server(websocket_handler, "127.0.0.1", 8008)
+        logging.getLogger("Miya.Bootstrap").info("Kali 终端代理已启动: ws://127.0.0.1:8008")
+        return server
+    except Exception as e:
+        logging.getLogger("Miya.Bootstrap").debug(f"Kali 终端代理启动跳过: {e}")
+        return None
 
 
 def _print_platform_status(daemon):
@@ -161,6 +185,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="弥娅系统 v7.0 统一守护进程")
     parser.add_argument("--no-api", action="store_true", help="不启动管理 API")
+    parser.add_argument("--no-kali", action="store_true", help="不启动 Kali 终端代理")
     parser.add_argument(
         "--api-port",
         type=int,
@@ -215,6 +240,7 @@ def main():
                 api_port=args.api_port,
                 api_host=args.api_host,
                 platform_ids=platform_ids,
+                kali_enabled=not args.no_kali,
             )
         )
     except KeyboardInterrupt:
