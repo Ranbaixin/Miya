@@ -3211,7 +3211,6 @@ class DecisionHub:
         logger.info(f"[决策层] 处理命令: {content}, personality: {type(self.personality)}")
 
         user_id = None
-        group_id = None
         if perception:
             user_id = perception.get("user_id") or perception.get("sender_id")
             _group_id = perception.get("group_id")
