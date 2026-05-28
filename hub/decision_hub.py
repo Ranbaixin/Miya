@@ -3214,7 +3214,7 @@ class DecisionHub:
         group_id = None
         if perception:
             user_id = perception.get("user_id") or perception.get("sender_id")
-            group_id = perception.get("group_id")
+            _group_id = perception.get("group_id")
 
         def check_command_permission() -> bool:
             """检查命令执行权限 - 使用统一权限引擎 (v7.0 跨平台)"""
@@ -3402,7 +3402,7 @@ class DecisionHub:
                         else get_text("default_responses.switch_failed")
                     )
 
-            if cmd in Personality.CORE_FORMS:
+            if cmd in self.personality._core_forms:
                 success = self.personality.set_core_form(cmd)
                 return (
                     get_form_response("switch_core_success", form=cmd)
