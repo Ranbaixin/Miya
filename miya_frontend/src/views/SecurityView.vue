@@ -137,6 +137,7 @@ function destroyKaliTerm() {
 }
 
 function openKaliTerminal() {
+  kaliHasBeenOpened.value = true
   showKaliTerminal.value = true
   nextTick(() => {
     if (!kaliTerm) createKaliTerm()
