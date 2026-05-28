@@ -11,6 +11,7 @@ import subprocess
 import traceback
 import threading
 import queue
+from urllib.parse import urlparse
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Set, Tuple
 from dataclasses import dataclass, field
@@ -23,6 +24,15 @@ try:
 except ImportError:
     requests = None
     psutil = None
+
+try:
+    from .process_manager import enhanced_process_manager
+
+    parameter_optimizer = enhanced_process_manager
+    _has_process_manager = True
+except ImportError:
+    parameter_optimizer = None
+    _has_process_manager = False
 
 logger = logging.getLogger(__name__)
 
@@ -452,7 +462,7 @@ class IntelligentDecisionEngine:
         """Determine the type of target for appropriate tool selection"""
         # URL patterns
         if target.startswith(("http://", "https://")):
-            parsed = urllib.parse.urlparse(target)
+            parsed = urlparse(target)
             if "/api/" in parsed.path or parsed.path.endswith("/api"):
                 return TargetType.API_ENDPOINT
             return TargetType.WEB_APPLICATION
@@ -479,15 +489,15 @@ class IntelligentDecisionEngine:
         """Resolve domain to IP addresses"""
         try:
             if target.startswith(("http://", "https://")):
-                hostname = urllib.parse.urlparse(target).hostname
+                hostname = urlparse(target).hostname
             else:
                 hostname = target
 
             if hostname:
                 ip = socket.gethostbyname(hostname)
                 return [ip]
-        except Exception:
-            pass
+        except Exception as __e:
+            logger.debug(f"[decision_engine] 域名解析失败: {__e}")
         return []
 
     def _detect_technologies(self, target: str) -> List[TechnologyStack]:
@@ -620,7 +630,8 @@ class IntelligentDecisionEngine:
 
         # Use advanced parameter optimizer if available
         if hasattr(self, "_use_advanced_optimizer") and self._use_advanced_optimizer:
-            return parameter_optimizer.optimize_parameters_advanced(tool, profile, context)
+            if parameter_optimizer is not None:
+                return parameter_optimizer.optimize_parameters_advanced(tool, profile, context)
 
         # Fallback to legacy optimization for compatibility
         optimized_params = {}
@@ -668,7 +679,8 @@ class IntelligentDecisionEngine:
             optimized_params = self._optimize_checkov_params(profile, context)
         else:
             # Use advanced optimizer for unknown tools
-            return parameter_optimizer.optimize_parameters_advanced(tool, profile, context)
+            if parameter_optimizer is not None:
+                return parameter_optimizer.optimize_parameters_advanced(tool, profile, context)
 
         return optimized_params
 

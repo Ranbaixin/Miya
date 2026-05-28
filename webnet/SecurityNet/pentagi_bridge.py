@@ -40,7 +40,6 @@ class PentAGIClient:
 
             self._session = aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(total=_TIMEOUT),
-                connector=aiohttp.TCPConnector(ssl=False),
             )
 
     @property
@@ -136,8 +135,8 @@ class PentAGIClient:
             ) as resp:
                 if resp.status == 200:
                     return await resp.json()
-        except Exception:
-            pass
+        except Exception as __e:
+            logger.debug(f"[pentagi_bridge] 获取providers失败: {__e}")
         return None
 
     async def get_usage_stats(self) -> Optional[Dict]:
@@ -150,8 +149,8 @@ class PentAGIClient:
             ) as resp:
                 if resp.status == 200:
                     return await resp.json()
-        except Exception:
-            pass
+        except Exception as __e:
+            logger.debug(f"[pentagi_bridge] 获取usage失败: {__e}")
         return None
 
     async def close(self):

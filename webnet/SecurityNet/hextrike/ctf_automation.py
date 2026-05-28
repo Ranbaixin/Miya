@@ -45,14 +45,15 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+@dataclass
 class CTFChallenge:
     """CTF challenge information"""
 
     name: str
-    category: str  # web, crypto, pwn, forensics, rev, misc, osint
-    description: str
+    category: str = "misc"
+    description: str = ""
     points: int = 0
-    difficulty: str = "unknown"  # easy, medium, hard, insane
+    difficulty: str = "unknown"
     files: List[str] = field(default_factory=list)
     url: str = ""
     hints: List[str] = field(default_factory=list)
@@ -1594,6 +1595,8 @@ class CTFChallengeAutomator:
         self.solution_cache = {}
         self.learning_database = {}
         self.success_patterns = {}
+        self.ctf_manager = CTFWorkflowManager()
+        self.ctf_tools = CTFToolManager()
 
     def auto_solve_challenge(self, challenge: CTFChallenge) -> Dict[str, Any]:
         """Attempt to automatically solve a CTF challenge"""
@@ -1611,7 +1614,7 @@ class CTFChallengeAutomator:
 
         try:
             # Create workflow
-            workflow = ctf_manager.create_ctf_challenge_workflow(challenge)
+            workflow = self.ctf_manager.create_ctf_challenge_workflow(challenge)
 
             # Execute automated steps
             for step in workflow["workflow_steps"]:
@@ -1669,7 +1672,7 @@ class CTFChallengeAutomator:
         for tool in tools:
             try:
                 if tool != "manual":
-                    command = ctf_tools.get_tool_command(tool, challenge.target or challenge.name)
+                    command = self.ctf_tools.get_tool_command(tool, challenge.name)
                     # In a real implementation, this would execute the command
                     step_result["tools_used"].append(tool)
                     step_result["output"] += f"[{tool}] Executed successfully\n"
@@ -1704,7 +1707,7 @@ class CTFChallengeAutomator:
                     step_result["output"] += f"[CUSTOM] Custom implementation required\n"
                     step_result["success"] = True
                 else:
-                    command = ctf_tools.get_tool_command(tool, challenge.target or challenge.name)
+                    command = self.ctf_tools.get_tool_command(tool, challenge.name)
                     step_result["tools_used"].append(tool)
                     step_result["output"] += f"[{tool}] Command: {command}\n"
                     step_result["success"] = True
@@ -1756,7 +1759,7 @@ class CTFChallengeAutomator:
             attempted_tools.extend(step.get("tools_used", []))
 
         # Suggest alternative approaches
-        all_category_tools = ctf_tools.get_category_tools(f"{challenge.category}_recon")
+        all_category_tools = self.ctf_tools.get_category_tools(f"{challenge.category}_recon")
         unused_tools = [tool for tool in all_category_tools if tool not in attempted_tools]
 
         if unused_tools:
@@ -1836,7 +1839,9 @@ class CTFTeamCoordinator:
         self.team_communication = []
         self.shared_resources = {}
 
-    def optimize_team_strategy(self, challenges: List[CTFChallenge], team_skills: Dict[str, List[str]]) -> Dict[str, Any]:
+    def optimize_team_strategy(
+        self, challenges: List[CTFChallenge], team_skills: Dict[str, List[str]]
+    ) -> Dict[str, Any]:
         """Optimize team strategy based on member skills and challenge types"""
         strategy = {
             "assignments": {},
@@ -1844,7 +1849,7 @@ class CTFTeamCoordinator:
             "collaboration_opportunities": [],
             "resource_sharing": {},
             "estimated_total_score": 0,
-            "time_allocation": {}
+            "time_allocation": {},
         }
 
         # Analyze team skills
@@ -1857,7 +1862,7 @@ class CTFTeamCoordinator:
                 "forensics": "forensics" in skills or "investigation" in skills,
                 "rev": "reverse" in skills or "reversing" in skills,
                 "osint": "osint" in skills or "intelligence" in skills,
-                "misc": True  # Everyone can handle misc
+                "misc": True,  # Everyone can handle misc
             }
 
         # Score challenges for each team member
@@ -1872,21 +1877,19 @@ class CTFTeamCoordinator:
                 if skill_matrix[member].get(challenge.category, False):
                     skill_multiplier = 1.5  # 50% bonus for skill match
 
-                difficulty_penalty = {
-                    "easy": 1.0,
-                    "medium": 0.9,
-                    "hard": 0.7,
-                    "insane": 0.5,
-                    "unknown": 0.8
-                }[challenge.difficulty]
+                difficulty_penalty = {"easy": 1.0, "medium": 0.9, "hard": 0.7, "insane": 0.5, "unknown": 0.8}[
+                    challenge.difficulty
+                ]
 
                 final_score = base_score * skill_multiplier * difficulty_penalty
 
-                member_challenge_scores[member].append({
-                    "challenge": challenge,
-                    "score": final_score,
-                    "estimated_time": self._estimate_solve_time(challenge, skill_matrix[member])
-                })
+                member_challenge_scores[member].append(
+                    {
+                        "challenge": challenge,
+                        "score": final_score,
+                        "estimated_time": self._estimate_solve_time(challenge, skill_matrix[member]),
+                    }
+                )
 
         # Assign challenges using Hungarian algorithm approximation
         assignments = self._assign_challenges_optimally(member_challenge_scores)
@@ -1896,12 +1899,14 @@ class CTFTeamCoordinator:
         all_assignments = []
         for member, challenges in assignments.items():
             for challenge_info in challenges:
-                all_assignments.append({
-                    "member": member,
-                    "challenge": challenge_info["challenge"].name,
-                    "priority": challenge_info["score"],
-                    "estimated_time": challenge_info["estimated_time"]
-                })
+                all_assignments.append(
+                    {
+                        "member": member,
+                        "challenge": challenge_info["challenge"].name,
+                        "priority": challenge_info["score"],
+                        "estimated_time": challenge_info["estimated_time"],
+                    }
+                )
 
         strategy["priority_queue"] = sorted(all_assignments, key=lambda x: x["priority"], reverse=True)
 
@@ -1913,11 +1918,11 @@ class CTFTeamCoordinator:
     def _estimate_solve_time(self, challenge: CTFChallenge, member_skills: Dict[str, bool]) -> int:
         """Estimate solve time for a challenge based on member skills"""
         base_times = {
-            "easy": 1800,    # 30 minutes
+            "easy": 1800,  # 30 minutes
             "medium": 3600,  # 1 hour
-            "hard": 7200,    # 2 hours
-            "insane": 14400, # 4 hours
-            "unknown": 5400  # 1.5 hours
+            "hard": 7200,  # 2 hours
+            "insane": 14400,  # 4 hours
+            "unknown": 5400,  # 1.5 hours
         }
 
         base_time = base_times[challenge.difficulty]
@@ -1953,7 +1958,9 @@ class CTFTeamCoordinator:
 
         return assignments
 
-    def _identify_collaboration_opportunities(self, challenges: List[CTFChallenge], team_skills: Dict[str, List[str]]) -> List[Dict[str, Any]]:
+    def _identify_collaboration_opportunities(
+        self, challenges: List[CTFChallenge], team_skills: Dict[str, List[str]]
+    ) -> List[Dict[str, Any]]:
         """Identify challenges that would benefit from team collaboration"""
         collaboration_opportunities = []
 
@@ -1966,15 +1973,17 @@ class CTFTeamCoordinator:
                         relevant_members.append(member)
 
                 if len(relevant_members) >= 2:
-                    collaboration_opportunities.append({
-                        "challenge": challenge.name,
-                        "recommended_team": relevant_members,
-                        "reason": f"High-difficulty {challenge.category} challenge benefits from collaboration"
-                    })
+                    collaboration_opportunities.append(
+                        {
+                            "challenge": challenge.name,
+                            "recommended_team": relevant_members,
+                            "reason": f"High-difficulty {challenge.category} challenge benefits from collaboration",
+                        }
+                    )
 
         return collaboration_opportunities
+
 
 # ============================================================================
 # ADVANCED PARAMETER OPTIMIZATION AND INTELLIGENCE (v9.0 ENHANCEMENT)
 # ============================================================================
-

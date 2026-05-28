@@ -80,6 +80,18 @@ class SecurityToolCallRequest(BaseModel):
     command: Optional[str] = None
 
 
+class KaliExecRequest(BaseModel):
+    """Kali 命令执行请求"""
+
+    command: str
+
+
+class KaliLaunchRequest(BaseModel):
+    """Kali 桌面启动请求"""
+
+    pass
+
+
 class IPBlockRequest(BaseModel):
     """IP 封禁请求"""
 
@@ -124,7 +136,8 @@ class SecurityRoutes:
         self.security = HTTPBearer()
         self._init_security_components()
         self._setup_routes()
-        logger.info("[SecurityRoutes] 安全路由已初始化 (14 tools + orchestrator)")
+        self._setup_kali_terminal()
+        logger.info("[SecurityRoutes] 安全路由已初始化 (14 tools + orchestrator + kali terminal)")
 
     def _init_security_components(self):
         """初始化安全组件"""
@@ -394,9 +407,18 @@ class SecurityRoutes:
                 return {"success": False, "running": False, "error": str(e)}
 
         @self.router.post("/kali/launch")
-        async def kali_launch():
-            """启动/重启 Kali 桌面环境"""
+        async def kali_launch(
+            request: KaliLaunchRequest = None,
+            token: HTTPAuthorizationCredentials = Depends(self.security),
+        ):
+            """启动/重启 Kali 桌面环境（需要管理员权限）"""
             try:
+                user_info = self.web_net.verify_token(token.credentials)
+                if not user_info:
+                    raise HTTPException(status_code=401, detail="未授权")
+                if user_info.get("level", 0) < 4:
+                    raise HTTPException(status_code=403, detail="需要管理员权限")
+
                 from webnet.SecurityNet.kali_sandbox import (
                     ensure_kali_container,
                     docker_exec_sync,
@@ -412,8 +434,111 @@ class SecurityRoutes:
                     docker_exec_sync("nohup bash /start-vnc.sh > /tmp/vnc.log 2>&1 &", timeout=5)
 
                 return {"success": True, "message": "Kali 桌面已启动", "url": "http://localhost:6080/vnc.html"}
+            except HTTPException:
+                raise
             except Exception as e:
                 return {"success": False, "error": str(e)}
+
+        @self.router.post("/kali/exec")
+        async def kali_exec(
+            request: KaliExecRequest,
+            token: HTTPAuthorizationCredentials = Depends(self.security),
+        ):
+            """在 Kali 容器中执行命令并返回输出（需要认证）"""
+            try:
+                user_info = self.web_net.verify_token(token.credentials)
+                if not user_info:
+                    raise HTTPException(status_code=401, detail="未授权")
+
+                from webnet.SecurityNet.kali_sandbox import (
+                    is_container_running,
+                    docker_exec_sync,
+                    KALI_CONTAINER,
+                )
+
+                if not is_container_running(KALI_CONTAINER):
+                    return {"success": False, "error": "Kali 容器未运行"}
+
+                command = request.command
+                if not command or not command.strip():
+                    return {"success": False, "error": "未提供命令"}
+
+                result = docker_exec_sync(command, timeout=30)
+                return {
+                    "success": result.get("success", False),
+                    "stdout": result.get("stdout", ""),
+                    "stderr": result.get("stderr", ""),
+                    "error": result.get("error", ""),
+                }
+            except HTTPException:
+                raise
+            except Exception as e:
+                return {"success": False, "error": str(e)}
+
+    def _setup_kali_terminal(self):
+        """注册 Kali 终端 WebSocket 路由"""
+
+        @self.router.websocket("/kali/terminal")
+        async def kali_terminal(websocket):
+            import asyncio as aio, subprocess
+
+            await websocket.accept()
+            try:
+                from webnet.SecurityNet.kali_sandbox import is_container_running, KALI_CONTAINER
+
+                if not is_container_running(KALI_CONTAINER):
+                    await websocket.send_text("\x1b[31mKali 容器未运行\x1b[0m\r\n")
+                    await websocket.close()
+                    return
+            except Exception as e:
+                await websocket.send_text(f"\x1b[31m{e}\x1b[0m\r\n")
+                await websocket.close()
+                return
+
+            proc = await aio.create_subprocess_exec(
+                "docker",
+                "exec",
+                "-i",
+                KALI_CONTAINER,
+                "bash",
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+
+            async def read_out():
+                try:
+                    while True:
+                        chunk = await proc.stdout.read(4096)
+                        if not chunk:
+                            break
+                        try:
+                            await websocket.send_bytes(chunk)
+                        except Exception:
+                            break
+                except Exception:
+                    pass
+
+            async def write_in():
+                try:
+                    while True:
+                        data = await websocket.receive_bytes()
+                        proc.stdin.write(data)
+                        await proc.stdin.drain()
+                except Exception:
+                    pass
+
+            r = aio.create_task(read_out())
+            try:
+                await write_in()
+            finally:
+                r.cancel()
+                try:
+                    proc.terminate()
+                except ProcessLookupError:
+                    pass
+                except Exception:
+                    pass
 
     async def _call_tool_safe(self, tool_name: str, args: Dict[str, Any]) -> str:
         """安全地调用工具，优先使用 SecuritySubnet，fallback 到 ToolRegistry"""

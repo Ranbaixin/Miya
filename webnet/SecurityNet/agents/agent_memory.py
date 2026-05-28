@@ -87,8 +87,8 @@ class AgentMemory:
                 kg = json.loads(kg_path.read_text(encoding="utf-8"))
                 self._entities = kg.get("entities", {})
                 self._relationships = kg.get("relationships", [])
-            except Exception:
-                pass
+            except Exception as __e:
+                logger.debug(f"[agent_memory] 加载知识图谱失败: {__e}")
 
     def _save(self):
         """保存记忆到 JSON 文件"""

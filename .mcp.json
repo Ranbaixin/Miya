@@ -13,6 +13,13 @@
       "env": {},
       "disabled": true,
       "autoApprove": []
+    },
+    "security_sandbox": {
+      "command": "python",
+      "args": ["mcpserver/security_sandbox/server.py"],
+      "env": {},
+      "disabled": false,
+      "autoApprove": ["security_sandbox_exec", "security_sandbox_get_logs", "security_sandbox_list_containers", "security_sandbox_stop_container"]
     }
   }
 }

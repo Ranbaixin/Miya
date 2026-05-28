@@ -52,13 +52,13 @@ class SecuritySandboxService:
         tool_name = tool_call.get("tool_name", "")
         args = tool_call.get("arguments", {})
 
-        if "sandbox_exec" == tool_name:
+        if tool_name == "security_sandbox_exec":
             return await self._exec_command(args)
-        elif "get_logs" in tool_name:
+        elif tool_name == "security_sandbox_get_logs":
             return await self._get_logs(args)
-        elif "list" in tool_name:
+        elif tool_name == "security_sandbox_list_containers":
             return await self._list_containers(args)
-        elif "stop" in tool_name:
+        elif tool_name == "security_sandbox_stop_container":
             return await self._stop_container(args)
         else:
             import json
@@ -162,7 +162,7 @@ class SecuritySandboxService:
             return f"沙箱执行失败: {str(e)[:300]}"
 
     def _fallback_local_exec(self, command: str, timeout: int) -> str:
-        """Docker 不可用时的本地回退执行（受限）"""
+        """Docker 不可用时的回退 — 仅返回提示，不直接执行命令"""
         import platform
 
         if platform.system() == "Windows":
@@ -172,14 +172,13 @@ class SecuritySandboxService:
                 "下载: https://www.docker.com/products/docker-desktop"
             )
 
-        # Linux/Mac 本地回退
-        try:
-            result = os.popen(f"timeout {timeout} {command} 2>&1").read()
-            if len(result) > 8000:
-                result = result[:8000] + "\n... [截断]"
-            return f"本地执行完成（Docker 不可用，非沙箱模式）\n{'─' * 40}\n{result}"
-        except Exception as e:
-            return f"本地执行失败: {str(e)[:200]}"
+        return (
+            "Docker 服务不可用，无法提供沙箱执行环境。\n"
+            "请确保 Docker 已安装并运行:\n"
+            "  1. 安装 Docker: https://docs.docker.com/get-docker/\n"
+            "  2. 启动 Docker 服务: sudo systemctl start docker\n"
+            "  3. 验证: docker ps"
+        )
 
     def _log(self, container_id: str, message: str):
         """记录执行日志"""

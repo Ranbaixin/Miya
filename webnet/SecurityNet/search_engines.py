@@ -126,8 +126,8 @@ async def search_duckduckgo(query: str, max_results: int = 10) -> List[Dict[str,
         logger.debug(f"DuckDuckGo search failed: {e}")
         try:
             results.extend(await _duckduckgo_html_fallback(query, max_results))
-        except Exception:
-            pass
+        except Exception as __e:
+            logger.debug(f"[search_engines] HTML fallback也失败: {__e}")
 
     return results[:max_results]
 

@@ -3,6 +3,7 @@
 Miya AI End-to-End Test Scenarios
 ================================
 """
+
 import asyncio
 import json
 import time
@@ -36,11 +37,7 @@ class E2ETestRunner:
             elapsed = time.time() - start_time
             self.passed += 1
 
-            result = {
-                "name": test_name,
-                "status": "PASS",
-                "duration": elapsed
-            }
+            result = {"name": test_name, "status": "PASS", "duration": elapsed}
 
             if benchmark:
                 self.performance_metrics[test_name] = elapsed
@@ -51,21 +48,13 @@ class E2ETestRunner:
         except asyncio.TimeoutError:
             elapsed = time.time() - start_time
             self.failed += 1
-            self.test_results.append({
-                "name": test_name,
-                "status": "TIMEOUT",
-                "duration": elapsed
-            })
+            self.test_results.append({"name": test_name, "status": "TIMEOUT", "duration": elapsed})
             print(f"[TIMEOUT] {test_name} - timeout ({elapsed:.2f}s)\n")
 
         except Exception as e:
             elapsed = time.time() - start_time
             self.failed += 1
-            self.test_results.append({
-                "name": test_name,
-                "status": f"FAIL: {str(e)}",
-                "duration": elapsed
-            })
+            self.test_results.append({"name": test_name, "status": f"FAIL: {str(e)}", "duration": elapsed})
             print(f"[FAIL] {test_name} - failed: {str(e)} ({elapsed:.2f}s)\n")
 
     def print_summary(self):
@@ -89,38 +78,53 @@ class E2ETestRunner:
 
 # ==================== Performance Tests ====================
 
+
 async def test_config_cache_basic():
     """Test config cache basic functionality"""
-    from core.config_cache import ConfigCache
+    import tempfile
 
-    cache = ConfigCache(max_size=100, default_ttl=60.0)
+    from core.config_cache import ConfigCacheLayer
 
-    cache.put("emotion", "default_happy", 0.8)
-    value = cache.get("emotion", "default_happy")
-    assert value == 0.8, "Cache value mismatch"
+    cache = ConfigCacheLayer(max_size=100, default_ttl=60.0)
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".json", mode="w", encoding="utf-8") as f:
+        json.dump({"emotion": "happy", "confidence": 0.8}, f)
+        config_path = Path(f.name)
+
+    try:
+        await cache.load_config(config_path)
+        stats = cache.get_stats()
+        assert stats["loads"] >= 1, "Should have loaded config from file"
+    finally:
+        config_path.unlink(missing_ok=True)
 
     print("  [OK] Config cache basic functionality")
 
 
 async def test_config_cache_performance():
     """Test config cache performance"""
-    from core.config_cache import ConfigCache
+    import tempfile
 
-    cache = ConfigCache(max_size=1000, default_ttl=300.0)
+    from core.config_cache import ConfigCacheLayer
 
-    def load_config():
-        return {"value": time.time()}
+    cache = ConfigCacheLayer(max_size=1000, default_ttl=300.0)
 
-    time.time()
-    for i in range(100):
-        cache.put(f"config_{i}", "", load_config())
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".json", mode="w", encoding="utf-8") as f:
+        json.dump({"value": time.time()}, f)
+        config_path = Path(f.name)
 
-    read_start = time.time()
-    for i in range(1000):
-        cache.get(f"config_{i % 100}", "")
-    read_duration = time.time() - read_start
+    try:
+        await cache.load_config(config_path)
 
-    assert read_duration < 0.1, f"Read performance too slow: {read_duration:.3f}s"
+        read_start = time.time()
+        for i in range(1000):
+            await cache.load_config(config_path)
+        read_duration = time.time() - read_start
+
+        assert read_duration < 0.1, f"Read performance too slow: {read_duration:.3f}s"
+
+    finally:
+        config_path.unlink(missing_ok=True)
 
     print(f"  [OK] Config cache performance (1000 reads: {read_duration:.4f}s)")
 
@@ -129,11 +133,7 @@ async def test_event_batcher_basic():
     """Test event batcher basic functionality"""
     from core.event_batcher import BatchConfig, EventBatcher
 
-    batcher = EventBatcher(BatchConfig(
-        max_batch_size=10,
-        max_batch_delay=1.0,
-        min_batch_size=3
-    ))
+    batcher = EventBatcher(BatchConfig(max_batch_size=10, max_batch_delay=1.0, min_batch_size=3))
 
     events_received = []
 
@@ -158,11 +158,7 @@ async def test_event_batcher_performance():
     """Test event batcher performance"""
     from core.event_batcher import BatchConfig, EventBatcher
 
-    batcher = EventBatcher(BatchConfig(
-        max_batch_size=100,
-        max_batch_delay=0.5,
-        min_batch_size=10
-    ))
+    batcher = EventBatcher(BatchConfig(max_batch_size=100, max_batch_delay=0.5, min_batch_size=10))
 
     async def subscriber(event):
         pass
@@ -194,10 +190,7 @@ async def test_db_connection_pool_basic():
         db_path = f.name
 
     try:
-        pool = SQLiteConnectionPool(db_path, PoolConfig(
-            min_connections=2,
-            max_connections=5
-        ))
+        pool = SQLiteConnectionPool(db_path, PoolConfig(min_connections=2, max_connections=5))
 
         await pool.initialize()
 
@@ -224,6 +217,7 @@ async def test_db_connection_pool_basic():
 
 # ==================== Security Tests ====================
 
+
 async def test_config_encryption_basic():
     """Test config encryption basic functionality"""
     import tempfile
@@ -242,11 +236,7 @@ async def test_config_encryption_basic():
 
         assert decrypted == original, "Decrypted value should match original"
 
-        config = {
-            "username": "admin",
-            "password": "secret123",
-            "api_key": "abc123def456"
-        }
+        config = {"username": "admin", "password": "secret123", "api_key": "abc123def456"}
 
         encrypted_config = encryption.encrypt_config(config)
         assert "password" not in str(encrypted_config), "Password should be encrypted"
@@ -272,11 +262,7 @@ async def test_access_control_basic():
     try:
         manager = APIKeyManager(storage_path)
 
-        key_id, secret_key = manager.generate_key(
-            name="Test Key",
-            role=Role.USER,
-            expires_in_days=30
-        )
+        key_id, secret_key = manager.generate_key(name="Test Key", role=Role.USER, expires_in_days=30)
 
         api_key = manager.validate_key(secret_key)
         assert api_key is not None, "Key validation should succeed"
@@ -307,23 +293,21 @@ async def test_audit_logger_basic():
         logger = AuditLogger(log_dir=log_dir)
 
         logger.log_event(
-            event_type=AuditEventType.SYSTEM_STARTUP,
-            level=AuditEventLevel.INFO,
-            message="System startup test"
+            event_type=AuditEventType.SYSTEM_STARTUP, level=AuditEventLevel.INFO, message="System startup test"
         )
 
         logger.log_event(
             event_type=AuditEventType.API_KEY_CREATE,
             level=AuditEventLevel.INFO,
             user_id="test_user",
-            message="Create API key test"
+            message="Create API key test",
         )
 
         logger.log_event(
             event_type=AuditEventType.IOT_COMMAND_SEND,
             level=AuditEventLevel.WARNING,
             user_id="test_user",
-            message="Send IoT command test"
+            message="Send IoT command test",
         )
 
         events = logger.query_events(limit=10)
@@ -337,6 +321,7 @@ async def test_audit_logger_basic():
 
 # ==================== Monitoring Tests ====================
 
+
 async def test_monitoring_basic():
     """Test monitoring system basic functionality"""
     from core.monitoring import MonitoringSystem
@@ -346,15 +331,18 @@ async def test_monitoring_basic():
     monitoring.collector.record("test.metric", 75.0)
 
     from core.monitoring import AlertRule, AlertSeverity
-    monitoring.alert_engine.add_rule(AlertRule(
-        rule_id="test_rule",
-        name="Test Rule",
-        metric_name="test.metric",
-        condition="gt",
-        threshold=70.0,
-        severity=AlertSeverity.WARNING,
-        duration=1.0
-    ))
+
+    monitoring.alert_engine.add_rule(
+        AlertRule(
+            rule_id="test_rule",
+            name="Test Rule",
+            metric_name="test.metric",
+            condition="gt",
+            threshold=70.0,
+            severity=AlertSeverity.WARNING,
+            duration=1.0,
+        )
+    )
 
     monitoring.alert_engine.check_rules()
 
@@ -378,15 +366,17 @@ async def test_alert_notification():
 
     monitoring.collector.record("test.metric", 90.0)
 
-    monitoring.alert_engine.add_rule(AlertRule(
-        rule_id="test_alert",
-        name="Test Alert",
-        metric_name="test.metric",
-        condition="gt",
-        threshold=80.0,
-        severity=AlertSeverity.ERROR,
-        duration=1.0
-    ))
+    monitoring.alert_engine.add_rule(
+        AlertRule(
+            rule_id="test_alert",
+            name="Test Alert",
+            metric_name="test.metric",
+            condition="gt",
+            threshold=80.0,
+            severity=AlertSeverity.ERROR,
+            duration=1.0,
+        )
+    )
 
     monitoring.alert_engine.check_rules()
     await asyncio.sleep(0.5)
@@ -396,33 +386,38 @@ async def test_alert_notification():
 
 # ==================== Integration Tests ====================
 
+
 async def test_config_hot_reload_with_cache():
     """Test config hot reload with cache integration"""
     import tempfile
 
-    from core.config_cache import ConfigCache
+    from core.config_cache import ConfigCacheLayer
     from core.config_encryption import ConfigEncryption
 
-    with tempfile.NamedTemporaryFile(delete=False) as f:
-        key_file = Path(f.name)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".json", mode="w", encoding="utf-8") as f:
+        json.dump({"happy": 0.8, "sad": 0.1}, f)
+        config_path = Path(f.name)
+
+    with tempfile.NamedTemporaryFile(delete=False) as key_f:
+        key_file = Path(key_f.name)
 
     try:
-        cache = ConfigCache(max_size=100)
+        cache = ConfigCacheLayer(max_size=100)
         ConfigEncryption(key_file=key_file)
 
-        def load_config():
-            return {"happy": 0.8, "sad": 0.1}
-
-        config1 = cache.get("emotion", "", loader=load_config)
+        config1 = await cache.load_config(config_path)
         assert config1 is not None, "Should load config"
+        assert config1.get("happy") == 0.8, "Config should contain happy key"
 
-        config2 = cache.get("emotion", "", loader=load_config)
+        config2 = await cache.load_config(config_path)
         assert config2 is not None, "Should get from cache"
+        assert config2.get("sad") == 0.1, "Config should contain sad key"
 
         stats = cache.get_stats()
         assert stats["hits"] >= 1, "Should have cache hits"
 
     finally:
+        config_path.unlink(missing_ok=True)
         key_file.unlink(missing_ok=True)
 
     print("  [OK] Config hot reload with cache integration")
@@ -443,16 +438,13 @@ async def test_api_security_flow():
             key_manager = APIKeyManager(storage_path)
             audit_logger = AuditLogger(log_dir=log_dir)
 
-            key_id, secret_key = key_manager.generate_key(
-                name="Security Test Key",
-                role=Role.USER
-            )
+            key_id, secret_key = key_manager.generate_key(name="Security Test Key", role=Role.USER)
 
             audit_logger.log_event(
                 event_type=AuditEventType.API_KEY_CREATE,
                 user_id="test_user",
                 api_key_id=key_id,
-                message="API key creation"
+                message="API key creation",
             )
 
             api_key = key_manager.validate_key(secret_key)
@@ -462,17 +454,10 @@ async def test_api_security_flow():
             assert has_permission, "Should have read config permission"
 
             key_manager.log_access(
-                key_id=key_id,
-                endpoint="/api/config",
-                method="GET",
-                status_code=200,
-                response_time_ms=50.5
+                key_id=key_id, endpoint="/api/config", method="GET", status_code=200, response_time_ms=50.5
             )
 
-            events = audit_logger.query_events(
-                event_type=AuditEventType.API_KEY_CREATE,
-                limit=10
-            )
+            events = audit_logger.query_events(event_type=AuditEventType.API_KEY_CREATE, limit=10)
             assert len(events) > 0, "Should have audit events"
 
             key_stats = key_manager.get_stats()
@@ -489,30 +474,39 @@ async def test_api_security_flow():
 
 async def test_performance_benchmark():
     """Performance benchmark test"""
-    from core.config_cache import ConfigCache
+    import tempfile
+
+    from core.config_cache import ConfigCacheLayer
     from core.event_batcher import BatchConfig, EventBatcher
 
     results = {}
 
-    cache = ConfigCache(max_size=1000)
+    cache = ConfigCacheLayer(max_size=1000)
 
-    start = time.time()
-    for i in range(1000):
-        cache.put(f"key_{i}", "", f"value_{i}")
-    write_duration = time.time() - start
-    results["cache_write_1000"] = write_duration
+    temp_files = []
+    for i in range(100):
+        f = tempfile.NamedTemporaryFile(delete=False, suffix=".json", mode="w", encoding="utf-8")
+        json.dump({"key": f"value_{i}", "index": i}, f)
+        f.close()
+        temp_files.append(Path(f.name))
 
-    start = time.time()
-    for i in range(10000):
-        cache.get(f"key_{i % 1000}", "")
-    read_duration = time.time() - start
-    results["cache_read_10000"] = read_duration
+    try:
+        start = time.time()
+        for i in range(100):
+            await cache.load_config(temp_files[i])
+        load_duration = time.time() - start
+        results["cache_load_100"] = load_duration
 
-    batcher = EventBatcher(BatchConfig(
-        max_batch_size=100,
-        max_batch_delay=0.1,
-        min_batch_size=10
-    ))
+        start = time.time()
+        for i in range(10000):
+            await cache.load_config(temp_files[i % 100])
+        read_duration = time.time() - start
+        results["cache_read_10000"] = read_duration
+    finally:
+        for fp in temp_files:
+            fp.unlink(missing_ok=True)
+
+    batcher = EventBatcher(BatchConfig(max_batch_size=100, max_batch_delay=0.1, min_batch_size=10))
 
     async def subscriber(event):
         pass
@@ -529,17 +523,18 @@ async def test_performance_benchmark():
     await asyncio.sleep(1)
     await batcher.shutdown()
 
-    assert results["cache_write_1000"] < 1.0, "Cache write too slow"
+    assert results["cache_load_100"] < 1.0, "Cache load too slow"
     assert results["cache_read_10000"] < 0.5, "Cache read too slow"
     assert results["event_publish_1000"] < 2.0, "Event publish too slow"
 
     print("  [OK] Performance benchmark:")
-    print(f"    - Cache write 1000: {results['cache_write_1000']:.4f}s")
+    print(f"    - Cache load 100: {results['cache_load_100']:.4f}s")
     print(f"    - Cache read 10000: {results['cache_read_10000']:.4f}s")
     print(f"    - Event publish 1000: {results['event_publish_1000']:.4f}s")
 
 
 # ==================== Main Test Flow ====================
+
 
 async def run_all_e2e_tests():
     """Run all end-to-end tests"""
@@ -584,7 +579,7 @@ async def run_all_e2e_tests():
         "passed": runner.passed,
         "failed": runner.failed,
         "results": runner.test_results,
-        "performance_metrics": runner.performance_metrics
+        "performance_metrics": runner.performance_metrics,
     }
 
 
@@ -599,4 +594,5 @@ if __name__ == "__main__":
     print(f"\n[FILE] E2E test results saved to: {result_file}")
 
     import sys
+
     sys.exit(0 if result["failed"] == 0 else 1)

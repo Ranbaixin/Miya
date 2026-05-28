@@ -110,9 +110,7 @@ class UnifiedPermissionEngine:
                     self._superadmin_ids.add(uid)
 
         # 从白名单（兼容）
-        whitelist = self._config.get("special_rules", {}).get(
-            "super_admin_whitelist", []
-        )
+        whitelist = self._config.get("special_rules", {}).get("super_admin_whitelist", [])
         self._superadmin_ids.update(whitelist)
 
     def _get_superadmin_id_for_platform(self, platform: str) -> Optional[str]:
@@ -184,33 +182,6 @@ class UnifiedPermissionEngine:
                 return True
 
         return False
-        self._reload()
-
-        if user_id in self._superadmin_ids:
-            return True
-
-        # platform_userid 格式
-        if platform and f"{platform}_{user_id}" in self._superadmin_ids:
-            return True
-
-        # 从 superadmins 字段检查
-        superadmins = self._config.get("superadmins", {})
-        for raw_id, info in superadmins.items():
-            platforms = info.get("platforms", [])
-            if user_id == raw_id or (
-                platform and platform in platforms and user_id == raw_id
-            ):
-                return True
-            if platform and f"{platform}_{raw_id}" == f"{platform}_{user_id}":
-                return True
-
-        # 从 users 的 linked_to 检查
-        for user in self._config.get("users", []):
-            linked = user.get("linked_to", "")
-            if linked and linked == user_id:
-                return True
-
-        return False
 
     def is_superadmin_cross_platform(self, platform: str, raw_user_id: str) -> bool:
         """跨平台超管检查 — 简化调用"""
@@ -229,9 +200,7 @@ class UnifiedPermissionEngine:
 
     # ==================== 权限检查 ====================
 
-    def check(
-        self, user_id: str, permission: str, context: Optional[Dict] = None
-    ) -> bool:
+    def check(self, user_id: str, permission: str, context: Optional[Dict] = None) -> bool:
         """
         检查用户是否有指定权限
 
@@ -291,9 +260,7 @@ class UnifiedPermissionEngine:
 
     # ==================== 内部方法 ====================
 
-    def _get_user_permissions(
-        self, user_id: str, context: Optional[Dict] = None
-    ) -> List[str]:
+    def _get_user_permissions(self, user_id: str, context: Optional[Dict] = None) -> List[str]:
         """获取用户的所有权限节点"""
         config = self._config
         permissions: List[str] = []
@@ -331,9 +298,7 @@ class UnifiedPermissionEngine:
 
         return None
 
-    def _add_or_update_user(
-        self, user_id: str, platform: str, username: str, groups: List[str]
-    ):
+    def _add_or_update_user(self, user_id: str, platform: str, username: str, groups: List[str]):
         """添加或更新用户配置"""
         config = self._config
         user = self._find_user(user_id)
@@ -371,9 +336,7 @@ class UnifiedPermissionEngine:
             if len(parts) <= len(check_parts):
                 match = True
                 for i, p in enumerate(parts):
-                    if p != "*" and p != (
-                        check_parts[i] if i < len(check_parts) else ""
-                    ):
+                    if p != "*" and p != (check_parts[i] if i < len(check_parts) else ""):
                         match = False
                         break
                 if match:
@@ -389,16 +352,12 @@ class UnifiedPermissionEngine:
             return user.get("permission_groups", [])
         return []
 
-    def get_user_permissions_list(
-        self, user_id: str, context: Optional[Dict] = None
-    ) -> List[str]:
+    def get_user_permissions_list(self, user_id: str, context: Optional[Dict] = None) -> List[str]:
         """获取用户所有权限（展开）"""
         self._reload()
         return self._get_user_permissions(user_id, context)
 
-    def grant_role(
-        self, user_id: str, platform: str, username: str, groups: List[str]
-    ) -> bool:
+    def grant_role(self, user_id: str, platform: str, username: str, groups: List[str]) -> bool:
         """授予用户权限组（持久化）"""
         self._reload()
         self._add_or_update_user(user_id, platform, username, groups)
@@ -412,9 +371,7 @@ class UnifiedPermissionEngine:
         for user in users:
             if user.get("user_id") == user_id:
                 if groups:
-                    user["permission_groups"] = [
-                        g for g in user.get("permission_groups", []) if g not in groups
-                    ]
+                    user["permission_groups"] = [g for g in user.get("permission_groups", []) if g not in groups]
                 else:
                     user["permission_groups"] = ["Default"]
                 self._rebuild_superadmin_cache()

@@ -204,8 +204,8 @@ class IntelligentOrchestrator:
                                 "recommendation": str(result)[:1000],
                             }
                         )
-                except Exception:
-                    pass
+                except Exception as __e:
+                    logger.debug(f"[orchestrator] 漏洞查询失败: {__e}")
 
             # 2c. 自动查询 CVE + 漏洞利用
             keywords = set()
@@ -225,8 +225,8 @@ class IntelligentOrchestrator:
                                 "result": str(result)[:2000],
                             }
                         )
-                except Exception:
-                    pass
+                except Exception as __e:
+                    logger.debug(f"[orchestrator] CVE查询失败: {__e}")
 
                 try:
                     result = await self.tool_executor("security_sploitus_search", {"keyword": kw})
@@ -238,8 +238,8 @@ class IntelligentOrchestrator:
                                 "result": str(result)[:2000],
                             }
                         )
-                except Exception:
-                    pass
+                except Exception as __e:
+                    logger.debug(f"[orchestrator] Sploitus查询失败: {__e}")
 
             plan.phases_completed.add(2)
 
@@ -273,8 +273,8 @@ class IntelligentOrchestrator:
                 try:
                     result = await self.tool_executor("security_vuln_lookup", {"keyword": plan.target})
                     plan.vuln_intel[-1]["result"] = str(result)[:2000]
-                except Exception:
-                    pass
+                except Exception as __e:
+                    logger.debug(f"[orchestrator] Phase4漏洞查询失败: {__e}")
 
             plan.phases_completed.add(4)
 

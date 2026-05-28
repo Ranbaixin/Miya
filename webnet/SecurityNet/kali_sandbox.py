@@ -152,8 +152,8 @@ def ensure_kali_container() -> Dict[str, Any]:
             # 容器存在，启动它
             subprocess.run(["docker", "start", KALI_CONTAINER], capture_output=True, timeout=10)
             return {"success": True, "message": f"Kali 容器已启动: {KALI_CONTAINER}"}
-    except Exception:
-        pass
+    except Exception as __e:
+        logger.debug(f"[kali_sandbox] Docker检查失败: {__e}")
 
     # 容器不存在，需要构建
     return {

@@ -86,8 +86,8 @@ class HexStrikeClient:
                 if resp.status == 200:
                     data = await resp.json()
                     return json.dumps(data, ensure_ascii=False, indent=2)
-        except Exception:
-            pass
+        except Exception as __e:
+            logger.debug(f"[online_tools_bridge] 分析目标失败: {__e}")
         return None
 
     async def smart_scan(self, target: str, mode: str = "quick") -> Optional[str]:
@@ -100,8 +100,8 @@ class HexStrikeClient:
                 if resp.status == 200:
                     data = await resp.json()
                     return json.dumps(data, ensure_ascii=False, indent=2)
-        except Exception:
-            pass
+        except Exception as __e:
+            logger.debug(f"[online_tools_bridge] 智能扫描失败: {__e}")
         return None
 
     async def search_tools(self, query: str) -> Optional[List[Dict[str, Any]]]:
@@ -113,8 +113,8 @@ class HexStrikeClient:
             ) as resp:
                 if resp.status == 200:
                     return await resp.json()
-        except Exception:
-            pass
+        except Exception as __e:
+            logger.debug(f"[online_tools_bridge] 搜索工具失败: {__e}")
         return None
 
     async def close(self):

@@ -154,42 +154,165 @@ port_scanner:
 # ═══════════════════════════════════════════
 subdomain_enum:
   default_subdomains:
-    - www - mail - ftp - localhost - webmail - smtp
-    - pop - ns1 - webdisk - ns2 - cpanel - whm
-    - autodiscover - autoconfig - m - imap - test
-    - ns - blog - pop3 - dev - www2 - admin
-    - forum - news - vpn - ns3 - mail2 - new
-    - mysql - old - lists - support - mobile - mx
-    - static - docs - beta - shop - sql - secure
-    - demo - cp - calendar - wiki - web - media
-    - email - images - img - download - git
-    - api - cdn - staging - app - portal
-    - status - monitor - cloud - remote
-    - backup - db - data - storage
-    - gateway - proxy - auth
-    - jenkins - gitlab - jira - confluence
-    - nextcloud - grafana - kibana
-    - phpmyadmin - adminer
+    - www
+    - mail
+    - ftp
+    - localhost
+    - webmail
+    - smtp
+    - pop
+    - ns1
+    - webdisk
+    - ns2
+    - cpanel
+    - whm
+    - autodiscover
+    - autoconfig
+    - m
+    - imap
+    - test
+    - ns
+    - blog
+    - pop3
+    - dev
+    - www2
+    - admin
+    - forum
+    - news
+    - vpn
+    - ns3
+    - mail2
+    - new
+    - mysql
+    - old
+    - lists
+    - support
+    - mobile
+    - mx
+    - static
+    - docs
+    - beta
+    - shop
+    - sql
+    - secure
+    - demo
+    - cp
+    - calendar
+    - wiki
+    - web
+    - media
+    - email
+    - images
+    - img
+    - download
+    - git
+    - api
+    - cdn
+    - staging
+    - app
+    - portal
+    - status
+    - monitor
+    - cloud
+    - remote
+    - backup
+    - db
+    - data
+    - storage
+    - gateway
+    - proxy
+    - auth
+    - jenkins
+    - gitlab
+    - jira
+    - confluence
+    - nextcloud
+    - grafana
+    - kibana
+    - phpmyadmin
+    - adminer
 
   deep_subdomains:
-    - api2 - api-gateway - assets - bbs
-    - cdn1 - cdn2 - chat - ci - click - cms
-    - crm - dashboard - design - dns1 - dns2
-    - docker - editor - events - exchange - feeds
-    - files - flow - forms - games - help
-    - host - jobs - kb - lab - library
-    - live - login - log - m1 - manage
-    - map - market - master - members - messenger
-    - mirror - music - node1 - node2
-    - office - online - partner - pay
-    - photos - radio - recruit - release
-    - repo - research - sandbox - search
-    - server1 - server2 - service - signup
-    - source - sso - stage - store
-    - survey - svn - tasks - team
-    - tech - tracker - translate - upload
-    - video - vip - voip - workflow
-    - ws - ww2 - xml - xmpp
+    - api2
+    - api-gateway
+    - assets
+    - bbs
+    - cdn1
+    - cdn2
+    - chat
+    - ci
+    - click
+    - cms
+    - crm
+    - dashboard
+    - design
+    - dns1
+    - dns2
+    - docker
+    - editor
+    - events
+    - exchange
+    - feeds
+    - files
+    - flow
+    - forms
+    - games
+    - help
+    - host
+    - jobs
+    - kb
+    - lab
+    - library
+    - live
+    - login
+    - log
+    - m1
+    - manage
+    - map
+    - market
+    - master
+    - members
+    - messenger
+    - mirror
+    - music
+    - node1
+    - node2
+    - office
+    - online
+    - partner
+    - pay
+    - photos
+    - radio
+    - recruit
+    - release
+    - repo
+    - research
+    - sandbox
+    - search
+    - server1
+    - server2
+    - service
+    - signup
+    - source
+    - sso
+    - stage
+    - store
+    - survey
+    - svn
+    - tasks
+    - team
+    - tech
+    - tracker
+    - translate
+    - upload
+    - video
+    - vip
+    - voip
+    - workflow
+    - ws
+    - ww2
+    - xml
+    - xmpp
 
 # ═══════════════════════════════════════════
 # HTTP 响应头安全分析配置
@@ -219,7 +342,13 @@ http_headers:
 # ═══════════════════════════════════════════
 dns_enum:
   default_record_types:
-    - A - AAAA - MX - NS - CNAME - TXT - SOA
+    - A
+    - AAAA
+    - MX
+    - NS
+    - CNAME
+    - TXT
+    - SOA
   resolver_timeout: 5
   analysis_warnings:
     no_mx: "未配置 MX 记录：可能未启用企业邮箱"
@@ -392,38 +521,99 @@ dir_brute:
   max_paths_deep: 80
 
   common_paths:
-    - /admin - /login - /wp-admin - /administrator
-    - /api - /api/v1 - /graphql - /swagger
-    - /.git/HEAD - /.env - /.svn/entries - /.DS_Store
-    - /robots.txt - /sitemap.xml - /crossdomain.xml
-    - /backup - /backup.zip - /backup.tar.gz
-    - /config.php - /configuration.php - /wp-config.php
-    - /phpinfo.php - /info.php - /test.php
-    - /console - /debug - /dev
-    - /uploads - /upload - /images - /css - /js
-    - /static - /assets - /public
-    - /tmp - /temp - /logs - /log
-    - /sql - /db - /database
-    - /phpmyadmin - /adminer - /mysql
-    - /jenkins - /solr - /actuator
-    - /server-status - /server-info
-    - /cgi-bin - /cgi-bin/test.cgi
-    - /v1 - /v2 - /v1/api
-    - /api-docs - /api/swagger.json - /openapi.json
+    - /admin
+    - /login
+    - /wp-admin
+    - /administrator
+    - /api
+    - /api/v1
+    - /graphql
+    - /swagger
+    - /.git/HEAD
+    - /.env
+    - /.svn/entries
+    - /.DS_Store
+    - /robots.txt
+    - /sitemap.xml
+    - /crossdomain.xml
+    - /backup
+    - /backup.zip
+    - /backup.tar.gz
+    - /config.php
+    - /configuration.php
+    - /wp-config.php
+    - /phpinfo.php
+    - /info.php
+    - /test.php
+    - /console
+    - /debug
+    - /dev
+    - /uploads
+    - /upload
+    - /images
+    - /css
+    - /js
+    - /static
+    - /assets
+    - /public
+    - /tmp
+    - /temp
+    - /logs
+    - /log
+    - /sql
+    - /db
+    - /database
+    - /phpmyadmin
+    - /adminer
+    - /mysql
+    - /jenkins
+    - /solr
+    - /actuator
+    - /server-status
+    - /server-info
+    - /cgi-bin
+    - /cgi-bin/test.cgi
+    - /v1
+    - /v2
+    - /v1/api
+    - /api-docs
+    - /api/swagger.json
+    - /openapi.json
     - /vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
-    - /wp-content/uploads - /wp-json/wp/v2/users
-    - /.htaccess - /.gitignore - /README.md
-    - /config - /config.yaml - /config.yml
-    - /docker-compose.yml - /Dockerfile
-    - /composer.json - /package.json
-    - /web.config - /WEB-INF/web.xml
-    - /actuator/health - /actuator/env
-    - /cron - /crontab
-    - /status - /health - /ping
-    - /favicon.ico - /404 - /error
+    - /wp-content/uploads
+    - /wp-json/wp/v2/users
+    - /.htaccess
+    - /.gitignore
+    - /README.md
+    - /config
+    - /config.yaml
+    - /config.yml
+    - /docker-compose.yml
+    - /Dockerfile
+    - /composer.json
+    - /package.json
+    - /web.config
+    - /WEB-INF/web.xml
+    - /actuator/health
+    - /actuator/env
+    - /cron
+    - /crontab
+    - /status
+    - /health
+    - /ping
+    - /favicon.ico
+    - /404
+    - /error
 
   common_extensions:
-    - .php - .asp - .aspx - .jsp - .bak - .old - .save - .txt
+    - .php
+    - .asp
+    - .aspx
+    - .jsp
+    - .bak
+    - .old
+    - .save
+    - .txt
 
   critical_paths:
     - [/.git/HEAD, "敏感 Git 仓库暴露"]

@@ -28,6 +28,18 @@ logger = logging.getLogger(__name__)
 
 from .error_handler import ModernVisualEngine
 
+try:
+    from selenium import webdriver
+    from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.common.by import By
+
+    _SELENIUM_AVAILABLE = True
+except ImportError:
+    webdriver = None
+    Options = None
+    By = None
+    _SELENIUM_AVAILABLE = False
+
 
 class BrowserAgent:
     """AI-powered browser agent for web application testing and inspection"""
@@ -40,6 +52,10 @@ class BrowserAgent:
 
     def setup_browser(self, headless: bool = True, proxy_port: int = None):
         """Setup Chrome browser with security testing options"""
+        if not _SELENIUM_AVAILABLE:
+            logger.warning("Selenium 不可用，跳过浏览器 Agent 初始化")
+            return False
+
         try:
             chrome_options = Options()
 
@@ -303,7 +319,8 @@ class BrowserAgent:
                 }
                 return storage;
             """)
-        except:
+        except Exception as __e:
+            logger.debug(f"[browser_agent] 获取localStorage失败: {__e}")
             return {}
 
     def _get_session_storage(self) -> dict:
@@ -317,7 +334,8 @@ class BrowserAgent:
                 }
                 return storage;
             """)
-        except:
+        except Exception as __e:
+            logger.debug(f"[browser_agent] 获取sessionStorage失败: {__e}")
             return {}
 
     def _extract_forms(self) -> list:
@@ -343,8 +361,8 @@ class BrowserAgent:
                     )
 
                 forms.append(form_data)
-        except:
-            pass
+        except Exception as __e:
+            logger.debug(f"[browser_agent] 提取表单失败: {__e}")
 
         return forms
 
@@ -362,8 +380,8 @@ class BrowserAgent:
                             "text": link.text[:100],  # Limit text length
                         }
                     )
-        except:
-            pass
+        except Exception as __e:
+            logger.debug(f"[browser_agent] 提取链接失败: {__e}")
 
         return links
 
@@ -381,8 +399,8 @@ class BrowserAgent:
                         "placeholder": input_elem.get_attribute("placeholder") or "",
                     }
                 )
-        except:
-            pass
+        except Exception as __e:
+            logger.debug(f"[browser_agent] 提取输入元素失败: {__e}")
 
         return inputs
 
@@ -404,8 +422,8 @@ class BrowserAgent:
                                 "content": content[:1000],  # Limit content
                             }
                         )
-        except:
-            pass
+        except Exception as __e:
+            logger.debug(f"[browser_agent] 提取脚本失败: {__e}")
 
         return scripts
 
@@ -429,7 +447,8 @@ class BrowserAgent:
                     )
 
             return network_requests
-        except:
+        except Exception as __e:
+            logger.debug(f"[browser_agent] 获取网络日志失败: {__e}")
             return []
 
     def _analyze_page_security(self, page_source: str, page_info: dict) -> dict:

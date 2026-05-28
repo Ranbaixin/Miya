@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 class Role(Enum):
     """角色枚举"""
+
     ADMIN = "admin"  # 管理员: 所有权限
     USER = "user"  # 用户: 基本权限
     GUEST = "guest"  # 访客: 只读权限
@@ -36,6 +37,7 @@ class Role(Enum):
 
 class Permission(Enum):
     """权限枚举"""
+
     # 配置管理
     CONFIG_READ = "config:read"
     CONFIG_WRITE = "config:write"
@@ -63,6 +65,7 @@ class Permission(Enum):
 @dataclass
 class APIKey:
     """API密钥"""
+
     key_id: str
     key_hash: str
     name: str
@@ -78,6 +81,7 @@ class APIKey:
 @dataclass
 class AccessLog:
     """访问日志"""
+
     key_id: str
     endpoint: str
     method: str
@@ -99,22 +103,17 @@ class APIKeyManager:
             Permission.API_READ,
             Permission.IOT_READ,
             Permission.DATA_READ,
-            Permission.DATA_WRITE
+            Permission.DATA_WRITE,
         },
-        Role.GUEST: {
-            Permission.CONFIG_READ,
-            Permission.API_READ,
-            Permission.IOT_READ,
-            Permission.DATA_READ
-        },
+        Role.GUEST: {Permission.CONFIG_READ, Permission.API_READ, Permission.IOT_READ, Permission.DATA_READ},
         Role.SYSTEM: {
             Permission.SYSTEM_ADMIN,
             Permission.SYSTEM_MONITOR,
             Permission.CONFIG_READ,
             Permission.CONFIG_WRITE,
             Permission.API_READ,
-            Permission.API_WRITE
-        }
+            Permission.API_WRITE,
+        },
     }
 
     def __init__(self, storage_path: Optional[str] = None):
@@ -136,7 +135,7 @@ class APIKeyManager:
 
             storage_file = Path(self.storage_path)
             if storage_file.exists():
-                with open(storage_file, 'r', encoding='utf-8') as f:
+                with open(storage_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
 
                 for key_data in data.get("keys", []):
@@ -147,10 +146,12 @@ class APIKeyManager:
                         role=Role(key_data["role"]),
                         permissions={Permission(p) for p in key_data["permissions"]},
                         created_at=datetime.fromisoformat(key_data["created_at"]),
-                        expires_at=datetime.fromisoformat(key_data["expires_at"]) if key_data.get("expires_at") else None,
+                        expires_at=datetime.fromisoformat(key_data["expires_at"])
+                        if key_data.get("expires_at")
+                        else None,
                         is_active=key_data["is_active"],
                         rate_limit=key_data.get("rate_limit", 1000),
-                        metadata=key_data.get("metadata", {})
+                        metadata=key_data.get("metadata", {}),
                     )
                     self._api_keys[api_key.key_id] = api_key
 
@@ -180,14 +181,14 @@ class APIKeyManager:
                         "expires_at": key.expires_at.isoformat() if key.expires_at else None,
                         "is_active": key.is_active,
                         "rate_limit": key.rate_limit,
-                        "metadata": key.metadata
+                        "metadata": key.metadata,
                     }
                     for key in self._api_keys.values()
                 ],
-                "updated_at": datetime.now().isoformat()
+                "updated_at": datetime.now().isoformat(),
             }
 
-            with open(storage_file, 'w', encoding='utf-8') as f:
+            with open(storage_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
 
             logger.debug("[访问控制] API密钥已保存")
@@ -201,15 +202,16 @@ class APIKeyManager:
         role: Role = Role.USER,
         permissions: Optional[Set[Permission]] = None,
         expires_in_days: Optional[int] = None,
-        rate_limit: int = 1000
+        rate_limit: int = 1000,
     ) -> Tuple[str, str]:
         """生成API密钥"""
         # 生成密钥ID和实际密钥
         key_id = secrets.token_hex(16)
         secret_key = secrets.token_urlsafe(32)
 
-        # 计算密钥哈希
-        key_hash = hashlib.sha256(secret_key.encode()).hexdigest()
+        # 计算密钥哈希（加盐 SHA-256）
+        salt = secrets.token_bytes(16)
+        key_hash = hashlib.sha256(salt + secret_key.encode()).hexdigest() + ":" + salt.hex()
 
         # 设置权限
         if permissions is None:
@@ -230,7 +232,7 @@ class APIKeyManager:
             created_at=datetime.now(),
             expires_at=expires_at,
             is_active=True,
-            rate_limit=rate_limit
+            rate_limit=rate_limit,
         )
 
         # 保存密钥
@@ -297,10 +299,7 @@ class APIKeyManager:
         hour_ago = now - timedelta(hours=1)
 
         # 清理过期计数
-        self._rate_limit_counters[key_id] = [
-            ts for ts in self._rate_limit_counters[key_id]
-            if ts > hour_ago
-        ]
+        self._rate_limit_counters[key_id] = [ts for ts in self._rate_limit_counters[key_id] if ts > hour_ago]
 
         # 检查是否超过限制
         if len(self._rate_limit_counters[key_id]) >= api_key.rate_limit:
@@ -319,7 +318,7 @@ class APIKeyManager:
         status_code: int,
         response_time_ms: float,
         ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None
+        user_agent: Optional[str] = None,
     ):
         """记录访问日志"""
         log = AccessLog(
@@ -330,7 +329,7 @@ class APIKeyManager:
             status_code=status_code,
             response_time_ms=response_time_ms,
             ip_address=ip_address,
-            user_agent=user_agent
+            user_agent=user_agent,
         )
 
         self._access_logs.append(log)
@@ -339,11 +338,7 @@ class APIKeyManager:
         if len(self._access_logs) > 10000:
             self._access_logs = self._access_logs[-10000:]
 
-    def get_access_logs(
-        self,
-        key_id: Optional[str] = None,
-        limit: int = 100
-    ) -> List[AccessLog]:
+    def get_access_logs(self, key_id: Optional[str] = None, limit: int = 100) -> List[AccessLog]:
         """获取访问日志"""
         logs = self._access_logs
 
@@ -375,7 +370,7 @@ class APIKeyManager:
             "successful_requests": successful_requests,
             "failed_requests": total_requests - successful_requests,
             "avg_response_time_ms": avg_response_time,
-            "key_requests": dict(key_requests)
+            "key_requests": dict(key_requests),
         }
 
     def list_keys(self) -> List[Dict[str, Any]]:
@@ -389,7 +384,7 @@ class APIKeyManager:
                 "created_at": key.created_at.isoformat(),
                 "expires_at": key.expires_at.isoformat() if key.expires_at else None,
                 "is_active": key.is_active,
-                "rate_limit": key.rate_limit
+                "rate_limit": key.rate_limit,
             }
             for key in self._api_keys.values()
         ]
@@ -397,16 +392,18 @@ class APIKeyManager:
 
 def require_permission(permission: Permission):
     """权限检查装饰器"""
+
     def decorator(func):
         @wraps(func)
         async def async_wrapper(*args, **kwargs):
             # 从kwargs获取API密钥
-            api_key = kwargs.get('api_key')
+            api_key = kwargs.get("api_key")
             if not api_key:
                 raise PermissionError("需要API密钥认证")
 
             # 检查权限
             from core.access_control import get_global_key_manager
+
             key_manager = get_global_key_manager()
             if not key_manager.has_permission(api_key, permission):
                 raise PermissionError(f"缺少权限: {permission.value}")
@@ -416,12 +413,13 @@ def require_permission(permission: Permission):
         @wraps(func)
         def sync_wrapper(*args, **kwargs):
             # 从kwargs获取API密钥
-            api_key = kwargs.get('api_key')
+            api_key = kwargs.get("api_key")
             if not api_key:
                 raise PermissionError("需要API密钥认证")
 
             # 检查权限
             from core.access_control import get_global_key_manager
+
             key_manager = get_global_key_manager()
             if not key_manager.has_permission(api_key, permission):
                 raise PermissionError(f"缺少权限: {permission.value}")
@@ -439,16 +437,18 @@ def require_permission(permission: Permission):
 
 def check_rate_limit():
     """速率限制检查装饰器"""
+
     def decorator(func):
         @wraps(func)
         async def async_wrapper(*args, **kwargs):
             # 从kwargs获取API密钥
-            api_key = kwargs.get('api_key')
+            api_key = kwargs.get("api_key")
             if not api_key:
                 raise PermissionError("需要API密钥认证")
 
             # 检查速率限制
             from core.access_control import get_global_key_manager
+
             key_manager = get_global_key_manager()
             if not key_manager.check_rate_limit(api_key.key_id):
                 raise PermissionError("超过速率限制")
@@ -458,12 +458,13 @@ def check_rate_limit():
         @wraps(func)
         def sync_wrapper(*args, **kwargs):
             # 从kwargs获取API密钥
-            api_key = kwargs.get('api_key')
+            api_key = kwargs.get("api_key")
             if not api_key:
                 raise PermissionError("需要API密钥认证")
 
             # 检查速率限制
             from core.access_control import get_global_key_manager
+
             key_manager = get_global_key_manager()
             if not key_manager.check_rate_limit(api_key.key_id):
                 raise PermissionError("超过速率限制")
@@ -502,11 +503,7 @@ if __name__ == "__main__":
     manager = APIKeyManager()
 
     # 生成API密钥
-    key_id, secret_key = manager.generate_key(
-        name="Test Key",
-        role=Role.USER,
-        expires_in_days=30
-    )
+    key_id, secret_key = manager.generate_key(name="Test Key", role=Role.USER, expires_in_days=30)
     print(f"生成的密钥: {secret_key}")
 
     # 验证密钥
@@ -521,16 +518,10 @@ if __name__ == "__main__":
         # 检查速率限制
         for i in range(10):
             allowed = manager.check_rate_limit(key_id)
-            print(f"请求 {i+1}: {'允许' if allowed else '拒绝'}")
+            print(f"请求 {i + 1}: {'允许' if allowed else '拒绝'}")
 
         # 记录访问
-        manager.log_access(
-            key_id=key_id,
-            endpoint="/api/config",
-            method="GET",
-            status_code=200,
-            response_time_ms=50.5
-        )
+        manager.log_access(key_id=key_id, endpoint="/api/config", method="GET", status_code=200, response_time_ms=50.5)
 
         # 获取统计
         stats = manager.get_stats()
