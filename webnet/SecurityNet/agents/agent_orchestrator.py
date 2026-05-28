@@ -520,3 +520,236 @@ def get_agent_orchestrator(llm_callback: Optional[LLMCallback] = None) -> AgentO
     elif llm_callback and not _orchestrator.llm:
         _orchestrator.llm = llm_callback
     return _orchestrator
+
+
+# ══════════════════════════════════════════════════════════════════
+# CTF 解题循环 (BUUCTF_Agent 移植)
+# ══════════════════════════════════════════════════════════════════
+
+
+@dataclass
+class CTFStep:
+    step: int
+    think: str = ""
+    tool_calls: List[Dict[str, Any]] = field(default_factory=list)
+    tool_results: List[Dict[str, Any]] = field(default_factory=list)
+    analysis: Dict[str, Any] = field(default_factory=dict)
+    status: str = "pending"
+
+
+class CTFSolver:
+    """CTF 自主解题 Agent — Think → Execute → Analyze 循环
+
+    从 BUUCTF_Agent 的 SolveAgent 移植，适配弥娅的 LLM/工具/记忆系统。
+    """
+
+    def __init__(
+        self,
+        problem: str,
+        category: str = "misc",
+        llm_callback: Optional[LLMCallback] = None,
+        tool_executor: Optional[Callable] = None,
+    ):
+        self.problem = problem
+        self.category = category
+
+        from .agent_memory import get_agent_memory
+        from ..skill_manager import get_skill_manager
+        from ..checkpoint import get_checkpoint
+
+        self.memory = get_agent_memory()
+        self.skill_manager = get_skill_manager()
+        self.checkpoint = get_checkpoint()
+        self.llm = llm_callback
+        self.tool_executor = tool_executor
+        self.history: List[CTFStep] = []
+        self.compressed_blocks: List[Dict[str, Any]] = []
+        self.failed_attempts: Dict[str, int] = {}
+        self.max_steps = 20
+        self._current_step = 0
+
+    def resume(self, resume_step: int = 0) -> None:
+        data = self.checkpoint.load(self.problem)
+        if data:
+            self._current_step = data.get("step_count", 0)
+            mem = data.get("memory", {})
+            self.memory.restore_from_dict(mem)
+            logger.info("CTF存档恢复: step %d", self._current_step)
+
+    async def solve(self, progress_cb: Optional[Callable] = None) -> Dict[str, Any]:
+        """主解题循环"""
+
+        skill_prompt = self.skill_manager.format_for_prompt([self.category])
+
+        for step_num in range(self._current_step, self.max_steps):
+            step = CTFStep(step=step_num + 1)
+            self.history.append(step)
+
+            if progress_cb:
+                progress_cb(step_num + 1, "think", "思考中...")
+
+            # Step A: Think — LLM 生成思考 + 工具计划
+            think_text, tool_calls = await self._think(skill_prompt)
+            step.think = think_text
+            step.tool_calls = tool_calls
+            step.status = "executing"
+
+            if progress_cb:
+                progress_cb(step_num + 1, "execute", f"执行 {len(tool_calls)} 个工具...")
+
+            # Step B: Execute — 执行工具
+            for tc in tool_calls:
+                tool_name = tc.get("tool_name", tc.get("name", ""))
+                tool_args = tc.get("arguments", tc.get("args", {}))
+                try:
+                    if self.tool_executor:
+                        result = await self._run_tool(tool_name, tool_args)
+                    else:
+                        result = f"[dry-run] 工具 {tool_name} 将用参数 {tool_args} 执行"
+                except Exception as e:
+                    result = f"执行失败: {e}"
+                step.tool_results.append(
+                    {
+                        "tool_name": tool_name,
+                        "arguments": tool_args,
+                        "output": str(result)[:4000],
+                    }
+                )
+
+            # Step C: Analyze — LLM 分析输出
+            if progress_cb:
+                progress_cb(step_num + 1, "analyze", "分析输出...")
+
+            analysis = await self._analyze(step)
+            step.analysis = analysis
+            step.status = "done"
+
+            # 检查是否发现 Flag
+            if analysis.get("flag_found") or analysis.get("has_flag"):
+                logger.info("CTF Flag 可能已发现: %s", analysis.get("flag", ""))
+                if progress_cb:
+                    progress_cb(step_num + 1, "found", analysis.get("flag", ""))
+                return {
+                    "success": True,
+                    "flag": analysis.get("flag", ""),
+                    "steps": step_num + 1,
+                    "history": [s.__dict__ for s in self.history],
+                }
+
+            # 检查是否需要终止
+            if analysis.get("should_stop") or step_num >= self.max_steps - 1:
+                break
+
+            # 记忆压缩检查
+            mem_summary = self.memory.get_summary()
+            if self.memory._estimate_tokens(mem_summary) > 100000:
+                compressed = self.memory.compress_memory(
+                    [s.__dict__ for s in self.history],
+                    llm_call=self.llm,
+                )
+                if compressed:
+                    self.compressed_blocks.append(compressed)
+
+            # 保存存档
+            self.checkpoint.save(self.problem, step_num + 1, self.memory.to_dict())
+
+        return {
+            "success": False,
+            "steps": len(self.history),
+            "history": [s.__dict__ for s in self.history],
+            "compressed": self.compressed_blocks,
+        }
+
+    async def _think(self, skill_prompt: str) -> tuple:
+        history_summary = self.memory.get_summary()
+
+        failed_hint = ""
+        if self.failed_attempts:
+            recent_fails = list(self.failed_attempts.items())[-3:]
+            failed_hint = "\n近期失败尝试:\n" + "\n".join(f"- {k} (×{v}次)" for k, v in recent_fails)
+
+        prompt = f"""你是弥娅的 CTF 解题 Agent。目标：分析题目并制定下一步操作。
+
+{skill_prompt}
+
+## 题目
+{self.problem}
+
+## 历史记忆
+{history_summary}
+{failed_hint}
+
+请分析当前状态，给出下一步思考，并输出需要执行的工具调用。
+以 JSON 格式回复：
+{{"think": "你的分析", "tool_calls": [{{"tool_name": "...", "arguments": {{}}}}]}}
+"""
+
+        try:
+            if self.llm:
+                result = await self.llm(prompt)
+            else:
+                result = json.dumps({"think": f"CTF {self.category} 分析模式", "tool_calls": []})
+
+            data = json.loads(result) if isinstance(result, str) else result
+            think = data.get("think", "")
+            tool_calls = data.get("tool_calls", [])
+            return think, tool_calls
+        except Exception as e:
+            logger.error("CTF Think 失败: %s", e)
+            return str(e), []
+
+    async def _analyze(self, step: CTFStep) -> Dict[str, Any]:
+        tool_outputs = "\n".join(
+            f"- {tr['tool_name']}({tr['arguments']}):\n{tr['output'][:1500]}" for tr in step.tool_results
+        )
+
+        prompt = f"""分析以下 CTF 解题步骤的输出：
+
+题目: {self.problem}
+思考: {step.think}
+工具输出:
+{tool_outputs}
+
+以 JSON 回复：
+{{"analysis": "分析", "key_findings": [], "flag_found": false, "flag": "", "should_stop": false, "success": true}}
+"""
+
+        try:
+            if self.llm:
+                result = await self.llm(prompt)
+                data = json.loads(result) if isinstance(result, str) else result
+                return data if isinstance(data, dict) else {}
+            return {"analysis": "跳过分析", "flag_found": False}
+        except Exception as e:
+            logger.error("CTF Analyze 失败: %s", e)
+            return {"analysis": str(e), "flag_found": False}
+
+    async def _run_tool(self, tool_name: str, args: Dict[str, Any]) -> str:
+        if self.tool_executor:
+            result = self.tool_executor(tool_name, args)
+            if asyncio.iscoroutine(result):
+                return await result
+            return str(result)
+        return f"工具 {tool_name} 不可用"
+
+    def reflect(self, feedback: str) -> Dict[str, Any]:
+        """接收用户反馈并重新思考"""
+        tool_call_summary = []
+        for tc in self.history[-1].tool_calls if self.history else []:
+            tool_call_summary.append(f"{tc.get('tool_name', '未知')}({tc.get('arguments', {})})")
+
+        prompt = f"""用户反馈: {feedback}
+
+之前的操作: {", ".join(tool_call_summary) if tool_call_summary else "无"}
+上次思考: {self.history[-1].think if self.history else "无"}
+
+根据用户反馈，分析问题并给出修正方案。
+以 JSON 回复: {{"think": "修正后的分析", "suggestions": []}}"""
+
+        try:
+            if self.llm:
+                result = asyncio.get_event_loop().run_until_complete(self.llm(prompt))
+                return json.loads(result) if isinstance(result, str) else result
+        except Exception as e:
+            logger.error("CTF Reflect 失败: %s", e)
+        return {"think": "无法处理反馈"}

@@ -186,6 +186,32 @@ export class CoreApiClient extends ApiClient {
   }
 
   // ── SecurityNet ──
+  async securityChat(message: string, target?: string): Promise<AsyncIterableIterator<StreamChunk>> {
+    const url = `${this.endpoint}/api/security/chat`
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
+      body: JSON.stringify({ message, target }),
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const reader = res.body?.getReader()
+    if (!reader) return aiter<StreamChunk>([])
+    const msgStream = readerToMessageStream(reader)
+    return aiter((async function* () {
+      for await (const data of msgStream) {
+        yield decodeStreamChunk(data)
+      }
+    })())
+  }
+
+  async getSecurityToolList(): Promise<{
+    success: boolean
+    categories: string[]
+    tools: Record<string, { name: string; desc: string }[]>
+  }> {
+    return this.instance.get('/api/security/tools/list')
+  }
+
   async callSecurityTool(tool: string, params: Record<string, any> = {}): Promise<any> {
     return this.instance.post('/api/security/tool', { tool, ...params })
   }

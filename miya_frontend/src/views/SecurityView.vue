@@ -3,6 +3,8 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStorage } from '@vueuse/core'
 import API from '@/api/core'
+import MessageItem from '@/components/MessageItem.vue'
+import type { Message } from '@/utils/session'
 
 const router = useRouter()
 
@@ -38,7 +40,9 @@ const phases = [
 const completedPhases = ref<Set<string>>(new Set())
 
 function completePhase(phaseKey: string) {
-  completedPhases.value.add(phaseKey)
+  const next = new Set(completedPhases.value)
+  next.add(phaseKey)
+  completedPhases.value = next
   currentPhase.value = phases.findIndex(p => p.key === phaseKey) + 1
 }
 
@@ -57,8 +61,86 @@ interface ScanRecord { target: string; time: string; strategy: string; score: nu
 const scanHistory = useStorage<ScanRecord[]>('miya-security-history-v2', [])
 const showHistory = ref(false)
 
-// 工具面板折叠
+// ─── 工具面板 (动态加载) ─────────────────────────────
 const expandedCats = ref<Set<string>>(new Set(['侦查']))
+const toolList = ref<Record<string, { name: string; desc: string }[]>>({
+  '侦查': [
+    { name: '端口扫描', desc: 'TCP端口探测 + 服务识别' },
+    { name: 'Nmap 扫描', desc: '快速/全面/隐蔽等多种扫描模式' },
+    { name: '子域名枚举', desc: '多数据源子域名发现' },
+    { name: 'DNS 枚举', desc: 'A/MX/NS/CNAME 等记录查询' },
+    { name: '在线资产', desc: 'FOFA/Shodan/Censys 资产搜索' },
+  ],
+  '分析': [
+    { name: 'HTTP 头分析', desc: '安全响应头检测' },
+    { name: 'SSL 证书', desc: 'TLS 证书信息检查' },
+    { name: '目录爆破', desc: 'Web 路径发现' },
+  ],
+  '漏洞': [
+    { name: 'CVE 查询', desc: 'NVD 漏洞数据库查询' },
+    { name: 'Exploit 搜索', desc: 'Sploitus/ExploitDB 利用查询' },
+    { name: 'Web 漏洞扫描', desc: 'SQL注入/XSS 检测' },
+  ],
+  '支撑': [
+    { name: '沙箱执行', desc: 'Docker Kali 安全执行' },
+    { name: '工具查询', desc: '308+ 安全工具知识库' },
+    { name: 'CTF 工作流', desc: 'CTF 7 类题型自动化' },
+  ],
+})
+const toolCategoriesList = ref<string[]>(['侦查', '分析', '漏洞', '支撑'])
+const toolSearch = ref('')
+const toolRunning = ref('')
+
+const catIcons: Record<string, string> = {
+  '信息收集': '⬡', '漏洞扫描': '◆', '漏洞利用': '◈', 'Webshell': '◇',
+  '密码破解': '●', '网络工具': '◈', 'BurpSuite': '◆', '安全防御': '◇',
+  '取证分析': '◇', '云安全': '⬡', '移动安全': '◇', '逆向工程': '◆',
+  '代理抓包': '◇', '运行环境': '●', 'AI工具': '◇', 'CTF专项': '◆',
+  '侦查': '⬡', '分析': '◇', '漏洞': '◆', '支撑': '◈',
+}
+
+const filteredToolCategories = computed(() => {
+  const search = toolSearch.value.trim().toLowerCase()
+  if (!search) return toolCategoriesList.value
+
+  return toolCategoriesList.value.filter(cat => {
+    const tools = toolList.value[cat] || []
+    return tools.some(
+      t => t.name.toLowerCase().includes(search) || t.desc.toLowerCase().includes(search)
+    )
+  })
+})
+
+const filteredTools = (cat: string) => {
+  const search = toolSearch.value.trim().toLowerCase()
+  const tools = toolList.value[cat] || []
+  if (!search) return tools
+  return tools.filter(
+    t => t.name.toLowerCase().includes(search) || t.desc.toLowerCase().includes(search)
+  )
+}
+
+function toggleCat(cat: string) {
+  const next = new Set(expandedCats.value)
+  if (next.has(cat)) next.delete(cat)
+  else next.add(cat)
+  expandedCats.value = next
+}
+
+async function fetchToolList() {
+  try {
+    const data = await API.getSecurityToolList()
+    if (data.success && data.categories.length > 0) {
+      toolCategoriesList.value = data.categories
+      toolList.value = data.tools
+      expandedCats.value = new Set([data.categories[0]])
+    }
+  } catch {
+    // 保持降级数据，无需处理
+  }
+}
+
+onMounted(() => { fetchToolList() })
 
 // Kali xterm 终端
 import { Terminal } from '@xterm/xterm'
@@ -153,18 +235,6 @@ function closeKaliTerminal() {
   showKaliTerminal.value = false
   destroyKaliTerm()
 }
-
-function toggleCat(cat: string) {
-  if (expandedCats.value.has(cat)) expandedCats.value.delete(cat)
-  else expandedCats.value.add(cat)
-}
-const toolCategories: Record<string, { icon: string; tools: string[] }> = {
-  '侦查': { icon: '⬡', tools: ['security_port_scan', 'security_nmap_scan', 'security_subdomain_enum', 'security_dns_enum', 'security_online_asset'] },
-  '分析': { icon: '◇', tools: ['security_http_headers', 'security_ssl_cert', 'security_dir_brute'] },
-  '漏洞': { icon: '◆', tools: ['security_vuln_lookup', 'security_sploitus_search', 'security_web_vuln_scanner'] },
-  '支撑': { icon: '◈', tools: ['security_sandbox_exec', 'security_tool_index', 'security_ctf_workflow'] },
-}
-const toolRunning = ref('')
 
 const strategies: Record<string, { name: string; desc: string; phases: number[] }> = {
   recon:    { name: '信息收集', desc: '仅侦察，不触发 WAF', phases: [1] },
@@ -460,17 +530,152 @@ function parseResults(scanResults: Record<string, any>) {
 }
 
 // ─── 单工具执行 ────────────────────────────────────
+const toolToSecurityMap: Record<string, string> = {
+  'nmap': 'security_nmap_scan', 'Nmap 扫描': 'security_nmap_scan',
+  'masscan': 'security_port_scan', '端口扫描': 'security_port_scan',
+  'naabu': 'security_port_scan',
+  'gobuster': 'security_dir_brute',
+  'dirsearch': 'security_dir_brute', '目录爆破': 'security_dir_brute',
+  'dirb': 'security_dir_brute',
+  'dalfox': 'security_web_vuln_scanner',
+  'nuclei': 'security_web_vuln_scanner', 'Web 漏洞扫描': 'security_web_vuln_scanner',
+  'xray': 'security_web_vuln_scanner',
+  'sqlmap': 'security_web_vuln_scanner',
+  'subfinder': 'security_subdomain_enum', '子域名枚举': 'security_subdomain_enum',
+  'amass': 'security_subdomain_enum',
+  'OneForAll': 'security_subdomain_enum',
+  'dnsx': 'security_dns_enum', 'DNS 枚举': 'security_dns_enum',
+  'httpx': 'security_http_headers', 'HTTP 头分析': 'security_http_headers',
+  'wafw00f': 'security_http_headers',
+  'sslscan': 'security_ssl_cert', 'SSL 证书': 'security_ssl_cert',
+  'hydra': 'security_port_scan',
+  'fscan': 'security_nmap_scan',
+  'kscan': 'security_nmap_scan',
+  'goby': 'security_nmap_scan',
+  '在线资产': 'security_online_asset',
+  'CVE 查询': 'security_vuln_lookup',
+  'Exploit 搜索': 'security_sploitus_search',
+  '沙箱执行': 'security_sandbox_exec',
+  '工具查询': 'security_tool_index',
+  'CTF 工作流': 'security_ctf_workflow',
+}
+
+function findToolDesc(name: string): string {
+  for (const cat of toolCategoriesList.value) {
+    const tools = toolList.value[cat] || []
+    const found = tools.find(t => t.name === name)
+    if (found) return found.desc
+  }
+  return ''
+}
+
+// ─── 安全对话 ────────────────────────────────────
+const secMessages = ref<Message[]>([])
+const secInput = ref('')
+const secChatting = ref(false)
+const secChatEl = ref<HTMLDivElement>()
+const leftPanelCollapsed = ref(false)
+
+function secScrollBottom() {
+  nextTick(() => {
+    if (secChatEl.value) secChatEl.value.scrollTop = secChatEl.value.scrollHeight
+  })
+}
+
+async function secSendChat(message?: string) {
+  const text = message || secInput.value.trim()
+  if (!text || secChatting.value) return
+  secInput.value = ''
+
+  secMessages.value.push({ role: 'user', content: text })
+  secMessages.value.push({ role: 'assistant', content: '', generating: true, status: '分析中...' })
+  secChatting.value = true
+  secScrollBottom()
+
+  try {
+    const stream = await API.securityChat(text, target.value || undefined)
+    let buf = ''
+    for await (const chunk of stream) {
+      if (chunk.type === 'status') {
+        const last = secMessages.value[secMessages.value.length - 1]
+        if (last && last.role === 'assistant') last.status = chunk.text || ''
+      } else if (chunk.type === 'content') {
+        const last = secMessages.value[secMessages.value.length - 1]
+        if (last && last.role === 'assistant') {
+          buf += (chunk.text || '') + '\n'
+          last.content = buf.trim()
+        }
+      } else if (chunk.type === 'done') {
+        break
+      }
+      secScrollBottom()
+    }
+  } catch (e: any) {
+    const last = secMessages.value[secMessages.value.length - 1]
+    if (last && last.role === 'assistant') {
+      last.content = `对话失败: ${e.message || e}`
+    }
+  } finally {
+    const last = secMessages.value[secMessages.value.length - 1]
+    if (last && last.role === 'assistant') last.generating = false
+    secChatting.value = false
+    secScrollBottom()
+  }
+}
+
+const quickActions = [
+  { label: '扫描', msg: '扫描 ', icon: '▲' },
+  { label: 'CTF', msg: 'CTF 解题: ', icon: '🏴' },
+  { label: 'BugBounty', msg: 'BugBounty 赏金: ', icon: '💰' },
+  { label: '工具', msg: '查询安全工具', icon: '🔧' },
+  { label: '报告', msg: '生成安全报告: ', icon: '📋' },
+]
+
+function quickAction(msg: string) {
+  secInput.value = msg
+}
+
 const toolDialog = ref(false)
 async function runTool(toolName: string) {
   if (!target.value.trim()) { toolDialog.value = true; return }
   toolRunning.value = toolName
-  addLog(`[手动] 执行 ${toolName.replace('security_', '')}...`, 'info')
-  try {
-    const resp = await safeCall(toolName, { target: target.value.trim() })
-    addLog(`[手动] ${toolName.replace('security_', '')} 完成`, 'ok')
-  } catch (e) {
-    addLog(`[手动] 失败: ${e}`, 'error')
-  } finally { toolRunning.value = '' }
+  const desc = findToolDesc(toolName)
+
+  const mapped = toolToSecurityMap[toolName] || toolToSecurityMap[toolName.toLowerCase()]
+  secMessages.value.push({
+    role: 'user',
+    content: `执行工具: **${toolName}** → ${target.value.trim()}`,
+  })
+
+  if (mapped) {
+    const idx = secMessages.value.push({
+      role: 'assistant', content: '', generating: true, status: `${toolName} 执行中...`,
+    })
+    secScrollBottom()
+    try {
+      const resp = await safeCall(mapped, { target: target.value.trim() })
+      let text = ''
+      if (typeof resp === 'string') text = resp
+      else if (resp && resp.result) text = typeof resp.result === 'string' ? resp.result : JSON.stringify(resp.result, null, 2)
+      else text = JSON.stringify(resp, null, 2)
+      secMessages.value[idx - 1] = {
+        role: 'assistant',
+        content: `### ${toolName}\n${desc}\n\n\`\`\`\n${text.slice(0, 3000)}\n\`\`\``,
+      }
+    } catch (e: any) {
+      secMessages.value[idx - 1] = {
+        role: 'assistant',
+        content: `### ${toolName} 失败\n${e.message || e}`,
+      }
+    }
+  } else {
+    secMessages.value.push({
+      role: 'assistant',
+      content: `### ${toolName}\n${desc}\n\n该工具暂无可执行的弥娅安全引擎，请尝试通过对话窗描述需求。`,
+    })
+  }
+  toolRunning.value = ''
+  secScrollBottom()
 }
 
 // ─── 快捷操作 ──────────────────────────────────────
@@ -565,7 +770,12 @@ onUnmounted(() => { destroyKaliTerm() })
     <!-- ── Body: 分屏 ── -->
     <div class="sec-body">
       <!-- 左面板: 控制 -->
-      <div class="sec-left">
+      <div class="sec-left" :class="{ collapsed: leftPanelCollapsed }">
+        <button class="panel-collapse-btn" @click="leftPanelCollapsed = !leftPanelCollapsed"
+          :title="leftPanelCollapsed ? '展开面板' : '折叠面板'">
+          {{ leftPanelCollapsed ? '▶' : '◀' }}
+        </button>
+        <div v-show="!leftPanelCollapsed" class="sec-left-inner">
         <!-- 目标输入 -->
         <div class="target-card">
           <input v-model="target" class="target-input" placeholder="example.com 或 https://..."
@@ -587,22 +797,30 @@ onUnmounted(() => { destroyKaliTerm() })
         </div>
         <div v-if="scanStatus" class="scan-status-msg">{{ scanStatus }}</div>
 
-        <!-- 工具面板 (折叠) -->
+        <!-- 工具目录 (动态加载) -->
         <div class="tools-panel">
-          <div v-for="(info, cat) in toolCategories" :key="cat" class="tool-group">
+          <div class="tool-search-box">
+            <input v-model="toolSearch" class="tool-search-input"
+              placeholder="搜索工具..." :disabled="scanning" />
+            <span class="tool-total">{{ toolCategoriesList.reduce((s, c) => s + (toolList[c]?.length || 0), 0) }} 工具</span>
+          </div>
+          <div v-for="cat in filteredToolCategories" :key="cat" class="tool-group">
             <button class="tool-cat-btn" @click="toggleCat(cat)">
               <span class="cat-arrow">{{ expandedCats.has(cat) ? '▼' : '▶' }}</span>
-              <span class="cat-icon">{{ info.icon }}</span>
+              <span class="cat-icon">{{ catIcons[cat] || '◇' }}</span>
               <span class="cat-label">{{ cat }}</span>
-              <span class="cat-count">{{ info.tools.length }}</span>
+              <span class="cat-count">{{ filteredTools(cat).length }}</span>
             </button>
             <div v-if="expandedCats.has(cat)" class="tool-grid">
-              <button v-for="tname in info.tools" :key="tname"
-                :class="['tool-chip', { running: toolRunning === tname }]"
+              <button v-for="t in filteredTools(cat)" :key="t.name"
+                class="tool-chip"
+                :class="{ running: toolRunning === t.name }"
                 :disabled="scanning || toolRunning !== ''"
-                @click="runTool(tname)"
+                :title="t.desc"
+                @click="runTool(t.name)"
               >
-                {{ tname.replace('security_', '').replace(/_/g, ' ').replace(/./, c => c.toUpperCase()) }}
+                <span class="tool-chip-name">{{ t.name }}</span>
+                <span class="tool-chip-desc">{{ t.desc }}</span>
               </button>
             </div>
           </div>
@@ -624,71 +842,46 @@ onUnmounted(() => { destroyKaliTerm() })
             </div>
           </div>
         </div>
-      </div>
+        </div> <!-- sec-left-inner -->
+      </div> <!-- sec-left -->
 
-      <!-- 右面板: 结果 -->
-      <div class="sec-right">
-        <!-- 空状态 -->
-        <div v-if="!scanning && !hasResult && scanLogs.length === 0" class="empty-state">
-          <div class="empty-icon">⬡</div>
-          <div class="empty-text">输入目标，开始安全评估</div>
-          <div class="empty-desc">弥娅将自动完成侦察 → 分析 → 漏洞检测 → 威胁情报 → 报告</div>
+      <!-- 右面板: 安全对话 -->
+      <div class="sec-right sec-chat">
+        <!-- 消息列表 -->
+        <div class="sec-chat-messages" ref="secChatEl">
+          <div v-if="secMessages.length === 0" class="sec-chat-empty">
+            <div class="sec-chat-empty-icon">⬡</div>
+            <div class="sec-chat-empty-title">弥娅安全助手</div>
+            <div class="sec-chat-empty-desc">
+              用自然语言驱动安全能力。<br/>
+              试试说：「扫描 example.com」「查询漏洞工具」「CTF 解题: Web」
+            </div>
+            <div class="sec-chat-quick">
+              <button v-for="a in quickActions" :key="a.label"
+                class="sec-chat-qbtn" @click="quickAction(a.msg)">
+                <span>{{ a.icon }}</span> {{ a.label }}
+              </button>
+            </div>
+          </div>
+          <MessageItem v-for="(m, i) in secMessages" :key="i" v-bind="m" />
+          <div v-if="secChatting" class="sec-chat-cursor">█</div>
         </div>
-
-        <!-- 扫描中: 实时终端 -->
-        <div v-if="scanning || (scanLogs.length > 0 && !hasResult)" class="scan-terminal" ref="logContainer">
-          <div v-for="(log, i) in scanLogs" :key="i" :class="['log-line', log.type]">
-            <span class="log-time">{{ log.time }}</span>
-            <span class="log-text">{{ log.text }}</span>
+        <!-- 输入框 -->
+        <div class="sec-chat-bar">
+          <div class="sec-chat-actions">
+            <button v-for="a in quickActions" :key="a.label"
+              class="sec-chat-qsm" :title="a.label"
+              @click="quickAction(a.msg)">
+              <span>{{ a.icon }}</span>
+            </button>
           </div>
-          <div v-if="scanning" class="log-cursor">█</div>
-        </div>
-
-        <!-- 结果仪表盘 -->
-        <div v-if="hasResult" class="result-dashboard">
-          <!-- 评分卡片 -->
-          <div class="score-card">
-            <div class="score-circle" :style="{ borderColor: gradeColor }">
-              <span class="score-grade" :style="{ color: gradeColor }">{{ securityGrade }}</span>
-              <span class="score-num">{{ securityScore }}/100</span>
-            </div>
-            <div class="score-breakdown">
-              <div v-for="(count, sev) in severityCounts" :key="sev" class="sev-chip" :style="{ color: sevColor[sev], borderColor: sevColor[sev] }">
-                {{ sev.toUpperCase() }}: {{ count }}
-              </div>
-            </div>
-            <div class="score-actions">
-              <button class="action-btn" @click="copyReport">复制报告</button>
-              <button class="action-btn" @click="exportMD">导出 MD</button>
-              <button class="action-btn primary" @click="deepScan">深度扫描</button>
-            </div>
-          </div>
-
-          <!-- 发现卡片 -->
-          <div v-if="findings.length" class="findings-section">
-            <h3 class="section-label">发现 ({{ findings.length }})</h3>
-            <div v-for="f in findings" :key="f.id" :class="['finding-card', f.severity]" :style="{ borderLeftColor: sevColor[f.severity] }">
-              <div class="finding-header" @click="toggleFinding(f.id)">
-                <span class="finding-sev" :style="{ background: sevColor[f.severity] }">{{ f.severity.toUpperCase() }}</span>
-                <span class="finding-title">{{ f.title }}</span>
-                <span class="finding-source">{{ f.source }}</span>
-                <span class="finding-chevron">{{ expandedFinding === f.id ? '▲' : '▼' }}</span>
-              </div>
-              <div class="finding-body" v-if="expandedFinding === f.id">
-                <p class="finding-desc">{{ f.description }}</p>
-                <pre class="finding-detail">{{ f.detail }}</pre>
-                <div v-if="f.recommendations?.length" class="finding-recs">
-                  <span class="rec-label">建议:</span>
-                  <span v-for="r in f.recommendations" :key="r" class="rec-chip">{{ r }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 无发现 -->
-          <div v-else class="no-findings">
-            <span class="nf-icon">✓</span> 未发现明显安全问题
-          </div>
+          <input v-model="secInput" class="sec-chat-input"
+            placeholder="输入安全指令，如「扫描 example.com」"
+            :disabled="secChatting"
+            @keydown.enter="secSendChat()" />
+          <button class="sec-chat-send" :disabled="secChatting || !secInput.trim()" @click="secSendChat()">
+            ▲
+          </button>
         </div>
       </div>
     </div>
@@ -760,7 +953,16 @@ onUnmounted(() => { destroyKaliTerm() })
 }
 .sec-left {
   width: 290px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px;
-  overflow-y: auto; padding-right: 6px;
+  overflow-y: auto; padding-right: 6px; transition: width 0.25s ease;
+  &.collapsed { width: 28px; padding-right: 0; overflow: hidden; }
+}
+.sec-left-inner { display: flex; flex-direction: column; gap: 10px; }
+.panel-collapse-btn {
+  width: 24px; height: 24px; border-radius: 5px; border: 0.5px solid rgba(167,139,250,0.15);
+  background: rgba(10,8,21,0.2); color: var(--miya-text-dim); cursor: pointer;
+  font-size: 0.55rem; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; flex-shrink: 0;
+  &:hover { border-color: var(--miya-accent); color: var(--miya-accent); }
 }
 .sec-right {
   flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden;
@@ -808,25 +1010,40 @@ onUnmounted(() => { destroyKaliTerm() })
 
 /* ── Tools Panel ── */
 .tools-panel { display: flex; flex-direction: column; gap: 2px; }
+.tool-search-box {
+  display: flex; align-items: center; gap: 8px; padding: 4px 0 8px;
+}
+.tool-search-input {
+  flex: 1; background: rgba(0,0,0,0.25); border: 0.5px solid rgba(167,139,250,0.12);
+  border-radius: 6px; padding: 6px 10px; color: var(--miya-text); font-size: 0.65rem;
+  outline: none; transition: border-color 0.2s;
+  &::placeholder { color: rgba(167,139,250,0.2); font-size: 0.6rem; }
+  &:focus { border-color: var(--miya-accent); }
+}
+.tool-total { font-size: 0.53rem; color: var(--miya-text-dim); white-space: nowrap; font-family: 'JetBrains Mono', monospace; }
+.tool-loading { font-size: 0.55rem; color: var(--miya-accent); animation: blink 0.8s step-end infinite; }
+.tool-empty { font-size: 0.6rem; color: var(--miya-text-dim); padding: 12px 0; text-align: center; opacity: 0.5; }
 .tool-cat-btn {
-  display: flex; align-items: center; gap: 7px; width: 100%; padding: 8px 10px;
+  display: flex; align-items: center; gap: 7px; width: 100%; padding: 7px 8px;
   border: none; border-radius: 6px; background: transparent; color: var(--miya-text-dim);
-  font-size: 0.72rem; cursor: pointer; transition: all 0.15s;
+  font-size: 0.7rem; cursor: pointer; transition: all 0.15s;
   &:hover { background: rgba(167,139,250,0.06); color: var(--miya-text); }
 }
 .cat-arrow { font-size: 0.45rem; width: 10px; }
 .cat-icon { font-size: 0.7rem; }
 .cat-label { flex: 1; text-align: left; font-weight: 500; }
-.cat-count { font-size: 0.55rem; opacity: 0.5; }
-.tool-grid { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 8px 8px 24px; }
+.cat-count { font-size: 0.53rem; opacity: 0.5; font-family: 'JetBrains Mono', monospace; }
+.tool-grid { display: flex; flex-direction: column; gap: 3px; padding: 3px 4px 6px 22px; }
 .tool-chip {
-  padding: 4px 10px; border-radius: 5px; font-size: 0.62rem;
-  border: 0.5px solid rgba(167,139,250,0.08); background: rgba(10,8,21,0.15);
-  color: var(--miya-text-dim); cursor: pointer; transition: all 0.15s; white-space: nowrap;
-  &:hover:not(:disabled) { border-color: var(--miya-accent); color: var(--miya-accent); background: rgba(167,139,250,0.08); }
+  display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; border-radius: 6px;
+  border: 0.5px solid rgba(167,139,250,0.06); background: rgba(10,8,21,0.1);
+  color: var(--miya-text-dim); cursor: pointer; transition: all 0.15s; text-align: left;
+  &:hover:not(:disabled) { border-color: var(--miya-accent); color: var(--miya-text); background: rgba(167,139,250,0.06); }
   &:disabled { opacity: 0.25; }
   &.running { border-color: var(--miya-accent); color: var(--miya-accent); animation: scan-pulse 1s infinite; }
 }
+.tool-chip-name { font-size: 0.68rem; font-weight: 500; color: var(--miya-text); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tool-chip-desc { font-size: 0.54rem; color: var(--miya-text-dim); line-height: 1.35; opacity: 0.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ── History ── */
 .history-panel { margin-top: auto; padding-top: 4px; }
@@ -945,6 +1162,64 @@ onUnmounted(() => { destroyKaliTerm() })
   font-size: 0.7rem; color: rgba(68,204,68,0.6);
 }
 .nf-icon { font-size: 1rem; }
+
+/* ── Security Chat ── */
+.sec-chat {
+  border: 0.5px solid rgba(167,139,250,0.08); border-radius: 10px;
+  background: rgba(10,8,21,0.15);
+}
+.sec-chat-messages {
+  flex: 1; overflow-y: auto; padding: 12px 16px 0;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.sec-chat-empty {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; opacity: 0.6; padding-bottom: 40px;
+}
+.sec-chat-empty-icon { font-size: 2.2rem; opacity: 0.25; }
+.sec-chat-empty-title { font-size: 1rem; color: var(--miya-text); font-weight: 500; }
+.sec-chat-empty-desc {
+  font-size: 0.62rem; color: var(--miya-text-dim); text-align: center; line-height: 1.7; max-width: 360px;
+}
+.sec-chat-quick { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; justify-content: center; }
+.sec-chat-qbtn {
+  padding: 6px 14px; border-radius: 7px; font-size: 0.68rem; cursor: pointer;
+  border: 0.5px solid rgba(167,139,250,0.2); background: rgba(167,139,250,0.06);
+  color: var(--miya-accent); display: flex; align-items: center; gap: 5px;
+  transition: all 0.15s;
+  &:hover { background: rgba(167,139,250,0.14); border-color: var(--miya-accent); }
+}
+.sec-chat-cursor {
+  color: var(--miya-accent); font-size: 0.7rem; animation: blink 1s step-end infinite; padding-left: 4px;
+}
+.sec-chat-bar {
+  display: flex; align-items: center; gap: 6px; padding: 10px 14px;
+  border-top: 0.5px solid rgba(167,139,250,0.08); background: rgba(0,0,0,0.12);
+  border-radius: 0 0 10px 10px;
+}
+.sec-chat-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.sec-chat-qsm {
+  width: 28px; height: 28px; border-radius: 6px; font-size: 0.75rem; cursor: pointer;
+  border: 0.5px solid rgba(167,139,250,0.1); background: transparent;
+  color: var(--miya-text-dim); display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  &:hover { border-color: var(--miya-accent); color: var(--miya-accent); background: rgba(167,139,250,0.06); }
+}
+.sec-chat-input {
+  flex: 1; background: rgba(0,0,0,0.25); border: 0.5px solid rgba(167,139,250,0.12);
+  border-radius: 7px; padding: 8px 12px; color: var(--miya-text); font-size: 0.78rem;
+  outline: none; transition: border-color 0.2s;
+  &::placeholder { color: rgba(167,139,250,0.2); font-size: 0.7rem; }
+  &:focus { border-color: var(--miya-accent); }
+  &:disabled { opacity: 0.3; }
+}
+.sec-chat-send {
+  width: 34px; height: 34px; border-radius: 7px; font-size: 0.85rem; cursor: pointer; flex-shrink: 0;
+  border: none; background: linear-gradient(135deg, var(--miya-accent), color-mix(in srgb, var(--miya-accent) 70%, #ff4444));
+  color: #fff; display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+  &:hover:not(:disabled) { transform: translateY(-1px); }
+  &:disabled { opacity: 0.3; cursor: not-allowed; }
+}
 
 /* ── Kali Terminal ── */
 .kali-btn {

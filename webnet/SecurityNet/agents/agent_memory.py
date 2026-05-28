@@ -16,7 +16,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -373,6 +373,92 @@ class AgentMemory:
             "entities": len(self._entities),
             "relationships": len(self._relationships),
         }
+
+    # ─── 记忆压缩 (BUUCTF_Agent 移植) ────────────
+
+    def _estimate_tokens(self, text: str) -> int:
+        return max(1, len(text) // 4)
+
+    def compress_memory(
+        self,
+        history: List[Dict[str, Any]],
+        max_context: int = 128000,
+        ratio: float = 0.8,
+        llm_call: Optional[Callable] = None,
+    ) -> Dict[str, Any]:
+        """LLM 驱动的记忆压缩，返回结构化摘要。
+
+        当详细历史 token 数超过 max_context * ratio 时触发。
+        压缩后保留 key_findings、failed_attempts、current_status、next_steps。
+        """
+        if not history or not llm_call:
+            return {}
+
+        prompt = (
+            "压缩以下 CTF 解题历史。提取：\n"
+            "1. 关键的技术细节和发现\n"
+            "2. 尝试但失败的方案\n"
+            "3. 当前解题状态\n"
+            "4. 下一步建议\n"
+            "返回 JSON 格式，包含 key_findings failed_attempts current_status next_steps\n\n"
+            "历史:\n"
+        )
+        for i, step in enumerate(history[-10:]):
+            prompt += f"\n步骤 {i + 1}: {json.dumps(step, ensure_ascii=False)[:800]}\n"
+
+        try:
+            import asyncio
+
+            result_text = ""
+            if asyncio.iscoroutinefunction(llm_call):
+                result_text = asyncio.get_event_loop().run_until_complete(llm_call(prompt))
+            else:
+                result_text = llm_call(prompt)
+
+            data = json.loads(result_text) if isinstance(result_text, str) else {}
+            if isinstance(data, dict):
+                logger.info(
+                    "记忆压缩完成: %d 发现, %d 失败尝试",
+                    len(data.get("key_findings", [])),
+                    len(data.get("failed_attempts", [])),
+                )
+                return data
+        except Exception as e:
+            logger.warning("记忆压缩失败: %s", e)
+
+        return {
+            "fallback": "压缩未完成",
+            "source_steps": len(history),
+        }
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "guides": [vars(e) for e in self._guides],
+            "answers": [vars(e) for e in self._answers],
+            "code": [vars(e) for e in self._code],
+            "tool_execs": [vars(e) for e in self._tool_execs],
+            "agent_responses": [vars(e) for e in self._agent_responses],
+            "entities": self._entities,
+            "relationships": self._relationships,
+        }
+
+    def restore_from_dict(self, data: Dict[str, Any]) -> None:
+        from dataclasses import fields as dc_fields
+
+        field_names = {f.name for f in dc_fields(MemoryEntry)}
+        for key, target in [
+            ("guides", self._guides),
+            ("answers", self._answers),
+            ("code", self._code),
+            ("tool_execs", self._tool_execs),
+            ("agent_responses", self._agent_responses),
+        ]:
+            target.clear()
+            for item in data.get(key, []):
+                cleaned = {k: v for k, v in item.items() if k in field_names}
+                target.append(MemoryEntry(**cleaned))
+        self._entities = data.get("entities", {})
+        self._relationships = data.get("relationships", [])
 
     def clear(self):
         """清空所有记忆"""

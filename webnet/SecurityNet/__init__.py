@@ -84,6 +84,14 @@ from .hextrike import (
 
 from .anonymizer import anonymize, anonymize_for_storage
 
+from .skill_manager import SkillManager, SkillInfo, get_skill_manager
+from .checkpoint import CheckpointManager, get_checkpoint
+from .agents.agent_orchestrator import CTFSolver, CTFStep
+from .engine import MiyaEngine, get_engine
+from .ctf_tool_matcher import CTFToolMatcher, get_ctf_matcher
+from .http_session import HTTPSessionManager, get_http_manager
+from .knowledge_graph import KnowledgeGraph, get_knowledge_graph
+
 from .tool_wrappers import (
     TOOLS as SECURITY_TOOLS,
     ToolCommand,
@@ -161,4 +169,24 @@ __all__ = [
     "get_categories",
     "get_tools_status",
     "check_installed_tools",
+    # BUUCTF_Agent 融合模块
+    "SkillManager",
+    "SkillInfo",
+    "get_skill_manager",
+    "CheckpointManager",
+    "get_checkpoint",
+    "CTFSolver",
+    "CTFStep",
+    # 统一引擎
+    "MiyaEngine",
+    "get_engine",
+    # CTF 工具匹配器
+    "CTFToolMatcher",
+    "get_ctf_matcher",
+    # HTTP 会话管理
+    "HTTPSessionManager",
+    "get_http_manager",
+    # 知识图谱
+    "KnowledgeGraph",
+    "get_knowledge_graph",
 ]

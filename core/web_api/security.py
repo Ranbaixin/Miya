@@ -4,6 +4,7 @@
 """
 
 import asyncio
+import json
 import logging
 import uuid
 from datetime import datetime
@@ -113,6 +114,9 @@ def _resolve_args(req: SecurityToolCallRequest) -> Dict[str, Any]:
 
 
 class SecurityRoutes:
+    # 类级别 CTF 任务存储
+    _ctf_tasks: Dict[str, Any] = {}
+
     """安全相关路由
 
     职责:
@@ -228,6 +232,328 @@ class SecurityRoutes:
             except Exception as e:
                 logger.error(f"[SecurityRoutes] 工具调用失败: {request.tool} — {e}", exc_info=True)
                 return {"success": False, "tool": request.tool, "result": f"执行失败: {e}"}
+
+        # ══════════════════════════════════════════════
+        #  工具目录 /api/security/tools/list
+        # ══════════════════════════════════════════════
+
+        @self.router.get("/tools/list")
+        async def list_security_tools():
+            """获取弥娅安全工具目录
+
+            返回 security_net.yaml 中 tool_index 的全部工具信息，
+            包括分类、工具名、描述，供前端工具面板动态展示。
+            """
+            try:
+                from config.security_net_loader import get_section
+
+                tool_index = get_section("tool_index", {})
+                return {
+                    "success": True,
+                    "max_preview": tool_index.get("max_preview", 3),
+                    "categories": tool_index.get("categories", []),
+                    "tools": tool_index.get("tools", {}),
+                }
+            except Exception as e:
+                logger.error(f"[SecurityRoutes] 获取工具目录失败: {e}")
+                return {"success": False, "categories": [], "tools": {}, "error": str(e)}
+
+        # ══════════════════════════════════════════════
+        #  CTF 解题 /api/security/ctf/*
+        # ══════════════════════════════════════════════
+
+        class CTFSolveRequest(BaseModel):
+            problem: str
+            category: str = "misc"
+
+        class CTFResumeRequest(BaseModel):
+            problem: str
+            resume_step: int = 0
+
+        @self.router.get("/ctf/skills")
+        async def list_ctf_skills():
+            """列出可用的 CTF 技能知识库"""
+            try:
+                from webnet.SecurityNet.skill_manager import get_skill_manager
+
+                mgr = get_skill_manager()
+                skills = mgr.get_all()
+                return {
+                    "success": True,
+                    "skills": [{"name": s.name, "description": s.description} for s in skills],
+                }
+            except Exception as e:
+                return {"success": False, "error": str(e)}
+
+        @self.router.post("/ctf/solve")
+        async def ctf_solve(request: CTFSolveRequest):
+            """启动 CTF 自主解题（异步，返回任务 ID）"""
+            try:
+                from webnet.SecurityNet.agents.agent_orchestrator import CTFSolver
+
+                solver = CTFSolver(problem=request.problem, category=request.category)
+                task_id = f"ctf-{uuid.uuid4().hex[:8]}"
+                SecurityRoutes._ctf_tasks[task_id] = solver
+
+                import asyncio as _asyncio
+
+                _asyncio.create_task(_ctf_solve_runner(task_id, solver))
+                return {"success": True, "task_id": task_id, "message": "CTF 解题已启动"}
+            except Exception as e:
+                logger.error(f"[SecurityRoutes] CTF solve 失败: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+
+        @self.router.get("/ctf/status/{task_id}")
+        async def ctf_status(task_id: str):
+            """获取 CTF 解题状态"""
+            solver = SecurityRoutes._ctf_tasks.get(task_id)
+            if not solver:
+                raise HTTPException(status_code=404, detail=f"任务不存在: {task_id}")
+            return {
+                "success": True,
+                "task_id": task_id,
+                "steps": solver._current_step,
+                "problem": solver.problem[:200],
+                "category": solver.category,
+            }
+
+        @self.router.post("/ctf/resume")
+        async def ctf_resume(request: CTFResumeRequest):
+            """恢复中断的 CTF 解题"""
+            try:
+                from webnet.SecurityNet.agents.agent_orchestrator import CTFSolver
+
+                solver = CTFSolver(problem=request.problem)
+                solver.resume(resume_step=request.resume_step)
+                task_id = f"ctf-{uuid.uuid4().hex[:8]}"
+                SecurityRoutes._ctf_tasks[task_id] = solver
+
+                import asyncio as _asyncio
+
+                _asyncio.create_task(_ctf_solve_runner(task_id, solver))
+                return {"success": True, "task_id": task_id, "message": "CTF 解题已恢复"}
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
+
+        # ══════════════════════════════════════════════
+        #  统一引擎 /api/security/engine/*
+        # ══════════════════════════════════════════════
+
+        class EngineRequest(BaseModel):
+            message: str = ""
+            target: Optional[str] = None
+
+        @self.router.get("/engine/analyze")
+        async def engine_analyze(target: str = ""):
+            """使用弥娅引擎分析目标：类型识别 + 工具推荐 + 攻击链"""
+            if not target:
+                return {"success": False, "message": "请提供 target 参数"}
+            try:
+                from webnet.SecurityNet.engine import get_engine
+
+                engine = get_engine()
+                analysis = await engine.analyze_target(target)
+                recommendations = engine.quick_scan(target)
+                return {
+                    "success": True,
+                    "analysis": analysis,
+                    "recommendations": recommendations,
+                }
+            except Exception as e:
+                return {"success": False, "error": str(e)}
+
+        @self.router.post("/engine/chain")
+        async def engine_chain(request: EngineRequest):
+            """生成并执行攻击链"""
+            try:
+                from webnet.SecurityNet.engine import get_engine
+
+                engine = get_engine()
+
+                async def _progress(step, total, name):
+                    logger.info(f"[Engine] 攻击链进度: {step}/{total} — {name}")
+
+                chain = await engine.generate_attack_chain(request.message or request.target or "")
+                if not chain:
+                    return {"success": False, "message": "无法生成攻击链"}
+
+                result = await engine.execute_chain(chain, progress_cb=_progress)
+                return {"success": True, "result": result}
+            except Exception as e:
+                return {"success": False, "error": str(e)}
+
+        @self.router.get("/engine/ctf-match")
+        async def engine_ctf_match(category: str = "", description: str = ""):
+            """CTF 题目→工具智能匹配"""
+            try:
+                from webnet.SecurityNet.ctf_tool_matcher import get_ctf_matcher
+
+                matcher = get_ctf_matcher()
+                if category:
+                    tools = matcher.match_by_category(category)
+                elif description:
+                    tools = matcher.get_tool_chain(description)
+                else:
+                    return {"success": False, "message": "请提供 category 或 description"}
+                return {"success": True, "tools": tools, "total": len(tools)}
+            except Exception as e:
+                return {"success": False, "error": str(e)}
+
+        @self.router.get("/engine/stats")
+        async def engine_stats():
+            """获取引擎统计"""
+            try:
+                from webnet.SecurityNet.engine import get_engine
+
+                engine = get_engine()
+                return {"success": True, "stats": engine.get_stats()}
+            except Exception as e:
+                return {"success": False, "error": str(e)}
+
+        # ══════════════════════════════════════════════
+        #  安全对话 /api/security/chat (SSE 流式)
+        # ══════════════════════════════════════════════
+
+        class SecurityChatRequest(BaseModel):
+            message: str
+            target: Optional[str] = None
+
+        @self.router.post("/chat")
+        async def security_chat(request: SecurityChatRequest):
+            """安全对话：自然语言驱动安全自动化 (SSE 流式)
+
+            解析用户意图 → AI 驱动安全分析 → 流式返回结果。
+            """
+
+            async def event_stream():
+                msg = request.message.strip()
+                actual_target = request.target
+
+                # 自动提取目标域名
+                if not actual_target:
+                    import re as _re
+
+                    m = _re.search(r"(?:https?://)?([a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,}", msg)
+                    if m:
+                        actual_target = m.group(0)
+
+                # 意图识别
+                is_scan = any(kw in msg for kw in ["扫描", "scan", "检测", "评估", "渗透", "攻击", "分析", "侦察"])
+                is_ctf = any(kw in msg for kw in ["ctf", "CTF", "解题", "flag", "Flag", "题目"])
+
+                # 自动识别：有 URL/域名 + 未明确CTF → 默认扫描
+                if (
+                    actual_target
+                    and not is_ctf
+                    and not any(
+                        kw in msg for kw in ["是什么", "怎么样", "安全吗", "帮我看看", "分析一下", "你好", "在嘛"]
+                    )
+                ):
+                    is_scan = True
+
+                if is_scan and actual_target:
+                    # ─── 全自动扫描 ───
+                    domain = actual_target.replace("https://", "").replace("http://", "").split("/")[0]
+                    yield SecurityRoutes._sse({"type": "status", "text": f"启动自动扫描: {domain}"})
+
+                    scan_tools = [
+                        ("security_port_scan", "端口扫描", {"target": domain}),
+                        ("security_subdomain_enum", "子域名枚举", {"domain": domain}),
+                        ("security_dns_enum", "DNS 解析", {"domain": domain}),
+                        ("security_http_headers", "HTTP 头分析", {"url": actual_target}),
+                        ("security_vuln_lookup", "CVE 漏洞查询", {"keyword": domain}),
+                        ("security_sploitus_search", "Exploit 搜索", {"keyword": domain}),
+                    ]
+
+                    results = []
+                    for tool_name, label, args in scan_tools:
+                        yield SecurityRoutes._sse({"type": "status", "text": f"⚡ {label}..."})
+                        try:
+                            if self._subnet:
+                                r = await self._subnet.execute_tool(tool_name, args)
+                                output = str(r)[:800] if r else "(无结果)"
+                            else:
+                                r = await self._call_tool_safe(tool_name, args)
+                                output = str(r)[:800] if r else "(无结果)"
+                            results.append({"tool": tool_name, "label": label, "output": output})
+                            yield SecurityRoutes._sse(
+                                {"type": "content", "text": f"✓ {label} 完成\n```\n{output}\n```"}
+                            )
+                        except Exception as e:
+                            yield SecurityRoutes._sse({"type": "content", "text": f"✗ {label} 失败: {e}"})
+
+                    yield SecurityRoutes._sse({"type": "status", "text": "扫描完成，生成分析..."})
+                    # AI 总结
+                    try:
+                        summary = await _summarize_scan_results(actual_target, results)
+                        if summary:
+                            yield SecurityRoutes._sse({"type": "content", "text": f"\n# 扫描总结\n{summary}"})
+                    except Exception:
+                        yield SecurityRoutes._sse(
+                            {
+                                "type": "content",
+                                "text": f"\n# 扫描完成\n已对 {domain} 执行 6 项安全检测，具体结果如上。",
+                            }
+                        )
+
+                elif is_ctf:
+                    # ─── CTF 分析 ───
+                    yield SecurityRoutes._sse({"type": "status", "text": "CTF 分析模式..."})
+                    try:
+                        from webnet.SecurityNet.ctf_tool_matcher import get_ctf_matcher
+                        from webnet.SecurityNet.skill_manager import get_skill_manager
+
+                        matcher = get_ctf_matcher()
+                        skills = get_skill_manager()
+                        tools = matcher.get_tool_chain(msg)
+                        if tools:
+                            yield SecurityRoutes._sse(
+                                {"type": "content", "text": f"🔧 匹配工具: {', '.join(tools[:10])}"}
+                            )
+                        yield SecurityRoutes._sse(
+                            {"type": "content", "text": f"📚 知识库: {', '.join(skills.get_names())}"}
+                        )
+                    except Exception as e:
+                        yield SecurityRoutes._sse({"type": "error", "text": str(e)})
+
+                    # AI 分析
+                    try:
+                        ai_resp = await _call_security_ai(msg, actual_target)
+                        if ai_resp:
+                            for chunk in _split_text_chunks(ai_resp, 800):
+                                yield SecurityRoutes._sse({"type": "content", "text": chunk})
+                    except Exception:
+                        pass
+
+                else:
+                    # ─── 自由对话 ───
+                    yield SecurityRoutes._sse({"type": "status", "text": "弥娅分析中..."})
+                    try:
+                        result_text = await _call_security_ai(msg, actual_target)
+                        if result_text:
+                            for chunk in _split_text_chunks(result_text, 800):
+                                yield SecurityRoutes._sse({"type": "content", "text": chunk})
+                        else:
+                            yield SecurityRoutes._sse(
+                                {
+                                    "type": "content",
+                                    "text": "弥娅安全助手已就绪。输入「扫描 example.com」启动安全评估。",
+                                }
+                            )
+                    except Exception as e:
+                        yield SecurityRoutes._sse({"type": "error", "text": f"AI 调用失败: {e}"})
+
+                yield 'data: {"type":"done"}\n\n'
+
+            return StreamingResponse(
+                event_stream(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no",
+                },
+            )
 
         # ══════════════════════════════════════════════
         #  扫描计划 /api/security/plan/*
@@ -599,6 +925,195 @@ class SecurityRoutes:
             logger.warning(f"[SecurityRoutes] ToolRegistry fallback 失败: {tool_name} — {e}")
             return None
 
+    @staticmethod
+    def _sse(data: Dict[str, Any]) -> str:
+        return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+
     def get_router(self):
         """获取路由器"""
         return self.router
+
+
+async def _ctf_solve_runner(task_id: str, solver):
+    """后台执行 CTF 解题任务"""
+    logger.info(f"[CTF] 开始解题: {task_id}")
+    try:
+        result = await solver.solve()
+        logger.info(f"[CTF] 解题完成: {task_id}, success={result.get('success')}")
+        SecurityRoutes._ctf_tasks[task_id + "_result"] = result
+    except Exception as e:
+        logger.error(f"[CTF] 解题失败: {task_id} - {e}")
+        SecurityRoutes._ctf_tasks[task_id + "_result"] = {"success": False, "error": str(e)}
+
+
+# ══════════════════════════════════════════════════════════════
+# 安全对话配置加载
+# ══════════════════════════════════════════════════════════════
+
+_security_chat_config: Optional[Dict[str, Any]] = None
+
+
+def _load_chat_config() -> Dict[str, Any]:
+    global _security_chat_config
+    if _security_chat_config is not None:
+        return _security_chat_config
+    try:
+        from pathlib import Path
+
+        import yaml
+
+        # 寻找 MIYA 根目录（含 config/）
+        current = Path(__file__).resolve().parent
+        for _ in range(5):
+            if (current / "config" / "security_chat.yaml").exists():
+                break
+            current = current.parent
+        config_path = current / "config" / "security_chat.yaml"
+        with open(config_path, "r", encoding="utf-8") as f:
+            _security_chat_config = yaml.safe_load(f)
+    except Exception as e:
+        logger.warning(f"[SecurityChat] 配置加载失败: {e}")
+        _security_chat_config = {}
+    return _security_chat_config
+
+
+def _get_chat_cfg(section: str, default: Any = None) -> Any:
+    cfg = _load_chat_config()
+    chat = cfg.get("security_chat", {})
+    return chat.get(section, default)
+
+
+def _fallback_security_response(message: str, target: Optional[str] = None) -> str:
+    return _get_chat_cfg("ai_unavailable", "安全 AI 服务暂时不可用，请检查模型连接后重试。")
+
+
+async def _call_security_ai(message: str, target: Optional[str] = None) -> str:
+    try:
+        from core.model_pool_manager import get_model_pool
+
+        pool = get_model_pool()
+        if not pool:
+            return _fallback_security_response(message, target)
+
+        client = pool.create_ai_client(task_type="chat")
+        if not client:
+            return _fallback_security_response(message, target)
+
+        # 引擎预分析
+        engine_context = ""
+        actual_target = target
+        if not actual_target:
+            import re as _re
+
+            host_match = _re.search(r"(?:https?://)?([a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,}", message)
+            if host_match:
+                actual_target = host_match.group(0)
+
+        if actual_target:
+            try:
+                from webnet.SecurityNet.engine import get_engine
+
+                engine = get_engine()
+                tools_rec = engine.quick_scan(actual_target)
+                engine_context = f"\n\n[引擎分析] 目标 {actual_target} 推荐工具: {', '.join(tools_rec[:6])}"
+            except Exception:
+                pass
+
+        # CTF 题型检测
+        ctf_hint = ""
+        if any(kw in message for kw in ["ctf", "CTF", "解题", "flag", "Flag"]):
+            try:
+                from webnet.SecurityNet.ctf_tool_matcher import get_ctf_matcher
+
+                matcher = get_ctf_matcher()
+                tools = matcher.get_tool_chain(message)
+                if tools:
+                    ctf_hint = f"\n\n[CTF匹配] 推荐工具: {', '.join(tools[:8])}"
+            except Exception:
+                pass
+
+        tools_info = _build_tools_summary()
+        skills_info = _build_skills_summary()
+
+        template = _get_chat_cfg("ai", {}).get("system_prompt", "你是弥娅的安全分析 AI 助手。请回答用户的安全问题。")
+        system_prompt = template.format(tools_info=tools_info, skills_info=skills_info)
+
+        user_msg = f"用户消息: {message}"
+        if actual_target:
+            user_msg += f"\n目标: {actual_target}"
+        user_msg += engine_context + ctf_hint
+
+        result = await client.chat_with_system_prompt(
+            system_prompt=system_prompt,
+            user_message=user_msg,
+            use_miya_prompt=False,
+        )
+        return result if isinstance(result, str) else str(result)
+    except Exception as e:
+        logger.warning(f"[SecurityChat] AI 调用失败: {e}")
+        return _fallback_security_response(message, target)
+
+
+async def _summarize_scan_results(target: str, results: List[Dict[str, str]]) -> str:
+    """AI 总结扫描结果"""
+    try:
+        from core.model_pool_manager import get_model_pool
+
+        pool = get_model_pool()
+        if not pool:
+            return ""
+
+        summary_text = "\n".join(f"## {r['label']}\n{r['output'][:400]}" for r in results)
+        client = pool.create_ai_client(task_type="chat")
+        if not client:
+            return ""
+
+        prompt = f"以下是 {target} 的安全扫描结果。请用 200 字以内做简要总结，指出最关键的风险点：\n{summary_text}"
+        result = await client.chat_with_system_prompt(
+            system_prompt="你是安全分析师。总结扫描结果，指出风险。",
+            user_message=prompt,
+            use_miya_prompt=False,
+        )
+        return result if isinstance(result, str) else ""
+    except Exception:
+        return ""
+
+
+def _split_text_chunks(text: str, size: int = 800):
+    paragraphs = text.split("\n")
+    buf = ""
+    for p in paragraphs:
+        if len(buf) + len(p) > size:
+            if buf:
+                yield buf
+                buf = ""
+        buf += p + "\n"
+    if buf:
+        yield buf
+
+
+def _build_tools_summary() -> str:
+    try:
+        from config.security_net_loader import get_section
+
+        tool_index = get_section("tool_index", {})
+        tools_data = tool_index.get("tools", {})
+        lines = []
+        for cat in tool_index.get("categories", [])[:8]:
+            tlist = tools_data.get(cat, [])
+            if tlist:
+                names = ", ".join(t["name"] for t in tlist[:4])
+                lines.append(f"- {cat}: {names}")
+        return "\n".join(lines) if lines else _get_chat_cfg("default_tools", "端口扫描、Nmap扫描等")
+    except Exception:
+        return _get_chat_cfg("default_tools", "端口扫描、Nmap扫描等")
+
+
+def _build_skills_summary() -> str:
+    try:
+        from webnet.SecurityNet.skill_manager import get_skill_manager
+
+        mgr = get_skill_manager()
+        return ", ".join(mgr.get_names())
+    except Exception:
+        return _get_chat_cfg("default_skills", "Web安全、密码学、逆向工程")
