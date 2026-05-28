@@ -31,6 +31,43 @@ if not ACCESS_TOKEN:
     logger.info(f"Kali 终端 Token 已生成: miya_kali_{_generated}")
 
 
+def _find_script_pty() -> str | None:
+    try:
+        result = subprocess.run(
+            [
+                "docker",
+                "exec",
+                KALI_CONTAINER,
+                "bash",
+                "-c",
+                "ps -o tty= -p $(pgrep -f 'script -q' | head -1)",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        tty = result.stdout.strip()
+        if tty and tty != "?":
+            return f"/dev/{tty}"
+    except Exception:
+        pass
+    return None
+
+
+def _resize_pty(pty_path: str | None, cols: int, rows: int):
+    if pty_path:
+        try:
+            subprocess.run(
+                ["docker", "exec", KALI_CONTAINER, "bash", "-c", f"stty cols {cols} rows {rows} < {pty_path}"],
+                capture_output=True,
+                timeout=3,
+            )
+            return True
+        except Exception:
+            pass
+    return False
+
+
 async def check_container() -> bool:
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -50,9 +87,6 @@ async def check_container() -> bool:
 
 
 def _relay_thread(proc: subprocess.Popen, q_out: queue.Queue, q_in: queue.Queue):
-    """线程：从 docker stdout 读 → 放入队列；从队列读 → 写入 docker stdin"""
-    import time
-
     def reader():
         try:
             while True:
@@ -93,7 +127,6 @@ def _send_frame(writer, data: bytes):
 
 
 async def websocket_handler(reader, writer):
-    """WebSocket 连接处理（含 Token 认证）"""
     try:
         raw = await asyncio.wait_for(reader.readuntil(b"\r\n\r\n"), timeout=10)
     except asyncio.TimeoutError:
@@ -139,9 +172,12 @@ async def websocket_handler(reader, writer):
     await writer.drain()
 
     if not await check_container():
-        msg = "\x1b[31mKali 容器未运行\x1b[0m\r\n"
-        frame = bytes([0x82, len(msg)]) + msg.encode()
-        writer.write(frame)
+        msg = (
+            "\x1b[31mKali 容器未运行 (miya-kali)\x1b[0m\r\n\r\n"
+            "\x1b[33m启动容器:\x1b[0m  docker start miya-kali\r\n"
+            "\x1b[33m构建镜像:\x1b[0m  docker build -f Dockerfile.kali -t miya-kali .\r\n"
+        )
+        _send_frame(writer, msg.encode())
         await writer.drain()
         writer.close()
         return
@@ -149,9 +185,14 @@ async def websocket_handler(reader, writer):
     peername = writer.get_extra_info("peername")
     logger.info(f"[kali-term] Kali 终端连接: {peername}")
 
-    # 先发欢迎帧保持连接活跃，再启动 docker exec
-    welcome = b"\x1b[1;32mKali \xe7\xbb\x88\xe7\xab\xaf\xe5\xb7\xb2\xe5\xb0\xb1\xe7\xbb\xaa\r\n\x1b[0m"
-    _send_frame(writer, welcome)
+    tips = (
+        b"\x1b[1;35m  \xe2\x96\xb8 Kali Terminal \xe2\x80\x94 miya-kali \xe2\x80\x94 bash\x1b[0m\r\n"
+        b"\x1b[2m  Ctrl+C \xe4\xb8\xad\xe6\x96\xad  "
+        b"Ctrl+D \xe9\x80\x80\xe5\x87\xba  "
+        b"Ctrl+Shift+C \xe5\xa4\x8d\xe5\x88\xb6  "
+        b"Ctrl+Shift+V \xe7\xb2\x98\xe8\xb4\xb4\x1b[0m\r\n\r\n"
+    )
+    _send_frame(writer, tips)
     await writer.drain()
 
     q_out = queue.Queue()
@@ -165,8 +206,14 @@ async def websocket_handler(reader, writer):
     )
     relay = threading.Thread(target=_relay_thread, args=(proc, q_out, q_in), daemon=True)
     relay.start()
-
     loop = asyncio.get_event_loop()
+
+    # 发现 script 分配的 PTY 设备路径（用于无闪现 resize）
+    pty_path = await loop.run_in_executor(None, _find_script_pty)
+    if pty_path:
+        logger.info(f"[kali-term] PTY 设备: {pty_path}")
+    else:
+        logger.info("[kali-term] PTY 未检测到，resize 将回退到 stdin 模式")
 
     async def docker_to_ws():
         try:
@@ -225,7 +272,8 @@ async def websocket_handler(reader, writer):
                         if ctrl.get("type") == "resize":
                             cols, rows = ctrl["cols"], ctrl["rows"]
                             logger.info(f"[kali-term] 终端尺寸变更: {cols}x{rows}")
-                            q_in.put(f"stty cols {cols} rows {rows}\n".encode())
+                            if not _resize_pty(pty_path, cols, rows):
+                                q_in.put(f"stty cols {cols} rows {rows}\n".encode())
                         continue
                     except Exception:
                         pass

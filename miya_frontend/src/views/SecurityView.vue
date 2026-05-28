@@ -62,37 +62,40 @@ const expandedCats = ref<Set<string>>(new Set(['侦查']))
 
 // Kali xterm 终端
 import { Terminal } from '@xterm/xterm'
+import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 
+const kaliHasBeenOpened = ref(false)
 const showKaliTerminal = ref(false)
 const kaliTermEl = ref<HTMLDivElement>()
 let kaliTerm: Terminal | null = null
 let kaliWs: WebSocket | null = null
+let kaliFitAddon: FitAddon | null = null
+let kaliReconnectTimer: ReturnType<typeof setTimeout> | null = null
 
 function createKaliTerm() {
   if (!kaliTermEl.value || kaliTerm) return
+  kaliFitAddon = new FitAddon()
   kaliTerm = new Terminal({
-    theme: { background: '#0a0a14', foreground: '#d4d4e8', cursor: '#a78bfa' },
-    fontSize: 13,
+    theme: { background: '#080618', foreground: '#d0c8f0', cursor: '#a78bfa',
+      selectionBackground: '#3730a340', black: '#1a1635', red: '#f87171',
+      green: '#6ee7b7', yellow: '#fbbf24', blue: '#93c5fd', magenta: '#c084fc',
+      cyan: '#67e8f9', white: '#e2e8f0', brightBlack: '#4a4560',
+      brightRed: '#fca5a5', brightGreen: '#86efac', brightYellow: '#fde68a',
+      brightBlue: '#bfdbfe', brightMagenta: '#d8b4fe', brightCyan: '#a5f3fc',
+      brightWhite: '#f8fafc' },
+    fontSize: 14,
     fontFamily: "'Cascadia Code', 'JetBrains Mono', 'Consolas', monospace",
     cursorBlink: true, cursorStyle: 'bar',
+    allowProposedApi: true,
   })
+  kaliTerm.loadAddon(kaliFitAddon)
   kaliTerm.open(kaliTermEl.value)
+  kaliHasBeenOpened.value = true
+  try { kaliFitAddon.fit() } catch { /* will retry on connect */ }
   kaliTerm.writeln('\x1b[1;32m▸ 正在连接 Kali 终端...\x1b[0m')
 
-  kaliWs = new WebSocket('ws://localhost:8008')
-  kaliWs.binaryType = 'arraybuffer'
-  kaliWs.onopen = () => { kaliTerm?.writeln('') }
-  kaliWs.onmessage = (ev) => { kaliTerm?.write(new Uint8Array(ev.data as ArrayBuffer)) }
-  kaliWs.onclose = () => {
-    kaliTerm?.writeln('\x1b[31m▸ 已断开 — 3秒后自动重连...\x1b[0m')
-    const oldTerm = kaliTerm; kaliTerm = null; kaliWs = null
-    oldTerm?.dispose()
-    setTimeout(() => {
-      if (showKaliTerminal.value) createKaliTerm()
-    }, 3000)
-  }
-  kaliWs.onerror = () => { kaliTerm?.writeln('\x1b[31m▸ 连接失败\x1b[0m') }
+  connectKaliWS()
 
   kaliTerm.onResize(({ cols, rows }) => {
     if (kaliWs?.readyState === WebSocket.OPEN) {
@@ -104,15 +107,50 @@ function createKaliTerm() {
   })
 }
 
-function destroyKaliTerm() {
-  kaliWs?.close(); kaliWs = null
-  kaliTerm?.dispose(); kaliTerm = null
+function connectKaliWS() {
+  if (!kaliTerm) return
+  kaliWs = new WebSocket('ws://localhost:8008')
+  kaliWs.binaryType = 'arraybuffer'
+  kaliWs.onopen = () => {
+    if (kaliReconnectTimer) { clearTimeout(kaliReconnectTimer); kaliReconnectTimer = null }
+    kaliTerm?.writeln('\x1b[1;32m▸ 已连接\x1b[0m')
+    try { kaliFitAddon?.fit() } catch { /* ignore */ }
+    kaliTerm?.focus()
+  }
+  kaliWs.onmessage = (ev) => { kaliTerm?.write(new Uint8Array(ev.data as ArrayBuffer)) }
+  kaliWs.onclose = () => {
+    if (!kaliTerm) return
+    kaliWs = null
+    kaliTerm.writeln('\x1b[33m▸ 连接断开 — 3秒后自动重连...\x1b[0m')
+    kaliReconnectTimer = setTimeout(() => {
+      if (kaliHasBeenOpened.value && kaliTerm) connectKaliWS()
+    }, 3000)
+  }
+  kaliWs.onerror = () => { kaliTerm?.writeln('\x1b[31m▸ 连接失败\x1b[0m') }
 }
 
-async function launchKaliTerminal() {
-  showKaliTerminal.value = !showKaliTerminal.value
-  if (showKaliTerminal.value) { await nextTick(); createKaliTerm() }
-  else { destroyKaliTerm() }
+function destroyKaliTerm() {
+  if (kaliReconnectTimer) { clearTimeout(kaliReconnectTimer); kaliReconnectTimer = null }
+  kaliWs?.close(); kaliWs = null
+  kaliTerm?.dispose(); kaliTerm = null
+  kaliFitAddon = null
+}
+
+function openKaliTerminal() {
+  showKaliTerminal.value = true
+  nextTick(() => {
+    if (!kaliTerm) createKaliTerm()
+    else { try { kaliFitAddon?.fit() } catch {/* ignore */}; kaliTerm?.focus() }
+  })
+}
+
+function minimizeKaliTerminal() {
+  showKaliTerminal.value = false
+}
+
+function closeKaliTerminal() {
+  showKaliTerminal.value = false
+  destroyKaliTerm()
 }
 
 function toggleCat(cat: string) {
@@ -503,7 +541,7 @@ onUnmounted(() => { destroyKaliTerm() })
       </button>
       <h1 class="sec-title">安全中心</h1>
       <span class="sec-sub">SecurityNet · 弥娅网络安全中枢</span>
-      <button class="kali-btn term" :class="{ active: showKaliTerminal }" @click="launchKaliTerminal">
+      <button class="kali-btn term" :class="{ active: showKaliTerminal }" @click="showKaliTerminal ? minimizeKaliTerminal() : openKaliTerminal()">
         <span class="kali-icon">▸</span> 终端
       </button>
     </div>
@@ -655,11 +693,13 @@ onUnmounted(() => { destroyKaliTerm() })
     </div>
 
     <!-- ── Kali 终端 (xterm.js) ── -->
-    <div v-if="showKaliTerminal" class="kali-term-wrap">
+    <div v-if="kaliHasBeenOpened" v-show="showKaliTerminal" class="kali-term-wrap">
       <div class="kali-toolbar">
         <span class="kali-label">▸ Kali Terminal</span>
         <span class="kali-status">miya-kali · bash</span>
-        <button class="kali-close" @click="showKaliTerminal = false">✕</button>
+        <span class="kali-hint">Ctrl+Shift+C/V 复制粘贴  |  Ctrl+C 中断  |  Ctrl+D 退出</span>
+        <button class="kali-btn-minimize" @click="minimizeKaliTerminal" title="最小化">—</button>
+        <button class="kali-btn-close" @click="closeKaliTerminal" title="关闭终端">✕</button>
       </div>
       <div ref="kaliTermEl" class="kali-xterm-box" />
     </div>
@@ -916,12 +956,14 @@ onUnmounted(() => { destroyKaliTerm() })
 }
 .kali-icon { font-size: 0.7rem; }
 
-.kali-term-wrap { position:fixed; inset:56px 0 0 0; z-index:51; display:flex; flex-direction:column; background:#0a0a14; }
-.kali-toolbar { display:flex; align-items:center; gap:12px; padding:6px 16px; border-bottom:.5px solid rgba(167,139,250,.2); background:rgba(0,0,0,.4); }
+.kali-term-wrap { position:fixed; inset:56px 0 0 0; z-index:51; display:flex; flex-direction:column; background:#080618; }
+.kali-toolbar { display:flex; align-items:center; gap:12px; padding:6px 16px; border-bottom:.5px solid rgba(167,139,250,.2); background:rgba(0,0,0,.5); }
 .kali-label { font-size:.7rem; color:var(--miya-accent); font-family:'JetBrains Mono',monospace; }
 .kali-status { font-size:.55rem; color:var(--miya-text-dim); }
-.kali-close { margin-left:auto; padding:3px 10px; border-radius:4px; font-size:.6rem; cursor:pointer; border:.5px solid rgba(255,80,80,.2); background:transparent; color:#ff6666; &:hover{background:rgba(255,80,80,.1)} }
-.kali-xterm-box { flex:1; padding:4px; :deep(.xterm){height:100%} :deep(.xterm-viewport){overflow-y:auto} }
+.kali-hint { margin-left:auto; font-size:.55rem; color:var(--miya-text-dim); opacity:0.5; }
+.kali-btn-minimize { padding:2px 8px; border-radius:4px; font-size:.65rem; cursor:pointer; border:.5px solid rgba(167,139,250,.2); background:transparent; color:var(--miya-text-dim); margin-left:8px; &:hover{background:rgba(167,139,250,.15);color:var(--miya-accent);} }
+.kali-btn-close { padding:2px 8px; border-radius:4px; font-size:.65rem; cursor:pointer; border:.5px solid rgba(255,80,80,.2); background:transparent; color:#ff6666; &:hover{background:rgba(255,80,80,.1)} }
+.kali-xterm-box { flex:1; padding:6px 4px 4px 10px; :deep(.xterm){height:100%} :deep(.xterm-viewport){overflow-y:auto} :deep(.xterm-viewport::-webkit-scrollbar){width:6px} :deep(.xterm-viewport::-webkit-scrollbar-thumb){background:rgba(167,139,250,.2);border-radius:3px} }
 
 /* ── Modal ── */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; }
