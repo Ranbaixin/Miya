@@ -24,7 +24,10 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 try:
     from config.security_net_loader import get_orchestrator_config
 except ImportError:
-    get_orchestrator_config = lambda: {}
+
+    def get_orchestrator_config():
+        return {}
+
 
 logger = logging.getLogger(__name__)
 

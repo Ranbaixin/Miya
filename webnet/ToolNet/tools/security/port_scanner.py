@@ -15,7 +15,10 @@ from webnet.ToolNet.base import BaseTool, ToolContext
 try:
     from config.security_net_loader import get_port_scanner_config
 except ImportError:
-    get_port_scanner_config = lambda: {}
+
+    def get_port_scanner_config():
+        return {}
+
 
 _CFG = get_port_scanner_config()
 COMMON_PORTS = _CFG.get("common_ports", {})

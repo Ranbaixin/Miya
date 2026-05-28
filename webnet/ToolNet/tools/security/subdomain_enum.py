@@ -15,7 +15,10 @@ from webnet.ToolNet.base import BaseTool, ToolContext
 try:
     from config.security_net_loader import get_subdomain_enum_config
 except ImportError:
-    get_subdomain_enum_config = lambda: {}
+
+    def get_subdomain_enum_config():
+        return {}
+
 
 _CFG = get_subdomain_enum_config()
 DEFAULT_SUBDOMAINS = _CFG.get("default_subdomains", [])
@@ -97,18 +100,12 @@ class SecuritySubdomainEnumTool(BaseTool):
         ]
 
         if found:
-            # 按类型分组
-            www_found = [f for f in found if f["hostname"].startswith("www")]
-            mail_found = [f for f in found if "mail" in f["hostname"]]
             dev_found = [
                 f for f in found if any(kw in f["hostname"] for kw in ["dev", "test", "stage", "staging", "beta"])
             ]
             admin_found = [
                 f for f in found if any(kw in f["hostname"] for kw in ["admin", "manage", "cpanel", "dashboard"])
             ]
-            api_found = [f for f in found if "api" in f["hostname"]]
-            other_found = [f for f in found if f not in www_found + mail_found + dev_found + admin_found + api_found]
-
             lines.append("| 子域名 | IP |")
             lines.append("|--------|----|")
             for f in found:

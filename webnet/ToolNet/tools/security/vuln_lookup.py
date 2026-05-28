@@ -17,7 +17,10 @@ from webnet.ToolNet.base import BaseTool, ToolContext
 try:
     from config.security_net_loader import get_vuln_lookup_config
 except ImportError:
-    get_vuln_lookup_config = lambda: {}
+
+    def get_vuln_lookup_config():
+        return {}
+
 
 _CFG = get_vuln_lookup_config()
 _API_BASE = _CFG.get("nvd_api_base", "https://services.nvd.nist.gov/rest/json/cves/2.0")

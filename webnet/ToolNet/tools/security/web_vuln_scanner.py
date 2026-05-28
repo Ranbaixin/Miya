@@ -17,7 +17,10 @@ from webnet.ToolNet.base import BaseTool, ToolContext
 try:
     from config.security_net_loader import get_web_vuln_scanner_config
 except ImportError:
-    get_web_vuln_scanner_config = lambda: {}
+
+    def get_web_vuln_scanner_config():
+        return {}
+
 
 _CFG = get_web_vuln_scanner_config()
 SQL_PAYLOADS = _CFG.get("sql_payloads", [])
@@ -186,7 +189,6 @@ class SecurityWebVulnScannerTool(BaseTool):
                     )
 
             # 5. 错误页面检查
-            common_errors = base_url.split("/")[-1]
             for error_path in [
                 f"{base_url.rsplit('/', 1)[0]}/nonexistent_404_test",
                 f"{base_url}/'",

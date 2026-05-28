@@ -17,7 +17,10 @@ from webnet.ToolNet.base import BaseTool, ToolContext
 try:
     from config.security_net_loader import get_http_headers_config
 except ImportError:
-    get_http_headers_config = lambda: {}
+
+    def get_http_headers_config():
+        return {}
+
 
 _CFG = get_http_headers_config()
 SECURITY_HEADER_CHECKS = _CFG.get("security_checks", [])

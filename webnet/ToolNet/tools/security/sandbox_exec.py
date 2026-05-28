@@ -70,7 +70,7 @@ class SecuritySandboxExecTool(BaseTool):
                 }
             )
             return result
-        except Exception as e:
+        except Exception:
             return await self._local_fallback(command, timeout)
 
     async def _local_fallback(self, command: str, timeout: int) -> str:

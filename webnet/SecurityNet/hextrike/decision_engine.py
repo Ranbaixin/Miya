@@ -488,10 +488,7 @@ class IntelligentDecisionEngine:
     def _resolve_domain(self, target: str) -> List[str]:
         """Resolve domain to IP addresses"""
         try:
-            if target.startswith(("http://", "https://")):
-                hostname = urlparse(target).hostname
-            else:
-                hostname = target
+            hostname = urlparse(target).hostname if target.startswith(("http://", "https://")) else target
 
             if hostname:
                 ip = socket.gethostbyname(hostname)

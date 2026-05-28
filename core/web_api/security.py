@@ -480,7 +480,8 @@ class SecurityRoutes:
 
         @self.router.websocket("/kali/terminal")
         async def kali_terminal(websocket):
-            import asyncio as aio, subprocess
+            import asyncio as aio
+            import subprocess
 
             await websocket.accept()
             try:

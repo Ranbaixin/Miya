@@ -129,10 +129,7 @@ class ModernVisualEngine:
     @staticmethod
     def create_progress_bar(current: int, total: int, width: int = 50, tool: str = "") -> str:
         """Create a beautiful progress bar with cyberpunk styling"""
-        if total == 0:
-            percentage = 0
-        else:
-            percentage = min(100, (current / total) * 100)
+        percentage = 0 if total == 0 else min(100, (current / total) * 100)
 
         filled = int(width * percentage / 100)
         bar = "█" * filled + "░" * (width - filled)
@@ -225,8 +222,6 @@ class ModernVisualEngine:
                 if len(proc_info.get("command", "")) > 50
                 else proc_info.get("command", "unknown")
             )
-            duration = proc_info.get("duration", 0)
-
             status_color = (
                 ModernVisualEngine.COLORS["ACCENT_LINE"]
                 if status == "running"

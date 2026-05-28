@@ -20,10 +20,7 @@ def _load() -> Dict[str, Any]:
     if _CONF is not None:
         return _CONF
     try:
-        if _CONFIG_PATH.exists():
-            _CONF = yaml.safe_load(_CONFIG_PATH.read_text(encoding="utf-8")) or {}
-        else:
-            _CONF = {}
+        _CONF = yaml.safe_load(_CONFIG_PATH.read_text(encoding="utf-8")) or {} if _CONFIG_PATH.exists() else {}
     except Exception:
         _CONF = {}
     return _CONF

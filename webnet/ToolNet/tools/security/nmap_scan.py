@@ -14,7 +14,10 @@ from webnet.ToolNet.base import BaseTool, ToolContext
 try:
     from config.security_net_loader import get_nmap_scan_config
 except ImportError:
-    get_nmap_scan_config = lambda: {}
+
+    def get_nmap_scan_config():
+        return {}
+
 
 _CFG = get_nmap_scan_config()
 NMAP_SCAN_TYPES = _CFG.get("scan_types", {})
@@ -76,10 +79,7 @@ class SecurityNmapScanTool(BaseTool):
 
         target = target.split("://")[-1].split("/")[0].split(":")[0]
 
-        if custom_args:
-            nmap_args = custom_args
-        else:
-            nmap_args = NMAP_SCAN_TYPES.get(mode, NMAP_SCAN_TYPES["quick"])
+        nmap_args = custom_args or NMAP_SCAN_TYPES.get(mode, NMAP_SCAN_TYPES["quick"])
 
         command = f"nmap {nmap_args} {target}"
 

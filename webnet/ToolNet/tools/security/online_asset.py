@@ -16,7 +16,10 @@ from webnet.ToolNet.base import BaseTool, ToolContext
 try:
     from config.security_net_loader import get_online_asset_config
 except ImportError:
-    get_online_asset_config = lambda: {}
+
+    def get_online_asset_config():
+        return {}
+
 
 _CFG = get_online_asset_config()
 SUPPORTED_SERVICES = _CFG.get("supported_services", {})

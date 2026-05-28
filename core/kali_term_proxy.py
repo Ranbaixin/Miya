@@ -111,10 +111,10 @@ async def websocket_handler(reader, writer):
         if not token_match or not secrets.compare_digest(token_match.group(1), expected):
             logger.warning(f"[kali-term] Token 验证失败，来自: {peername}")
             writer.write(
-                "HTTP/1.1 403 Forbidden\r\n"
-                "Access-Control-Allow-Origin: http://localhost:9800\r\n"
-                "Content-Type: text/plain\r\n"
-                "\r\n".encode()
+                b"HTTP/1.1 403 Forbidden\r\n"
+                b"Access-Control-Allow-Origin: http://localhost:9800\r\n"
+                b"Content-Type: text/plain\r\n"
+                b"\r\n"
             )
             await writer.drain()
             writer.close()

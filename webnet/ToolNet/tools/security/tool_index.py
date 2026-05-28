@@ -15,7 +15,10 @@ from webnet.ToolNet.base import BaseTool, ToolContext
 try:
     from config.security_net_loader import get_tool_index_config
 except ImportError:
-    get_tool_index_config = lambda: {}
+
+    def get_tool_index_config():
+        return {}
+
 
 _CFG = get_tool_index_config()
 CATEGORY_TOOLS = _CFG.get("tools", {})

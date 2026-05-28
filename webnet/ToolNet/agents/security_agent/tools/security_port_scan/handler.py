@@ -5,7 +5,6 @@ async def execute(args, context=None, **kwargs) -> str:
     target = ""
     if isinstance(args, dict):
         target = args.get("target", "")
-        ports = args.get("ports", None)
     elif context and hasattr(context, "get"):
         target = context.get("target", "")
     if kwargs:

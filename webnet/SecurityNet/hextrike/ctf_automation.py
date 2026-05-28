@@ -1452,11 +1452,7 @@ class CTFToolManager:
 
         elif tool in ["gobuster", "dirsearch", "feroxbuster"]:
             # For directory brute forcing, optimize threads and extensions
-            if tool == "gobuster" and "-t" not in base_command:
-                base_command += " -t 50"
-            elif tool == "dirsearch" and "-t" not in base_command:
-                base_command += " -t 50"
-            elif tool == "feroxbuster" and "-t" not in base_command:
+            if tool in ["gobuster", "dirsearch", "feroxbuster"] and "-t" not in base_command:
                 base_command += " -t 50"
 
         if additional_args:
@@ -1672,7 +1668,7 @@ class CTFChallengeAutomator:
         for tool in tools:
             try:
                 if tool != "manual":
-                    command = self.ctf_tools.get_tool_command(tool, challenge.name)
+                    self.ctf_tools.get_tool_command(tool, challenge.name)
                     # In a real implementation, this would execute the command
                     step_result["tools_used"].append(tool)
                     step_result["output"] += f"[{tool}] Executed successfully\n"
@@ -1741,11 +1737,7 @@ class CTFChallengeAutomator:
         """Validate if a string matches common flag formats"""
         common_formats = [r"^flag\{.+\}$", r"^FLAG\{.+\}$", r"^ctf\{.+\}$", r"^CTF\{.+\}$", r"^[a-zA-Z0-9_]+\{.+\}$"]
 
-        for pattern in common_formats:
-            if re.match(pattern, flag, re.IGNORECASE):
-                return True
-
-        return False
+        return any(re.match(pattern, flag, re.IGNORECASE) for pattern in common_formats)
 
     def _generate_manual_guidance(
         self, challenge: CTFChallenge, current_result: Dict[str, Any]

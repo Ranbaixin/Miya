@@ -16,7 +16,10 @@ from webnet.ToolNet.base import BaseTool, ToolContext
 try:
     from config.security_net_loader import get_dir_brute_config
 except ImportError:
-    get_dir_brute_config = lambda: {}
+
+    def get_dir_brute_config():
+        return {}
+
 
 _CFG = get_dir_brute_config()
 COMMON_PATHS = _CFG.get("common_paths", [])

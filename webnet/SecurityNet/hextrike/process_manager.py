@@ -803,10 +803,7 @@ class ProcessPool:
                     active_tasks_count = len(self.active_tasks)
 
                 # Calculate load metrics
-                if active_workers > 0:
-                    load_ratio = (active_tasks_count + queue_size) / active_workers
-                else:
-                    load_ratio = float("inf")
+                load_ratio = (active_tasks_count + queue_size) / active_workers if active_workers > 0 else float("inf")
 
                 # Auto-scaling logic
                 if load_ratio > self.scale_threshold and active_workers < self.max_workers:

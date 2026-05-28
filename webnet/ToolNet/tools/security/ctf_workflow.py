@@ -15,7 +15,10 @@ from webnet.ToolNet.base import BaseTool, ToolContext
 try:
     from config.security_net_loader import get_ctf_workflow_config
 except ImportError:
-    get_ctf_workflow_config = lambda: {}
+
+    def get_ctf_workflow_config():
+        return {}
+
 
 _CFG = get_ctf_workflow_config()
 CTF_CATEGORIES = _CFG.get("categories") or {}
