@@ -453,6 +453,10 @@ app.whenReady().then(async () => {
   ipcMain.on('live2d:resetPosition', () => {
     resetLive2dPosition()
   })
+  ipcMain.on('live2d:readyToggle', () => {
+    // 启动时检查 localStorage 中的 visible 配置，如果关闭则隐藏窗口
+    toggleLive2dVisibility()
+  })
   ipcMain.on('live2d:background', (_event, data: { color: string, alpha: number }) => {
     broadcastLive2dCommand('live2d:background', data)
   })

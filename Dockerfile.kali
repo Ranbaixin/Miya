@@ -1,0 +1,129 @@
+# 弥娅安全子网 — Kali Docker 沙箱
+# 一键构建包含 46+ 安全工具的容器环境
+# 使用: docker build -t miya-kali -f Dockerfile.kali .
+
+FROM kalilinux/kali-rolling:latest
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Asia/Shanghai
+
+# 更新（使用默认源）
+RUN apt-get update && apt-get upgrade -y || true
+
+# ─── Network Recon ──────────────────────────
+RUN apt-get install -y --no-install-recommends \
+    nmap \
+    masscan \
+    netcat-openbsd \
+    enum4linux \
+    smbmap \
+    smbclient \
+    nbtscan \
+    arp-scan \
+    dnsutils \
+    whois \
+    && apt-get clean
+
+# rustscan
+RUN wget -q https://github.com/RustScan/RustScan/releases/latest/download/rustscan_amd64.deb \
+    -O /tmp/rustscan.deb && dpkg -i /tmp/rustscan.deb 2>/dev/null || true && rm /tmp/rustscan.deb
+
+# autorecon
+RUN apt-get install -y --no-install-recommends \
+    seclists curl dnsrecon feroxbuster gobuster \
+    impacket-scripts nbtscan nikto nmap onesixtyone oscanner \
+    redis-tools smbclient smbmap snmp sslscan sipvicious \
+    tnscmd10g whatweb wkhtmltopdf \
+    && apt-get clean
+RUN python3 -m pip install git+https://github.com/Tib3rius/AutoRecon.git 2>/dev/null || true
+
+# ─── Subdomain ──────────────────────────────
+RUN apt-get install -y --no-install-recommends \
+    dnsrecon \
+    dnsenum \
+    && apt-get clean
+
+# go 工具
+RUN apt-get install -y --no-install-recommends golang-go git ca-certificates && apt-get clean
+RUN go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest 2>/dev/null || true
+RUN go install -v github.com/owasp-amass/amass/v4/...@master 2>/dev/null || true
+RUN go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest 2>/dev/null || true
+RUN go install -v github.com/projectdiscovery/katana/cmd/katana@latest 2>/dev/null || true
+RUN go install -v github.com/lc/gau/v2/cmd/gau@latest 2>/dev/null || true
+RUN go install -v github.com/tomnomnom/waybackurls@latest 2>/dev/null || true
+RUN go install -v github.com/ffuf/ffuf/v2@latest 2>/dev/null || true
+RUN go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest 2>/dev/null || true
+RUN nuclei -update-templates 2>/dev/null || true
+
+# 链接 Go bin
+RUN mkdir -p /usr/local/bin && \
+    for f in /root/go/bin/*; do ln -sf "$f" /usr/local/bin/ 2>/dev/null; done
+
+# ─── Dir Enum ────────────────────────────────
+RUN apt-get install -y --no-install-recommends \
+    gobuster \
+    seclists \
+    wordlists \
+    dirsearch \
+    feroxbuster \
+    && apt-get clean
+RUN pip install arjun 2>/dev/null || true
+
+# ─── Vuln Scan ──────────────────────────────
+RUN apt-get install -y --no-install-recommends \
+    nikto \
+    wafw00f \
+    && apt-get clean
+RUN gem install wpscan 2>/dev/null || true
+
+# ─── Exploitation ───────────────────────────
+RUN apt-get install -y --no-install-recommends \
+    sqlmap \
+    metasploit-framework \
+    && apt-get clean
+# dalfox
+RUN go install -v github.com/hahwul/dalfox/v2@latest 2>/dev/null || true \
+    && ln -sf /root/go/bin/dalfox /usr/local/bin/dalfox 2>/dev/null || true
+
+# ─── Password ───────────────────────────────
+RUN apt-get install -y --no-install-recommends \
+    hydra \
+    john \
+    hashcat \
+    && apt-get clean
+
+# ─── Reverse Eng / Forensics ────────────────
+RUN apt-get install -y --no-install-recommends \
+    binwalk \
+    exiftool \
+    steghide \
+    foremost \
+    binutils \
+    checksec \
+    gdb \
+    && apt-get clean
+
+# ─── Cloud ──────────────────────────────────
+RUN pip install trivy 2>/dev/null || true
+RUN pip install prowler 2>/dev/null || true
+RUN pip install scout 2>/dev/null || true
+
+# ─── Netexec ────────────────────────────────
+RUN pip install netexec 2>/dev/null || true
+RUN pip install impacket 2>/dev/null || true
+
+# ─── Python Tools ───────────────────────────
+RUN apt-get install -y --no-install-recommends python3-pip python3-dev && apt-get clean
+
+# ─── Cleanup ────────────────────────────────
+RUN apt-get remove -y golang-go git ca-certificates 2>/dev/null || true
+RUN apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /root/go /root/.cache
+
+WORKDIR /workspace
+VOLUME ["/workspace", "/data"]
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD nmap --version || exit 1
+
+CMD ["bash"]

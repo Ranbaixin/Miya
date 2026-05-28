@@ -87,8 +87,8 @@ async function boot(): Promise<void> {
     }
 
     startIPCListener()
-    startYinmeiPolling()
     notifyLive2dReady()
+    checkStartupVisibility()
     console.log('[Live2D App] Ready!')
   }
   catch (err) {
@@ -144,6 +144,22 @@ function notifyLive2dReady(): void {
       live2dIPC?: { send: (ch: string, ...args: unknown[]) => void }
     }).live2dIPC
     if (ipc) ipc.send('live2d:ready')
+  }
+  catch { /* ignore */ }
+}
+
+function checkStartupVisibility(): void {
+  try {
+    const raw = localStorage.getItem('miya-live2d-window-config')
+    if (raw) {
+      const cfg = JSON.parse(raw)
+      if (cfg.visible === false) {
+        const ipc = (window as unknown as {
+          live2dIPC?: { send: (ch: string, ...args: unknown[]) => void }
+        }).live2dIPC
+        if (ipc) ipc.send('live2d:readyToggle')
+      }
+    }
   }
   catch { /* ignore */ }
 }

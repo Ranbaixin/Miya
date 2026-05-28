@@ -59,6 +59,89 @@ const showHistory = ref(false)
 
 // 工具面板折叠
 const expandedCats = ref<Set<string>>(new Set(['侦查']))
+
+// Kali 桌面
+const showKaliDesktop = ref(false)
+const kaliReady = ref(false)
+const kaliLoading = ref(false)
+
+async function launchKaliDesktop() {
+  if (kaliReady.value) { showKaliDesktop.value = !showKaliDesktop.value; return }
+  kaliLoading.value = true
+  try {
+    const resp = await fetch('http://localhost:8000/api/security/kali/status')
+    const data = await resp.json()
+    if (data.running) {
+      kaliReady.value = true
+      showKaliDesktop.value = true
+    } else {
+      const startResp = await fetch('http://localhost:8000/api/security/kali/launch', { method: 'POST' })
+      const startData = await startResp.json()
+      if (startData.success) {
+        await new Promise(r => setTimeout(r, 5000))
+        kaliReady.value = true
+        showKaliDesktop.value = true
+      } else {
+        alert('Kali 启动失败: ' + (startData.error || '未知错误'))
+      }
+    }
+  } catch (e) {
+    alert('无法连接 Kali 容器，请确认 Docker 已启动且 miya-kali 容器正在运行')
+  } finally {
+    kaliLoading.value = false
+  }
+}
+
+// Kali 终端
+const showKaliTerminal = ref(false)
+const kaliTermCmd = ref('')
+const kaliTermLines = ref<string[]>([
+  '  Kali Linux Terminal (miya-kali)',
+  '  输入命令后按回车执行 ────────',
+  '',
+])
+const kaliTermOutput = ref<HTMLElement>()
+
+async function runKaliCmd() {
+  const cmd = kaliTermCmd.value.trim()
+  if (!cmd) return
+  kaliTermLines.value.push(`$ ${cmd}`)
+  kaliTermCmd.value = ''
+  try {
+    const resp = await fetch('http://localhost:8000/api/security/kali/exec', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: cmd }),
+    })
+    const data = await resp.json()
+    if (data.success) {
+      const output = (data.stdout || data.stderr || '').split('\n')
+      output.forEach((l: string) => kaliTermLines.value.push(l))
+    } else {
+      kaliTermLines.value.push(`Error: ${data.error || 'unknown'}`)
+    }
+  } catch (e) {
+    kaliTermLines.value.push('Error: 无法连接到后端')
+  }
+  kaliTermLines.value.push('')
+  // 限制行数
+  if (kaliTermLines.value.length > 500) {
+    kaliTermLines.value = kaliTermLines.value.slice(-500)
+  }
+  // 滚动到底部
+  setTimeout(() => {
+    if (kaliTermOutput.value) {
+      kaliTermOutput.value.scrollTop = kaliTermOutput.value.scrollHeight
+    }
+  }, 50)
+}
+
+async function launchKaliTerminal() {
+  showKaliTerminal.value = !showKaliTerminal.value
+  if (showKaliTerminal.value) {
+    kaliTermLines.value = ['  Kali Linux Terminal (miya-kali)', '']
+  }
+}
 function toggleCat(cat: string) {
   if (expandedCats.value.has(cat)) expandedCats.value.delete(cat)
   else expandedCats.value.add(cat)
@@ -348,6 +431,14 @@ onUnmounted(() => {})
       </button>
       <h1 class="sec-title">安全中心</h1>
       <span class="sec-sub">SecurityNet · 弥娅网络安全中枢</span>
+      <button class="kali-btn" :class="{ active: showKaliDesktop, loading: kaliLoading }" @click="launchKaliDesktop">
+        <span v-if="kaliLoading" class="kali-spinner" />
+        <span v-else class="kali-icon">◉</span>
+        Kali {{ kaliReady && showKaliDesktop ? '▲' : '▼' }}
+      </button>
+      <button class="kali-btn term" :class="{ active: showKaliTerminal }" @click="launchKaliTerminal">
+        <span class="kali-icon">▸</span> 终端
+      </button>
     </div>
 
     <!-- ── Phase 指示器 ── -->
@@ -493,6 +584,34 @@ onUnmounted(() => {})
             <span class="nf-icon">✓</span> 未发现明显安全问题
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ── Kali 桌面 ── -->
+    <div v-if="showKaliDesktop && kaliReady" class="kali-desktop-panel">
+      <div class="kali-toolbar">
+        <span class="kali-label">▸ Kali Linux Desktop</span>
+        <span class="kali-status">localhost:6080</span>
+        <button class="kali-refresh" @click="kaliReady = false; showKaliDesktop = false; launchKaliDesktop()">⟳ 刷新</button>
+        <button class="kali-close" @click="showKaliDesktop = false">✕</button>
+      </div>
+      <iframe src="http://localhost:6080/vnc.html?autoconnect=1&resize=scale" class="kali-iframe" />
+    </div>
+
+    <!-- ── Kali 终端 ── -->
+    <div v-if="showKaliTerminal" class="kali-terminal-panel">
+      <div class="kali-toolbar">
+        <span class="kali-label">▸ Kali Terminal</span>
+        <span class="kali-status">miya-kali</span>
+        <button class="kali-refresh" @click="kaliTermCmd=''; runKaliCmd()">⟳ 清屏</button>
+        <button class="kali-close" @click="showKaliTerminal = false">✕</button>
+      </div>
+      <div class="kali-term-output" ref="kaliTermOutput">
+        <div v-for="(line, i) in kaliTermLines" :key="i" class="term-line">{{ line }}</div>
+      </div>
+      <div class="kali-term-input-row">
+        <span class="term-prompt">$</span>
+        <input v-model="kaliTermCmd" class="term-input" @keydown.enter="runKaliCmd" placeholder="输入命令..." />
       </div>
     </div>
 
@@ -736,6 +855,43 @@ onUnmounted(() => {})
   font-size: 0.7rem; color: rgba(68,204,68,0.6);
 }
 .nf-icon { font-size: 1rem; }
+
+/* ── Kali Desktop ── */
+.kali-btn {
+  margin-left: auto; padding: 4px 12px; border-radius: 8px; font-size: 0.65rem; cursor: pointer;
+  border: 0.5px solid rgba(0,180,100,0.3); background: rgba(0,180,100,0.08); color: var(--miya-accent);
+  transition: all 0.15s; white-space: nowrap; display: flex; align-items: center; gap: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  &:hover { background: rgba(0,180,100,0.18); border-color: rgba(0,180,100,0.5); }
+  &.active { background: rgba(0,180,100,0.2); border-color: rgba(0,220,140,0.6); color: #44cc88; }
+  &.loading { opacity: 0.7; }
+  &.term { margin-left: 8px; border-color: rgba(167,139,250,0.3); background: rgba(167,139,250,0.08); color: var(--miya-accent); }
+  &.term:hover { background: rgba(167,139,250,0.18); border-color: var(--miya-accent); }
+  &.term.active { background: rgba(167,139,250,0.2); border-color: rgba(180,120,255,0.6); color: #b488ff; }
+}
+.kali-icon { font-size: 0.7rem; }
+.kali-spinner {
+  display: inline-block; width: 10px; height: 10px; border: 1.5px solid rgba(0,180,100,0.3);
+  border-top-color: #44cc88; border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+
+.kali-desktop-panel {
+  position: fixed; inset: 56px 0 0 0; z-index: 50; background: rgba(5,4,12,0.97);
+  display: flex; flex-direction: column;
+}
+.kali-toolbar {
+  display: flex; align-items: center; gap: 12px; padding: 6px 16px;
+  border-bottom: 0.5px solid rgba(0,180,100,0.2); background: rgba(0,15,5,0.5);
+}
+.kali-label { font-size: 0.7rem; color: #44cc88; font-family: 'JetBrains Mono', monospace; }
+.kali-status { font-size: 0.55rem; color: var(--miya-text-dim); margin-left: 4px; }
+.kali-refresh, .kali-close {
+  margin-left: auto; padding: 3px 10px; border-radius: 4px; font-size: 0.6rem; cursor: pointer;
+  border: 0.5px solid rgba(167,139,250,0.2); background: rgba(10,8,21,0.2); color: var(--miya-text-dim);
+  &:hover { color: var(--miya-accent); border-color: var(--miya-accent); }
+}
+.kali-close { margin-left: 4px; color: #ff6666; border-color: rgba(255,80,80,0.2); }
+.kali-iframe { flex: 1; border: none; width: 100%; }
 
 /* ── Modal ── */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; }

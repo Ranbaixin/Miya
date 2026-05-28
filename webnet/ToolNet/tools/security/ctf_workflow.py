@@ -18,9 +18,8 @@ except ImportError:
     get_ctf_workflow_config = lambda: {}
 
 _CFG = get_ctf_workflow_config()
-CTF_CATEGORIES = _CFG.get("categories", {})
-BUGBOUNTY_FLOW = _CFG.get("bugbounty_flow", {})
-CATEGORY_ADVICE = _CFG.get("category_specific_advice", {})
+CTF_CATEGORIES = _CFG.get("categories") or {}
+CATEGORY_ADVICE: Dict[str, Any] = _CFG.get("category_specific_advice") or {
     "web": {
         "name": "Web安全",
         "tools": ["BurpSuite", "sqlmap", "dirsearch", "nuclei"],
@@ -277,7 +276,9 @@ class SecurityCTFWorkflowTool(BaseTool):
         lines.append("### 重要原则")
         lines.append("")
         for p in principles:
-            lines.append(f"{principles.index(p) + 1}. **{p.split('—')[0].strip()}** — {p.split('—')[1].strip() if '—' in p else p}")
+            lines.append(
+                f"{principles.index(p) + 1}. **{p.split('—')[0].strip()}** — {p.split('—')[1].strip() if '—' in p else p}"
+            )
         lines.append("")
         lines.append("*弥娅 SecurityNet 的全面扫描、端口扫描、目录爆破等工具可用于自动化部分侦察过程*")
         return "\n".join(lines)

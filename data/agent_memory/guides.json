@@ -1,0 +1,13 @@
+[
+  {
+    "id": "guide-1779944502981",
+    "type": "guide",
+    "question": "test",
+    "content": "test guide",
+    "metadata": {
+      "guide_type": "pentest"
+    },
+    "created_at": "2026-05-28T13:01:42.981680",
+    "score": 0.0
+  }
+]

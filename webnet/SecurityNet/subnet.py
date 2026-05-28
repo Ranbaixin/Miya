@@ -61,23 +61,36 @@ class SecuritySubnet:
         self.logger.info(f"[{self.config.subnet_name}] 子网已启动 v{self.config.version}")
 
     def _init_tools(self):
-        """初始化安全工具"""
-        from webnet.ToolNet.tools.security.port_scanner import SecurityPortScanTool, get_security_port_scan_tool
-        from webnet.ToolNet.tools.security.subdomain_enum import (
-            SecuritySubdomainEnumTool,
-            get_security_subdomain_enum_tool,
-        )
-        from webnet.ToolNet.tools.security.http_headers import SecurityHTTPHeadersTool, get_security_http_headers_tool
-        from webnet.ToolNet.tools.security.dns_enum import SecurityDNSEnumTool, get_security_dns_enum_tool
-        from webnet.ToolNet.tools.security.ssl_cert import SecuritySSLCertTool, get_security_ssl_cert_tool
-        from webnet.ToolNet.tools.security.vuln_lookup import SecurityVulnLookupTool, get_security_vuln_lookup_tool
+        """初始化安全工具（14 个）"""
+        from webnet.ToolNet.tools.security.port_scanner import get_security_port_scan_tool
+        from webnet.ToolNet.tools.security.nmap_scan import get_security_nmap_scan_tool
+        from webnet.ToolNet.tools.security.subdomain_enum import get_security_subdomain_enum_tool
+        from webnet.ToolNet.tools.security.dns_enum import get_security_dns_enum_tool
+        from webnet.ToolNet.tools.security.http_headers import get_security_http_headers_tool
+        from webnet.ToolNet.tools.security.ssl_cert import get_security_ssl_cert_tool
+        from webnet.ToolNet.tools.security.vuln_lookup import get_security_vuln_lookup_tool
+        from webnet.ToolNet.tools.security.sploitus_search import get_security_sploitus_search_tool
+        from webnet.ToolNet.tools.security.online_asset import get_security_online_asset_tool
+        from webnet.ToolNet.tools.security.dir_brute import get_security_dir_brute_tool
+        from webnet.ToolNet.tools.security.web_vuln_scanner import get_security_web_vuln_scanner_tool
+        from webnet.ToolNet.tools.security.sandbox_exec import get_security_sandbox_exec_tool
+        from webnet.ToolNet.tools.security.ctf_workflow import get_security_ctf_workflow_tool
+        from webnet.ToolNet.tools.security.tool_index import get_security_tool_index_tool
 
         self.tools["security_port_scan"] = get_security_port_scan_tool()
+        self.tools["security_nmap_scan"] = get_security_nmap_scan_tool()
         self.tools["security_subdomain_enum"] = get_security_subdomain_enum_tool()
-        self.tools["security_http_headers"] = get_security_http_headers_tool()
         self.tools["security_dns_enum"] = get_security_dns_enum_tool()
+        self.tools["security_http_headers"] = get_security_http_headers_tool()
         self.tools["security_ssl_cert"] = get_security_ssl_cert_tool()
         self.tools["security_vuln_lookup"] = get_security_vuln_lookup_tool()
+        self.tools["security_sploitus_search"] = get_security_sploitus_search_tool()
+        self.tools["security_online_asset"] = get_security_online_asset_tool()
+        self.tools["security_dir_brute"] = get_security_dir_brute_tool()
+        self.tools["security_web_vuln_scanner"] = get_security_web_vuln_scanner_tool()
+        self.tools["security_sandbox_exec"] = get_security_sandbox_exec_tool()
+        self.tools["security_ctf_workflow"] = get_security_ctf_workflow_tool()
+        self.tools["security_tool_index"] = get_security_tool_index_tool()
 
         self.logger.info(f"[SecurityNet] 已加载 {len(self.tools)} 个安全工具")
 
