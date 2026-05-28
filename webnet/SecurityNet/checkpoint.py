@@ -47,7 +47,7 @@ class CheckpointManager:
                 logger.warning("存档题目不匹配")
                 return None
             return data
-        except (json.JSONDecodeError, IOError) as e:
+        except (json.JSONDecodeError, OSError) as e:
             logger.error("读取存档失败: %s", e)
             return None
 
@@ -72,7 +72,7 @@ class CheckpointManager:
         try:
             with open(path, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except (json.JSONDecodeError, IOError) as e:
+        except (json.JSONDecodeError, OSError) as e:
             logger.error("读取存档失败: %s", e)
             return None
 
