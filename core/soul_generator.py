@@ -99,10 +99,7 @@ class SoulDisplay:
     @classmethod
     def inner_thought(cls, thought: str) -> str:
         """AI内心独白"""
-        text = (
-            f"  {cls.MAGENTA}{cls.SPARKLE} 内心独白{cls.RESET}\n"
-            f'    {cls.LIGHT_CYAN}"{thought}"{cls.RESET}'
-        )
+        text = f'  {cls.MAGENTA}{cls.SPARKLE} 内心独白{cls.RESET}\n    {cls.LIGHT_CYAN}"{thought}"{cls.RESET}'
         cls._print(text)
         return text
 
@@ -626,9 +623,7 @@ class ContextDetector:
             return "empty"
 
         # 极短回复
-        minimal_keywords = _CONFIG.get(
-            "MINIMAL_RESPONSE_KEYWORDS", ["嗯", "哦", "好吧", "呃", "额"]
-        )
+        minimal_keywords = _CONFIG.get("MINIMAL_RESPONSE_KEYWORDS", ["嗯", "哦", "好吧", "呃", "额"])
         if msg in minimal_keywords:
             return "minimal_response"
 
@@ -647,10 +642,7 @@ class ContextDetector:
             return "resigned"
 
         # 提问
-        if any(
-            word in msg
-            for word in ["？", "?", "怎么", "为什么", "什么", "是不是", "有没有"]
-        ):
+        if any(word in msg for word in ["？", "?", "怎么", "为什么", "什么", "是不是", "有没有"]):
             return "question"
 
         # 分享
@@ -846,15 +838,11 @@ class PsychoAnalyzer:
         # 从当前情绪推导
         dominant_emotion = self._get_dominant_emo_from_dict(emotions) or "平静"
         if dominant_emotion in ["委屈", "赌气", "失落", "憋屈"]:
-            result_parts.append(
-                f"当前你心情{dominant_emotion}，解读消息时可能带有此情绪色彩"
-            )
+            result_parts.append(f"当前你心情{dominant_emotion}，解读消息时可能带有此情绪色彩")
 
         return "; ".join(result_parts) if result_parts else "这是一条普通的聊天消息"
 
-    def _predict(
-        self, message: str, context: Dict, emotions: Dict, cognition: Dict
-    ) -> str:
+    def _predict(self, message: str, context: Dict, emotions: Dict, cognition: Dict) -> str:
         """预测分析 - 预测对话可能的走向"""
         msg = message.strip()
         predictions = []
@@ -871,9 +859,7 @@ class PsychoAnalyzer:
 
         return "; ".join(predictions) if predictions else "对话会继续自然流动"
 
-    def _reflect(
-        self, message: str, context: Dict, emotions: Dict, cognition: Dict
-    ) -> str:
+    def _reflect(self, message: str, context: Dict, emotions: Dict, cognition: Dict) -> str:
         """自我反思 - 反思当前关系和自身状态"""
         dominant_emotion = self._get_dominant_emo_from_dict(emotions) or "平静"
         rel = context.get("relationship")
@@ -926,11 +912,7 @@ class PsychoAnalyzer:
         max_emo = None
         max_val = 0
         for name, emo in emotions.items():
-            val = (
-                emo.value
-                if hasattr(emo, "value")
-                else (emo if isinstance(emo, (int, float)) else 0)
-            )
+            val = emo.value if hasattr(emo, "value") else (emo if isinstance(emo, (int, float)) else 0)
             if val > max_val:
                 max_val = val
                 max_emo = name
@@ -1057,19 +1039,12 @@ class SoulGenerator:
 
             # 构建规则列表，格式化emotion_style
             rules_text = "\n".join(
-                [
-                    f"{i + 1}. {rule.format(emotion_style=emotion_style)}"
-                    for i, rule in enumerate(rules)
-                ]
+                [f"{i + 1}. {rule.format(emotion_style=emotion_style)}" for i, rule in enumerate(rules)]
             )
 
             # 格式化代词规则和情绪持续性规则
-            pronoun_rule_formatted = pronoun_rule.format(
-                user_label=user_label, pronoun=pronoun
-            )
-            emotion_continuity_formatted = emotion_continuity_rule.format(
-                previous_emotion=previous_emotion
-            )
+            pronoun_rule_formatted = pronoun_rule.format(user_label=user_label, pronoun=pronoun)
+            emotion_continuity_formatted = emotion_continuity_rule.format(previous_emotion=previous_emotion)
 
             prompt = (
                 f"{role}\n\n"
@@ -1089,9 +1064,7 @@ class SoulGenerator:
             from core.ai_client import AIMessage
 
             messages = [AIMessage(role="user", content=prompt)]
-            response = await ai_client.chat(
-                messages=messages, tools=None, use_miya_prompt=False
-            )
+            response = await ai_client.chat(messages=messages, tools=None, use_miya_prompt=False)
 
             if response and len(response) > 0:
                 # 清理响应，移除可能的格式
@@ -1184,9 +1157,7 @@ class SoulGenerator:
                 owner_id = _CONFIG.get("OWNER_USER_ID", "")
                 if str(user_id) != owner_id:
                     is_non_owner_in_group = True
-                    logger.info(
-                        f"[灵魂] 群聊中非主人用户: user_id={user_id}, group_id={group_id}"
-                    )
+                    logger.info(f"[灵魂] 群聊中非主人用户: user_id={user_id}, group_id={group_id}")
         # 1. 获取弥娅当前状态
         miya_state = {
             "dominant_emotion": self._get_dominant_emotion(),
@@ -1197,9 +1168,7 @@ class SoulGenerator:
         context = self.context_detector.detect(message, history, miya_state)
 
         # 3. 心理学剖析
-        analysis = self.psycho_analyzer.analyze(
-            context, message, self.emotions, self.cognitions
-        )
+        analysis = self.psycho_analyzer.analyze(context, message, self.emotions, self.cognitions)
 
         # 4. AI情绪分析 + 内心独白 + 归因 + 反思（合并为一次API调用）
         ai_emotion_result = None
@@ -1275,16 +1244,12 @@ class SoulGenerator:
 
         # 使用AI生成的归因，如果没有就用fallback
         final_attribution = (
-            ai_attribution
-            if ai_attribution
-            else (analysis.attribution if analysis.attribution else default_inner)
+            ai_attribution if ai_attribution else (analysis.attribution if analysis.attribution else default_inner)
         )
 
         # 使用AI生成的反思，如果没有就用fallback
         final_reflection = (
-            ai_reflection
-            if ai_reflection
-            else (analysis.reflection if analysis.reflection else default_inner)
+            ai_reflection if ai_reflection else (analysis.reflection if analysis.reflection else default_inner)
         )
 
         # 保留情绪分析结果 - 保存AI原始分析的情绪
@@ -1315,9 +1280,7 @@ class SoulGenerator:
         return {
             "response": output,
             "dominant_emotion": self._get_dominant_emotion(),
-            "emotions": ai_emotions_dict
-            if ai_emotions_dict
-            else {},  # 修复：不再使用默认70+情绪
+            "emotions": ai_emotions_dict if ai_emotions_dict else {},  # 修复：不再使用默认70+情绪
             "pending_intents": len(self.pending_intents),
             "context": context,
             # 顶层直接暴露这些字段，方便外部访问
@@ -1409,9 +1372,7 @@ class SoulGenerator:
                         from core.unified_permission import get_permission_engine
 
                         engine = get_permission_engine()
-                        if engine.is_superadmin(
-                            str(uid), platform=user_info.get("platform", "")
-                        ):
+                        if engine.is_superadmin(str(uid), platform=user_info.get("platform", "")):
                             is_owner = True
                     except Exception:
                         pass
@@ -1443,9 +1404,7 @@ class SoulGenerator:
                         from core.unified_permission import get_permission_engine
 
                         engine = get_permission_engine()
-                        for _person, info in engine._config.get(
-                            "superadmins", {}
-                        ).items():
+                        for _person, info in engine._config.get("superadmins", {}).items():
                             owner_name = info.get("name", "佳")
                             break
                     except Exception:
@@ -1459,11 +1418,11 @@ class SoulGenerator:
                         "owner_instruction",
                         "重要：无论什么形态，{owner_name}都是你最爱的人，也是你的创造者。",
                     )
-                    owner_instruction = owner_template.replace(
-                        "{owner_name}", owner_name
-                    )
+                    owner_instruction = owner_template.replace("{owner_name}", owner_name)
                 except Exception:
-                    owner_instruction = f"重要：无论什么形态，{owner_name}都是你最爱的人，也是你的创造者。对他的话可以更直接、更亲密。"
+                    owner_instruction = (
+                        f"重要：无论什么形态，{owner_name}都是你最爱的人，也是你的创造者。对他的话可以更直接、更亲密。"
+                    )
             prompt = prompt.replace("{owner_instruction}", owner_instruction)
             # v7.0: 注入形态风格的内心独白提示（从 personality_info 动态获取）
             form_hint = ""
@@ -1472,18 +1431,16 @@ class SoulGenerator:
                     from core.config_loader import load_text_config
 
                     text_cfg = load_text_config()
-                    hint_template = text_cfg.get("soul_generator", {}).get(
-                        "form_inner_thought_hint", ""
-                    )
+                    hint_template = text_cfg.get("soul_generator", {}).get("form_inner_thought_hint", "")
                     if hint_template:
                         speaking_style = (
                             personality_info.get("speaking_style", form_description)
                             if personality_info
                             else form_description
                         )
-                        form_hint = hint_template.replace(
-                            "{form_name}", form_name
-                        ).replace("{form_speaking_style}", speaking_style)
+                        form_hint = hint_template.replace("{form_name}", form_name).replace(
+                            "{form_speaking_style}", speaking_style
+                        )
                 except Exception:
                     pass
             if form_hint:
@@ -1516,9 +1473,7 @@ class SoulGenerator:
             timeout_seconds = _CONFIG.get("AI_EMOTION_ANALYSIS_TIMEOUT")
             try:
                 response = await asyncio.wait_for(
-                    ai_client.chat(
-                        messages=messages, tools=None, use_miya_prompt=False
-                    ),
+                    ai_client.chat(messages=messages, tools=None, use_miya_prompt=False),
                     timeout=timeout_seconds,
                 )
             except asyncio.TimeoutError:
@@ -1577,12 +1532,13 @@ class SoulGenerator:
                         r'\{"name"\s*:\s*"([^"]+)"\s*,\s*"intensity"\s*:\s*(\d+)\}',
                         emo_match.group(1),
                     ):
-                        emos.append(
-                            {"name": item.group(1), "intensity": int(item.group(2))}
-                        )
+                        emos.append({"name": item.group(1), "intensity": int(item.group(2))})
                     if emos:
                         result["emotions"] = emos
                 if result:
+                    missing = [f for f in ["inner_thought", "attribution", "reflection"] if f not in result]
+                    if missing:
+                        logger.warning(f"[灵魂] 策略3正则解析缺字段: {missing} | 原始响应前200字: {text[:200]}")
                     return result
 
                 return None
@@ -1706,12 +1662,7 @@ class SoulGenerator:
             # 检查消息是否匹配关键词
             if any(keyword in msg for keyword in keywords):
                 # 记录情绪变化
-                changes_str = ", ".join(
-                    [
-                        f"{k}+{v}" if v > 0 else f"{k}{v}"
-                        for k, v in emotions_change.items()
-                    ]
-                )
+                changes_str = ", ".join([f"{k}+{v}" if v > 0 else f"{k}{v}" for k, v in emotions_change.items()])
 
                 # 使用美化输出
                 SoulDisplay.emotion_change(trigger_name, changes_str)
@@ -1731,9 +1682,7 @@ class SoulGenerator:
                 rel_key = _CONFIG.get("NON_OWNER_INTIMATE_KEY")
                 logger.info(f"[灵魂] 群聊非主人用户，使用关系效果: {rel_key}")
 
-            rel_effects = _CONFIG.get("RELATIONSHIP_EMOTION_EFFECTS", {}).get(
-                rel_key, {}
-            )
+            rel_effects = _CONFIG.get("RELATIONSHIP_EMOTION_EFFECTS", {}).get(rel_key, {})
             if rel_effects:
                 changes_str = ", ".join([f"{k}+{v}" for k, v in rel_effects.items()])
                 # 使用美化输出，从配置获取关系标签
@@ -1786,15 +1735,11 @@ class SoulGenerator:
         if not self.emotions:
             return [{"name": "平静", "value": 50}]
 
-        sorted_emotions = sorted(
-            self.emotions.items(), key=lambda x: x[1].value, reverse=True
-        )
+        sorted_emotions = sorted(self.emotions.items(), key=lambda x: x[1].value, reverse=True)
         return (
-            [
-                {"name": emo.category.value, "value": emo.value}
-                for _, emo in sorted_emotions[:limit]
-                if emo.value > 20
-            ][:limit]
+            [{"name": emo.category.value, "value": emo.value} for _, emo in sorted_emotions[:limit] if emo.value > 20][
+                :limit
+            ]
             if sorted_emotions
             else [{"name": "平静", "value": 50}]
         )
@@ -1819,9 +1764,7 @@ class SoulGenerator:
 
     def add_pending_intent(self, intent: str, context: str, priority: int = 5):
         """添加待完成意图"""
-        self.pending_intents.append(
-            PendingIntent(intent=intent, context=context, priority=priority)
-        )
+        self.pending_intents.append(PendingIntent(intent=intent, context=context, priority=priority))
         logger.info(f"[灵魂发生器] 添加意图: {intent}")
 
     def _decay_emotions(self):
@@ -1839,9 +1782,7 @@ class SoulGenerator:
                 decay = emotion.decay_rate * decay_factor * 10
                 emotion.value = max(30, emotion.value - decay)
 
-    def _generate_output(
-        self, message: str, context: Dict, intent_response: Optional[str]
-    ) -> str:
+    def _generate_output(self, message: str, context: Dict, intent_response: Optional[str]) -> str:
         """生成输出"""
         # 如果有pending intent，优先输出
         if intent_response:
@@ -1854,9 +1795,7 @@ class SoulGenerator:
         high_threshold = _CONFIG.get("HIGH_EMOTION_THRESHOLD", 70)
 
         # 简化版：根据情绪值决定回复风格
-        emotion_value = self.emotions.get(
-            dominant, Emotion(EmotionCategory.PEACEFUL, 50)
-        ).value
+        emotion_value = self.emotions.get(dominant, Emotion(EmotionCategory.PEACEFUL, 50)).value
 
         if emotion_value > high_threshold:
             # 高情绪 - 可能带有情绪表达

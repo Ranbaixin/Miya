@@ -3363,8 +3363,7 @@ class DecisionHub:
             cmd = cmd.strip().lower()
             if not cmd:
                 profile = self.personality.get_profile()
-                chat_form = self.personality.get_form_for_chat(str(user_id), str(group_id) if group_id else "")
-                current_form = chat_form
+                current_form = profile.get("current_form", "normal")
                 form_name = get_form_name(current_form)
                 form_info = profile.get("form_info", {})
 
@@ -3373,10 +3372,6 @@ class DecisionHub:
                     get_form_display("name", name=form_info.get("name", "常态")),
                     get_form_display("description", desc=form_info.get("description", "")),
                 ]
-                if group_id:
-                    lines.append(get_form_display("scope", scope=f"群聊 {group_id}"))
-                else:
-                    lines.append(get_form_display("scope", scope="私聊"))
                 if profile.get("current_core_form"):
                     core_info = profile.get("core_form_info", {})
                     lines.append(get_form_display("core", core=profile["current_core_form"]))
@@ -3389,9 +3384,7 @@ class DecisionHub:
             if self.personality._use_yaml and self.personality._loader:
                 available_forms = self.personality._loader.list_available()
                 if cmd in available_forms:
-                    success = self.personality.set_form_for_chat(cmd, str(user_id), str(group_id) if group_id else "")
-                    if success:
-                        self.personality.set_form(cmd)
+                    success = self.personality.set_form_global(cmd)
                     return (
                         get_form_response("switch_success", form=cmd)
                         if success
@@ -3402,9 +3395,7 @@ class DecisionHub:
 
                 available_forms = get_available_forms()
                 if cmd in available_forms:
-                    success = self.personality.set_form_for_chat(cmd, str(user_id), str(group_id) if group_id else "")
-                    if success:
-                        self.personality.set_form(cmd)
+                    success = self.personality.set_form_global(cmd)
                     return (
                         get_form_response("switch_success", form=cmd)
                         if success

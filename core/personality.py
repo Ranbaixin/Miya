@@ -68,9 +68,7 @@ class Personality:
 
         self._core_forms = base_config.get("core_forms", {})
         correlations = base_config.get("personality_correlations", {})
-        self._correlations = {
-            (k.split("-")[0], k.split("-")[1]): v for k, v in correlations.items()
-        }
+        self._correlations = {(k.split("-")[0], k.split("-")[1]): v for k, v in correlations.items()}
         self._default_vectors = base_config.get(
             "default_vectors",
             {
@@ -158,9 +156,7 @@ class Personality:
             return f"group_{group_id}"
         return f"private_{user_id}"
 
-    def set_form_for_chat(
-        self, form_name: str, user_id: str, group_id: str = ""
-    ) -> bool:
+    def set_form_for_chat(self, form_name: str, user_id: str, group_id: str = "") -> bool:
         if not self._use_yaml or not self._loader:
             return False
         try:
@@ -170,6 +166,17 @@ class Personality:
         chat_key = self.get_chat_key(user_id, group_id)
         self._chat_forms[chat_key] = form_name
         return True
+
+    def set_form_global(self, form_name: str) -> bool:
+        """设置全局形态并清除所有独立聊天形态，确保所有场景一致"""
+        if not self._use_yaml or not self._loader:
+            return False
+        try:
+            self._loader.load(form_name)
+        except Exception:
+            return False
+        self._chat_forms.clear()
+        return self.set_form(form_name)
 
     def get_form_for_chat(self, user_id: str = "", group_id: str = "") -> str:
         if not user_id and not group_id:
@@ -203,9 +210,7 @@ class Personality:
         self.current_core_form = None
         self.core_form_timeout = None
 
-    def activate_core_form(
-        self, form_name: str, auto_restore: bool = False, timeout: int = 300
-    ) -> bool:
+    def activate_core_form(self, form_name: str, auto_restore: bool = False, timeout: int = 300) -> bool:
         if form_name not in self._core_forms:
             return False
         self.current_core_form = form_name
@@ -244,9 +249,7 @@ class Personality:
         self.current_form = target_form
         return True
 
-    def auto_detect_form(
-        self, user_message: str, emotion_state: Optional[Dict] = None
-    ) -> Optional[str]:
+    def auto_detect_form(self, user_message: str, emotion_state: Optional[Dict] = None) -> Optional[str]:
         base_config = {}
         if self._use_yaml and self._loader:
             base_config = self._loader._load_base_config() or {}
@@ -269,9 +272,7 @@ class Personality:
                 return form
 
         long_conv = auto_detect.get("long_conversation", {})
-        if emotion_state and emotion_state.get("message_count", 0) > long_conv.get(
-            "threshold", 10
-        ):
+        if emotion_state and emotion_state.get("message_count", 0) > long_conv.get("threshold", 10):
             return long_conv.get("form")
 
         return None
@@ -288,11 +289,7 @@ class Personality:
         core_abbrev = form_info.get("core_abbrev", {})
 
         form_name = form_names.get(self.current_form, "")
-        core_name = (
-            core_abbrev.get(self.current_core_form, "")
-            if self.current_core_form
-            else ""
-        )
+        core_name = core_abbrev.get(self.current_core_form, "") if self.current_core_form else ""
 
         if core_name:
             return f"[{form_name}|{self.speak_mode}|{core_name}]"
@@ -378,9 +375,7 @@ class Personality:
         self._record_vector_history()
         return True
 
-    def _apply_correlation_constraints(
-        self, key: str, old_value: float, new_value: float
-    ):
+    def _apply_correlation_constraints(self, key: str, old_value: float, new_value: float):
         delta = new_value - old_value
         for (vec_a, vec_b), correlation in self._correlations.items():
             if vec_a == key and vec_b in self.vectors:
@@ -389,9 +384,7 @@ class Personality:
                 self.vectors[related_key] += related_delta * 0.5
                 boundary_min = self.boundaries.get(f"min_{related_key}", 0.0)
                 boundary_max = self.boundaries.get(f"max_{related_key}", 1.0)
-                self.vectors[related_key] = round(
-                    max(boundary_min, min(boundary_max, self.vectors[related_key])), 2
-                )
+                self.vectors[related_key] = round(max(boundary_min, min(boundary_max, self.vectors[related_key])), 2)
 
     def _record_vector_history(self):
         import time
@@ -450,11 +443,7 @@ class Personality:
         variance_stability = 1.0 - variance
         correlation_stability = self._calculate_correlation_stability(vectors)
         temporal_stability = self._calculate_temporal_stability()
-        total = (
-            variance_stability * 0.4
-            + correlation_stability * 0.3
-            + temporal_stability * 0.3
-        )
+        total = variance_stability * 0.4 + correlation_stability * 0.3 + temporal_stability * 0.3
         return float(round(total, 2))
 
     def _calculate_correlation_stability(self, vectors: Dict) -> float:
