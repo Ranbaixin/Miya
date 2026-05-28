@@ -43,6 +43,8 @@ const cards = [
   { id: 'mind',      label: '记忆星河', desc: '认知引擎 · 记忆网络',  path: '/mind',      angle: -13, radius: 2, varName: '--miya-comp-panel-card-6', fallback: '#00e5ff', emoji: '◇' },
   { id: 'config',    label: '灵魂调谐', desc: '人格 · 情绪 · 模型池', path: '/config',    angle:  13, radius: 2, varName: '--miya-comp-panel-card-7', fallback: '#d4af37', emoji: '❖' },
   { id: 'floating',  label: '铃音守护', desc: '轻量陪伴 · 悬浮球',   icon: 'floating',  angle:  30, radius: 1, varName: '--miya-comp-panel-card-8', fallback: '#4da6ff', emoji: '◈' },
+  // ═══ 右下 ═══
+  { id: 'security',  label: '安全中心', desc: '扫描 · 渗透 · 分析',   path: '/security',  angle: -45, radius: 1, varName: '--miya-comp-panel-card-9', fallback: '#ff5555', emoji: '⬡' },
 ]
 
 // ─── Mouse tracking ──────────────────────────────────────────────────
@@ -55,9 +57,9 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
 // ─── Wing geometry ───────────────────────────────────────────────────
 const cardScale = useStorage('miya-panel-card-scale', 1.0)
 // 半径随缩放自适应：卡片越大，轨道越远，减少重叠
-const gapFactor = computed(() => 0.5 + cardScale.value * 0.6) // scale 1.0→1.1, scale 2.0→1.7
-const tipRadius   = computed(() => Math.min(340, height.value * 0.38) * gapFactor.value)
-const innerRadius = computed(() => Math.min(260, height.value * 0.32) * gapFactor.value)
+const gapFactor = computed(() => 0.5 + cardScale.value * 0.5) // scale 1.0→1.0, scale 2.0→1.5
+const tipRadius   = computed(() => Math.min(280, height.value * 0.30) * gapFactor.value)
+const innerRadius = computed(() => Math.min(220, height.value * 0.26) * gapFactor.value)
 const rotationRx  = computed(() => (mouse.y - 0.5) * -5)
 const rotationRy  = computed(() => (mouse.x - 0.5) * 8)
 const SCALE       = computed(() => Math.min(1.08, Math.max(0.72, height.value / 900)) * cardScale.value)
@@ -85,6 +87,8 @@ const wingLines = computed(() => {
   lines.push({ x1: 0, y1: 0, x2: pos[3].x, y2: pos[3].y, cls: 'wing-root' })
   lines.push({ x1: 0, y1: 0, x2: pos[4].x, y2: pos[4].y, cls: 'wing-root' })
   lines.push({ x1: 0, y1: 0, x2: pos[7].x, y2: pos[7].y, cls: 'wing-root' })
+  // Security center card
+  if (pos.length > 8) lines.push({ x1: 0, y1: 0, x2: pos[8].x, y2: pos[8].y, cls: 'wing-root' })
   return lines
 })
 

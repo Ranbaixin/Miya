@@ -128,6 +128,13 @@ function startIPCListener(): void {
       app.renderer.backgroundAlpha = data.alpha
     }
   })
+  ipc.on('live2d:visibilityChanged', (visible: boolean) => {
+    if (visible) {
+      startYinmeiPolling()
+    } else {
+      stopYinmeiPolling()
+    }
+  })
   console.log('[Live2D App] IPC listener started')
 }
 
@@ -144,7 +151,16 @@ function notifyLive2dReady(): void {
 let _yinmeiPollTimer: ReturnType<typeof setInterval> | null = null
 let _yinmeiWasEnabled = true
 
+function stopYinmeiPolling(): void {
+  if (_yinmeiPollTimer) {
+    clearInterval(_yinmeiPollTimer)
+    _yinmeiPollTimer = null
+    console.log('[Live2D App] Yinmei polling stopped')
+  }
+}
+
 function startYinmeiPolling(): void {
+  stopYinmeiPolling()
   const apiPort = (window as any).__MIYA_API_PORT__ || 8000
   const pollUrl = `http://127.0.0.1:${apiPort}/api/yinmei/live2d/commands`
 

@@ -20,6 +20,7 @@ const router = createRouter({
     { path: '/screen', component: () => import('@/views/ScreenVisionView.vue') },
     { path: '/terminal', component: () => import('@/views/TerminalView.vue') },
     { path: '/live2d', component: () => import('@/views/Live2dConfigView.vue') },
+    { path: '/security', component: () => import('@/views/SecurityView.vue') },
     {
       path: '/community',
       children: [

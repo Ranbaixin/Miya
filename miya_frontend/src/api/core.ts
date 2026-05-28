@@ -184,6 +184,31 @@ export class CoreApiClient extends ApiClient {
   async openclawHistory(sessionKey: string, limit: number = 20): Promise<any> {
     return this.mcpCall('openclaw', 'get_history', { session_key: sessionKey, limit })
   }
+
+  // ── SecurityNet ──
+  async callSecurityTool(tool: string, params: Record<string, any> = {}): Promise<any> {
+    return this.instance.post('/api/security/tool', { tool, ...params })
+  }
+
+  async createSecurityPlan(target: string, strategy: string = 'quick'): Promise<any> {
+    return this.instance.post('/api/security/plan/create', { target, strategy })
+  }
+
+  async executeSecurityPlan(planId: string): Promise<any> {
+    return this.instance.post('/api/security/plan/execute', { plan_id: planId })
+  }
+
+  async getSecurityReport(planId: string): Promise<any> {
+    return this.instance.get(`/api/security/plan/report?plan_id=${planId}`)
+  }
+
+  async getSecurityPlans(): Promise<any> {
+    return this.instance.get('/api/security/plans')
+  }
+
+  async onlineSearch(service: string, query: string, limit?: number): Promise<any> {
+    return this.instance.get(`/api/security/online?service=${service}&query=${encodeURIComponent(query)}${limit ? `&limit=${limit}` : ''}`)
+  }
 }
 
 export default new CoreApiClient(8000)

@@ -1,0 +1,17 @@
+{
+    "type": "function",
+    "function": {
+        "name": "security_dns_enum",
+        "description": "DNS记录枚举工具，当用户需要查询域名的DNS解析记录、邮件服务器、SPF/DMARC邮件安全策略时调用。自动查询A/AAAA/MX/NS/CNAME/TXT/SOA等常见记录类型。注意：仅限授权使用。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "domain": {
+                    "type": "string",
+                    "description": "目标域名，如 example.com"
+                }
+            },
+            "required": ["domain"]
+        }
+    }
+}

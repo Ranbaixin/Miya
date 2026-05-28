@@ -1,0 +1,17 @@
+{
+    "type": "function",
+    "function": {
+        "name": "security_http_headers",
+        "description": "HTTP响应头安全分析工具，当用户需要检查网站的安全响应头配置时调用。自动检测CSP、HSTS、X-Frame-Options等安全头配置，并识别信息泄露风险。注意：仅限授权使用。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "目标URL，如 https://example.com"
+                }
+            },
+            "required": ["url"]
+        }
+    }
+}

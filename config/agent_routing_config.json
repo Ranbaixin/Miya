@@ -37,14 +37,24 @@
                 ],
                 "description": "文件分析助手 - 文件读取、图片分析、群文件、本地搜索"
             },
-            "code_delivery_agent": {
-                "keywords": [
-                    "代码", "编程", "写代码", "开发", "程序",
-                    "运行代码", "执行Python", "计算", "数据分析"
-                ],
-                "description": "代码交付助手 - 编程、执行代码"
-            }
+        "code_delivery_agent": {
+            "keywords": [
+                "代码", "编程", "写代码", "开发", "程序",
+                "运行代码", "执行Python", "计算", "数据分析"
+            ],
+            "description": "代码交付助手 - 编程、执行代码"
         },
+        "security_agent": {
+            "keywords": [
+                "安全", "扫描", "端口", "漏洞", "渗透",
+                "子域名", "DNS", "证书", "SSL", "CVE",
+                "安全评估", "安全分析", "安全审计", "风险",
+                "HTTP头", "响应头", "网络安全", "信息收集",
+                "scan", "port scan", "nmap", "whois"
+            ],
+            "description": "安全分析专家 - 端口扫描、子域名枚举、DNS查询、漏洞查询、证书检查"
+        }
+    },
         
         "fallback": {
             "description": "未匹配时的回退策略",

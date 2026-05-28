@@ -73,9 +73,7 @@ class ToolRegistry:
         """获取工具实例"""
         return self.tools.get(name)
 
-    def get_tools_schema(
-        self, tool_names: Optional[List[str]] = None
-    ) -> List[Dict[str, Any]]:
+    def get_tools_schema(self, tool_names: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         """
         获取工具配置（OpenAI Function Calling 格式）
 
@@ -87,9 +85,7 @@ class ToolRegistry:
         """
         tools_to_fetch = self.tools
         if tool_names is not None:
-            tools_to_fetch = {
-                name: tool for name, tool in self.tools.items() if name in tool_names
-            }
+            tools_to_fetch = {name: tool for name, tool in self.tools.items() if name in tool_names}
 
         tools_schema = []
         for tool in tools_to_fetch.values():
@@ -97,15 +93,9 @@ class ToolRegistry:
             # 增强工具描述：添加明确的调用时机说明
             description = tool_config.get("description", "")
             # 确保描述足够清晰，包含何时调用
-            if (
-                "当" not in description
-                and "调用" not in description
-                and "如果" not in description
-            ):
+            if "当" not in description and "调用" not in description and "如果" not in description:
                 # 为没有明确调用时机描述的工具添加提示
-                tool_config["description"] = (
-                    f"[工具] {description}\n调用时机：当用户明确请求此功能时调用。"
-                )
+                tool_config["description"] = f"[工具] {description}\n调用时机：当用户明确请求此功能时调用。"
 
             tools_schema.append({"type": "function", "function": tool_config})
 
@@ -177,9 +167,7 @@ class ToolRegistry:
             self.logger.error(f"执行工具失败 {name}: {e}", exc_info=True)
             return f"❌ 工具执行失败: {str(e)}"
 
-    async def _check_tool_permission(
-        self, tool_name: str, context: ToolContext
-    ) -> Dict[str, Any]:
+    async def _check_tool_permission(self, tool_name: str, context: ToolContext) -> Dict[str, Any]:
         """
         检查用户是否有执行工具的权限
 
@@ -214,14 +202,10 @@ class ToolRegistry:
 
             if group_id and onebot_client:
                 try:
-                    member_info = await onebot_client.get_group_member_info(
-                        group_id=group_id, user_id=user_id
-                    )
+                    member_info = await onebot_client.get_group_member_info(group_id=group_id, user_id=user_id)
                     role = member_info.get("role", "member")
                     if role in ["owner", "admin"]:
-                        self.logger.info(
-                            f"[权限检查] 用户 {user_id} 是群管理员(role={role})，放行"
-                        )
+                        self.logger.info(f"[权限检查] 用户 {user_id} 是群管理员(role={role})，放行")
                         return {"allowed": True, "required_permission": None}
                 except Exception as e:
                     self.logger.warning(f"[权限检查] 获取群成员信息失败: {e}")
@@ -231,14 +215,10 @@ class ToolRegistry:
             required_permission = f"tool.{tool_name}"
 
             perm_core = PermissionCore()
-            has_permission = perm_core.check_permission(
-                unified_user_id, required_permission
-            )
+            has_permission = perm_core.check_permission(unified_user_id, required_permission)
 
             if not has_permission:
-                has_permission = perm_core.check_permission(
-                    "system_admin", required_permission
-                )
+                has_permission = perm_core.check_permission("system_admin", required_permission)
 
             return {
                 "allowed": has_permission,
@@ -290,6 +270,7 @@ class ToolRegistry:
         self._load_network_tools()
         self._load_core_tools()
         self._load_social_tools()
+        self._load_security_tools()
         self._load_agent_tools()
         self._load_mcp_tools()
 
@@ -346,9 +327,7 @@ class ToolRegistry:
         self.register(SendTextFileTool())
         self.register(SendUrlFileTool())
         self.register(GetRecentMessagesTool())
-        self.logger.info(
-            "已加载消息工具: SendMessageTool, SendTextFileTool, SendUrlFileTool, GetRecentMessagesTool"
-        )
+        self.logger.info("已加载消息工具: SendMessageTool, SendTextFileTool, SendUrlFileTool, GetRecentMessagesTool")
 
     def _load_auth_tools(self):
         """加载认证工具"""
@@ -424,9 +403,7 @@ class ToolRegistry:
         self.register(AddKnowledgeTool())
         self.register(SearchKnowledgeTool())
         self.register(DeleteKnowledgeTool())
-        self.logger.info(
-            "已加载知识库工具: AddKnowledgeTool, SearchKnowledgeTool, DeleteKnowledgeTool"
-        )
+        self.logger.info("已加载知识库工具: AddKnowledgeTool, SearchKnowledgeTool, DeleteKnowledgeTool")
 
     def _load_cognitive_tools(self):
         """加载认知工具"""
@@ -437,9 +414,7 @@ class ToolRegistry:
         self.register(GetProfileTool())
         self.register(SearchProfilesTool())
         self.register(SearchEventsTool())
-        self.logger.info(
-            "已加载认知工具: GetProfileTool, SearchProfilesTool, SearchEventsTool"
-        )
+        self.logger.info("已加载认知工具: GetProfileTool, SearchProfilesTool, SearchEventsTool")
 
     def _load_bilibili_tools(self):
         """加载B站工具"""
@@ -463,9 +438,7 @@ class ToolRegistry:
         self.register(CreateScheduleTaskTool())
         self.register(DeleteScheduleTaskTool())
         self.register(ListScheduleTasksTool())
-        self.logger.info(
-            "已加载定时任务工具: CreateScheduleTaskTool, DeleteScheduleTaskTool, ListScheduleTasksTool"
-        )
+        self.logger.info("已加载定时任务工具: CreateScheduleTaskTool, DeleteScheduleTaskTool, ListScheduleTasksTool")
 
     def _load_entertainment_tools(self):
         """加载娱乐工具"""
@@ -481,9 +454,7 @@ class ToolRegistry:
             self.register(WenchangDijun())
             self.register(SendPoke())
             self.register(ReactEmoji())
-            self.logger.info(
-                "已加载娱乐工具: QQLike, Horoscope, WenchangDijun, SendPoke, ReactEmoji"
-            )
+            self.logger.info("已加载娱乐工具: QQLike, Horoscope, WenchangDijun, SendPoke, ReactEmoji")
         except Exception as e:
             self.logger.warning(f"加载娱乐工具失败: {e}")
 
@@ -580,9 +551,7 @@ class ToolRegistry:
             self.register(TavilySearchTool())
             self.register(WeatherQueryTool())
 
-            self.logger.info(
-                "已加载网络工具: CrawlWebpage, WhoisQuery, TCPing, SpeedTest, TavilySearch, WeatherQuery"
-            )
+            self.logger.info("已加载网络工具: CrawlWebpage, WhoisQuery, TCPing, SpeedTest, TavilySearch, WeatherQuery")
         except Exception as e:
             self.logger.warning(f"加载网络工具失败: {e}")
 
@@ -607,6 +576,47 @@ class ToolRegistry:
             self.logger.info("已加载社交工具: QQLevel")
         except Exception as e:
             self.logger.warning(f"加载社交工具失败: {e}")
+
+    def _load_security_tools(self):
+        """加载安全工具"""
+        try:
+            from webnet.ToolNet.tools.security.port_scanner import SecurityPortScanTool
+            from webnet.ToolNet.tools.security.subdomain_enum import SecuritySubdomainEnumTool
+            from webnet.ToolNet.tools.security.http_headers import SecurityHTTPHeadersTool
+            from webnet.ToolNet.tools.security.dns_enum import SecurityDNSEnumTool
+            from webnet.ToolNet.tools.security.ssl_cert import SecuritySSLCertTool
+            from webnet.ToolNet.tools.security.vuln_lookup import SecurityVulnLookupTool
+            from webnet.ToolNet.tools.security.nmap_scan import SecurityNmapScanTool
+            from webnet.ToolNet.tools.security.sandbox_exec import SecuritySandboxExecTool
+            from webnet.ToolNet.tools.security.sploitus_search import SecuritySploitusSearchTool
+            from webnet.ToolNet.tools.security.dir_brute import SecurityDirBruteTool
+            from webnet.ToolNet.tools.security.web_vuln_scanner import SecurityWebVulnScannerTool
+            from webnet.ToolNet.tools.security.online_asset import SecurityOnlineAssetTool
+            from webnet.ToolNet.tools.security.ctf_workflow import SecurityCTFWorkflowTool
+            from webnet.ToolNet.tools.security.tool_index import SecurityToolIndexTool
+
+            self.register(SecurityPortScanTool())
+            self.register(SecuritySubdomainEnumTool())
+            self.register(SecurityHTTPHeadersTool())
+            self.register(SecurityDNSEnumTool())
+            self.register(SecuritySSLCertTool())
+            self.register(SecurityVulnLookupTool())
+            self.register(SecurityNmapScanTool())
+            self.register(SecuritySandboxExecTool())
+            self.register(SecuritySploitusSearchTool())
+            self.register(SecurityDirBruteTool())
+            self.register(SecurityWebVulnScannerTool())
+            self.register(SecurityOnlineAssetTool())
+            self.register(SecurityCTFWorkflowTool())
+            self.register(SecurityToolIndexTool())
+
+            self.logger.info(
+                "已加载 14 个安全工具: PortScan, NmapScan, SubdomainEnum, HTTPHeaders, DNSEnum, "
+                "SSLCert, VulnLookup, SploitusSearch, DirBrute, WebVulnScanner, "
+                "SandboxExec, OnlineAsset, CTFWorkflow, ToolIndex"
+            )
+        except Exception as e:
+            self.logger.warning(f"加载安全工具失败: {e}")
 
     def _load_agent_tools(self):
         """加载 Agent 专用工具（新增）"""
@@ -692,11 +702,11 @@ class ToolRegistry:
                                                     f"[Agent工具] 收到 dict context, onebot_client: {ctx_dict.get('onebot_client')}"
                                                 )
                                             else:
-                                                logger.info(
-                                                    f"[Agent工具] 收到未知类型 context: {type(context)}"
-                                                )
+                                                logger.info(f"[Agent工具] 收到未知类型 context: {type(context)}")
 
-                                        module_path = f"webnet.ToolNet.agents.{self._agent_name}.tools.{self._tool_dir}.handler"
+                                        module_path = (
+                                            f"webnet.ToolNet.agents.{self._agent_name}.tools.{self._tool_dir}.handler"
+                                        )
                                         module = import_module(module_path)
                                         if hasattr(module, "execute"):
                                             return await module.execute(
@@ -716,9 +726,7 @@ class ToolRegistry:
                                 tool_dir.name,
                             )
                             self.register(tool)
-                            self.logger.info(
-                                f"已加载 Agent 工具: {agent_dir.name}/{tool_dir.name}"
-                            )
+                            self.logger.info(f"已加载 Agent 工具: {agent_dir.name}/{tool_dir.name}")
                     except Exception as e:
                         self.logger.warning(f"加载 Agent 工具失败 {tool_dir.name}: {e}")
 
@@ -734,9 +742,7 @@ class ToolRegistry:
             tools = discover_mcp_tools()
             for tool in tools:
                 self.register(tool)
-            self.logger.info(
-                f"[ToolRegistry] MCPNet 已加载 {len(tools)} 个工具: {[t._full_name for t in tools]}"
-            )
+            self.logger.info(f"[ToolRegistry] MCPNet 已加载 {len(tools)} 个工具: {[t._full_name for t in tools]}")
         except Exception as e:
             self.logger.warning(f"加载 MCP 工具失败（MCP 可能尚未初始化）: {e}")
 

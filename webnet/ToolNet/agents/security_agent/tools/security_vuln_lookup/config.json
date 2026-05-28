@@ -1,0 +1,21 @@
+{
+    "type": "function",
+    "function": {
+        "name": "security_vuln_lookup",
+        "description": "漏洞数据库查询工具，当用户需要查询CVE漏洞详情、搜索特定产品/服务的已知漏洞时调用。支持按CVE编号和关键词搜索NVD数据库。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "cve": {
+                    "type": "string",
+                    "description": "CVE编号，如 CVE-2024-1234"
+                },
+                "keyword": {
+                    "type": "string",
+                    "description": "搜索关键词，如产品名、漏洞类型"
+                }
+            },
+            "required": []
+        }
+    }
+}

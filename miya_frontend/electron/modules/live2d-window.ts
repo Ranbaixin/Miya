@@ -123,6 +123,7 @@ export function toggleLive2dVisibility(): void {
   const win = getLive2dWindow()
   if (!win) return
   win.isVisible() ? win.hide() : win.show()
+  broadcastLive2dCommand('live2d:visibilityChanged', win.isVisible())
 }
 
 export function setLive2dAlwaysOnTop(enabled: boolean): void {

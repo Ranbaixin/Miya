@@ -1,0 +1,21 @@
+{
+    "type": "function",
+    "function": {
+        "name": "security_port_scan",
+        "description": "TCP端口扫描工具，当用户需要对目标主机进行端口检测、服务识别时调用。支持常见端口扫描（22/80/443/3306/6379/8080等）和自定义端口范围。注意：仅限授权使用。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "target": {
+                    "type": "string",
+                    "description": "目标主机IP或域名"
+                },
+                "ports": {
+                    "type": "string",
+                    "description": "端口列表(逗号分隔)，如'22,80,443'"
+                }
+            },
+            "required": ["target"]
+        }
+    }
+}

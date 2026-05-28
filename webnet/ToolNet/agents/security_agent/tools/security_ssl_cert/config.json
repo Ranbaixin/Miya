@@ -1,0 +1,17 @@
+{
+    "type": "function",
+    "function": {
+        "name": "security_ssl_cert",
+        "description": "SSL/TLS证书检查工具，当用户需要检查网站HTTPS证书信息、到期时间或证书配置安全性时调用。自动验证有效期、颁发者、SAN域名等。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "hostname": {
+                    "type": "string",
+                    "description": "目标主机域名，如 example.com"
+                }
+            },
+            "required": ["hostname"]
+        }
+    }
+}

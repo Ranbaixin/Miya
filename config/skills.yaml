@@ -71,6 +71,9 @@ skills:
     - name: "knowledge"
       description: "知识库"
       path: "webnet/ToolNet/tools/knowledge"
+    - name: "security"
+      description: "安全工具（端口扫描/子域名枚举/DNS枚举/HTTP头/SSL证书/漏洞查询）"
+      path: "webnet/ToolNet/tools/security"
 
   # Agent配置 (对应Undefined的6个Agent)
   agents:
@@ -172,6 +175,25 @@ skills:
         - "screen_vision_look_screen"
         - "screen_vision_screenshot"
       mcp_service: "screen_vision"
+    
+    security_agent:
+      enabled: true
+      description: "安全分析专家 - 端口/Nmap/子域名/DNS/HTTP/SSL/CVE/漏洞利用/目录爆破/注入检测/在线资产/CTF/工具索引"
+      tools:
+        - "security_port_scan"
+        - "security_nmap_scan"
+        - "security_subdomain_enum"
+        - "security_http_headers"
+        - "security_dns_enum"
+        - "security_ssl_cert"
+        - "security_vuln_lookup"
+        - "security_sploitus_search"
+        - "security_sandbox_exec"
+        - "security_dir_brute"
+        - "security_web_vuln_scanner"
+        - "security_online_asset"
+        - "security_ctf_workflow"
+        - "security_tool_index"
 
   # 执行统计配置
   stats:

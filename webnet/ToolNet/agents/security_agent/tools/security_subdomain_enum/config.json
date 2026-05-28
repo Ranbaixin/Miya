@@ -1,0 +1,21 @@
+{
+    "type": "function",
+    "function": {
+        "name": "security_subdomain_enum",
+        "description": "子域名枚举工具，当用户需要发现目标域名的子域名、资产测绘时调用。通过DNS解析验证子域名是否存在，覆盖常见服务名称。注意：仅限授权使用。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "domain": {
+                    "type": "string",
+                    "description": "目标域名，如 example.com"
+                },
+                "deep": {
+                    "type": "boolean",
+                    "description": "是否深度枚举（使用300+子域名字典），默认false"
+                }
+            },
+            "required": ["domain"]
+        }
+    }
+}

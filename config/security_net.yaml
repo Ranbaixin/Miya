@@ -1,0 +1,767 @@
+# SecurityNet 统一配置文件
+# 所有安全工具的硬编码参数集中管理，修改此文件即可调整工具行为
+# 加载器: config/security_net_loader.py
+
+# ═══════════════════════════════════════════
+# 编排器配置 (IntelligentOrchestrator)
+# ═══════════════════════════════════════════
+orchestrator:
+  version: "2.0.0"
+  report_engine: "弥娅 SecurityNet 智能编排引擎"
+
+  # 扫描策略
+  strategies:
+    recon:
+      name: "信息收集"
+      description: "仅侦察：端口 + 子域名 + DNS + 在线资产"
+      phases: [1]
+    quick:
+      name: "快速评估"
+      description: "侦察 → 分析（自动查工具/漏洞）"
+      phases: [1, 2, 4]
+    full:
+      name: "全面评估"
+      description: "侦察 → 分析 → Nmap → 漏洞扫描 → 威胁情报"
+      phases: [1, 2, 3, 4]
+    webapp:
+      name: "Web 专项"
+      description: "HTTP头 → 目录爆破 → 注入检测 → 工具推荐"
+      phases: [1, 2]
+    deep:
+      name: "全链路自动化"
+      description: "侦察 → 分析 → 沙箱自动利用 → 威胁情报 → 报告"
+      phases: [1, 2, 3, 4, 5]
+
+  # 各阶段工具配置
+  phase1_tools:
+    - [子域名枚举, security_subdomain_enum, {domain: "{target}"}]
+    - [DNS 枚举, security_dns_enum, {domain: "{target}"}]
+    - [端口扫描, security_port_scan, {target: "{target}"}]
+
+  phase1_extra:
+    - [在线资产 FOFA, security_online_asset, {service: "fofa", query: 'domain="{target}"'}]
+    - [在线资产 Shodan, security_online_asset, {service: "shodan", query: "hostname:{target}"}]
+    - [Nmap 扫描, security_nmap_scan, {target: "{target}", mode: "full"}]
+    - [HTTP 头分析, security_http_headers, {url: "https://{target}"}]
+    - [SSL 证书, security_ssl_cert, {hostname: "{target}"}]
+
+  phase3_tools:
+    - [目录爆破, security_dir_brute, {url: "https://{target}"}]
+    - [Web 漏洞扫描, security_web_vuln_scanner, {url: "https://{target}"}]
+
+  # 服务识别模式 (regex, service_name, product_description)
+  service_patterns:
+    - regex: 'Apache/[\d.]+'
+      service: Apache
+      product: 'Apache HTTP Server'
+    - regex: 'nginx/[\d.]+'
+      service: nginx
+      product: Nginx
+    - regex: 'OpenSSH[_\s]?[\d.]+'
+      service: OpenSSH
+      product: 'SSH 服务器'
+    - regex: 'MySQL[_\s]?[\d.]+'
+      service: MySQL
+      product: 'MySQL 数据库'
+    - regex: 'PostgreSQL[\s\d.]+'
+      service: PostgreSQL
+      product: 'PostgreSQL 数据库'
+    - regex: 'PHP/[\d.]+'
+      service: PHP
+      product: PHP
+    - regex: 'WordPress/[\d.]+'
+      service: WordPress
+      product: 'WordPress CMS'
+    - regex: 'Tomcat/[\d.]+'
+      service: Tomcat
+      product: 'Apache Tomcat'
+    - regex: 'Microsoft-IIS/[\d.]+'
+      service: IIS
+      product: 'Microsoft IIS'
+    - regex: 'Redis[\s\d.]+'
+      service: Redis
+      product: 'Redis 缓存'
+    - regex: 'MongoDB[\s\d.]+'
+      service: MongoDB
+      product: 'MongoDB 数据库'
+    - regex: 'Elasticsearch[\s\d.]+'
+      service: Elasticsearch
+      product: Elasticsearch
+    - regex: 'Node\.js[\s\d.]+'
+      service: Node.js
+      product: Node.js
+    - regex: 'Express[\s\d.]+'
+      service: Express
+      product: 'Express 框架'
+    - regex: 'Django/[\d.]+'
+      service: Django
+      product: 'Django 框架'
+    - regex: 'Flask[\s\d.]+'
+      service: Flask
+      product: 'Flask 框架'
+    - regex: 'Spring[\s\d.]+'
+      service: Spring
+      product: 'Spring Framework'
+    - regex: 'jQuery[\s\d.]+'
+      service: jQuery
+      product: jQuery
+    - regex: 'Bootstrap/[\d.]+'
+      service: Bootstrap
+      product: Bootstrap
+    - regex: 'Microsoft-HTTPAPI/[\d.]+'
+      service: Microsoft-HTTPAPI
+      product: 'Windows HTTP'
+    - regex: 'Jetty[\s\d.]+'
+      service: Jetty
+      product: 'Eclipse Jetty'
+
+# ═══════════════════════════════════════════
+# 端口扫描配置
+# ═══════════════════════════════════════════
+port_scanner:
+  max_ports: 100
+  connect_timeout: 3.0
+  banner_timeout: 2.0
+  common_ports:
+    21: FTP
+    22: SSH
+    23: Telnet
+    25: SMTP
+    53: DNS
+    80: HTTP
+    110: POP3
+    143: IMAP
+    443: HTTPS
+    445: SMB
+    1080: SOCKS
+    1433: MSSQL
+    1521: Oracle
+    2222: SSH-Alt
+    3306: MySQL
+    3389: RDP
+    5432: PostgreSQL
+    5900: VNC
+    6379: Redis
+    8080: HTTP-Proxy
+    8443: HTTPS-Alt
+    9090: Web-Admin
+    9200: Elasticsearch
+    11211: Memcached
+    27017: MongoDB
+
+# ═══════════════════════════════════════════
+# 子域名枚举配置
+# ═══════════════════════════════════════════
+subdomain_enum:
+  default_subdomains:
+    - www - mail - ftp - localhost - webmail - smtp
+    - pop - ns1 - webdisk - ns2 - cpanel - whm
+    - autodiscover - autoconfig - m - imap - test
+    - ns - blog - pop3 - dev - www2 - admin
+    - forum - news - vpn - ns3 - mail2 - new
+    - mysql - old - lists - support - mobile - mx
+    - static - docs - beta - shop - sql - secure
+    - demo - cp - calendar - wiki - web - media
+    - email - images - img - download - git
+    - api - cdn - staging - app - portal
+    - status - monitor - cloud - remote
+    - backup - db - data - storage
+    - gateway - proxy - auth
+    - jenkins - gitlab - jira - confluence
+    - nextcloud - grafana - kibana
+    - phpmyadmin - adminer
+
+  deep_subdomains:
+    - api2 - api-gateway - assets - bbs
+    - cdn1 - cdn2 - chat - ci - click - cms
+    - crm - dashboard - design - dns1 - dns2
+    - docker - editor - events - exchange - feeds
+    - files - flow - forms - games - help
+    - host - jobs - kb - lab - library
+    - live - login - log - m1 - manage
+    - map - market - master - members - messenger
+    - mirror - music - node1 - node2
+    - office - online - partner - pay
+    - photos - radio - recruit - release
+    - repo - research - sandbox - search
+    - server1 - server2 - service - signup
+    - source - sso - stage - store
+    - survey - svn - tasks - team
+    - tech - tracker - translate - upload
+    - video - vip - voip - workflow
+    - ws - ww2 - xml - xmpp
+
+# ═══════════════════════════════════════════
+# HTTP 响应头安全分析配置
+# ═══════════════════════════════════════════
+http_headers:
+  # 安全头检查规则: [header_name, severity, label, recommendation]
+  security_checks:
+    - [content-security-policy, high, "CSP（内容安全策略）", "添加 Content-Security-Policy 头限制资源加载来源，防止 XSS 攻击"]
+    - [strict-transport-security, high, "HSTS（HTTP严格传输安全）", "添加 Strict-Transport-Security 头强制浏览器使用HTTPS"]
+    - [x-frame-options, medium, "Clickjacking 防护", "添加 X-Frame-Options: DENY 或 SAMEORIGIN 防止点击劫持"]
+    - [x-content-type-options, medium, "MIME 类型嗅探防护", "添加 X-Content-Type-Options: nosniff 防止MIME类型嗅探"]
+    - [referrer-policy, low, "Referrer 策略", "添加 Referrer-Policy 头控制跨域请求中的来源信息"]
+    - [permissions-policy, low, "权限策略", "添加 Permissions-Policy 头限制浏览器API使用"]
+    - [x-permitted-cross-domain-policies, low, "跨域策略", "添加 X-Permitted-Cross-Domain-Policies: none 限制Flash跨域"]
+
+  # 信息泄露头检查: [header_name, severity, label, recommendation]
+  info_leak_headers:
+    - [server, medium, "服务器版本信息泄露", "移除或通用化 Server 响应头"]
+    - [x-powered-by, medium, "技术栈信息泄露", "移除 X-Powered-By 响应头"]
+    - [x-aspnet-version, medium, "ASP.NET 版本泄露", "移除 X-AspNet-Version 响应头"]
+    - [x-generator, low, "生成器信息泄露", "移除 X-Generator 响应头"]
+
+  request_timeout: 15.0
+
+# ═══════════════════════════════════════════
+# DNS 枚举配置
+# ═══════════════════════════════════════════
+dns_enum:
+  default_record_types:
+    - A - AAAA - MX - NS - CNAME - TXT - SOA
+  resolver_timeout: 5
+  analysis_warnings:
+    no_mx: "未配置 MX 记录：可能未启用企业邮箱"
+    no_spf: "未配置 SPF 记录：存在邮件伪造风险"
+    no_dmarc: "未配置 DMARC 记录：建议配置以增强邮件安全"
+    spf_loose: "SPF 策略过于宽松（使用 ?all 或 +all），建议使用 -all"
+    spf_softfail: "SPF 策略使用 softfail(~all)，建议使用严格模式 -all"
+
+# ═══════════════════════════════════════════
+# SSL 证书检查配置
+# ═══════════════════════════════════════════
+ssl_cert:
+  connect_timeout: 10
+  warning_days: 90
+  critical_days: 30
+
+# ═══════════════════════════════════════════
+# 漏洞查询配置 (CVE/NVD)
+# ═══════════════════════════════════════════
+vuln_lookup:
+  nvd_api_base: "https://services.nvd.nist.gov/rest/json/cves/2.0"
+  request_timeout: 30.0
+  max_limit: 20
+  description_max_length: 300
+
+  # 离线知识库回退（NVD 不可用时使用）
+  offline_knowledge:
+    apache: |
+      Apache HTTP Server 常见漏洞：CVE-2021-41773(路径穿越)、CVE-2021-40438(SSRF)、CVE-2022-22720(HTTP请求走私)。建议保持Apache版本为最新。
+    nginx: |
+      Nginx 常见漏洞：CVE-2021-23017(DNS解析器)、CVE-2019-9511/9513/9516(HTTP/2 DoS)。建议使用最新稳定版。
+    mysql: |
+      MySQL 常见漏洞：定期关注 Oracle Critical Patch Update。建议使用最新GA版本并配置安全基线。
+    redis: |
+      Redis 常见安全问题：未授权访问是最常见问题。建议配置 requirepass、bind 到内网、禁用危险命令。
+    tomcat: |
+      Tomcat 常见漏洞：CVE-2024-21733、CVE-2023-41080。建议使用最新版本并配置安全管理器。
+    openssh: |
+      OpenSSH 常见漏洞：CVE-2023-38408(ssh-agent)、CVE-2024-6387(regreSSHion)。建议更新到最新版本。
+    openssl: |
+      OpenSSL 著名漏洞：CVE-2014-0160(Heartbleed)、CVE-2022-3786(Certificate Bypass)。建议更新到最新版本。
+    sql injection: |
+      SQL注入是最常见的Web漏洞之一。预防措施：使用参数化查询、ORM框架、输入验证、WAF。关键CVE：各CMS/系统中广泛存在。
+    xss: |
+      跨站脚本(XSS)是最常见的Web漏洞之一。预防措施：输入输出编码、CSP头部、HttpOnly Cookie。关键CVE：各Web应用广泛存在。
+    log4j: |
+      Log4Shell (CVE-2021-44228) CVSS 10.0 — 影响 Log4j 2.0-2.14.1 的所有版本。CVE-2021-45046 是后续修复绕过。建议立即升级到 2.17.0+。
+    spring: |
+      Spring Framework 常见漏洞：CVE-2022-22965(Spring4Shell) CVSS 9.8 — JDK9+ 上的 Spring MVC。CVE-2022-22963(Spring Cloud Function)。
+    wordpress: |
+      WordPress 安全提醒：主题/插件是最常见的攻击面。CVE-2023-2745、CVE-2023-6933 等。建议保持核心/主题/插件更新，使用 WAF。
+    iis: |
+      Microsoft IIS 常见漏洞：CVE-2021-31166(HTTP协议栈)、CVE-2017-7269(WebDAV)。建议安装最新补丁，禁用不必要的模块。
+
+  offline_fallback_message: |
+    未找到相关漏洞信息
+    NVD API 可能不可用。建议：
+    1. 访问 https://nvd.nist.gov 手动搜索
+    2. 访问 https://www.exploit-db.com 搜索漏洞利用
+    3. 检查网络连接后重试
+
+# ═══════════════════════════════════════════
+# Sploitus / Exploit-DB 搜索配置
+# ═══════════════════════════════════════════
+sploitus:
+  api_base: "https://sploitus.com"
+  exploitdb_search_url: "https://www.exploit-db.com/search"
+  request_timeout: 15.0
+
+# ═══════════════════════════════════════════
+# Web 漏洞扫描配置
+# ═══════════════════════════════════════════
+web_vuln_scanner:
+  request_timeout: 15.0
+
+  # SQL 注入测试 payload
+  sql_payloads:
+    - ['"', 引号错误]
+    - ["'", SQL语法错误]
+    - ["1' OR '1'='1", 条件注入]
+    - ["1' AND '1'='2", 条件注入]
+    - ["1' UNION SELECT NULL--", UNION注入]
+    - [") OR ('1'='1", 括号注入]
+    - ["'; WAITFOR DELAY '0:0:5'--", 时间盲注(SQL Server)]
+    - ["' OR SLEEP(5)--", 时间盲注(MySQL)]
+
+  # XSS 测试 payload
+  xss_payloads:
+    - ["<script>alert(1)</script>", 基础XSS]
+    - ["<img src=x onerror=alert(1)>", IMG事件XSS]
+    - ["<svg onload=alert(1)>", SVG事件XSS]
+    - ["javascript:alert(1)", JS协议XSS]
+
+  # SQL 错误检测模式
+  sql_error_patterns:
+    - 'SQL syntax.*MySQL'
+    - 'Warning.*mysql_'
+    - 'MySQLSyntaxErrorException'
+    - 'valid MySQL result'
+    - 'PostgreSQL.*ERROR'
+    - 'Warning.*\Wpg_'
+    - 'Driver.*SQL'
+    - 'SQLite/JDBCDriver'
+    - 'SQLite.Exception'
+    - 'Microsoft OLE DB.*SQL'
+    - '\[SQL Server\]'
+    - 'ODBC SQL Server Driver'
+    - 'Oracle error'
+    - 'ORA-[0-9]{5}'
+    - 'Microsoft JET Database Engine'
+    - 'Unclosed quotation mark'
+    - 'quoted string not properly terminated'
+    - 'SQL command not properly ended'
+
+  # 信息泄露检测模式: [regex, label, severity]
+  leak_patterns:
+    - regex: '(?:password|passwd|pwd)\s*[:=]\s*[''"]?\w+[''"]?'
+      label: 硬编码密码
+      severity: critical
+    - regex: '(?:api[_-]?key|apikey|secret)\s*[:=]\s*[''"]?\w+[''"]?'
+      label: API密钥泄露
+      severity: critical
+    - regex: '(?:jdbc:|mongodb://|mysql://|postgresql://|redis://)\S+'
+      label: 数据库连接串泄露
+      severity: high
+    - regex: '(?:aws_access_key|AWS_ACCESS_KEY)\s*[:=]\s*[''"]?\w+[''"]?'
+      label: AWS密钥泄露
+      severity: critical
+    - regex: '(?:-----BEGIN\s(?:RSA\s)?PRIVATE\sKEY-----)'
+      label: 私钥泄露
+      severity: critical
+    - regex: '<!--[\s\S]*?(?:TODO|FIXME|HACK|BUG)[\s\S]*?-->'
+      label: 注释中的敏感信息
+      severity: medium
+    - regex: 'stack\s*trace:'
+      label: 错误堆栈泄露
+      severity: medium
+    - regex: '(?:\d{1,3}\.){3}\d{1,3}'
+      label: 内部IP泄露
+      severity: low
+
+  # 错误页面信息泄露模式: [regex, label, severity]
+  error_page_patterns:
+    - regex: 'at\s+[\w.]+\([\w.]+:\d+\)'
+      label: 堆栈跟踪泄露
+      severity: high
+    - regex: 'Exception:\s*\w+'
+      label: 异常信息泄露
+      severity: medium
+    - regex: "File\\s*['\"].*?\\.\\w+['\"]"
+      label: 文件路径泄露
+      severity: medium
+    - regex: 'Version:\s*[\d.]+'
+      label: 版本信息泄露
+      severity: low
+    - regex: 'Apache Tomcat/[\d.]+'
+      label: 服务器版本泄露
+      severity: low
+    - regex: 'nginx/[\d.]+'
+      label: 服务器版本泄露
+      severity: low
+
+# ═══════════════════════════════════════════
+# 目录爆破配置
+# ═══════════════════════════════════════════
+dir_brute:
+  request_timeout: 10.0
+  max_concurrent: 10
+  max_paths_quick: 40
+  max_paths_deep: 80
+
+  common_paths:
+    - /admin - /login - /wp-admin - /administrator
+    - /api - /api/v1 - /graphql - /swagger
+    - /.git/HEAD - /.env - /.svn/entries - /.DS_Store
+    - /robots.txt - /sitemap.xml - /crossdomain.xml
+    - /backup - /backup.zip - /backup.tar.gz
+    - /config.php - /configuration.php - /wp-config.php
+    - /phpinfo.php - /info.php - /test.php
+    - /console - /debug - /dev
+    - /uploads - /upload - /images - /css - /js
+    - /static - /assets - /public
+    - /tmp - /temp - /logs - /log
+    - /sql - /db - /database
+    - /phpmyadmin - /adminer - /mysql
+    - /jenkins - /solr - /actuator
+    - /server-status - /server-info
+    - /cgi-bin - /cgi-bin/test.cgi
+    - /v1 - /v2 - /v1/api
+    - /api-docs - /api/swagger.json - /openapi.json
+    - /vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+    - /wp-content/uploads - /wp-json/wp/v2/users
+    - /.htaccess - /.gitignore - /README.md
+    - /config - /config.yaml - /config.yml
+    - /docker-compose.yml - /Dockerfile
+    - /composer.json - /package.json
+    - /web.config - /WEB-INF/web.xml
+    - /actuator/health - /actuator/env
+    - /cron - /crontab
+    - /status - /health - /ping
+    - /favicon.ico - /404 - /error
+
+  common_extensions:
+    - .php - .asp - .aspx - .jsp - .bak - .old - .save - .txt
+
+  critical_paths:
+    - [/.git/HEAD, "敏感 Git 仓库暴露"]
+    - [/.env, "环境变量文件暴露"]
+    - [/.svn/entries, "SVN 仓库暴露"]
+    - [/.DS_Store, "macOS 元数据泄露"]
+  attention_paths:
+    - [/admin, "管理后台可访问"]
+    - [/login, "登录页可访问"]
+    - [/wp-admin, "WordPress 后台可访问"]
+    - [/phpmyadmin, "phpMyAdmin 可访问"]
+    - [/actuator/env, "Spring Boot Actuator 暴露"]
+    - [/jenkins, "Jenkins 可访问"]
+
+# ═══════════════════════════════════════════
+# Nmap 扫描配置
+# ═══════════════════════════════════════════
+nmap_scan:
+  default_timeout: 180
+  max_timeout: 300
+  scan_types:
+    quick: "-T4 -F"
+    full: "-T4 -sV -sC -O"
+    stealth: "-T2 -sS -Pn"
+    udp: "-sU -T4 --top-ports 100"
+    version: "-sV --version-intensity 5"
+    script: "-sC --script=default,vuln"
+    all: "-T4 -A -p-"
+
+# ═══════════════════════════════════════════
+# 在线资产搜索配置 (FOFA/Shodan/Censys...)
+# ═══════════════════════════════════════════
+online_asset:
+  request_timeout: 20.0
+
+  supported_services:
+    fofa:
+      name: FOFA
+      desc: "中国领先的网络空间搜索引擎"
+      base_url: "https://fofa.info/api/v1/search/all"
+      auth_type: api_key
+      register_url: "https://fofa.info/"
+    shodan:
+      name: Shodan
+      desc: "全球互联网设备搜索引擎"
+      base_url: "https://api.shodan.io/shodan/host/search"
+      auth_type: api_key
+      register_url: "https://account.shodan.io/"
+    censys:
+      name: Censys
+      desc: "互联网资产发现平台"
+      base_url: "https://search.censys.io/api/v2/hosts/search"
+      auth_type: api_id_secret
+      register_url: "https://search.censys.io/account/api"
+    quake:
+      name: Quake
+      desc: "360网络空间测绘引擎"
+      base_url: "https://quake.360.cn/api/v3/search/quake_service"
+      auth_type: api_key
+      register_url: "https://quake.360.cn/"
+    zoomeye:
+      name: ZoomEye
+      desc: "知道创宇网络空间搜索引擎"
+      base_url: "https://api.zoomeye.org/host/search"
+      auth_type: api_key
+      register_url: "https://www.zoomeye.org/"
+
+# ═══════════════════════════════════════════
+# CTF / BugBounty 工作流配置
+# ═══════════════════════════════════════════
+ctf_workflow:
+  categories:
+    web:
+      name: "Web安全"
+      tools:
+        - BurpSuite - sqlmap - dirsearch - nuclei - xray
+      techniques:
+        - "SQL注入 (联合查询/盲注/时间盲注)"
+        - "XSS (反射型/存储型/DOM型)"
+        - "SSRF (内网探测/云元数据/Redis攻击)"
+        - "文件上传 (前端绕过/Content-Type/文件头/条件竞争)"
+        - "反序列化 (Java/PHP/Python Pickle)"
+        - "SSTI (Jinja2/Twig/FreeMarker)"
+        - "命令注入 (管道符/反引号/$IFS绕过)"
+        - "XXE (外带数据/内网探测)"
+        - "认证绕过 (JWT伪造/Session劫持)"
+    crypto:
+      name: "密码学"
+      tools:
+        - CyberChef - RsaCtfTool - yafu - hashcat
+      techniques:
+        - "古典密码 (凯撒/维吉尼亚/栅栏/培根)"
+        - "RSA攻击 (共模/小指数/维纳/费马)"
+        - "分组密码 (CBC字节翻转/Padding Oracle)"
+        - "哈希长度扩展攻击"
+        - "格密码 (LLL算法)"
+    pwn:
+      name: "二进制漏洞"
+      tools:
+        - pwntools - ghidra - gdb - checksec - ROPgadget
+      techniques:
+        - "栈溢出 (ret2text/ret2libc/ret2syscall)"
+        - "格式化字符串 (任意读写/GOT覆写)"
+        - "堆利用 (UAF/Fastbin/Tcache)"
+        - "整数溢出 (符号/宽度溢出)"
+        - "ROP链构造"
+    forensics:
+      name: "数字取证"
+      tools:
+        - Volatility - binwalk - foremost - exiftool - Steghide
+      techniques:
+        - "内存取证 (进程列表/注册表/网络连接)"
+        - "磁盘取证 (文件恢复/MFT分析)"
+        - "流量分析 (Wireshark/tshark 过滤)"
+        - "隐写分析 (LSB/频域/元数据)"
+        - "日志分析 (Web/系统/安全日志)"
+    rev:
+      name: "逆向工程"
+      tools:
+        - Ghidra - "IDA Free" - jadx - x64dbg - dnSpy
+      techniques:
+        - "静态分析 (反汇编/反编译)"
+        - "动态调试 (断点/内存修改)"
+        - "脱壳去花 (反反调试/反虚拟机)"
+        - "算法逆向 (加密/压缩/校验)"
+    misc:
+      name: "杂项"
+      tools:
+        - CyberChef - zsteg - foremost
+      techniques:
+        - "编码解码 (Base64/Hex/Unicode/Morse)"
+        - "协议分析 (自定义协议/PCAP)"
+        - "Python沙箱逃逸"
+        - "游戏逆向 (Unity/IL2CPP)"
+    osint:
+      name: "开源情报"
+      tools:
+        - Sherlock - theHarvester - "Maltego CE"
+      techniques:
+        - "社交账号搜索"
+        - "域名/WHOIS 反查"
+        - "图片EXIF/GPS分析"
+        - "证书透明度日志 (crt.sh)"
+        - "Google Dork"
+
+  category_specific_advice:
+    web: |
+      优先检查：1) 页面源代码和JS文件中的注释/API端点
+      2) URL 参数和 Cookie 中的特殊值
+      3) HTTP 响应头是否有异常
+      4) 尝试常见的弱口令和默认凭据
+      5) 检查 robots.txt 和 sitemap.xml
+    crypto: |
+      优先检查：1) 题目提供的加密算法和参数
+      2) 是否有已知的数学攻击方法
+      3) 密文是否有模式（重复、长度）
+      4) 尝试用 CyberChef 进行快速编码解码
+      5) 考虑侧信道信息（时间、文件名）
+    pwn: |
+      优先检查：1) checksec 查看保护机制
+      2) 分析程序逻辑找溢出点
+      3) 用 gdb/pwndbg 调试确认偏移
+      4) 检查 libc 版本（libc database查找）
+      5) 注意 one_gadget 条件
+    forensics: |
+      优先检查：1) file 命令确认文件类型
+      2) strings 提取可读字符串
+      3) binwalk 提取嵌套文件
+      4) exiftool 查看元数据
+      5) 搜索常见隐藏数据特征（PK头/Zip头/PNG尾）
+    rev: |
+      优先检查：1) file 确认文件类型和架构
+      2) strings 查找关键字符串（flag/密码/提示）
+      3) 搜索硬编码常量和密钥
+      4) 用反编译器查看主逻辑
+      5) 识别常见加密算法（AES/RSA/自定义）
+    misc: |
+      优先检查：1) 从最简单的方法开始
+      2) 检查所有附件中的隐藏信息
+      3) 尝试不同的编码解码工具
+      4) 搜索题目名称和描述中的提示
+      5) 查看比赛平台的历史 writeup
+    osint: |
+      优先检查：1) Google Image Search 搜索图片
+      2) 查看图片 EXIF/GPS 数据
+      3) 社交媒体平台搜索用户名
+      4) Wayback Machine 查看历史版本
+      5) 证书透明度日志 (crt.sh)
+
+  bugbounty_flow:
+    title: "BugBounty 漏洞赏金工作流"
+    phases:
+      - {phase: 1, name: "侦察", actions: [
+          "子域名枚举 → subfinder/amass/OneForAll",
+          "端口扫描 → nmap/masscan/naabu",
+          "技术指纹 → Wappalyzer/WhatWeb/BuiltWith",
+          "URL采集 → waybackurls/gau/katana"]}
+      - {phase: 2, name: "映射与分析", actions: [
+          "目录枚举 → dirsearch/ffuf/gobuster",
+          "参数发现 → paramspider/arjun",
+          "JS分析 → LinkFinder/SecretFinder",
+          "API端点收集 → Swagger/GraphQL"]}
+      - {phase: 3, name: "漏洞发现", actions: [
+          "自动化扫描 → nuclei/xray/yakit（注意流量）",
+          "手动测试 → SQL注入/XSS/SSRF/任意文件读取",
+          "业务逻辑 → IDOR/竞态条件/支付绕过",
+          "配置错误 → CORS/Cloud Storage/.git泄露"]}
+      - {phase: 4, name: "利用验证", actions: [
+          "概念证明 → 最小化PoC，不破坏数据",
+          "影响评估 → 确定漏洞实际危害范围",
+          "截图留证 → 清晰展示漏洞利用过程"]}
+      - {phase: 5, name: "报告撰写", actions: [
+          "标题 + 严重程度 (CVSS评分)",
+          "复现步骤 (清晰、可操作)",
+          "影响说明 (业务/数据/合规)",
+          "修复建议 (具体、可行)"]}
+    principles:
+      - "遵守规则 — 仅测试在赏金范围内定义的目标"
+      - "不破坏数据 — 禁止真实攻击，仅做漏洞验证"
+      - "及时报告 — 发现漏洞后通过平台提交"
+      - "不公开披露 — 漏洞修复前不公开发布细节"
+      - "保持专业 — 尊重厂商响应时间"
+
+# ═══════════════════════════════════════════
+# 安全工具知识库配置 (tool_index / 308+)
+# ═══════════════════════════════════════════
+tool_index:
+  max_preview: 3
+  categories:
+    - 信息收集
+    - 漏洞扫描
+    - 漏洞利用
+    - Webshell
+    - 密码破解
+    - 网络工具
+    - BurpSuite
+    - 安全防御
+    - 取证分析
+    - 云安全
+    - 移动安全
+    - 逆向工程
+    - 代理抓包
+    - 运行环境
+    - AI工具
+    - CTF专项
+
+  tools:
+    信息收集:
+      - {name: OneForAll, desc: "功能强大的子域名收集工具，支持多种数据源"}
+      - {name: EHole, desc: "红队重点攻击系统指纹探测工具"}
+      - {name: gogo, desc: "面向红队的自动化引擎扫描工具"}
+      - {name: naabu, desc: "快速的端口扫描工具 (Go)"}
+      - {name: nmap, desc: "经典网络扫描器和安全审计工具"}
+      - {name: masscan, desc: "超快速互联网级端口扫描器"}
+      - {name: fscan, desc: "内网综合扫描工具,适合内网渗透"}
+      - {name: kscan, desc: "轻量级资产探测和漏洞扫描"}
+      - {name: goby, desc: "自动化网络空间测绘和安全评估平台"}
+      - {name: dirsearch, desc: "Web目录爆破工具 (Python)"}
+      - {name: DnsX, desc: "快速多用途DNS工具包"}
+      - {name: Search_Viewer, desc: "Fofa/Shodan 可视化搜索工具"}
+      - {name: appshunter, desc: "APP资产信息收集工具"}
+    漏洞扫描:
+      - {name: nuclei, desc: "基于模板的快速漏洞扫描器,社区6000+模板"}
+      - {name: xray, desc: "Web漏洞检测代理,支持POC自定义"}
+      - {name: afrog, desc: "高性能漏洞扫描器,支持POC编排"}
+      - {name: poc-bomber, desc: "POC/EXP批量检测工具"}
+      - {name: scaninfo, desc: "开源、轻量、快速、跨平台的红队扫描工具"}
+      - {name: Full-Scanner, desc: "全面信息收集+漏洞扫描一体工具"}
+    漏洞利用:
+      - {name: sqlmap, desc: "自动化SQL注入检测和利用工具"}
+      - {name: ShiroAttack2, desc: "Shiro反序列化漏洞综合利用工具"}
+      - {name: JNDIExploit, desc: "JNDI注入利用工具,支持多种协议"}
+      - {name: FastjsonScan, desc: "Fastjson漏洞检测利用工具"}
+      - {name: Struts2, desc: "Struts2系列漏洞检测利用工具"}
+      - {name: WeblogicTool, desc: "Weblogic漏洞综合利用工具"}
+      - {name: LiqunKit, desc: "Java代码审计+自动化审计和漏洞利用"}
+      - {name: dalfox, desc: "快速XSS参数分析和扫描工具"}
+      - {name: XSStrike, desc: "高级XSS检测套件"}
+      - {name: MYExploit, desc: "综合漏洞利用框架"}
+    Webshell:
+      - {name: 冰蝎, desc: "动态二进制加密Webshell管理工具"}
+      - {name: "哥斯拉 Godzilla", desc: "JavaWebshell管理,支持冰蝎/哥斯拉内存马"}
+      - {name: "蚁剑 AntSword", desc: "开源跨平台Webshell管理工具"}
+      - {name: 天蝎, desc: "新一代Webshell管理器"}
+    密码破解:
+      - {name: hashcat, desc: "最快最先进密码恢复工具 (GPU加速)"}
+      - {name: hydra, desc: "网络登录暴力破解工具,支持50+协议"}
+      - {name: john, desc: "John the Ripper 离线密码破解"}
+      - {name: pydictor, desc: "强大实用的黑客暴力破解字典生成工具"}
+      - {name: jwt_tool, desc: "JSON Web Token 测试工具包"}
+    安全防御:
+      - {name: D盾, desc: "Webshell查杀+安全防护一体化工具"}
+      - {name: 河马, desc: "内存马专杀和Webshell查杀工具"}
+      - {name: 火绒剑, desc: "安全分析工具利器(进程/网络/注册表)"}
+      - {name: BlueTeamTools, desc: "蓝队工具箱:日志清洗/溯源/攻击IP分析"}
+      - {name: Sysmon, desc: "Windows系统监控服务"}
+      - {name: FindAll, desc: "内网资产发现工具"}
+      - {name: TrafficEye, desc: "开源流量分析监控系统"}
+    取证分析:
+      - {name: Volatility, desc: "高级内存取证框架"}
+      - {name: volatility3, desc: "Volatility 3 新版内存取证框架"}
+      - {name: Wireshark, desc: "网络协议分析器"}
+      - {name: tshark, desc: "Wireshark命令行版本"}
+      - {name: binwalk, desc: "固件分析工具"}
+      - {name: foremost, desc: "文件恢复和分离工具"}
+      - {name: exiftool, desc: "元数据读写工具"}
+      - {name: Steghide, desc: "图片/音频隐写工具"}
+    代理抓包:
+      - {name: BurpSuite, desc: "Web应用安全测试平台"}
+      - {name: Fiddler, desc: "Web调试代理,支持HTTPS解密"}
+      - {name: Charles, desc: "HTTP代理/监视器/反向代理"}
+      - {name: mitmproxy, desc: "交互式TLS拦截代理"}
+      - {name: Wireshark, desc: "网络协议分析器"}
+    逆向工程:
+      - {name: Ghidra, desc: "NSA开源的软件逆向工程框架"}
+      - {name: "IDA Free", desc: "交互式反汇编器(免费版)"}
+      - {name: x64dbg, desc: "Windows开源x64/x32调试器"}
+      - {name: dnSpy, desc: ".NET调试器和汇编编辑器"}
+      - {name: jadx, desc: "Dex to Java反编译器"}
+      - {name: jd-gui, desc: "Java反编译图形工具"}
+      - {name: GDA, desc: "Android APK/DEX 分析工具"}
+    CTF专项:
+      - {name: CyberChef, desc: "数据编码/解码/加密/解密在线工具"}
+      - {name: pwntools, desc: "CTF和漏洞利用开发框架 (Python)"}
+      - {name: zsteg, desc: "PNG/BMP隐写检测工具"}
+      - {name: RsaCtfTool, desc: "RSA攻击工具,支持多种攻击方式"}
+      - {name: yafu, desc: "大整数分解工具"}
+      - {name: checksec, desc: "二进制保护机制检查工具"}
+      - {name: ROPgadget, desc: "ROP链搜索工具"}
+      - {name: libc-database, desc: "libc版本离线识别工具"}
+
+# ═══════════════════════════════════════════
+# Docker 沙箱配置
+# ═══════════════════════════════════════════
+sandbox:
+  default_image: kalilinux/kali-rolling
+  safe_image: debian:latest
+  max_timeout: 300
+  default_timeout: 120
+  memory_limit_mb: 512
+  output_max_chars: 8000

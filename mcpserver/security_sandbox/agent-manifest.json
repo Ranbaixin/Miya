@@ -1,0 +1,20 @@
+{
+    "name": "security_sandbox",
+    "displayName": "安全沙箱服务",
+    "description": "为安全工具提供隔离的 Docker 容器执行环境，支持 Kali Linux 和 Debian 镜像",
+    "agentType": "mcp",
+    "entryPoint": {
+        "module": "mcpserver.security_sandbox.service",
+        "class": "SecuritySandboxService"
+    },
+    "capabilities": {
+        "tools": [
+            {"name": "sandbox_exec", "description": "在Docker容器中执行命令", "parameters": {"command": "string", "image": "string", "timeout": "number"}},
+            {"name": "sandbox_get_logs", "description": "获取容器执行日志", "parameters": {"container_id": "string"}},
+            {"name": "sandbox_list_containers", "description": "列出活跃容器"},
+            {"name": "sandbox_stop_container", "description": "停止指定容器", "parameters": {"container_id": "string"}}
+        ]
+    },
+    "version": "1.0.0",
+    "enabled": true
+}
