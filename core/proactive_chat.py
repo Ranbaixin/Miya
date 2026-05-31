@@ -336,6 +336,9 @@ class ProactiveChatSystem:
         # 追踪每种触发类型的最后发送时间
         self._last_trigger_by_type: dict[int, dict[str, datetime]] = {}
 
+        # 追踪弥娅最后一次回复时间（防止主动聊天紧跟正常回复）
+        self._last_miya_reply_time: dict[int, datetime] = {}
+
         # 追踪已发送消息的内容，避免重复
         self._sent_messages_history: dict[int, list[tuple[str, datetime]]] = {}
 
@@ -438,6 +441,10 @@ class ProactiveChatSystem:
     def set_prompt_manager(self, prompt_manager):
         """注入 prompt_manager 以构建系统 prompt"""
         self._prompt_manager = prompt_manager
+
+    def record_miya_reply(self, target_id: int):
+        """记录弥娅刚刚对 target 发送了正常回复"""
+        self._last_miya_reply_time[target_id] = datetime.now()
 
     def _build_persona_context(self) -> str:
         """提取当前人设+形态的上下文，注入 AI prompt"""
@@ -1034,6 +1041,13 @@ class ProactiveChatSystem:
             if elapsed < self._user_message_cooldown:
                 return None
 
+        # 检查弥娅是否刚刚回复过（防止主动聊天紧跟正常回复重复发送）
+        last_miya_reply = self._last_miya_reply_time.get(target_id)
+        if last_miya_reply:
+            miya_elapsed = (datetime.now() - last_miya_reply).total_seconds()
+            if miya_elapsed < 10:
+                return None
+
         if self._is_in_quiet_hours():
             return None
 
@@ -1398,7 +1412,13 @@ class ProactiveChatSystem:
                 if status:
                     system_prompt = status + "\n\n" + system_prompt
 
-            user_prompt = f"""判断是否应该主动和用户聊天。
+            # 注入弥娅刚才的回复，让 AI 知道已经回应过了，避免重复
+            last_reply_hint = ""
+            if context.last_miya_reply:
+                last_reply_short = context.last_miya_reply[:100]
+                last_reply_hint = f"\n弥娅刚刚回复了用户（内容摘要: {last_reply_short}），不需要再回复相同话题。\n"
+
+            prompt = f"""判断是否应该主动和用户聊天。
 【形态: {persona}】
 
 智能记忆检索：
@@ -1416,58 +1436,18 @@ class ProactiveChatSystem:
 - 成员数: {member_count}
 - 用户最后活跃: {last_active}
 - 最近话题: {recent_topics}
-
+{last_reply_hint}
 {group_warning}如果需要回复，请以符合上述人设质感生成一句简短温暖的话（不超过20字）。
 如果不需要回复，请回复"SKIP"。"""
 
             messages = []
             if system_prompt:
                 messages.append(AIMessage(role="system", content=system_prompt))
-            messages.append(AIMessage(role="user", content=user_prompt))
+            messages.append(AIMessage(role="user", content=prompt))
 
             response = await self.ai_client.chat(
                 messages=messages,
-                tool_choice="auto",
-            )
-
-            persona = self._build_persona_context()
-            memory_context = self._build_memory_context(target_id)
-            rich_context = await self._build_rich_context(target_id)
-            scene_context = self._build_deep_context(context) if self._scene_enabled else ""
-
-            memory_empty = self._load_text_config("scene.memory_empty", "（无近期对话记录）")
-            scene_private = self._load_text_config("scene.scene_private", "私聊场景")
-            group_warning = (
-                self._load_text_config("scene.group_warning", "")
-                if context.chat_type == "group" and self._scene_enabled
-                else ""
-            )
-            scene_info = f"{scene_context}" if scene_context else scene_private
-
-            prompt = f"""判断是否应该主动和用户聊天。
-【{persona}】
-记忆检索：
-{rich_context or "（无相关记忆）"}
-
-对话上下文：
-{memory_context or memory_empty}
-
-场景信息：
-{scene_info}
-
-聊天信息：
-- 类型: {chat_type}
-- 群名称: {group_name}
-- 成员数: {member_count}
-- 用户最后活跃: {last_active}
-- 最近话题: {recent_topics}
-
-{group_warning}如果需要回复，请以符合上述人设质感生成一句简短温暖的话（不超过20字）。
-如果不需要回复，请回复"SKIP"。"""
-
-            response = await self.ai_client.chat(
-                messages=[AIMessage(role="user", content=prompt)],
-                tool_choice="auto",
+                tool_choice="none",
             )
 
             # response 直接是字符串，不需要 .get() 解析

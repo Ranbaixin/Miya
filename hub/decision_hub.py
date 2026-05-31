@@ -531,6 +531,10 @@ class DecisionHub:
             self.proactive_chat.update_context(target_id, context, platform)
             self.proactive_chat.record_message(target_id, chat_type, user_message, platform)
 
+            # 记录弥娅刚回复了，防止主动聊天紧跟正常回复重复发送
+            if main_response:
+                self.proactive_chat.record_miya_reply(target_id)
+
             # 检查是否需要主动发言
             result: Optional[ProactiveResult] = await self.proactive_chat.check_and_respond(
                 target_id=target_id, user_message=user_message
@@ -851,6 +855,11 @@ class DecisionHub:
         reply_to_bot = perception.get("reply_to_bot", False)
         user_id = perception.get("user_id", perception.get("sender_id", 0))
         group_name = perception.get("group_name", "")
+
+        # 标记弥娅正在处理消息，防止主动聊天在后处理中插入干扰
+        target_id = group_id if group_id and group_id != 0 else user_id
+        if target_id and self.proactive_chat:
+            self.proactive_chat.record_miya_reply(target_id)
 
         try:
             if group_id and group_id != 0:

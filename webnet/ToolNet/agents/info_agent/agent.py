@@ -53,12 +53,39 @@ class InfoAgent(BaseTool):
                 tool = WeatherQueryTool()
                 return await tool.execute(context, args={"city": city})
 
-        # 热搜查询
+        # 热搜查询（优先微博，失败后回退百度/抖音）
         if any(kw in prompt_lower for kw in ["热搜", "微博", "新闻", "热门"]):
             from webnet.ToolNet.tools.network.weibohot import WeiboHotTool
 
             tool = WeiboHotTool()
-            return await tool.execute(context, args={"limit": 10})
+            result = await tool.execute(context, args={"limit": 10})
+            if "失败" not in result and "错误" not in result:
+                return result
+
+            logger.info("微博热搜获取失败，尝试百度热搜作为回退")
+            try:
+                from webnet.ToolNet.agents.info_agent.tools.baiduhot.handler import (
+                    execute as baiduhot_execute,
+                )
+
+                baidu_result = await baiduhot_execute({"limit": 10}, {})
+                if "失败" not in baidu_result and "暂无数据" not in baidu_result:
+                    return f"[微博热搜暂时不可用，为您展示百度热搜]\n\n{baidu_result}"
+            except Exception as e:
+                logger.warning(f"百度热搜回退也失败: {e}")
+
+            try:
+                from webnet.ToolNet.agents.info_agent.tools.douyinhot.handler import (
+                    execute as douyinhot_execute,
+                )
+
+                douyin_result = await douyinhot_execute({"limit": 10}, {})
+                if "失败" not in douyin_result and "暂无数据" not in douyin_result:
+                    return f"[微博/百度热搜暂不可用，为您展示抖音热搜]\n\n{douyin_result}"
+            except Exception as e:
+                logger.warning(f"抖音热搜回退也失败: {e}")
+
+            return result
 
         # arXiv论文搜索
         if any(kw in prompt_lower for kw in ["论文", "paper", "arxiv", "学术"]):
@@ -67,9 +94,7 @@ class InfoAgent(BaseTool):
             query = self._extract_query(prompt)
             if query:
                 tool = ArxivSearchTool()
-                return await tool.execute(
-                    context, args={"query": query, "max_results": 5}
-                )
+                return await tool.execute(context, args={"query": query, "max_results": 5})
 
         # 网络诊断
         if any(kw in prompt_lower for kw in ["ping", "网速", "延迟", "检测"]):
@@ -127,9 +152,7 @@ class InfoAgent(BaseTool):
         """提取域名"""
         import re
 
-        m = re.search(
-            r"(?:whois|域名|domain)[:\s]*([a-zA-Z0-9.-]+)", text, re.IGNORECASE
-        )
+        m = re.search(r"(?:whois|域名|domain)[:\s]*([a-zA-Z0-9.-]+)", text, re.IGNORECASE)
         if m:
             return m.group(1)
         m = re.search(r"(https?://)?([a-zA-Z0-9.-]+)", text)
