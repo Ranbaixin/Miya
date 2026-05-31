@@ -1045,7 +1045,7 @@ class ProactiveChatSystem:
         last_miya_reply = self._last_miya_reply_time.get(target_id)
         if last_miya_reply:
             miya_elapsed = (datetime.now() - last_miya_reply).total_seconds()
-            if miya_elapsed < 10:
+            if miya_elapsed < 120:
                 return None
 
         if self._is_in_quiet_hours():

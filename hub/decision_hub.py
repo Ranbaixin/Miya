@@ -1777,8 +1777,16 @@ class DecisionHub:
             except Exception:
                 pass
 
+            at_list = perception.get("at_list", [])
+            at_content_hint = content
+            if at_list:
+                at_names = perception.get("at_names", {})
+                at_names_str = ", ".join(f"{at_names.get(str(qq), 'QQ' + str(qq))}" for qq in at_list)
+                at_qids = ", ".join(str(qq) for qq in at_list)
+                at_content_hint = f"[用户@了{at_names_str}(QQ:{at_qids})] {content}"
+
             prompt_info = self.prompt_manager.build_full_prompt(
-                user_input=content,
+                user_input=at_content_hint,
                 memory_context=conversation_context,
                 knowledge_context=knowledge_context,
                 additional_context={
@@ -1790,6 +1798,7 @@ class DecisionHub:
                     "sender_name": sender_name,
                     "available_tools": available_tools,
                     "at_list": perception.get("at_list", []),
+                    "at_names": perception.get("at_names", {}),
                     "bot_qq": context.get("bot_qq"),
                     "is_creator": self.platform_tools_manager.is_creator(user_id, self.onebot_client),
                     "status_prompt": status_prompt,
@@ -1848,6 +1857,7 @@ class DecisionHub:
                     "message_type": perception.get("message_type"),
                     "sender_name": sender_name,
                     "at_list": perception.get("at_list", []) or [],
+                    "at_names": perception.get("at_names", {}),
                     "bot_qq": perception.get("bot_qq"),
                     "memory_engine": self.memory_engine,
                     "emotion": self.emotion,

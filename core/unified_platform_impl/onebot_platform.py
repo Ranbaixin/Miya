@@ -11,6 +11,7 @@ import asyncio
 import contextlib
 import json
 import logging
+import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -47,6 +48,8 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         # 群聊消息批处理缓冲: group_id → [messages]
         self._batch_buffers: Dict[str, list] = {}
         self._batch_timers: Dict[str, asyncio.Task] = {}
+        # 群成员缓存: group_id → (timestamp, [member_info_dict, ...])
+        self._group_member_cache: Dict[int, tuple] = {}
 
     @property
     def _config_data(self) -> dict:
@@ -604,6 +607,10 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         # === 9. 直接图片 AI 视觉分析 ===
         extra = {}
         extra["at_list"] = at_list
+        if at_list and group_id_str and msg_type == "group":
+            names = await self.resolve_at_names(int(group_id_str), at_list)
+            if names:
+                extra["at_names"] = names
         has_media = has_direct_images
 
         if has_direct_images and not reply_id:
@@ -817,6 +824,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         # 文字模式或 TTS 回退
         max_len = self._config_data.get("max_message_length", 200)
         for chunk in self._split_message(text, max_len):
+            chunk = self.resolve_at_mentions(chunk)
             reply_data = {
                 "action": "send_msg",
                 "params": {
@@ -1091,7 +1099,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                         "action": "send_group_msg",
                         "params": {
                             "group_id": group_id,
-                            "message": [{"type": "text", "data": {"text": message}}],
+                            "message": self._build_structured_message(message),
                         },
                     }
                 )
@@ -1107,6 +1115,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         if not self._ws or not self._connected:
             return False
         try:
+            message = self.resolve_at_mentions(message)
             await self._ws.send_str(
                 json.dumps(
                     {
@@ -1167,6 +1176,61 @@ class OneBotPlatform(MessageMixin, BasePlatform):
     @staticmethod
     def cq_at(qq: int) -> str:
         return f"[CQ:at,qq={qq}]"
+
+    @staticmethod
+    def resolve_at_mentions(text: str) -> str:
+        """将 @数字 转换为 [CQ:at,qq=数字] 格式，让 QQ 渲染为 @昵称卡片"""
+        import re
+
+        return re.sub(r"@(\d{5,15})", r"[CQ:at,qq=\1]", text)
+
+    @staticmethod
+    def _build_structured_message(text: str) -> list:
+        """将包含 @<QQ号> 的文本拆分为结构化消息段，确保 @ 正确渲染"""
+        import re
+
+        segments = []
+        last_end = 0
+        for m in re.finditer(r"@(\d{5,15})", text):
+            if m.start() > last_end:
+                segments.append({"type": "text", "data": {"text": text[last_end : m.start()]}})
+            segments.append({"type": "at", "data": {"qq": m.group(1)}})
+            last_end = m.end()
+        if last_end < len(text):
+            segments.append({"type": "text", "data": {"text": text[last_end:]}})
+        return segments or [{"type": "text", "data": {"text": text}}]
+
+    async def resolve_at_names(self, group_id: int, at_list: list) -> dict:
+        """解析 @列表中的 QQ 号 → 显示名映射（card > nickname > QQ号）"""
+        result = {}
+        if not at_list or not group_id:
+            return result
+
+        now = time.time()
+        cached = self._group_member_cache.get(group_id)
+        members = None
+        if cached and now - cached[0] < 300:
+            members = cached[1]
+
+        if members is None:
+            member_list = await self.get_group_member_list(group_id)
+            if member_list:
+                members = member_list
+                self._group_member_cache[group_id] = (now, members)
+
+        if not members:
+            return result
+
+        for qq in at_list:
+            qq_str = str(qq)
+            name = qq_str
+            for m in members:
+                if str(m.get("user_id")) == qq_str:
+                    name = m.get("card") or m.get("nickname") or qq_str
+                    break
+            result[qq_str] = name
+
+        return result
 
     @staticmethod
     def cq_image(file: str) -> str:
