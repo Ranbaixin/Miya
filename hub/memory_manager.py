@@ -80,9 +80,7 @@ class MemoryManager:
                     "group_id": group_id,
                     "message_type": message_type,
                     "sender": sender_name,
-                    "chat_label": f"群聊_{group_id}"
-                    if message_type == "group" and group_id
-                    else "私聊",
+                    "chat_label": f"群聊_{group_id}" if message_type == "group" and group_id else "私聊",
                 }
                 await self.memory_net.conversation_history.add_message(
                     session_id=session_id,
@@ -128,11 +126,7 @@ class MemoryManager:
 
             for pattern, info_type in important_patterns:
                 if re.search(pattern, content):
-                    priority = (
-                        0.9
-                        if info_type in ["生日", "电话", "邮箱", "明确要求"]
-                        else 0.7
-                    )
+                    priority = 0.9 if info_type in ["生日", "电话", "邮箱", "明确要求"] else 0.7
                     await store_important(
                         content=content,
                         user_id=user_id,
@@ -176,9 +170,7 @@ class MemoryManager:
                     "group_id": group_id,
                     "message_type": message_type,
                     "sender": "弥娅",
-                    "chat_label": f"群聊_{group_id}"
-                    if message_type == "group" and group_id
-                    else "私聊",
+                    "chat_label": f"群聊_{group_id}" if message_type == "group" and group_id else "私聊",
                 }
                 await self.memory_net.conversation_history.add_message(
                     session_id=session_id,
@@ -263,10 +255,7 @@ class MemoryManager:
                     daily = await core.get_daily_dialogues(yesterday)
                     if daily and len(daily) >= 3:
                         lines = [
-                            f"- {m.content[:80]}..."
-                            if len(m.content) > 80
-                            else f"- {m.content}"
-                            for m in daily[:20]
+                            f"- {m.content[:80]}..." if len(m.content) > 80 else f"- {m.content}" for m in daily[:20]
                         ]
                         summary_text = "\n".join(lines)
                         await core.store_daily_summary(
@@ -275,9 +264,7 @@ class MemoryManager:
                             user_id="global",
                             dialogue_count=len(daily),
                         )
-                        logger.info(
-                            f"[记忆管理器] 已生成 {yesterday} 每日摘要 ({len(daily)} 条对话)"
-                        )
+                        logger.info(f"[记忆管理器] 已生成 {yesterday} 每日摘要 ({len(daily)} 条对话)")
                 self._last_summary_date = today
             except Exception as e:
                 logger.debug(f"[记忆管理器] 每日摘要生成跳过: {e}")
@@ -285,14 +272,10 @@ class MemoryManager:
             # 对话历史压缩
             try:
                 if self.memory_net and self.memory_net.conversation_history:
-                    messages = await self.memory_net.conversation_history.get_history(
-                        session_id, limit=100
-                    )
+                    messages = await self.memory_net.conversation_history.get_history(session_id, limit=100)
                     if len(messages) > 50:
                         if hasattr(self.memory_net, "compress_conversation_to_tide"):
-                            await self.memory_net.compress_conversation_to_tide(
-                                session_id=session_id, recent_count=30
-                            )
+                            await self.memory_net.compress_conversation_to_tide(session_id=session_id, recent_count=30)
                             logger.info(f"[记忆管理器] 已触发对话压缩: {session_id}")
             except Exception as e:
                 logger.debug(f"[记忆管理器] 对话压缩失败: {e}")
@@ -344,9 +327,7 @@ class MemoryManager:
                         if isinstance(item, list) and len(item) >= 2:
                             pattern_regex = item[0]
                             tag_name = item[1]
-                            assistant_patterns.append(
-                                (pattern_regex, mem_type, importance, [tag_name])
-                            )
+                            assistant_patterns.append((pattern_regex, mem_type, importance, [tag_name]))
         except Exception as e:
             logger.warning(f"[记忆管理器] 加载自记忆配置失败: {e}")
             return
@@ -381,10 +362,7 @@ class MemoryManager:
                             "original_context": user_input[:100] if user_input else "",
                         },
                     )
-                    logger.info(
-                        f"[星璇·自记忆升级] {mem_type}: {content[:30]}... "
-                        f"(priority={base_importance})"
-                    )
+                    logger.info(f"[星璇·自记忆升级] {mem_type}: {content[:30]}... (priority={base_importance})")
                 except Exception as e:
                     logger.debug(f"[星璇·自记忆升级] 存储失败: {e}")
 
@@ -415,6 +393,8 @@ class MemoryManager:
 
             session_id = f"{platform}_{user_id}"
 
+            extra_meta = perception.get("_meta", {}) if isinstance(perception.get("_meta"), dict) else {}
+
             # 存储到统一记忆系统
             await store_dialogue(
                 content=content,
@@ -426,6 +406,7 @@ class MemoryManager:
                     "sender_name": sender_name,
                     "group_id": perception.get("group_id", ""),
                     "message_type": perception.get("message_type", ""),
+                    **extra_meta,
                 },
             )
 
@@ -439,14 +420,13 @@ class MemoryManager:
                         "platform": platform,
                         "user_id": user_id,
                         "sender_name": sender_name,
+                        **extra_meta,
                     },
                 )
 
             # 【星璇增强】弥娅回复时，自动分析并升级重要自记忆
             if role == "assistant" and content and len(content.strip()) >= 5:
-                user_input = perception.get("content", "") or perception.get(
-                    "input", ""
-                )
+                user_input = perception.get("content", "") or perception.get("input", "")
                 group_id = perception.get("group_id", "")
                 message_type = perception.get("message_type", "")
                 try:
@@ -484,16 +464,12 @@ class MemoryManager:
         max_messages = 30 if needs_recall else 8
 
         try:
-            messages = await self.memory_net.conversation_history.get_history(
-                session_id, limit=max_messages
-            )
+            messages = await self.memory_net.conversation_history.get_history(session_id, limit=max_messages)
 
             if not messages:
                 return []
 
-            recent_messages = (
-                messages[-max_messages:] if len(messages) > max_messages else messages
-            )
+            recent_messages = messages[-max_messages:] if len(messages) > max_messages else messages
 
             context = []
             total_tokens = 0

@@ -167,6 +167,7 @@ class DecisionHub:
         onebot_client=None,
         identity=None,
         model_pool=None,
+        model_scheduler=None,
         miya_instance=None,
         unified_memory=None,
         platform_registry=None,
@@ -188,6 +189,7 @@ class DecisionHub:
             onebot_client: OneBot 客户端
             identity: 身份系统
             model_pool: 多模型管理器
+            model_scheduler: AI 模型调度裁判
             miya_instance: Miya 实例
         """
         # 核心组件引用（保留用于兼容性）
@@ -204,6 +206,7 @@ class DecisionHub:
         self.onebot_client = onebot_client
         self.identity = identity
         self.model_pool = model_pool
+        self.model_scheduler = model_scheduler
         self.miya_instance = miya_instance
         self.platform_registry = platform_registry
 
@@ -264,6 +267,7 @@ class DecisionHub:
             tool_subnet=self.tool_subnet,
             memory_engine=self.memory_engine,
             model_pool=self.model_pool,
+            model_scheduler=self.model_scheduler,
             identity=self.identity,
         )
 
@@ -728,6 +732,7 @@ class DecisionHub:
                     config=config,
                     personality=self.personality,
                     soul_generator=self._soul_generator,
+                    model_scheduler=self.model_scheduler,
                 )
                 logger.info(
                     f"[决策层] 模型协作引擎初始化成功 | "

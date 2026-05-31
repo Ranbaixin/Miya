@@ -510,12 +510,15 @@ class PromptManager:
             role = memory.get("role", "")
             content = memory.get("content", "")
             memory.get("timestamp", "")
+            metadata = memory.get("metadata", {}) or {}
+            is_scheduled = metadata.get("scheduled", False)
 
             if role and content:
                 if role == "user":
                     lines.append(f"用户：{content}")
                 elif role == "assistant":
-                    lines.append(f"弥娅：{content}")
+                    tag = "[定时] " if is_scheduled else ""
+                    lines.append(f"{tag}弥娅：{content}")
                 else:
                     lines.append(f"{role}：{content}")
             else:

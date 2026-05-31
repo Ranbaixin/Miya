@@ -517,6 +517,7 @@ class Scheduler:
                 "sender_name": "弥娅",
                 "message_type": target_type,
                 "response": message,
+                "_meta": {"scheduled": True},
             }
 
             await self.memory_manager.store_unified_memory(perception, role="assistant")

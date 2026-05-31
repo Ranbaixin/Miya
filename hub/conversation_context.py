@@ -89,27 +89,17 @@ class ConversationContextManager:
         self.conversation_context_config = config
 
         self.memory_net = memory_net
-        self.enable_conversation_context = config.get(
-            "enabled", enable_conversation_context
-        )
-        self.conversation_context_max_count = config.get(
-            "max_count", conversation_context_max_count
-        )
-        self.conversation_context_max_tokens = config.get(
-            "max_tokens", conversation_context_max_tokens
-        )
+        self.enable_conversation_context = config.get("enabled", enable_conversation_context)
+        self.conversation_context_max_count = config.get("max_count", conversation_context_max_count)
+        self.conversation_context_max_tokens = config.get("max_tokens", conversation_context_max_tokens)
 
         # 从配置文件加载回忆关键词
         self.recall_patterns = config.get("recall_patterns", [])
 
         # 话题跟踪（用于多轮对话追踪）
-        self._topic_history: Dict[str, List[str]] = defaultdict(
-            list
-        )  # session_id -> 话题列表
+        self._topic_history: Dict[str, List[str]] = defaultdict(list)  # session_id -> 话题列表
         self._last_topics: Dict[str, str] = {}  # session_id -> 最近话题
-        self._conversation_turns: Dict[str, int] = defaultdict(
-            int
-        )  # session_id -> 对话轮次
+        self._conversation_turns: Dict[str, int] = defaultdict(int)  # session_id -> 对话轮次
         self._pending_intent: Dict[str, str] = {}  # session_id -> 未完成的意图
 
         self._persist_file = Path("data/conversation_context_state.json")
@@ -127,9 +117,7 @@ class ConversationContextManager:
                 with open(config_path, "r", encoding="utf-8") as f:
                     full_config = json.load(f)
                 cc_config = full_config.get("conversation_context", {})
-                cc_config["important_topic_keywords"] = full_config.get(
-                    "important_topic_keywords", []
-                )
+                cc_config["important_topic_keywords"] = full_config.get("important_topic_keywords", [])
                 return cc_config
         except Exception as e:
             logger.warning(f"[对话上下文] 加载配置失败: {e}")
@@ -139,9 +127,7 @@ class ConversationContextManager:
         """更新话题追踪，返回当前话题"""
         current_topic = self._detect_topic(user_input)
 
-        important_keywords = self.conversation_context_config.get(
-            "important_topic_keywords", []
-        )
+        important_keywords = self.conversation_context_config.get("important_topic_keywords", [])
         is_important = any(kw in user_input for kw in important_keywords)
 
         # 增量对话轮次
@@ -153,9 +139,7 @@ class ConversationContextManager:
             self._topic_history[session_id].append(current_topic)
             max_history = 50 if is_important else 20
             if len(self._topic_history[session_id]) > max_history:
-                self._topic_history[session_id] = self._topic_history[session_id][
-                    -max_history:
-                ]
+                self._topic_history[session_id] = self._topic_history[session_id][-max_history:]
             self._last_topics[session_id] = current_topic
 
         self._save_topic_state()
@@ -199,23 +183,16 @@ class ConversationContextManager:
             for session_id in list(data.get("conversation_turns", {}).keys()):
                 if session_id not in self._last_topics:
                     continue
-                self._conversation_turns[session_id] = data["conversation_turns"][
-                    session_id
-                ]
+                self._conversation_turns[session_id] = data["conversation_turns"][session_id]
 
             self._pending_intent = {
-                sid: v
-                for sid, v in data.get("pending_intent", {}).items()
-                if sid in self._last_topics
+                sid: v for sid, v in data.get("pending_intent", {}).items() if sid in self._last_topics
             }
             self._last_active_time = last_active_times
 
             loaded = len(self._last_topics)
             if loaded > 0 or filtered_sessions > 0:
-                logger.info(
-                    f"[对话上下文] 恢复话题状态: {loaded} 个会话, "
-                    f"跳过 {filtered_sessions} 个休眠"
-                )
+                logger.info(f"[对话上下文] 恢复话题状态: {loaded} 个会话, 跳过 {filtered_sessions} 个休眠")
         except Exception as e:
             logger.warning(f"[对话上下文] 恢复话题状态失败: {e}")
 
@@ -297,16 +274,12 @@ class ConversationContextManager:
         ]
         return any(p in user_input for p in recall_patterns)
 
-    async def get_conversation_context(
-        self, session_id: str, current_input: str = ""
-    ) -> List[Dict]:
+    async def get_conversation_context(self, session_id: str, current_input: str = "") -> List[Dict]:
         if not self.enable_conversation_context:
             return []
 
         # 【修复】即使 conversation_history 还未初始化，也记录临时上下文
-        conversation_history_ready = (
-            self.memory_net and self.memory_net.conversation_history
-        )
+        conversation_history_ready = self.memory_net and self.memory_net.conversation_history
 
         if current_input:
             self._update_topic_tracking(session_id, current_input)
@@ -329,32 +302,22 @@ class ConversationContextManager:
 
         if conversation_history_ready:
             try:
-                messages = await self.memory_net.conversation_history.get_history(
-                    session_id, limit=max_messages
-                )
+                messages = await self.memory_net.conversation_history.get_history(session_id, limit=max_messages)
 
                 if messages:
-                    recent_messages = (
-                        messages[-max_messages:]
-                        if len(messages) > max_messages
-                        else messages
-                    )
-                    logger.debug(
-                        f"[对话上下文] 加载对话历史: {len(recent_messages)} 条"
-                    )
+                    recent_messages = messages[-max_messages:] if len(messages) > max_messages else messages
+                    logger.debug(f"[对话上下文] 加载对话历史: {len(recent_messages)} 条")
 
                     for msg in recent_messages:
                         token_estimate = len(msg.content) // 4
-                        if (
-                            total_tokens + token_estimate
-                            > self.conversation_context_max_tokens
-                        ):
+                        if total_tokens + token_estimate > self.conversation_context_max_tokens:
                             break
                         context.append(
                             {
                                 "role": msg.role,
                                 "content": msg.content,
                                 "timestamp": msg.timestamp,
+                                "metadata": msg.metadata or {},
                             }
                         )
                         total_tokens += token_estimate
@@ -418,18 +381,12 @@ class ConversationContextManager:
             摘要文本，如果没有则返回空字符串
         """
         try:
-
             if not self.memory_net:
                 return ""
 
             # 搜索最近保存的终端会话记录
-            if (
-                hasattr(self.memory_net, "memory_engine")
-                and self.memory_net.memory_engine
-            ):
-                results = self.memory_net.memory_engine.search_tides(
-                    query="终端会话", limit=3
-                )
+            if hasattr(self.memory_net, "memory_engine") and self.memory_net.memory_engine:
+                results = self.memory_net.memory_engine.search_tides(query="终端会话", limit=3)
             else:
                 return ""
 
