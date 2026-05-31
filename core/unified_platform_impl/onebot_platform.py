@@ -35,6 +35,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         self._bot_qq = self.config.get("bot_qq", "")
         self._ws: Optional[Any] = None
         self._connected = False
+        self._shutting_down = False
         self._pending_echoes: Dict[str, asyncio.Future] = {}
         self._loaded_config: dict = {}
         self._process_lock = asyncio.Lock()
@@ -213,6 +214,8 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         try:
             import aiohttp
 
+            self._shutting_down = False
+
             # 如果已有后台任务在运行，不重复创建
             existing_tasks = [t for t in self._tasks if not t.done()]
             if existing_tasks:
@@ -224,7 +227,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
             async def listen_loop():
                 retry_delay = 1
-                while self._connected is not False:
+                while not self._shutting_down:
                     try:
                         async with aiohttp.ClientSession() as session:
                             async with session.ws_connect(self._ws_url) as ws:
@@ -247,11 +250,16 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                                         break
 
                     except Exception as e:
+                        if self._shutting_down:
+                            break
                         logger.warning(f"[{self.platform_id}] 连接断开: {e}, {retry_delay}s 后重连")
                         self._connected = False
                         self._ws = None
                         await asyncio.sleep(retry_delay)
                         retry_delay = min(retry_delay * 2, 30)
+
+                self._connected = False
+                self._ws = None
 
             self._tasks.append(asyncio.create_task(listen_loop()))
             await asyncio.sleep(0.5)
@@ -1588,6 +1596,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             logger.debug(f"[{self.platform_id}] 自动保存图片失败(bytes): {e}")
 
     async def _do_disconnect(self):
+        self._shutting_down = True
         self._connected = False
         if self._ws:
             with contextlib.suppress(Exception):
