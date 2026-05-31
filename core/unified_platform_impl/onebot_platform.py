@@ -517,8 +517,10 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         sender.get("title", "")
 
         # === 5. @检测 + at列表 ===
-        is_at_bot = self._is_at_bot(raw_message, bot_qq) if bot_qq else True
-        self._extract_at_list(raw_message)
+        # 优先使用结构化 message 数组（现代 OneBot 的 raw_message 不含 CQ 码）
+        message_array = data.get("message", raw_message)
+        is_at_bot = self._is_at_bot(message_array, bot_qq) if bot_qq else True
+        at_list = self._extract_at_list(message_array)
 
         # === 6. 消息段解析（text / reply / image / file / face） ===
         reply_id = ""
@@ -601,6 +603,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
         # === 9. 直接图片 AI 视觉分析 ===
         extra = {}
+        extra["at_list"] = at_list
         has_media = has_direct_images
 
         if has_direct_images and not reply_id:
