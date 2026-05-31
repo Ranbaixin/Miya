@@ -1099,12 +1099,9 @@ class DecisionHub:
 
         # 【优化】私聊谛听策略分析移至并行阶段（_generate_response_cross_platform Phase 1）
 
-        # 【新增】手动检测定时任务关键词，直接调用工具
-        timer_result = await self._detect_and_process_timer_task(perception, platform, content, user_id, sender_name)
-        if timer_result:
-            logger.info(f"[决策层] 定时任务已处理: {timer_result[:50]}")
-            # 定时任务有结果，直接返回，不走AI
-            return timer_result
+        # 【已移除】关键词检测定时任务已改为由 LLM 调用 create_schedule_task 工具自行判断
+        # 原 _detect_and_process_timer_task 的关键词匹配（如 "叫我"）过于宽泛，
+        # 会导致日常对话（如 "我叫你老婆"）被误判为定时任务请求
 
         response = await self._generate_response_cross_platform(content, platform, perception)
 

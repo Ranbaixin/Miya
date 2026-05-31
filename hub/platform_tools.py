@@ -537,6 +537,12 @@ class PlatformToolsManager:
         "python_interpreter",
         "horoscope",
         "wenchang_dijun",
+        # 定时任务工具（交由 LLM 自行判断调用时机）
+        "create_schedule_task",
+        "list_schedule_tasks",
+        "delete_schedule_task",
+        "update_schedule_task",
+        "get_schedule_stats",
     ]
 
     def __init__(self, tool_subnet):
@@ -587,25 +593,16 @@ class PlatformToolsManager:
             selected_tools = self.CORE_TOOLS + self.QQ_EXTENDED_TOOLS
             # QQ 聊天场景不需要屏幕视觉工具，移除避免 AI 混淆
             selected_tools = [
-                t
-                for t in selected_tools
-                if t
-                not in ("mcp_screen_vision_look_screen", "mcp_screen_vision_screenshot")
+                t for t in selected_tools if t not in ("mcp_screen_vision_look_screen", "mcp_screen_vision_screenshot")
             ]
 
         # 从 tool_subnet 获取工具 schema
         try:
             all_schemas = self.tool_subnet.get_tools_schema()
             # 只返回在 selected_tools 列表中的工具
-            platform_schemas = [
-                s
-                for s in all_schemas
-                if s.get("function", {}).get("name") in selected_tools
-            ]
+            platform_schemas = [s for s in all_schemas if s.get("function", {}).get("name") in selected_tools]
 
-            logger.info(
-                f"[平台工具] 平台 {platform} 使用 {len(platform_schemas)} 个工具"
-            )
+            logger.info(f"[平台工具] 平台 {platform} 使用 {len(platform_schemas)} 个工具")
             return platform_schemas
 
         except Exception as e:

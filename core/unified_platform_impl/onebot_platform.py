@@ -285,6 +285,18 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         except Exception as e:
             logger.error(f"[{self.platform_id}] 消息处理异常: {e}")
 
+    def _notify_scheduler_online(self, user_id: str):
+        """通知调度器用户上线（条件触发支持）"""
+        try:
+            from hub.scheduler import get_global_scheduler
+
+            s = get_global_scheduler()
+            if s and s._running:
+                s.notify_user_online(user_id)
+                logger.debug(f"[{self.platform_id}] 调度器已通知: 用户 {user_id} 在线")
+        except Exception as e:
+            logger.debug(f"[{self.platform_id}] 通知调度器失败: {e}")
+
     async def _handle_notice(self, data: Dict):
         """处理通知事件（拍一拍等）"""
         notice_type = data.get("notice_type", "")
@@ -347,6 +359,11 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                         )
             else:
                 logger.info(f"[{self.platform_id}] notify: {sub_type}")
+                # input_status = 对方正在输入 → 通知调度器用户在线
+                if sub_type == "input_status":
+                    user_id = str(data.get("user_id", ""))
+                    if user_id:
+                        self._notify_scheduler_online(user_id)
         elif notice_type in ("group_increase", "group_decrease"):
             logger.info(f"[{self.platform_id}] 群变动: {notice_type}")
         else:

@@ -1,6 +1,7 @@
 """
 删除指定定时任务
 """
+
 import logging
 from typing import Any, Dict
 
@@ -19,14 +20,9 @@ class DeleteScheduleTaskTool(BaseTool):
             "description": "删除指定的定时任务。当用户明确要求删除某个任务、取消提醒时必须调用此工具。重要：此工具执行实际删除操作，不要用文字回复，必须调用工具执行。",
             "parameters": {
                 "type": "object",
-                "properties": {
-                    "task_id": {
-                        "type": "string",
-                        "description": "任务ID（使用 list_schedule_tasks 查看）"
-                    }
-                },
-                "required": ["task_id"]
-            }
+                "properties": {"task_id": {"type": "string", "description": "任务ID（使用 list_schedule_tasks 查看）"}},
+                "required": ["task_id"],
+            },
         }
 
     async def execute(self, args: Dict[str, Any], context: ToolContext) -> str:
@@ -59,29 +55,36 @@ class DeleteScheduleTaskTool(BaseTool):
                     del context.memory_engine.memory_metadata[memory_key]
 
             # 从调度器中删除（如果有）
-            scheduler = getattr(context, 'scheduler', None)
+            scheduler = getattr(context, "scheduler", None)
             if scheduler:
                 # 从队列中删除
-                task_queue = getattr(scheduler, 'task_queue', [])
-                scheduler.task_queue = [t for t in task_queue if getattr(t, 'task_id', '') != task_id]
+                task_queue = getattr(scheduler, "task_queue", [])
+                scheduler.task_queue = [t for t in task_queue if getattr(t, "task_id", "") != task_id]
 
                 # 从运行中的任务中删除
-                running_tasks = getattr(scheduler, 'running_tasks', {})
+                running_tasks = getattr(scheduler, "running_tasks", {})
                 if task_id in running_tasks:
                     del running_tasks[task_id]
                     deleted = True
                     deleted_from.append("调度器")
 
                 # 从已完成的任务中删除
-                completed_tasks = getattr(scheduler, 'completed_tasks', {})
+                completed_tasks = getattr(scheduler, "completed_tasks", {})
                 if task_id in completed_tasks:
                     del completed_tasks[task_id]
                     deleted = True
                     deleted_from.append("调度器历史")
 
-                if task_id in [t['task_id'] for t in getattr(scheduler, 'task_history', [])]:
+                if task_id in [t["task_id"] for t in getattr(scheduler, "task_history", [])]:
                     scheduler.task_history = [t for t in scheduler.task_history if t.task_id != task_id]
                     deleted = True
+                    deleted_from.append("调度器历史")
+
+            # 从 TaskStore 删除
+            if scheduler and hasattr(scheduler, "task_store") and scheduler.task_store:
+                if scheduler.task_store.delete_task(task_id):
+                    deleted = True
+                    deleted_from.append("数据库")
 
             if deleted:
                 from_str = ", ".join(deleted_from) if deleted_from else "未知位置"
@@ -89,13 +92,9 @@ class DeleteScheduleTaskTool(BaseTool):
             else:
                 # 尝试模糊搜索
                 if context.memory_engine:
-                    all_memories = {
-                        **context.memory_engine.tide_memory,
-                        **context.memory_engine.dream_memory
-                    }
+                    all_memories = {**context.memory_engine.tide_memory, **context.memory_engine.dream_memory}
                     similar_ids = [
-                        mid for mid in all_memories
-                        if task_id.lower() in mid.lower() and "scheduled_task" in mid
+                        mid for mid in all_memories if task_id.lower() in mid.lower() and "scheduled_task" in mid
                     ]
                     if similar_ids:
                         return f"❌ 未找到精确匹配的任务: {task_id}\n\n相似的任务ID:\n{', '.join(similar_ids[:5])}"

@@ -431,14 +431,22 @@ class ToolRegistry:
         from webnet.ToolNet.tools.scheduler.delete_schedule_task import (
             DeleteScheduleTaskTool,
         )
+        from webnet.ToolNet.tools.scheduler.get_schedule_stats import (
+            GetScheduleStatsTool,
+        )
         from webnet.ToolNet.tools.scheduler.list_schedule_tasks import (
             ListScheduleTasksTool,
+        )
+        from webnet.ToolNet.tools.scheduler.update_schedule_task import (
+            UpdateScheduleTaskTool,
         )
 
         self.register(CreateScheduleTaskTool())
         self.register(DeleteScheduleTaskTool())
+        self.register(GetScheduleStatsTool())
         self.register(ListScheduleTasksTool())
-        self.logger.info("已加载定时任务工具: CreateScheduleTaskTool, DeleteScheduleTaskTool, ListScheduleTasksTool")
+        self.register(UpdateScheduleTaskTool())
+        self.logger.info("已加载定时任务工具: CRUD + Stats (5 tools)")
 
     def _load_entertainment_tools(self):
         """加载娱乐工具"""

@@ -49,9 +49,21 @@ class CreateScheduleTaskTool(BaseTool):
                     },
                     "repeat": {
                         "type": "string",
-                        "description": "重复频率：once(一次性), daily(每天), weekly(每周)。默认为一次性",
-                        "enum": ["once", "daily", "weekly"],
+                        "description": "重复频率：once(一次性), daily(每天), weekly(每周), monthly(每月)。默认为一次性。daily/weekly/monthly 任务会在执行后自动重新调度",
+                        "enum": ["once", "daily", "weekly", "monthly"],
                         "default": "once",
+                    },
+                    "max_executions": {
+                        "type": "integer",
+                        "description": "重复任务的最大执行次数。超过此次数后自动停止。不设置则无限重复",
+                        "minimum": 1,
+                    },
+                    "repeat_config": {
+                        "type": "object",
+                        "description": "重复配置，可包含 end_date(结束日期 ISO格式) 等选项。JSON 对象",
+                        "properties": {
+                            "end_date": {"type": "string", "description": "重复任务的结束日期，格式: YYYY-MM-DD"}
+                        },
                     },
                     "priority": {
                         "type": "integer",
@@ -71,6 +83,30 @@ class CreateScheduleTaskTool(BaseTool):
                         "minimum": 1,
                         "maximum": 10,
                         "default": 1,
+                    },
+                    "condition_type": {
+                        "type": "string",
+                        "description": "触发条件类型：time(定时触发,默认), online(用户上线时触发), offline(用户离线时触发)。'上线提醒我'类需求用online",
+                        "enum": ["time", "online", "offline"],
+                        "default": "time",
+                    },
+                    "condition_data": {
+                        "type": "object",
+                        "description": "条件附加数据。online/offline 时可不填（自动用当前用户ID）",
+                    },
+                    "follow_up_task": {
+                        "type": "object",
+                        "description": '任务链：此任务完成后自动创建的后续任务。格式: {"task_type":"reminder","message":"...","schedule_time":"30分钟后","repeat":"once"}。用于多步骤提醒场景',
+                        "properties": {
+                            "task_type": {"type": "string", "description": "任务类型：message/reminder/action"},
+                            "message": {"type": "string", "description": "后续任务的消息"},
+                            "schedule_time": {
+                                "type": "string",
+                                "description": "相对于当前任务完成后的延迟，如'30分钟后'",
+                            },
+                            "repeat": {"type": "string", "description": "重复频率"},
+                            "priority": {"type": "integer", "description": "优先级"},
+                        },
                     },
                 },
                 "required": ["task_type"],
@@ -115,49 +151,78 @@ class CreateScheduleTaskTool(BaseTool):
             return "❌ 动作任务需要指定action_type（qq_like或send_poke）"
 
         try:
-            # 生成任务ID
-            task_id = str(uuid.uuid4())[:8]
+            # 生成任务ID（完整 UUID，不再截断以避免碰撞）
+            task_id = str(uuid.uuid4())
 
             # 解析时间
             scheduled_at = None
             if schedule_time:
                 try:
+                    from webnet.ToolNet.tools.scheduler.time_parser import (
+                        parse_smart_time,
+                    )
+
+                    scheduled_at = parse_smart_time(schedule_time)
+                    if scheduled_at:
+                        logger.info(f"智能时间解析: '{schedule_time}' -> {scheduled_at.isoformat()}")
+                except ImportError:
+                    scheduled_at = None
+                except Exception as e:
+                    logger.warning(f"智能时间解析失败: '{schedule_time}' -> {e}")
+                    scheduled_at = None
+
+                if not scheduled_at:
                     # 检测相对时间（如"1分钟后"、"5分钟后"）
                     if "分钟后" in schedule_time or "minute" in schedule_time.lower():
                         match = re.search(r"(\d+)\s*分钟", schedule_time)
                         if match:
                             minutes = int(match.group(1))
                             scheduled_at = datetime.now() + timedelta(minutes=minutes)
-                            logger.info(
-                                f"检测到相对时间: {minutes}分钟后，执行时间: {scheduled_at}"
-                            )
+                            logger.info(f"检测到相对时间: {minutes}分钟后，执行时间: {scheduled_at}")
                     elif "小时后" in schedule_time or "hour" in schedule_time.lower():
                         match = re.search(r"(\d+)\s*小时", schedule_time)
                         if match:
                             hours = int(match.group(1))
                             scheduled_at = datetime.now() + timedelta(hours=hours)
-                            logger.info(
-                                f"检测到相对时间: {hours}小时后，执行时间: {scheduled_at}"
-                            )
+                            logger.info(f"检测到相对时间: {hours}小时后，执行时间: {scheduled_at}")
                     # 绝对时间
                     elif ":" in schedule_time:
-                        if len(schedule_time) == 5:
-                            # 只有时间，使用今天的日期
-                            today = datetime.now().date()
-                            scheduled_at = datetime.strptime(
-                                f"{today} {schedule_time}", "%Y-%m-%d %H:%M"
-                            )
-                        else:
-                            # 完整日期时间
-                            scheduled_at = datetime.strptime(
-                                schedule_time, "%Y-%m-%d %H:%M"
-                            )
-                except ValueError as e:
-                    return f"❌ 时间格式错误: {e}。请使用 HH:MM、YYYY-MM-DD HH:MM 或相对时间（如'1分钟后'）"
+                        try:
+                            if len(schedule_time) == 5:
+                                today = datetime.now().date()
+                                scheduled_at = datetime.strptime(f"{today} {schedule_time}", "%Y-%m-%d %H:%M")
+                            else:
+                                scheduled_at = datetime.strptime(schedule_time, "%Y-%m-%d %H:%M")
+                        except ValueError as e:
+                            return f"❌ 时间格式错误: {e}。请使用 HH:MM、YYYY-MM-DD HH:MM 或相对时间（如'1分钟后'）"
 
             # 如果没有指定时间，默认立即执行（5分钟后）
             if not scheduled_at:
                 scheduled_at = datetime.now() + timedelta(minutes=5)
+
+            # ── 任务去重检查 ──
+            scheduler = getattr(context, "scheduler", None)
+            if scheduler and hasattr(scheduler, "task_store") and scheduler.task_store:
+                pending = scheduler.task_store.list_tasks(status="pending")
+                for pt in pending:
+                    if (
+                        pt.get("task_type") == task_type
+                        and pt.get("target_id") == str(target_id)
+                        and pt.get("target_type") == target_type
+                        and pt.get("message") == message
+                    ):
+                        existing_time = None
+                        try:
+                            existing_time = datetime.fromisoformat(pt.get("execute_at", ""))
+                        except (ValueError, TypeError):
+                            pass
+                        if existing_time and abs((existing_time - scheduled_at).total_seconds()) < 300:
+                            return (
+                                f"⚠️ 已存在相同的待执行任务\n"
+                                f"任务ID: {pt['task_id']}\n"
+                                f"执行时间: {pt.get('execute_at', 'unknown')}\n"
+                                f"提示: 无需重复创建"
+                            )
 
             # 构建任务数据
             task_data = {
@@ -168,10 +233,16 @@ class CreateScheduleTaskTool(BaseTool):
                 "message": message,
                 "scheduled_at": scheduled_at.isoformat() if scheduled_at else None,
                 "repeat": repeat,
+                "repeat_config": args.get("repeat_config"),
+                "max_executions": args.get("max_executions"),
+                "execution_count": 0,
                 "priority": priority,
-                "created_by": f"user_{context.user_id}"
-                if context.user_id
-                else "unknown",
+                "platform": getattr(context, "platform", None),
+                "created_by": f"user_{context.user_id}" if context.user_id else "unknown",
+                # ── Phase 4: 条件触发 + 任务链 ──
+                "condition_type": args.get("condition_type", "time"),
+                "condition_data": args.get("condition_data"),
+                "follow_up_task": args.get("follow_up_task"),
             }
 
             # 如果是action类型，添加action相关参数
@@ -181,9 +252,7 @@ class CreateScheduleTaskTool(BaseTool):
                     task_data["times"] = times
 
             # 使用调度器
-            print(
-                f"[DEBUG] context: {type(context)}, memory_engine: {context.memory_engine}"
-            )
+            print(f"[DEBUG] context: {type(context)}, memory_engine: {context.memory_engine}")
             print(f"[DEBUG] context.__dict__: {context.__dict__}")
 
             if context.memory_engine:
@@ -207,9 +276,7 @@ class CreateScheduleTaskTool(BaseTool):
 
                         scheduler = get_global_scheduler()
                         if scheduler and scheduler._running:
-                            logger.info(
-                                f"从全局获取scheduler成功, running={scheduler._running}"
-                            )
+                            logger.info(f"从全局获取scheduler成功, running={scheduler._running}")
                         else:
                             scheduler = None
                     except Exception as e:
@@ -226,9 +293,7 @@ class CreateScheduleTaskTool(BaseTool):
                         execute_at=scheduled_at,
                     )
                     scheduler.schedule(task)
-                    logger.info(
-                        f"定时任务已添加到调度队列: {task_id}, 执行时间: {scheduled_at}"
-                    )
+                    logger.info(f"定时任务已添加到调度队列: {task_id}, 执行时间: {scheduled_at}")
                 else:
                     logger.warning("调度器不可用，任务将只存储在记忆中")
 

@@ -98,6 +98,7 @@ from core.constants import Encoding
 from core.system_detector import get_system_detector
 from hub import Decision, DecisionHub, Emotion, MemoryEmotion, MemoryEngine, Scheduler
 from hub.platform_adapters import get_adapter
+from hub.task_store import TaskStore
 from mlink import Message, MLinkCore
 from utils.port_utils import check_and_get_port
 from webnet import CrossNetEngine, NetManager
@@ -139,7 +140,8 @@ class Miya:
         self.memory_engine = MemoryEngine()
         self.emotion = Emotion()
         self.decision = Decision(self.emotion, self.personality, self.ethics)
-        self.scheduler = Scheduler()
+        self.task_store = TaskStore()
+        self.scheduler = Scheduler(task_store=self.task_store)
 
         # 初始化M-Link
         self.mlink = MLinkCore()
