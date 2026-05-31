@@ -267,7 +267,6 @@ class DecisionHub:
             tool_subnet=self.tool_subnet,
             memory_engine=self.memory_engine,
             model_pool=self.model_pool,
-            model_scheduler=self.model_scheduler,
             identity=self.identity,
         )
 
