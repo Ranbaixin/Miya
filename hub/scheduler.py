@@ -383,10 +383,7 @@ class Scheduler:
             frepeat = follow_up.get("repeat", "once")
 
             schedule_time = follow_up.get("schedule_time", "")
-            if schedule_time:
-                scheduled_at = parse_smart_time(schedule_time)
-            else:
-                scheduled_at = datetime.now() + timedelta(minutes=30)
+            scheduled_at = parse_smart_time(schedule_time) if schedule_time else datetime.now() + timedelta(minutes=30)
 
             if not scheduled_at:
                 scheduled_at = datetime.now() + timedelta(minutes=30)

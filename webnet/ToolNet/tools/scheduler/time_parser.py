@@ -92,10 +92,7 @@ def _parse_time_str(time_str: str) -> Tuple[int, int]:
     point_match = re.search(r"(\d+|[一二三四五六七八九十]+)\s*点", time_str)
     if point_match:
         num_str = point_match.group(1)
-        if num_str.isdigit():
-            hour = int(num_str)
-        else:
-            hour = _parse_chinese_number(num_str) or 0
+        hour = int(num_str) if num_str.isdigit() else _parse_chinese_number(num_str) or 0
 
     # 处理 "X:" 格式
     colon_match = re.search(r"(\d{1,2}):(\d{2})", time_str)
@@ -207,10 +204,7 @@ def parse_smart_time(
     match = re.search(r"下个?月\s*(\d+|[一二三四五六七八九十]+)\s*[号日]", expr)
     if match:
         num_str = match.group(1)
-        if num_str.isdigit():
-            day = int(num_str)
-        else:
-            day = _parse_chinese_number(num_str) or 1
+        day = int(num_str) if num_str.isdigit() else _parse_chinese_number(num_str) or 1
         month = now.month + 1
         year = now.year
         if month > 12:
