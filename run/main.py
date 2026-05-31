@@ -203,6 +203,9 @@ class Miya:
             platform_registry=get_platform_registry(),
         )
 
+        # 将 MemoryManager 注入 Scheduler，使定时任务产出进入记忆系统
+        self.scheduler.memory_manager = self.decision_hub.memory_manager
+
         # 初始化平台适配器
         self.terminal_adapter = get_adapter("terminal")
 

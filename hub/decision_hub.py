@@ -1514,6 +1514,7 @@ class DecisionHub:
 
             # 等待 conversation_context (cognitive 和 soul 都需要它)
             conversation_context = await conv_task
+            logger.info(f"[决策层] 对话上下文: {len(conversation_context)} 条, session={session_id}")
 
             # ============================================================
             # Phase 2: 先获取认知记忆，再注入灵魂发生器（保证内心独白连贯）

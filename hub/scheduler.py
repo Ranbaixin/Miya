@@ -49,7 +49,9 @@ class Task:
 class Scheduler:
     """任务调度器"""
 
-    def __init__(self, tool_registry=None, onebot_client=None, task_store: Optional[TaskStore] = None):
+    def __init__(
+        self, tool_registry=None, onebot_client=None, task_store: Optional[TaskStore] = None, memory_manager=None
+    ):
         self.task_queue = []
         self.running_tasks = {}
         self.completed_tasks = {}
@@ -61,7 +63,8 @@ class Scheduler:
         self.onebot_client = onebot_client
         self.terminal_callback: Optional[Callable[[str], Any]] = None
         self.task_store = task_store
-        self._online_users: set = set()  # 在线用户 ID 集合
+        self.memory_manager = memory_manager
+        self._online_users: set = set()
         self._last_condition_check = datetime.now()
 
     async def start(self):
@@ -218,6 +221,7 @@ class Scheduler:
 
                 logger.info(f"执行提醒任务: 目标={target_type}_{target_id}, 消息={message}")
 
+                send_success = False
                 # 终端模式或没有 onebot_client 时，记录日志提醒
                 if not self.onebot_client:
                     logger.info(f"【定时提醒】{message}")
@@ -236,8 +240,12 @@ class Scheduler:
                         else:
                             await self.onebot_client.send_private_message(target_id, message)
                             logger.info(f"提醒消息已发送到用户 {target_id}")
+                        send_success = True
                     except Exception as e:
                         logger.error(f"发送提醒消息失败: {e}", exc_info=True)
+
+                if send_success:
+                    await self._store_scheduled_response(task, message)
 
             elif task.task_type == "scheduled_message":
                 # 定时发送消息任务
@@ -249,6 +257,7 @@ class Scheduler:
                 logger.info(f"发送定时消息: 目标={target_type}_{target_id}, 消息={message}")
 
                 # 直接使用 onebot_client 发送消息
+                send_success = False
                 if self.onebot_client:
                     try:
                         if target_type == "group":
@@ -257,8 +266,12 @@ class Scheduler:
                         else:
                             await self.onebot_client.send_private_message(target_id, message)
                             logger.info(f"定时消息已发送到用户 {target_id}")
+                        send_success = True
                     except Exception as e:
                         logger.error(f"发送定时消息失败: {e}", exc_info=True)
+
+                if send_success:
+                    await self._store_scheduled_response(task, message)
 
             elif task.task_type == "scheduled_action":
                 # 定时执行动作（如点赞等）
@@ -475,6 +488,54 @@ class Scheduler:
                 logger.info(f"[Restore] 从数据库恢复了 {restored} 个待执行任务")
         except Exception as e:
             logger.error(f"[Restore] 恢复任务失败: {e}", exc_info=True)
+
+    async def _store_scheduled_response(self, task: Task, message: str) -> None:
+        """将定时任务产出存入记忆系统（对话历史 + 统一记忆）"""
+        if not self.memory_manager:
+            logger.warning("[Scheduler] memory_manager 未注入，定时任务产出无法存入记忆")
+            return
+
+        try:
+            data = task.data
+            target_id = str(data.get("target_id", ""))
+            target_type = data.get("target_type", "private")
+            group_id = target_id if target_type == "group" else ""
+            platform = data.get("platform", "")
+            if not platform:
+                platform = "aiocqhttp"
+            created_by = data.get("created_by", "")
+            # Strip "user_" prefix if present
+            raw_owner = created_by if created_by else target_id
+            owner_id = raw_owner.replace("user_", "") if str(raw_owner).startswith("user_") else str(raw_owner)
+            session_id = f"{platform}_{owner_id}"
+
+            perception = {
+                "content": message,
+                "user_id": owner_id,
+                "group_id": group_id,
+                "platform": platform,
+                "sender_name": "弥娅",
+                "message_type": target_type,
+                "response": message,
+            }
+
+            await self.memory_manager.store_unified_memory(perception, role="assistant")
+
+            # 验证：立即回读对话历史确认写入成功
+            verify_count = 0
+            try:
+                if self.memory_manager.memory_net and self.memory_manager.memory_net.conversation_history:
+                    history = await self.memory_manager.memory_net.conversation_history.get_history(session_id, limit=3)
+                    verify_count = len(history) if history else 0
+            except Exception:
+                pass
+
+            logger.info(
+                f"[Scheduler] 定时任务产出已存入记忆: {message[:30]}... "
+                f"(user={owner_id}, platform={platform}, session={session_id}, 会话消息数={verify_count})"
+            )
+        except Exception as e:
+            logger.error(f"[Scheduler] 存储定时任务产出到记忆失败: {e}", exc_info=True)
 
     def get_next_task(self) -> Optional[Task]:
         """获取下一个待执行任务"""
