@@ -223,6 +223,7 @@ def get_default_config() -> dict:
             "ai": 180,
         },
         "user_message_cooldown": 5,
+        "reply_cooldown": 120,
     }
 
 
@@ -362,6 +363,9 @@ class ProactiveChatSystem:
 
         # 用户发消息后的冷却时间
         self._user_message_cooldown = self._config.get("user_message_cooldown", 5)
+
+        # 正常回复后的冷却时间（防止主动聊天紧跟插话）
+        self._reply_cooldown = self._config.get("reply_cooldown", 120)
 
         # 后台轮询
         self._bg_task: Optional[asyncio.Task] = None
@@ -1045,7 +1049,7 @@ class ProactiveChatSystem:
         last_miya_reply = self._last_miya_reply_time.get(target_id)
         if last_miya_reply:
             miya_elapsed = (datetime.now() - last_miya_reply).total_seconds()
-            if miya_elapsed < 120:
+            if miya_elapsed < self._reply_cooldown:
                 return None
 
         if self._is_in_quiet_hours():

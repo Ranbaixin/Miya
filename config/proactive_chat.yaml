@@ -420,6 +420,10 @@ proactive_chat:
   # 避免在用户刚说话后立即主动发言
   user_message_cooldown: 5
 
+  # 弥娅正常回复后的冷却（秒）
+  # 避免主动聊天紧跟正常回复再插话
+  reply_cooldown: 120
+
   # === 场景感知主动策略 ===
   scene_awareness:
     enabled: true
