@@ -330,17 +330,19 @@ class DecisionHub:
             async def _rich_context_provider(target_id: int) -> str:
                 """为主动聊天构建完整的记忆上下文"""
                 try:
+                    from datetime import datetime, timezone, timedelta
                     from memory.cognitive_engine import get_cognitive_engine
 
                     parts = []
                     target_str = str(target_id)
                     session_id = f"aiocqhttp_{target_str}"
+                    now = datetime.now()
 
-                    # 1. 认知记忆检索（智能语义搜索）
+                    # 1. 认知记忆检索（智能语义搜索）— 使用有效查询
                     try:
                         ce = get_cognitive_engine()
                         cog_text = await ce.build_context(
-                            user_input="",
+                            user_input="最近的对话",
                             conversation_history=[],
                             limit=3,
                             user_id=target_str,
@@ -350,20 +352,50 @@ class DecisionHub:
                     except Exception:
                         pass
 
-                    # 2. 对话历史
+                    # 2. 对话历史 — 只保留最近 4 小时的消息，避免旧消息污染
                     try:
                         conv = await self.conversation_context_manager.get_conversation_context(
                             session_id, current_input=""
                         )
                         if conv:
-                            lines = []
-                            for msg in conv[-8:]:
-                                role = msg.get("role", "user")
-                                content = str(msg.get("content", ""))[:80]
-                                name = "弥娅" if role == "assistant" else "用户"
-                                lines.append(f"{name}: {content}")
-                            if lines:
-                                parts.append("【近期对话】\n" + "\n".join(lines))
+                            cutoff = now - timedelta(hours=4)
+                            recent = []
+                            for msg in conv:
+                                ts = msg.get("timestamp", "")
+                                try:
+                                    if ts:
+                                        msg_time = datetime.fromisoformat(str(ts))
+                                        if msg_time < cutoff:
+                                            continue
+                                except (ValueError, TypeError):
+                                    pass
+                                recent.append(msg)
+
+                            if recent:
+                                lines = []
+                                for msg in recent[-8:]:
+                                    role = msg.get("role", "user")
+                                    content = str(msg.get("content", ""))[:80]
+                                    name = "弥娅" if role == "assistant" else "用户"
+                                    ts = msg.get("timestamp", "")
+                                    time_label = ""
+                                    try:
+                                        if ts:
+                                            msg_time = datetime.fromisoformat(str(ts))
+                                            elapsed = (now - msg_time).total_seconds()
+                                            if elapsed < 3600:
+                                                time_label = f"[{int(elapsed // 60)}分钟前]"
+                                            elif elapsed < 86400:
+                                                time_label = f"[{msg_time.strftime('%H:%M')}]"
+                                            else:
+                                                time_label = f"[{msg_time.strftime('%m-%d %H:%M')}]"
+                                    except (ValueError, TypeError):
+                                        pass
+                                    lines.append(f"{time_label} {name}: {content}")
+                                if lines:
+                                    parts.append("【近期对话】\n" + "\n".join(lines))
+                            else:
+                                parts.append("【近期对话】\n（最近4小时内无对话记录）")
                     except Exception:
                         pass
 

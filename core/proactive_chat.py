@@ -1422,7 +1422,38 @@ class ProactiveChatSystem:
                 last_reply_short = context.last_miya_reply[:100]
                 last_reply_hint = f"\n弥娅刚刚回复了用户（内容摘要: {last_reply_short}），不需要再回复相同话题。\n"
 
+            now = datetime.now()
+            current_time_str = now.strftime("%Y-%m-%d %H:%M:%S")
+            hour = now.hour
+            if 5 <= hour < 12:
+                period_str = "上午"
+            elif 12 <= hour < 14:
+                period_str = "中午"
+            elif 14 <= hour < 18:
+                period_str = "下午"
+            elif 18 <= hour < 22:
+                period_str = "晚上"
+            else:
+                period_str = "深夜"
+
+            last_active_readable = "未知"
+            if last_active and last_active != "未知":
+                try:
+                    last_dt = datetime.fromisoformat(last_active)
+                    elapsed = (now - last_dt).total_seconds()
+                    if elapsed < 60:
+                        last_active_readable = f"{int(elapsed)}秒前"
+                    elif elapsed < 3600:
+                        last_active_readable = f"{int(elapsed // 60)}分钟前"
+                    elif elapsed < 86400:
+                        last_active_readable = f"{int(elapsed // 3600)}小时前"
+                    else:
+                        last_active_readable = f"{int(elapsed // 86400)}天前"
+                except (ValueError, TypeError):
+                    last_active_readable = str(last_active)[:19]
+
             prompt = f"""判断是否应该主动和用户聊天。
+【当前时间: {current_time_str} ({period_str})】
 【形态: {persona}】
 
 智能记忆检索：
@@ -1438,7 +1469,7 @@ class ProactiveChatSystem:
 - 类型: {chat_type}
 - 群名称: {group_name}
 - 成员数: {member_count}
-- 用户最后活跃: {last_active}
+- 用户最后活跃: {last_active_readable}
 - 最近话题: {recent_topics}
 {last_reply_hint}
 {group_warning}如果需要回复，请以符合上述人设质感生成一句简短温暖的话（不超过20字）。
