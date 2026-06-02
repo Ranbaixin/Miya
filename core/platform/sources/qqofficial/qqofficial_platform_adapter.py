@@ -49,13 +49,18 @@ class ManagedBotWebSocket(BotWebSocket):
             return
         await super().on_closed(close_status_code, close_msg)
 
+    async def _send_heart(self) -> None:
+        try:
+            await super()._send_heart()
+        except Exception:
+            pass
+
     async def close(self) -> None:
         self._can_reconnect = False
         if self._conn is not None and not self._conn.closed:
             await self._conn.close()
 
 
-# QQ 机器人官方框架
 class botClient(Client):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -70,9 +75,7 @@ class botClient(Client):
         return self._shutting_down or self.is_closed()
 
     # 收到群消息
-    async def on_group_at_message_create(
-        self, message: botpy.message.GroupMessage
-    ) -> None:
+    async def on_group_at_message_create(self, message: botpy.message.GroupMessage) -> None:
         abm = await QQOfficialPlatformAdapter._parse_from_qqofficial(
             message,
             MessageType.GROUP_MESSAGE,
@@ -94,9 +97,7 @@ class botClient(Client):
         self._commit(abm)
 
     # 收到私聊消息
-    async def on_direct_message_create(
-        self, message: botpy.message.DirectMessage
-    ) -> None:
+    async def on_direct_message_create(self, message: botpy.message.DirectMessage) -> None:
         abm = await QQOfficialPlatformAdapter._parse_from_qqofficial(
             message,
             MessageType.FRIEND_MESSAGE,
@@ -429,9 +430,7 @@ class QQOfficialPlatformAdapter(Platform):
             else:
                 filename = cast(
                     str,
-                    getattr(attachment, "filename", None)
-                    or getattr(attachment, "name", None)
-                    or "attachment",
+                    getattr(attachment, "filename", None) or getattr(attachment, "name", None) or "attachment",
                 )
                 ext = Path(filename).suffix.lower()
                 image_exts = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"}
@@ -537,15 +536,11 @@ class QQOfficialPlatformAdapter(Platform):
             else:
                 abm.sender = MessageMember(message.author.user_openid, "")
             # Parse face messages to readable text
-            abm.message_str = QQOfficialPlatformAdapter._parse_face_message(
-                message.content.strip()
-            )
+            abm.message_str = QQOfficialPlatformAdapter._parse_face_message(message.content.strip())
             abm.self_id = "unknown_selfid"
             msg.append(At(qq="qq_official"))
             msg.append(Plain(abm.message_str))
-            await QQOfficialPlatformAdapter._append_attachments(
-                msg, message.attachments
-            )
+            await QQOfficialPlatformAdapter._append_attachments(msg, message.attachments)
             abm.message = msg
 
         elif isinstance(message, (botpy.message.Message, botpy.message.DirectMessage)):
@@ -561,9 +556,7 @@ class QQOfficialPlatformAdapter(Platform):
                 ).strip()
             )
 
-            await QQOfficialPlatformAdapter._append_attachments(
-                msg, message.attachments
-            )
+            await QQOfficialPlatformAdapter._append_attachments(msg, message.attachments)
             abm.message = msg
             abm.message_str = plain_content
             abm.sender = MessageMember(

@@ -1452,7 +1452,8 @@ class DecisionHub:
                                     web_search_mod = importlib.import_module("webnet.ToolNet.tools.network.web_search")
                                     if hasattr(web_search_mod, "EnhancedWebSearch"):
                                         searcher = web_search_mod.EnhancedWebSearch()
-                                        search_results = await searcher.search(content)
+                                        loop = asyncio.get_event_loop()
+                                        search_results = await loop.run_in_executor(None, searcher.search, content)
                                         if search_results:
                                             sc = f"\n\n【联网搜索结果】\n{str(search_results)[:800]}"
                                 except Exception:

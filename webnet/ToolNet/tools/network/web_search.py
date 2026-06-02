@@ -84,15 +84,13 @@ class EnhancedWebSearch:
                 "json_body": True,
             },
         }
-        self._free_engines = ["baidu", "bing_cn", "duckduckgo_html", "duckduckgo_api"]
+        self._free_engines = ["baidu", "bing_cn", "duckduckgo_html"]
 
         # 如果配置了 TAVILY_API_KEY，优先使用 Tavily
         if self._has_tavily_key():
             self._free_engines.insert(0, "tavily")
 
-    def search(
-        self, query: str, engines: List[str] = None, num_results: int = 10
-    ) -> List[Dict[str, Any]]:
+    def search(self, query: str, engines: List[str] = None, num_results: int = 10) -> List[Dict[str, Any]]:
         if engines is None:
             engines = self._free_engines
         all_results = []
@@ -117,9 +115,7 @@ class EnhancedWebSearch:
             from dotenv import load_dotenv
 
             for rel_path in [
-                os.path.join(
-                    os.path.dirname(__file__), "..", "..", "..", "..", "config", ".env"
-                ),
+                os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "config", ".env"),
                 os.path.join(os.getcwd(), "config", ".env"),
                 os.path.join(os.getcwd(), ".env"),
             ]:
@@ -129,9 +125,7 @@ class EnhancedWebSearch:
         except Exception:
             return False
 
-    def _search_engine(
-        self, query: str, engine: str, num_results: int
-    ) -> List[Dict[str, Any]]:
+    def _search_engine(self, query: str, engine: str, num_results: int) -> List[Dict[str, Any]]:
         if engine not in self.search_engines:
             logger.error(f"不支持的搜索引擎: {engine}")
             return []
@@ -161,9 +155,7 @@ class EnhancedWebSearch:
             if not api_key:
                 from dotenv import load_dotenv
 
-                config_env = os.path.join(
-                    os.path.dirname(__file__), "..", "..", "..", "..", "config", ".env"
-                )
+                config_env = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "config", ".env")
                 if os.path.exists(config_env):
                     load_dotenv(config_env)
                     api_key = os.environ.get(config["api_key_env"], "")
@@ -176,17 +168,11 @@ class EnhancedWebSearch:
             method = config.get("method", "GET")
             if method == "POST":
                 if json_body:
-                    response = requests.post(
-                        config["url"], json=params, timeout=15, headers=headers
-                    )
+                    response = requests.post(config["url"], json=params, timeout=15, headers=headers)
                 else:
-                    response = requests.post(
-                        config["url"], data=params, timeout=10, headers=headers
-                    )
+                    response = requests.post(config["url"], data=params, timeout=10, headers=headers)
             else:
-                response = requests.get(
-                    config["url"], params=params, timeout=10, headers=headers
-                )
+                response = requests.get(config["url"], params=params, timeout=10, headers=headers)
             response.raise_for_status()
 
             # 使用配置指定的解析器
@@ -197,9 +183,7 @@ class EnhancedWebSearch:
                     response.text
                     if method == "POST"
                     else response.json()
-                    if response.headers.get("content-type", "").startswith(
-                        "application/json"
-                    )
+                    if response.headers.get("content-type", "").startswith("application/json")
                     else response.text
                 )
             else:
@@ -235,9 +219,7 @@ class EnhancedWebSearch:
                         {
                             "title": title_el.get_text(strip=True),
                             "url": title_el.get("href", ""),
-                            "snippet": snippet_el.get_text(strip=True)
-                            if snippet_el
-                            else "",
+                            "snippet": snippet_el.get_text(strip=True) if snippet_el else "",
                             "source": "duckduckgo_html",
                         }
                     )
@@ -260,9 +242,7 @@ class EnhancedWebSearch:
                             {
                                 "title": item.get("Text", item.get("Result", "")),
                                 "url": item.get("FirstURL", ""),
-                                "snippet": item.get("Text", item.get("Result", ""))[
-                                    :200
-                                ],
+                                "snippet": item.get("Text", item.get("Result", ""))[:200],
                                 "source": "duckduckgo_api",
                             }
                         )
@@ -309,9 +289,7 @@ class EnhancedWebSearch:
             soup = BeautifulSoup(html, "html.parser")
             for item in soup.select(".result, .c-container"):
                 title_el = item.select_one("h3 a") or item.select_one(".t a")
-                snippet_el = item.select_one(".c-abstract") or item.select_one(
-                    ".c-span-last p"
-                )
+                snippet_el = item.select_one(".c-abstract") or item.select_one(".c-span-last p")
                 if title_el:
                     url = str(title_el.get("href", ""))
                     if url and not url.startswith("http"):
@@ -320,9 +298,7 @@ class EnhancedWebSearch:
                         {
                             "title": title_el.get_text(strip=True),
                             "url": url,
-                            "snippet": snippet_el.get_text(strip=True)[:200]
-                            if snippet_el
-                            else "",
+                            "snippet": snippet_el.get_text(strip=True)[:200] if snippet_el else "",
                             "source": "baidu",
                         }
                     )
@@ -343,9 +319,7 @@ class EnhancedWebSearch:
                         {
                             "title": title_el.get_text(strip=True),
                             "url": title_el.get("href", ""),
-                            "snippet": snippet_el.get_text(strip=True)[:200]
-                            if snippet_el
-                            else "",
+                            "snippet": snippet_el.get_text(strip=True)[:200] if snippet_el else "",
                             "source": "bing_cn",
                         }
                     )
@@ -393,9 +367,7 @@ class EnhancedWebSearch:
 
         return results
 
-    def _deduplicate_results(
-        self, results: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    def _deduplicate_results(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """搜索结果去重"""
         seen = set()
         deduplicated = []
@@ -414,9 +386,7 @@ class EnhancedWebSearch:
 
         return deduplicated
 
-    def _rank_results(
-        self, results: List[Dict[str, Any]], query: str
-    ) -> List[Dict[str, Any]]:
+    def _rank_results(self, results: List[Dict[str, Any]], query: str) -> List[Dict[str, Any]]:
         """搜索结果排序和评分"""
         query_keywords = set(query.lower().split())
 
@@ -445,15 +415,11 @@ class EnhancedWebSearch:
             result["relevance_score"] = score
 
         # 按分数排序
-        ranked = sorted(
-            results, key=lambda x: x.get("relevance_score", 0), reverse=True
-        )
+        ranked = sorted(results, key=lambda x: x.get("relevance_score", 0), reverse=True)
 
         return ranked
 
-    def generate_summary(
-        self, results: List[Dict[str, Any]], max_length: int = 500
-    ) -> str:
+    def generate_summary(self, results: List[Dict[str, Any]], max_length: int = 500) -> str:
         """
         生成搜索结果摘要
 
@@ -491,9 +457,7 @@ class EnhancedWebSearch:
 
         return summary_text
 
-    def search_with_ai_context(
-        self, query: str, context: str, engines: List[str] = None
-    ) -> Dict[str, Any]:
+    def search_with_ai_context(self, query: str, context: str, engines: List[str] = None) -> Dict[str, Any]:
         """
         带AI上下文的搜索
 
@@ -534,9 +498,7 @@ class EnhancedWebSearch:
         }
 
 
-def search_command(
-    query: str, engines: List[str] = None, options: Dict[str, Any] = None
-) -> Dict[str, Any]:
+def search_command(query: str, engines: List[str] = None, options: Dict[str, Any] = None) -> Dict[str, Any]:
     """
     搜索命令统一接口
 
@@ -562,9 +524,7 @@ def search_command(
 
     # 执行搜索
     if "with_context" in options:
-        results = searcher.search_with_ai_context(
-            query, options["with_context"], engines
-        )
+        results = searcher.search_with_ai_context(query, options["with_context"], engines)
     else:
         results_list = searcher.search(query, engines, options.get("num_results", 10))
 
@@ -576,9 +536,7 @@ def search_command(
 
     # 生成摘要
     if options.get("generate_summary", False):
-        results["摘要"] = searcher.generate_summary(
-            results_list, options.get("max_summary_length", 500)
-        )
+        results["摘要"] = searcher.generate_summary(results_list, options.get("max_summary_length", 500))
 
     # 添加元数据
     results["查询"] = query
