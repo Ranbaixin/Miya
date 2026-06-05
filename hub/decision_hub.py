@@ -611,6 +611,22 @@ class DecisionHub:
 
                 if not sent:
                     logger.warning(f"[决策层] [主动聊天] 无法发送到平台 {platform}: {result.message}")
+                else:
+                    # 将主动聊天消息记入记忆/对话上下文
+                    try:
+                        user_id_to_send = result.context.target_id if result.context else target_id
+                        store_perception = {
+                            "platform": platform,
+                            "user_id": str(user_id_to_send),
+                            "group_id": str(result.context.target_id)
+                            if result.context and chat_type == "group"
+                            else "0",
+                            "message_type": chat_type,
+                            "response": result.message,
+                        }
+                        await self.memory_manager.store_unified_memory(store_perception, role="assistant")
+                    except Exception as e:
+                        logger.debug(f"[决策层] [主动聊天] 记忆存储失败: {e}")
 
                 return result
 
