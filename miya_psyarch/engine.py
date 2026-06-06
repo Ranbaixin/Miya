@@ -47,6 +47,7 @@ _TICK_HISTORY_MAX = _ENGINE_CFG.get("tick_history_max", 1000)
 _TICK_HISTORY_KEEP = _ENGINE_CFG.get("tick_history_keep", 500)
 _FOCUS_SLICE = _ENGINE_CFG.get("focus_slice", 5)
 _STATE_TOP_SLICE = _ENGINE_CFG.get("state_top_slice", 8)
+_PROACTIVE = _ENGINE_CFG.get("proactive", {})
 
 _SP_CFG = (yaml.safe_load(_CFG_PATH.read_text(encoding="utf-8")) or {}).get("state_pool", {})
 _MIYA_FAMILY_PREFIX = _SP_CFG.get("miya_family_prefix", "miya_")
