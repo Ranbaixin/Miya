@@ -44,7 +44,7 @@ class APStage(Enum):
     TICK_END = auto()  # 周期收尾 & 学习事件
 
     @classmethod
-    def pipeline_order(cls) -> list["APStage"]:
+    def pipeline_order(cls) -> list[APStage]:
         return [
             cls.INGEST,
             cls.FAST_RECALL,

@@ -66,7 +66,7 @@ def main():
     engine.idle_tick()
     trace = engine.soul_state().raw_trace
     miya_in_state = any(
-        "miya_emotion" == str(i.get("family", ""))
+        str(i.get("family", "")) == "miya_emotion"
         for i in (trace.get("state_pool", {}).get("snapshot", {}).get("items", []) or [])
     )
     test("弥娅情感项已进入状态池", miya_in_state)
