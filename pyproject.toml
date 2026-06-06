@@ -193,6 +193,17 @@ target-version = "py311"
 exclude = [
     "webnet/EntertainmentNet/game_mode/*.py",
     "webnet/EntertainmentNet/game_mode/",
+    # APV2.1 上游引擎 — 不修改以保持白箱认知闭环完整性
+    "miya_psyarch/core/",
+    "miya_psyarch/memory/",
+    "miya_psyarch/channels/",
+    "miya_psyarch/sensors/",
+    "miya_psyarch/config/",
+    "miya_psyarch/education/",
+    "miya_psyarch/observatory/",
+    "miya_psyarch/learning_events.py",
+    "miya_psyarch/action_learning_v2.py",
+    "miya_psyarch/validate_innate_rule_closure.py",
 ]
 
 [tool.ruff.lint]

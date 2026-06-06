@@ -458,7 +458,7 @@ class MiyaEngine:
 
     def _render_response(self, user_message: str, form: str | None = None) -> str:
         """同步渲染弥娅回复（内部使用）。"""
-        import io, sys
+        import sys
 
         if self._cortex is None or not self._cortex_enabled:
             fallback = self._cortex.select_fallback(self._current_soul) if self._cortex else ""

@@ -84,7 +84,6 @@ def _build_state_items(
 
     # Item 1: 对话情境 — 用户说了什么 → 弥娅怎么回
     user_preview = user_message[:30]
-    reply_preview = miya_response[:40]
     items.append(
         {
             "sa_label": f"edu::reply_pattern::{user_preview}",

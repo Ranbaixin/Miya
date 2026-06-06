@@ -329,7 +329,6 @@ def _get_state(engine) -> dict:
 
 def _get_reconstruction(engine, obs) -> dict:
     """用 APV2.1 原版 reconstruct_tick_observatory 做完整白箱重建"""
-    runtime = engine._runtime
     trace = obs._latest_trace or {}
 
     if not trace or not isinstance(trace, dict):
