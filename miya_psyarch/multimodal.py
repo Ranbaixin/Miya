@@ -215,10 +215,7 @@ def perceive_audio(audio_bytes: bytes) -> AudioPerception:
     try:
         fmt = f"<{len(frames) // 2}h"
         raw = list(struct.unpack(fmt, frames[: len(frames) // 2 * 2]))
-        if n_channels == 1:
-            samples = raw
-        else:
-            samples = [raw[i] for i in range(0, len(raw), n_channels)]
+        samples = raw if n_channels == 1 else [raw[i] for i in range(0, len(raw), n_channels)]
     except Exception as e:
         logger.warning(f"Audio sample decode failed: {e}")
         return result

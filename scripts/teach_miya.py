@@ -11,7 +11,10 @@
 
 from __future__ import annotations
 
-import sys, io, os, time
+import sys
+import io
+import os
+import time
 from pathlib import Path
 
 _project_root = Path(os.path.abspath(__file__)).resolve().parent.parent

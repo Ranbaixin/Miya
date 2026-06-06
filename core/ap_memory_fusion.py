@@ -41,7 +41,7 @@ class APMemoryFusion:
         self._write_interval = 10.0  # 每 10 秒批量写一次
         self._auto_write_running = False
 
-    async def initialize(self) -> "APMemoryFusion":
+    async def initialize(self) -> APMemoryFusion:
         """初始化记忆融合"""
         try:
             from memory import get_memory_core

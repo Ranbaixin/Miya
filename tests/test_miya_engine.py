@@ -107,8 +107,6 @@ def main() -> None:
     run_phase("测试 3: 弥娅专属感受")
 
     # 验证至少有 contentment (安心) 或 curious (好奇)
-    mf = state.miya_feelings
-    has_miya_feeling = any(k in mf and v > 0 for k, v in [("contentment", 0), ("curious", 0), ("love_warmth", 0)])
     if not state.miya_feelings:
         print("  ⚠️ 弥娅感受为空 — 可能规则未触发")
     else:

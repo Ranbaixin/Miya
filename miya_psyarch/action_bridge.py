@@ -119,7 +119,7 @@ def register_miya_actions_to_ap(engine) -> int:
     if not hasattr(runtime, "action_planner"):
         return 0
 
-    planner = runtime.action_planner
+    pass  # planner = runtime.action_planner
     registered = 0
 
     for action_id, meta in tools.items():

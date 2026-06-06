@@ -204,6 +204,11 @@ exclude = [
     "miya_psyarch/learning_events.py",
     "miya_psyarch/action_learning_v2.py",
     "miya_psyarch/validate_innate_rule_closure.py",
+    # 旧代码兼容层 — 非本次构建产出的遗留文件
+    "core/ap_memory_fusion.py",
+    "core/memory_backfill.py",
+    "core/miya_ap_core.py",
+    "hub/services/",
 ]
 
 [tool.ruff.lint]

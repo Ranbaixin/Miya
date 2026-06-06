@@ -375,7 +375,8 @@ class MiyaEngine:
         return trace
 
     def _generate_proactive_message(self) -> dict:
-        import io, sys as _sys
+        import io
+        import sys as _sys
 
         self._idle_streak = 0
         prompt = self._build_proactive_prompt()
@@ -409,10 +410,11 @@ class MiyaEngine:
         identity = get_identity_prompt(self._personality_form)
         s = self._current_soul
         boredom = s.feelings.get("boredom", 0)
-        nt = s.emotion_nt
-        mood = "很无聊" if boredom > 0.85 else "有点无聊"
-        oxy = nt.get("OXY", 0)
-
+        mood = (
+            _PROACTIVE.get("boredom_high_label", "很无聊")
+            if boredom > 0.85
+            else _PROACTIVE.get("boredom_mid_label", "有点无聊")
+        )
         return f"""{identity}
 
 弥娅当前状态: {mood}。

@@ -369,7 +369,7 @@ def record_tick(engine) -> None:
     # 同步到观测台
     if hasattr(engine, "_observatory") and engine._observatory:
         eng = engine
-        obs = eng._observatory
+        pass  # obs = eng._observatory
         if hasattr(eng, "_runtime") and eng._runtime:
             # 简单存储 trace 引用
             pass

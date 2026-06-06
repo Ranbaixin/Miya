@@ -246,10 +246,7 @@ class MiyaTrainer:
         self._report.rounds.append(rnd)
 
     def _evaluate_pass(self):
-        for rnd in self._report.rounds:
-            if rnd.avg_bn_score > 10:
-                return True
-        return False
+        return any(rnd.avg_bn_score > 10 for rnd in self._report.rounds)
 
     def _print_summary(self):
         print(f"\n  训练完成 {'✅' if self._report.passed else ''}")
