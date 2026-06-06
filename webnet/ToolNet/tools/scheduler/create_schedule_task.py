@@ -124,7 +124,13 @@ class CreateScheduleTaskTool(BaseTool):
         print(f"args={args}, context={type(context)}", file=sys.stderr)
         logger.info(f"=== CREATE_SCHEDULE TOOL CALLED === args={args}")
         task_type = args.get("task_type")
-        target_type = args.get("target_type", "group")
+        # 从上下文推断 target_type：私聊用 private，群聊用 group
+        context_msg_type = getattr(context, "message_type", None) or "group"
+        if context_msg_type == "private":
+            default_target_type = "private"
+        else:
+            default_target_type = "group"
+        target_type = args.get("target_type", default_target_type)
         target_id = args.get("target_id", context.user_id)  # 默认使用当前用户ID
         message = args.get("message", "")
         schedule_time = args.get("schedule_time", "")

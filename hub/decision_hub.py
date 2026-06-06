@@ -132,7 +132,31 @@ def _build_integrated_status(
             parts.append(f"◆ 我的真实感受（灵魂）\n{simplified}")
 
     parts.append("（以上是谛听和灵魂感知到的完整画面，请自主融合后自然回应）")
+
+    # 【工具使用提醒】确保 LLM 调用 create_schedule_task 而非口头应允
+    if diting_intent in ("command", "request", "reminder", "task"):
+        parts.append(
+            "\n◆ 【工具速记】\n"
+            '　当用户要求提醒/定时（如"X分钟后提醒我"、"X点叫我"、"定时发消息"），\n'
+            "　必须调用 create_schedule_task 工具来实际创建任务。\n"
+            "　口头答应但不调用工具 = 任务未完成 = 失败！"
+        )
+
     return "\n".join(parts)
+
+
+def _is_reminder_request(user_content: str) -> bool:
+    """检测用户消息是否包含提醒/定时请求"""
+    if not user_content:
+        return False
+    import re
+
+    return bool(
+        re.search(
+            r"提醒我|提醒|叫我|喊我|定时|分钟后|小时后|几点|秒后|分钟",
+            user_content,
+        )
+    )
 
 
 class DecisionHub:
@@ -2263,12 +2287,27 @@ class DecisionHub:
 
             # 调用 AI（注入情绪上下文 + 认知记忆）
             user_msg = prompt_info["user"]
+
+            # 【关键修复】检测提醒/定时请求，强制在 system_prompt 末尾注入工具调用提示
+            system_prompt_with_tool_hint = prompt_info["system"]
+            if _is_reminder_request(content):
+                has_create_task = any(
+                    isinstance(t, dict) and t.get("function", {}).get("name") == "create_schedule_task"
+                    for t in (tools_schema or [])
+                )
+                if has_create_task:
+                    system_prompt_with_tool_hint = (
+                        system_prompt_with_tool_hint
+                        + "\n\n【重要】用户要求你设置提醒/定时任务。你必须立即调用 create_schedule_task 工具。"
+                        + " 不调工具 = 失败，不要犹豫，现在就调。"
+                    )
+
             if cognition_context:
                 user_msg = user_msg + cognition_context
             if ai_emotion_context:
                 user_msg = user_msg + ai_emotion_context
             response = await ai_client_to_use.chat_with_system_prompt(
-                system_prompt=prompt_info["system"],
+                system_prompt=system_prompt_with_tool_hint,
                 user_message=user_msg,
                 tools=tools_schema if tools_schema else None,
                 tool_choice=tool_choice,

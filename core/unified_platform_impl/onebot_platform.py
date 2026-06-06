@@ -110,6 +110,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 from hub.scheduler import set_global_scheduler
 
                 miya.scheduler.onebot_client = self
+                miya.scheduler.main_event_loop = asyncio.get_running_loop()
                 set_global_scheduler(miya.scheduler)
                 if not getattr(miya.scheduler, "_started", False):
                     miya.scheduler.start_background()

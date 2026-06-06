@@ -329,6 +329,11 @@ class BaseAIClient:
             r"帮我.*打开",
             r"给我.*打开",
             r"帮我.*运行",
+            # 【新增】提醒/定时类 — 确保 LLM 调用 create_schedule_task
+            r"提醒我",
+            r"(?:叫|喊).{0,3}我.*(?:分钟后|小时后|几点|秒后|分钟)",
+            r"(?:分钟后|小时后|几点|秒后).*(?:提醒|叫|喊)",
+            r"定时.*(?:提醒|消息|任务)",
         ]
 
         import re
@@ -693,15 +698,23 @@ class OpenAIClient(BaseAIClient):
                         1 for msg in current_messages if msg.role == "user" and "【系统提醒】" in msg.content
                     )
 
-                    if needs_action and tool_choice == "auto" and force_retry_count < 2:
+                    if needs_action and tool_choice == "auto" and force_retry_count < 2 and tools:
                         # 添加强制调用工具的提示，重新请求AI（最多重试2次）
                         logger.info(
-                            f"[AIClient] 检测到需要执行操作但AI未调用工具，强制重新请求... (重试 {force_retry_count + 1}/2)"
+                            f"[AIClient] OpenAI检测到需要执行操作但AI未调用工具，强制重新请求... (重试 {force_retry_count + 1}/2)"
                         )
-                        force_message = AIMessage(
-                            role="user",
-                            content="【系统提醒】你刚才没有执行用户请求的操作。请用自然语言描述你正在做什么，不要输出代码格式。",
+                        import re as _re
+
+                        _is_reminder = _re.search(
+                            r"提醒我|提醒|叫我|喊我|定时|分钟.*后|几点",
+                            user_message or "",
                         )
+                        _retry_msg = (
+                            "【系统提醒】你刚才没有调用 create_schedule_task 工具来设置提醒！"
+                            if _is_reminder
+                            else "【系统提醒】你刚才没有执行用户请求的操作。请用自然语言描述你正在做什么，不要输出代码格式。"
+                        )
+                        force_message = AIMessage(role="user", content=_retry_msg)
                         current_messages.append(force_message)
                         continue  # 继续循环，让AI重新生成响应
 
@@ -1037,15 +1050,23 @@ class DeepSeekClient(BaseAIClient):
                         1 for msg in current_messages if msg.role == "user" and "【系统提醒】" in msg.content
                     )
 
-                    if needs_action and tool_choice == "auto" and force_retry_count < 2:
+                    if needs_action and tool_choice == "auto" and force_retry_count < 2 and tools:
                         # 添加强制调用工具的提示，重新请求AI（最多重试2次）
                         logger.info(
                             f"[AIClient] DeepSeek检测到需要执行操作但AI未调用工具，强制重新请求... (重试 {force_retry_count + 1}/2)"
                         )
-                        force_message = AIMessage(
-                            role="user",
-                            content="【系统提醒】你刚才没有执行用户请求的操作。请用自然语言描述你正在做什么，不要输出代码格式。",
+                        import re as _re2
+
+                        _is_reminder2 = _re2.search(
+                            r"提醒我|提醒|叫我|喊我|定时|分钟.*后|几点",
+                            user_message or "",
                         )
+                        _retry_msg2 = (
+                            "【系统提醒】你刚才没有调用 create_schedule_task 工具来设置提醒！"
+                            if _is_reminder2
+                            else "【系统提醒】你刚才没有执行用户请求的操作。请用自然语言描述你正在做什么，不要输出代码格式。"
+                        )
+                        force_message = AIMessage(role="user", content=_retry_msg2)
                         current_messages.append(force_message)
                         continue  # 继续循环，让AI重新生成响应
 

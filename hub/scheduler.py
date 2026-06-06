@@ -66,6 +66,7 @@ class Scheduler:
         self.memory_manager = memory_manager
         self._online_users: set = set()
         self._last_condition_check = datetime.now()
+        self.main_event_loop: Optional[asyncio.AbstractEventLoop] = None
 
     async def start(self):
         """启动调度器（自动恢复持久化任务）"""
@@ -196,6 +197,23 @@ class Scheduler:
         except Exception as e:
             logger.error(f"[Condition] 条件检查失败: {e}", exc_info=True)
 
+    async def _safe_onebot_call(self, coro_func, target_id, message, task):
+        """跨事件循环安全地调用 onebot_client 方法"""
+        send_success = False
+        if self.onebot_client:
+            try:
+                if self.main_event_loop and self.main_event_loop.is_running():
+                    future = asyncio.run_coroutine_threadsafe(
+                        coro_func(target_id, message),
+                        self.main_event_loop,
+                    )
+                    send_success = await asyncio.wrap_future(future)
+                else:
+                    send_success = await coro_func(target_id, message)
+            except Exception as e:
+                logger.error(f"跨事件循环发送消息失败: {e}", exc_info=True)
+        return send_success
+
     async def _execute_task(self, task: Task):
         """执行任务（含重复任务自动重新入队）"""
         task.status = "running"
@@ -225,24 +243,22 @@ class Scheduler:
                 # 终端模式或没有 onebot_client 时，记录日志提醒
                 if not self.onebot_client:
                     logger.info(f"【定时提醒】{message}")
-                    # 可以通过回调通知终端
                     if hasattr(self, "terminal_callback") and self.terminal_callback:
                         try:
                             await self.terminal_callback(message)
                         except Exception as e:
                             logger.error(f"终端回调失败: {e}")
                 else:
-                    # 使用 onebot_client 发送消息
-                    try:
-                        if target_type == "group":
-                            await self.onebot_client.send_group_message(target_id, message)
-                            logger.info(f"提醒消息已发送到群 {target_id}")
-                        else:
-                            await self.onebot_client.send_private_message(target_id, message)
-                            logger.info(f"提醒消息已发送到用户 {target_id}")
-                        send_success = True
-                    except Exception as e:
-                        logger.error(f"发送提醒消息失败: {e}", exc_info=True)
+                    if target_type == "group":
+                        send_success = await self._safe_onebot_call(
+                            self.onebot_client.send_group_message, target_id, message, task
+                        )
+                    else:
+                        send_success = await self._safe_onebot_call(
+                            self.onebot_client.send_private_message, target_id, message, task
+                        )
+                    if send_success:
+                        logger.info(f"提醒消息已发送: {target_type}_{target_id}")
 
                 if send_success:
                     await self._store_scheduled_response(task, message)
@@ -256,19 +272,18 @@ class Scheduler:
 
                 logger.info(f"发送定时消息: 目标={target_type}_{target_id}, 消息={message}")
 
-                # 直接使用 onebot_client 发送消息
                 send_success = False
                 if self.onebot_client:
-                    try:
-                        if target_type == "group":
-                            await self.onebot_client.send_group_message(target_id, message)
-                            logger.info(f"定时消息已发送到群 {target_id}")
-                        else:
-                            await self.onebot_client.send_private_message(target_id, message)
-                            logger.info(f"定时消息已发送到用户 {target_id}")
-                        send_success = True
-                    except Exception as e:
-                        logger.error(f"发送定时消息失败: {e}", exc_info=True)
+                    if target_type == "group":
+                        send_success = await self._safe_onebot_call(
+                            self.onebot_client.send_group_message, target_id, message, task
+                        )
+                    else:
+                        send_success = await self._safe_onebot_call(
+                            self.onebot_client.send_private_message, target_id, message, task
+                        )
+                    if send_success:
+                        logger.info(f"定时消息已发送: {target_type}_{target_id}")
 
                 if send_success:
                     await self._store_scheduled_response(task, message)
