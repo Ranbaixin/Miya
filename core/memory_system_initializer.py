@@ -13,7 +13,7 @@ from core.conversation_history import (
     ConversationHistoryManager,
     get_conversation_history_manager,
 )
-from hub.memory_engine import MemoryEngine
+from core.memory_engine_shim import MemoryEngineShim as MemoryEngine
 from memory.undefined_memory import UndefinedMemoryAdapter, get_undefined_memory_adapter
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ class MemorySystemInitializer:
     统一管理所有记忆子系统：
     1. 对话历史持久化 (conversation_history.py)
     2. Undefined 手动记忆 (memory/undefined_memory.py)
-    3. 潮汐记忆/梦境压缩 (hub/memory_engine.py)
+    3. 记忆引擎兼容层 (core/memory_engine_shim.py → memory/core.py V3.1)
     """
 
     def __init__(
@@ -93,9 +93,7 @@ class MemorySystemInitializer:
             # 打印存储位置
             logger.info("\n数据存储位置:")
             logger.info(f"  • 对话历史: {self.data_dir / 'conversations'}")
-            logger.info(
-                f"  • 手动记忆: {self.data_dir / 'memory' / 'undefined_memory.json'}"
-            )
+            logger.info(f"  • 手动记忆: {self.data_dir / 'memory' / 'undefined_memory.json'}")
             logger.info("  • Redis: 已禁用")
             logger.info("  • Milvus: 已禁用")
             logger.info("  • Neo4j: 已禁用")
@@ -194,9 +192,7 @@ class MemorySystemInitializer:
             undefined_file = output_dir / f"undefined_memory_{timestamp}.json"
             memories = await self.undefined_memory.get_all()
             with open(undefined_file, "w", encoding=Encoding.UTF8) as f:
-                json.dump(
-                    [m.__dict__ for m in memories], f, ensure_ascii=False, indent=2
-                )
+                json.dump([m.__dict__ for m in memories], f, ensure_ascii=False, indent=2)
             export_files["undefined_memory"] = str(undefined_file)
         except Exception as e:
             logger.error(f"导出 Undefined 记忆失败: {e}")

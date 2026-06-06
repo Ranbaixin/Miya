@@ -620,6 +620,29 @@ class ProactiveChatSystem:
                 )
                 final_prompt = final_prompt + reply_awareness
 
+            # 注入 APV2.1 认知引擎的实时状态
+            try:
+                from core.miya_psyarch_bridge import get_psyarch_bridge
+
+                bridge = get_psyarch_bridge()
+                if bridge and bridge._initialized:
+                    emo = bridge.emotion_snapshot()
+                    nt = emo.get("nt_channels", {})
+                    mf = emo.get("miya_feelings", {})
+                    bx = emo.get("cognitive", {}).get("boredom", 0)
+                    parts = [f"AP:OXY={nt.get('OXY', 0):.0%} COR={nt.get('COR', 0):.0%}"]
+                    top = sorted(mf.items(), key=lambda x: -x[1])[:3]
+                    if top:
+                        parts.append(", ".join(f"{k}:{v:.1f}" for k, v in top))
+                    if bx > 0.65:
+                        parts.append("弥娅感到无聊")
+                    ap_info = " | ".join(parts)
+                    final_prompt += (
+                        f"\n\n【弥娅实时内心状态（AP认知引擎）】\n{ap_info}\n（请参考这些真实情绪数据来生成主动发言）"
+                    )
+            except Exception:
+                pass
+
             use_tools = trigger_type == "ai"
             response = await self.ai_client.chat(
                 messages=[AIMessage(role="user", content=final_prompt)],

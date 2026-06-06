@@ -95,8 +95,9 @@ from config import Settings
 from core import Arbitrator, Entropy, Ethics, Identity, Personality, PromptManager
 from core.autonomy_with_personality import get_autonomy_with_personality
 from core.constants import Encoding
+from core.memory_engine_shim import MemoryEngineShim as MemoryEngine, MemoryEngineShim as MemoryEmotion
 from core.system_detector import get_system_detector
-from hub import Decision, DecisionHub, Emotion, MemoryEmotion, MemoryEngine, Scheduler
+from hub import Decision, DecisionHub, Emotion, Scheduler
 from hub.platform_adapters import get_adapter
 from hub.task_store import TaskStore
 from mlink import Message, MLinkCore
@@ -142,6 +143,10 @@ class Miya:
         self.decision = Decision(self.emotion, self.personality, self.ethics)
         self.task_store = TaskStore()
         self.scheduler = Scheduler(task_store=self.task_store)
+
+        # APV2.1 认知引擎桥接 (可选)
+        self.psyarch_bridge = None
+        self.use_psyarch = False  # 默认使用传统 DecisionHub
 
         # 初始化M-Link
         self.mlink = MLinkCore()
@@ -691,6 +696,44 @@ class Miya:
                 self.logger.info(f"终端工具响应: {formatted_result[:100]}")
                 return formatted_result
 
+        # APV2.1 引擎切换命令
+        if user_input.strip().lower() in ("/ap", "/psyarch", "/认知"):
+            if not self.psyarch_bridge:
+                from core.miya_psyarch_bridge import MiyaPsyArchBridge
+
+                self.psyarch_bridge = MiyaPsyArchBridge()
+                self.psyarch_bridge.start_heartbeat()
+                self.psyarch_bridge.set_proactive_callback(lambda msg: print(f"\n  ♡ 弥娅: {msg}\n佳: ", end=""))
+                obs_url = self.psyarch_bridge.mount_observatory()
+                return f"已切换到 APV2.1 白箱认知引擎。\n  弥娅现在有了自己的心跳。\n  观测台: {obs_url}"
+            self.use_psyarch = True
+            return "AP 引擎已就绪。"
+        if user_input.strip().lower() in ("/llm", "/传统", "/old"):
+            self.use_psyarch = False
+            return "已切回 DecisionHub 传统引擎。"
+
+        # APV2.1 引擎路由
+        if self.use_psyarch and self.psyarch_bridge:
+            reply, soul = self.psyarch_bridge.process_message(user_input)
+            try:
+                from memory.lifebook import get_lifebook
+
+                lifebook = get_lifebook()
+                await lifebook.record_interaction(
+                    user_message=user_input,
+                    lover_response=reply or "",
+                    topics=[],
+                    emotion="AP认知",
+                )
+            except Exception:
+                pass
+            if soul:
+                mf = soul.get("miya_feelings", {})
+                top = sorted(mf.items(), key=lambda x: -x[1])[:3]
+                emo = ", ".join(f"{k}:{v:.1f}" for k, v in top) if top else "平静"
+                return f"{reply}\n  [AP 弥娅感受: {emo}]"
+            return reply or ""
+
         # 使用平台适配器转换为M-Link Message
         message = self.terminal_adapter.to_message(
             user_input=user_input,
@@ -839,9 +882,10 @@ def main():
 
         # 显示系统状态
         print("=" * 50)
-        print("【弥娅系统】")
-        print("  版本: v7.0.0")
+        print("【弥娅系统 零号机】")
+        print(f"  认知引擎: {'APV2.1 白箱' if miya.use_psyarch else 'DecisionHub (LLM)'}")
         print("  已启动")
+        print(f"  输入 /ap 切换到 APV2.1 认知引擎")
         print("=" * 50)
 
         # 启动定时任务调度器

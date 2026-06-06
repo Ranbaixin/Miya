@@ -1355,6 +1355,13 @@ class SoulGenerator:
             if form_name and form_name != "默认":
                 form_style = f"\n\n【当前形态特点】：{form_name} - {form_description}"
 
+            # 注入 APV2.1 认知引擎的实时情绪数据
+            ap_state_text = ""
+            if personality_info and personality_info.get("ap_state"):
+                ap_state_text = f"\n\n【弥娅实时内心状态（AP认知引擎）】\n{personality_info['ap_state']}\n请参考这些真实的情绪数据来生成内心独白和情绪分析。"
+            if personality_info and personality_info.get("multimodal_context"):
+                ap_state_text += f"\n\n【弥娅感知到的】\n{personality_info['multimodal_context']}"
+
             # 获取用户身份信息用于内心独白
             owner_id = _CONFIG.get("OWNER_USER_ID", "")
             user_labels = _CONFIG.get("USER_LABELS", {})
@@ -1393,6 +1400,10 @@ class SoulGenerator:
             prompt = prompt.replace("{form_style}", form_style)
             prompt = prompt.replace("{conversation_context}", conversation_context_str)
             prompt = prompt.replace("{memory_context}", memory_context_str)
+
+            # 注入 APV2.1 认知引擎的实时数据
+            if ap_state_text:
+                prompt += ap_state_text
 
             # v7.0: 动态生成 owner_instruction，从权限引擎读取所有者信息
             owner_instruction = ""
@@ -1550,6 +1561,45 @@ class SoulGenerator:
 
             # 多情绪格式
             emotions = result.get("emotions", [])
+            # 直接分析当前消息文本 → 43规则情绪池 → 随对话变化的真实情绪
+            try:
+                from miya_psyarch.emotion_pool import analyze_emotions, EMOTION_CN_MAP
+                pool_emotions = analyze_emotions(message)
+                real_emotions = []
+                for name, val in sorted(pool_emotions.items(), key=lambda x: -x[1])[:8]:
+                    cn = EMOTION_CN_MAP.get(name, name)
+                    real_emotions.append({"name": cn, "intensity": max(25, min(100, int(val * 140)))})
+                if real_emotions:
+                    emotions = real_emotions
+                    result["emotions"] = emotions
+                    result["source"] = "ap_engine"
+            except Exception:
+                pass
+            try:
+                from core.miya_psyarch_bridge import get_psyarch_bridge
+
+                bridge = get_psyarch_bridge()
+                if bridge and bridge._initialized:
+                    snapshot = bridge.emotion_snapshot()
+                    mf = snapshot.get("miya_feelings", {})
+                    nt = snapshot.get("nt_channels", {})
+                    real_emotions = []
+                    # NT通道 → 情绪 (OXY=温柔, COR=戒备, NOV=好奇, DA=积极)
+                    nt_map = {"OXY": "温柔", "COR": "戒备", "NOV": "好奇", "DA": "积极", "SER": "稳定"}
+                    for ch, label in nt_map.items():
+                        val = nt.get(ch, 0)
+                        if val > 0.3:
+                            real_emotions.append({"name": label, "intensity": max(25, min(100, int(val * 140)))})
+                    # 弥娅感受 Top 5
+                    for name, val in sorted(mf.items(), key=lambda x: -x[1])[:5]:
+                        if isinstance(val, (int, float)) and val > 0.5:
+                            real_emotions.append({"name": name, "intensity": max(25, min(100, int(val * 20)))})
+                    if real_emotions:
+                        emotions = real_emotions[:8]
+                        result["emotions"] = emotions
+                        result["source"] = "ap_engine"
+            except Exception:
+                pass
             if emotions:
                 emotion_parts = []
                 for emo in emotions:

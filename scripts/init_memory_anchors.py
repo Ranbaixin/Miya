@@ -69,7 +69,7 @@ async def init_memory_anchors():
     ]
 
     try:
-        from memory.unified_memory import get_unified_memory
+        from memory import get_unified_memory
 
         memory = get_unified_memory()
 
@@ -89,9 +89,7 @@ async def init_memory_anchors():
                 print(f"[{i}/{len(memory_anchors)}] OK: {anchor['fact'][:35]}...")
                 success_count += 1
             except Exception as e:
-                print(
-                    f"[{i}/{len(memory_anchors)}] FAIL: {anchor['fact'][:35]}... - {str(e)[:50]}"
-                )
+                print(f"[{i}/{len(memory_anchors)}] FAIL: {anchor['fact'][:35]}... - {str(e)[:50]}")
 
         print("\n" + "=" * 60)
         print(f"Memory anchors initialized: {success_count}/{len(memory_anchors)}")

@@ -69,6 +69,22 @@ def setup_logging():
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
 
+def _send_ap_proactive(daemon, msg: str) -> None:
+    """转发 AP 主动消息到 QQ OneBot"""
+    try:
+        for pid, platform in getattr(daemon, "_platforms", {}).items():
+            if hasattr(platform, "send_private_message"):
+                import asyncio
+
+                async def _send():
+                    await platform.send_private_message(user_id="1523878699", message=msg)
+
+                asyncio.get_event_loop().create_task(_send())
+                break
+    except Exception:
+        pass
+
+
 async def run_daemon(
     api_enabled: bool = True,
     api_port: int = 9800,
@@ -85,10 +101,10 @@ async def run_daemon(
     print("""
 +==============================================================+
 |                                                              |
-|        * 弥娅 (MIYA) v7.0 - 统一守护进程 *                  |
+|        * 弥娅 (MIYA) 零号机 - 统一守护进程 *                 |
 |                                                              |
 |        所有平台已就绪 · 热插拔 · 自动重连                    |
-|                                                              |
+|        设置 MIYA_PSYARCH_ENABLED=1 启用 AP 认知引擎           |
 +==============================================================+
     """)
 
@@ -98,6 +114,36 @@ async def run_daemon(
 
     # 2. 启动守护进程
     await daemon.start(platform_ids=platform_ids)
+
+    # 2.5 APV2.1 认知引擎 (可选)
+    psyarch_bridge = None
+    if os.environ.get("MIYA_PSYARCH_ENABLED"):
+        from core.miya_psyarch_bridge import MiyaPsyArchBridge
+
+        psyarch_bridge = MiyaPsyArchBridge()
+        psyarch_bridge.start_heartbeat()
+        psyarch_bridge.set_proactive_callback(lambda msg: print(f"\n  ♡ 弥娅主动: {msg}\n"))
+        obs_url = psyarch_bridge.mount_observatory()
+        # 注入到 Miya 核心实例 (所有平台通过 _miya_core 访问)
+        daemon.psyarch_bridge = psyarch_bridge
+        daemon.use_psyarch = True
+        if daemon._miya:
+            daemon._miya.psyarch_bridge = psyarch_bridge
+            daemon._miya.use_psyarch = True
+        logger.info(f"APV2.1 认知引擎已启用 | 观测台: {obs_url}")
+        print(f"  > APV2.1 认知引擎: {obs_url}")
+    else:
+        # 初始化 AP 全局单例作为 SoulGenerator 情感数据源
+        try:
+            from core.miya_psyarch_bridge import get_psyarch_bridge
+
+            bridge = get_psyarch_bridge()
+            bridge.start_heartbeat()
+            # 将 AP 主动消息转发到 QQ
+            bridge.set_proactive_callback(lambda msg: _send_ap_proactive(daemon, msg))
+            logger.info("APV2.1 情感引擎已在后台初始化")
+        except Exception:
+            pass
 
     # 2.5 启动 Kali 终端代理（后台任务）
     kali_server = None

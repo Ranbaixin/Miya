@@ -1622,6 +1622,47 @@ class DecisionHub:
                                 }
                             except Exception:
                                 pass
+                        # 注入 APV2.1 认知引擎的实时状态
+                        ap_hint = ""
+                        try:
+                            from core.miya_psyarch_bridge import get_psyarch_bridge
+
+                            bridge = get_psyarch_bridge()
+                            if bridge and bridge._initialized:
+                                emo = bridge.emotion_snapshot()
+                                if emo:
+                                    nt = emo.get("nt_channels", {})
+                                    mf = emo.get("miya_feelings", {})
+                                    parts = [f"AP:OXY={nt.get('OXY', 0):.0%} COR={nt.get('COR', 0):.0%}"]
+                                    top = sorted(mf.items(), key=lambda x: -x[1])[:4]
+                                    if top:
+                                        parts.append(", ".join(f"{k}:{v:.1f}" for k, v in top))
+                                    ap_hint = " | ".join(parts)
+                                # 注入 AP 记忆召回上下文
+                                mem_ctx = bridge.engine._memory_fusion.get_memory_context_for_llm()
+                                if mem_ctx:
+                                    ap_hint += f"\n{mem_ctx}"
+                                # 注入最近对话上下文
+                                recent = bridge.engine._current_soul.recent_context[-4:]
+                                if recent:
+                                    ap_hint += "\n最近对话:\n" + "\n".join(recent[-4:])
+                                if ap_hint:
+                                    personality_info["ap_state"] = ap_hint
+                            # 多模态融合上下文
+                            try:
+                                from core.miya_multimodal_fusion import get_multimodal_fusion
+
+                                fusion = get_multimodal_fusion()
+                                vis = fusion.get_vision_context()
+                                aud = fusion.get_audio_context()
+                                mm_ctx = " ".join(filter(None, [vis, aud]))
+                                if mm_ctx:
+                                    personality_info["multimodal_context"] = mm_ctx
+                            except Exception:
+                                pass
+                        except Exception:
+                            pass
+
                         sr = await self._soul_generator.process(
                             content,
                             history,

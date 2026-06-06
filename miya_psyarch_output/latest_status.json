@@ -1,0 +1,47 @@
+{
+  "tick": 18,
+  "focus": [
+    "行动:stabilize_prediction",
+    "行动反馈:wait",
+    "违和感",
+    "好奇",
+    "时间间隔感"
+  ],
+  "feelings": {
+    "surprise": 1.0,
+    "coherence": 0.82,
+    "dissonance": 0.5599,
+    "correctness": 0.5148,
+    "grasp": 0.862,
+    "expectation": 0.3642,
+    "pressure": 0.7289,
+    "uncertainty": 0.394,
+    "evidence_gap": 0.2448,
+    "quantity_grasp": 0.0,
+    "step_closure": 0.0,
+    "computation_pressure": 0.0747,
+    "sensory_clarity": 0.0,
+    "boredom": 0.0,
+    "fulfillment": 0.9538,
+    "task_available": 1.0,
+    "unfinished_strength": 0.4232,
+    "complexity": 0.1114,
+    "simplicity": 0.2193
+  },
+  "miya_feelings": {
+    "curious": 4.7417
+  },
+  "emotion": {
+    "DA": 0.9889,
+    "ADR": 0.9688,
+    "OXY": 0.9704,
+    "SER": 0.9861,
+    "END": 0.9326,
+    "COR": 0.9517,
+    "NOV": 0.9006,
+    "FOC": 0.9763
+  },
+  "text_output": "",
+  "active_intent": false,
+  "state_items_count": 8
+}

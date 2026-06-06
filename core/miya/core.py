@@ -63,9 +63,9 @@ class MiyaCore:
 
         # 连接记忆系统
         try:
-            from memory.unified_memory import UnifiedMemory
+            from memory import get_unified_memory
 
-            self._memory = UnifiedMemory()
+            self._memory = get_unified_memory()
             logger.info("  ✅ 记忆系统 (memory)")
         except Exception as e:
             logger.warning(f"  ⚠ 记忆系统连接失败: {e}")

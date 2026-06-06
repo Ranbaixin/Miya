@@ -1,5 +1,12 @@
 {
   "mcpServers": {
+    "miya-cognition": {
+      "command": "python",
+      "args": ["mcpserver/miya_core/unified_server.py"],
+      "env": {},
+      "disabled": false,
+      "autoApprove": ["miya_get_emotion", "miya_get_soul_state", "miya_ap_status", "miya_get_personality", "miya_memory_stats", "miya_list_models", "miya_list_tools", "miya_v9_status"]
+    },
     "miya-soul": {
       "command": "python",
       "args": ["mcpserver/miya/server.py"],

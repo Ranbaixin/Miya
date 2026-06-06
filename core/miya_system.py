@@ -1,3 +1,7 @@
+# DEPRECATED — 弥娅 v6.0.0 旧系统初始化
+# 已被 core/miya_core.py + core/miya_daemon.py 替代
+# 此文件将在下个版本移除
+
 #!/usr/bin/env python3
 """
 MIYA 系统初始化模块

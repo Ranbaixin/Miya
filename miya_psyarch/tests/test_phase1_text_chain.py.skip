@@ -1,0 +1,1931 @@
+from __future__ import annotations
+
+import io
+import math
+import struct
+import wave
+from pathlib import Path
+
+from miya_psyarch.core.runtime.engine import APV21Runtime
+
+
+def test_dual_energy_fields_exist_in_state_pool() -> None:
+    runtime = APV21Runtime()
+    trace = runtime.process_text_tick("今天下雨")
+    snapshot = trace["state_pool"]["snapshot"]["items"]
+    assert snapshot
+    row = snapshot[0]
+    assert "real_energy" in row
+    assert "virtual_energy" in row
+    assert "cognitive_pressure" in row
+
+
+def test_performance_profiles_scale_recall_accuracy_budget() -> None:
+    from config.performance_profiles import runtime_config_for_profile
+
+    low = runtime_config_for_profile("conservative", target_tick_ms=60)
+    balanced = runtime_config_for_profile("balanced", target_tick_ms=100)
+    high = runtime_config_for_profile("high_accuracy", target_tick_ms=150)
+
+    assert low.memory.core_item_limit < balanced.memory.core_item_limit < high.memory.core_item_limit
+    assert low.memory.candidate_limit < balanced.memory.candidate_limit < high.memory.candidate_limit
+    assert low.state_pool.memory_snapshot_limit < balanced.state_pool.memory_snapshot_limit < high.state_pool.memory_snapshot_limit
+    assert low.state_pool.r_state_items_per_head < balanced.state_pool.r_state_items_per_head < high.state_pool.r_state_items_per_head
+    assert balanced.state_pool.r_state_head_limit * balanced.state_pool.r_state_items_per_head >= 512
+    assert balanced.memory.query_feature_limit >= 1024
+    assert high.state_pool.r_state_head_limit * high.state_pool.r_state_items_per_head >= 2048
+    assert high.text_sensor.budget_limit >= 1024
+
+
+def test_fast_and_slow_system_paths_both_exist() -> None:
+    runtime = APV21Runtime()
+    runtime.process_text_tick("今天下雨 我想带伞")
+    trace = runtime.process_text_tick("今天下雨 我想带伞")
+    assert "bn" in trace["fast_system"]
+    assert "cn" in trace["fast_system"]
+    assert "bn_prime" in trace["slow_system"]
+    assert "cn_prime" in trace["slow_system"]
+
+
+def test_empty_tick_keeps_a_live_query_path_after_text_history() -> None:
+    runtime = APV21Runtime()
+    runtime.process_text_tick("今天下雨 我想带伞")
+    runtime.process_text_tick("今天下雨 我想带伞")
+    trace = runtime.process_text_tick("")
+    assert trace["state_pool"]["query_view"]
+    assert trace["attention"]["selected_labels"]
+
+
+def test_memory_bootstrap_can_seed_empty_tick_after_cold_runtime() -> None:
+    trainer = APV21Runtime()
+    trainer.process_text_tick("苹果 是 水果")
+    trainer.process_text_tick("苹果 是 水果")
+    latest_state = trainer.memory.latest_snapshot("state")
+    latest_focus = trainer.memory.latest_snapshot("focus")
+    assert latest_state is not None
+    assert latest_focus is not None
+
+    cold = APV21Runtime()
+    cold.memory._snapshots = list(trainer.memory._snapshots)
+    cold.memory._recent_by_kind = {key: list(value) for key, value in trainer.memory._recent_by_kind.items()}
+    cold.memory._next_id = trainer.memory._next_id
+
+    trace = cold.process_text_tick("", memory_bootstrap=True)
+    snapshot = trace["state_pool"]["snapshot"]["items"]
+    assert snapshot
+    assert any(float(item["virtual_energy"]) > 0.0 for item in snapshot)
+
+
+def test_bn_recall_contains_white_box_candidate_sources() -> None:
+    runtime = APV21Runtime()
+    runtime.process_text_tick("apple is fruit")
+    trace = runtime.process_text_tick("apple is fruit")
+    bn = trace["fast_system"]["bn"]
+    assert bn
+    assert any(row.get("candidate_sources") for row in bn)
+    assert all("score_breakdown" in row for row in bn)
+    assert all("energy_overlap" in row["score_breakdown"] for row in bn)
+
+
+def test_memory_recall_keeps_state_and_focus_vector_indexes_separate() -> None:
+    runtime = APV21Runtime()
+    runtime.process_text_tick("state only alpha")
+    runtime.process_text_tick("")
+
+    state_snapshot = runtime.memory.latest_snapshot("state")
+    focus_snapshot = runtime.memory.latest_snapshot("focus")
+    assert state_snapshot is not None
+    assert focus_snapshot is not None
+
+    state_rows = runtime.memory.recall(state_snapshot["items"], memory_kind="state", top_k=5)
+    focus_rows = runtime.memory.recall(focus_snapshot["items"], memory_kind="focus", top_k=5)
+    assert state_rows
+    assert focus_rows
+    assert all(row["memory_kind"] == "state" for row in state_rows)
+    assert all(row["memory_kind"] == "focus" for row in focus_rows)
+
+    ann_summary = runtime.memory.ann_summary()
+    assert "state" in ann_summary
+    assert "focus" in ann_summary
+
+
+def test_fast_r_state_default_budget_supports_1024_level_query_body() -> None:
+    from config.defaults import RuntimeConfig, TextSensorConfig
+
+    config = RuntimeConfig(text_sensor=TextSensorConfig(budget_limit=1200, competition_limit=1200))
+    runtime = APV21Runtime(config=config)
+    text = " ".join(f"wide{i}" for i in range(1100))
+    trace = runtime.process_text_tick(text)
+    r_state = trace["state_pool"]["r_state"]
+    query = trace["state_pool"]["query_view"]
+    assert r_state["total_pool_size"] >= 1024
+    head_total = r_state.get("total_head_item_count", sum(len(head.get("items", []) or []) for head in r_state.get("heads", []) or []))
+    assert head_total >= 1024
+    assert trace["state_pool"].get("query_view_total_count", len(query)) >= 1024
+
+    debug_trace = runtime.process_text_tick(text, trace_mode="debug")
+    assert len(debug_trace["state_pool"]["query_view"]) >= 1024
+
+
+def test_summary_trace_keeps_1024_query_as_refs_not_full_rows() -> None:
+    from config.performance_profiles import runtime_config_for_profile
+
+    runtime = APV21Runtime(config=runtime_config_for_profile("balanced", target_tick_ms=100))
+    text = " ".join(f"wide{i}" for i in range(1100))
+    trace = runtime.process_text_tick(text)
+
+    assert trace["trace_mode"] == "summary"
+    assert trace["state_pool"]["query_view_total_count"] >= 1024
+    assert len(trace["state_pool"]["query_view"]) < 128
+    assert trace["input"]["sa_item_count"] >= 1024
+    assert len(trace["input"]["sa_items"]) < 128
+    assert trace["thought_view"]["mode"] == "runtime_refs"
+    assert trace["explainability"]["mode"] == "runtime_refs"
+
+    debug_trace = runtime.process_text_tick(text, trace_mode="debug")
+    assert debug_trace["trace_mode"] == "debug"
+    assert len(debug_trace["state_pool"]["query_view"]) >= 1024
+
+
+def test_cn_successor_uses_transition_store_predictions() -> None:
+    runtime = APV21Runtime()
+    runtime.process_text_tick("today weather nice")
+    runtime.process_text_tick("i want go_out")
+    trace = runtime.process_text_tick("today weather nice")
+    cn = trace["fast_system"]["cn"]
+    predicted_labels = [item.get("sa_label") for branch in cn for item in branch.get("predicted_items", [])]
+    assert predicted_labels
+    assert any(str(label).startswith("text::") or str(label).startswith("phrase::") for label in predicted_labels)
+
+
+def test_bigram_signal_improves_same_order_recall() -> None:
+    runtime = APV21Runtime()
+    runtime.process_text_tick("apple likes basket")
+    runtime.process_text_tick("basket likes apple")
+    trace = runtime.process_text_tick("apple likes basket")
+    bn = trace["fast_system"]["bn"]
+    assert bn
+    assert bn[0]["score_breakdown"]["bigram_overlap"] >= 1
+
+
+def test_focus_memory_preserves_order_features_for_slow_recall() -> None:
+    runtime = APV21Runtime()
+    runtime.process_text_tick("red blue green")
+    runtime.process_text_tick("")
+    focus_snapshot = runtime.memory.latest_snapshot("focus")
+    assert focus_snapshot is not None
+    sequence = focus_snapshot.get("sequence_features", {})
+    assert sequence.get("focus_order")
+    assert isinstance(sequence.get("sequence_bigrams", []), list)
+    if len(sequence["focus_order"]) >= 2:
+        assert any(str(token).startswith("focus_seq::") for token in sequence.get("sequence_bigrams", []))
+
+
+def test_focus_order_stabilizes_external_text_without_changing_attention_winners() -> None:
+    runtime = APV21Runtime()
+    selected = [
+        {"sa_label": "text::gamma", "display_text": "gamma", "source_type": "external_text", "family": "text", "position": 2, "focus_score": 4.0},
+        {"sa_label": "feeling::surprise", "display_text": "surprise", "source_type": "cognitive_feeling", "family": "cognitive_feeling", "focus_score": 3.0},
+        {"sa_label": "text::alpha", "display_text": "alpha", "source_type": "external_text", "family": "text", "position": 0, "focus_score": 2.0},
+        {"sa_label": "text::beta", "display_text": "beta", "source_type": "external_text", "family": "text", "position": 1, "focus_score": 1.0},
+    ]
+
+    ordered, trace = runtime._stabilize_focus_order(selected)
+    labels = [item["sa_label"] for item in ordered]
+    assert labels == ["text::alpha", "feeling::surprise", "text::beta", "text::gamma"]
+    assert trace["raw_attention_labels"] == ["text::gamma", "feeling::surprise", "text::alpha", "text::beta"]
+    assert trace["ordered_focus_labels"] == labels
+    assert trace["changed"] is True
+    assert [item["sa_label"] for item in ordered if item["sa_label"].startswith("feeling::")] == ["feeling::surprise"]
+
+
+def test_focus_family_budget_keeps_focus_memory_from_single_family_monopoly() -> None:
+    from config.defaults import AttentionConfig, RuntimeConfig
+
+    runtime = APV21Runtime(
+        config=RuntimeConfig(
+            attention=AttentionConfig(
+                focus_limit=6,
+                focus_family_action_max=2,
+                focus_family_cognitive_feeling_max=2,
+                focus_family_text_max=4,
+            )
+        )
+    )
+    ranked = [
+        {"sa_label": "action::a1", "display_text": "a1", "family": "action", "source_type": "action", "focus_score": 9.0},
+        {"sa_label": "action::a2", "display_text": "a2", "family": "action", "source_type": "action", "focus_score": 8.0},
+        {"sa_label": "action::a3", "display_text": "a3", "family": "action", "source_type": "action", "focus_score": 7.0},
+        {"sa_label": "feeling::surprise", "display_text": "surprise", "family": "cognitive_feeling", "source_type": "cognitive_feeling", "focus_score": 6.0},
+        {"sa_label": "feeling::pressure", "display_text": "pressure", "family": "cognitive_feeling", "source_type": "cognitive_feeling", "focus_score": 5.0},
+        {"sa_label": "feeling::dissonance", "display_text": "dissonance", "family": "cognitive_feeling", "source_type": "cognitive_feeling", "focus_score": 4.0},
+        {"sa_label": "text::alpha", "display_text": "alpha", "family": "text", "source_type": "external_text", "focus_score": 3.0},
+        {"sa_label": "text::beta", "display_text": "beta", "family": "text", "source_type": "external_text", "focus_score": 2.0},
+    ]
+
+    selected, trace = runtime._shape_focus_family_budget(ranked_items=ranked, raw_selected_items=ranked[:6])
+    labels = [item["sa_label"] for item in selected]
+
+    assert labels == ["action::a1", "action::a2", "feeling::surprise", "feeling::pressure", "text::alpha", "text::beta"]
+    assert trace["raw_selected_labels"] == [
+        "action::a1",
+        "action::a2",
+        "action::a3",
+        "feeling::surprise",
+        "feeling::pressure",
+        "feeling::dissonance",
+    ]
+    assert trace["family_counts"]["action"] == 2
+    assert trace["family_counts"]["cognitive_feeling"] == 2
+    assert trace["family_counts"]["text"] == 2
+    assert trace["changed"] is True
+    assert trace["overflow_count"] >= 2
+    assert all(item["focus_family_bucket"] in {"action", "cognitive_feeling", "text"} for item in selected)
+
+
+def test_focus_family_budget_relaxes_caps_only_when_window_would_underfill() -> None:
+    from config.defaults import AttentionConfig, RuntimeConfig
+
+    runtime = APV21Runtime(config=RuntimeConfig(attention=AttentionConfig(focus_limit=4, focus_family_action_max=1)))
+    ranked = [
+        {"sa_label": "action::a1", "family": "action", "source_type": "action", "focus_score": 4.0},
+        {"sa_label": "action::a2", "family": "action", "source_type": "action", "focus_score": 3.0},
+    ]
+
+    selected, trace = runtime._shape_focus_family_budget(ranked_items=ranked, raw_selected_items=ranked)
+
+    assert [item["sa_label"] for item in selected] == ["action::a1", "action::a2"]
+    assert trace["family_counts"]["action"] == 2
+    assert trace["relaxed_fill_count"] == 1
+
+
+def test_build_slow_query_preserves_current_focus_order_before_weight_sort() -> None:
+    runtime = APV21Runtime()
+    runtime.state_pool.begin_tick(0)
+    runtime.state_pool.apply_external_items(
+        [
+            {"sa_label": "text::alpha", "display_text": "alpha", "source_type": "external_text", "family": "text", "position": 0, "real_energy": 0.4},
+            {"sa_label": "text::beta", "display_text": "beta", "source_type": "external_text", "family": "text", "position": 1, "real_energy": 2.0},
+            {"sa_label": "text::gamma", "display_text": "gamma", "source_type": "external_text", "family": "text", "position": 2, "real_energy": 1.0},
+        ],
+        tick_index=0,
+    )
+    selected = [
+        {"sa_label": "text::alpha"},
+        {"sa_label": "text::beta"},
+        {"sa_label": "text::gamma"},
+    ]
+
+    slow_query = runtime._build_slow_query(selected)
+    labels = [item["sa_label"] for item in slow_query[:3]]
+    assert labels == ["text::alpha", "text::beta", "text::gamma"]
+    assert [item.get("focus_order_index") for item in slow_query[:3]] == [0, 1, 2]
+
+
+def test_sequence_features_are_posting_recall_sources() -> None:
+    runtime = APV21Runtime()
+    runtime.process_text_tick("alpha beta gamma")
+    runtime.process_text_tick("")
+    focus_snapshot = runtime.memory.latest_snapshot("focus")
+    assert focus_snapshot is not None
+    rows = runtime.memory.recall(focus_snapshot["items"], memory_kind="focus", top_k=5)
+    assert rows
+    assert any("posting:sequence" in (row.get("candidate_sources", []) or []) for row in rows)
+    assert any((row.get("matched_tokens", {}) or {}).get("sequence") for row in rows)
+
+
+def test_relative_relation_score_distinguishes_same_tokens_different_order() -> None:
+    runtime = APV21Runtime()
+    runtime.process_text_tick("me bite dog")
+    runtime.process_text_tick("dog bite me")
+
+    query_items = [
+        {
+            "sa_label": "text::me",
+            "display_text": "me",
+            "source_type": "external_text",
+            "family": "text",
+            "position": 0,
+            "real_energy": 1.0,
+        },
+        {
+            "sa_label": "text::bite",
+            "display_text": "bite",
+            "source_type": "external_text",
+            "family": "text",
+            "position": 1,
+            "real_energy": 1.0,
+        },
+        {
+            "sa_label": "text::dog",
+            "display_text": "dog",
+            "source_type": "external_text",
+            "family": "text",
+            "position": 2,
+            "real_energy": 1.0,
+        },
+    ]
+
+    rows = runtime.memory.recall(query_items, memory_kind="state", top_k=5)
+    assert rows
+    by_source = {row["source_text"]: row for row in rows}
+    assert "me bite dog" in by_source
+    assert "dog bite me" in by_source
+    same_order = by_source["me bite dog"]
+    reverse_order = by_source["dog bite me"]
+    assert same_order["relative_relation_score"] > reverse_order["relative_relation_score"]
+    assert same_order["score"] > reverse_order["score"]
+    assert same_order["score_breakdown"]["relative_relation_score"] > 0.0
+    assert "text_order" in same_order["score_breakdown"]["relation_channels"]
+
+
+def test_bn_rows_expose_normalized_weight_match_efficiency_and_energy() -> None:
+    runtime = APV21Runtime()
+    runtime.process_text_tick("apple fruit sweet")
+    trace = runtime.process_text_tick("apple fruit sweet")
+
+    bn = trace["fast_system"]["bn"]
+    assert bn
+    weight_sum = sum(float(row.get("normalized_weight", 0.0) or 0.0) for row in bn)
+    assert 0.98 <= weight_sum <= 1.02
+    assert all("match_efficiency" in row for row in bn)
+    assert all("grasp_confidence" in row for row in bn)
+    assert all("b_real_energy" in row for row in bn)
+    assert bn[0]["match_efficiency"] > 0.5
+    assert bn[0]["grasp_confidence"] == bn[0]["match_efficiency"]
+    assert bn[0]["b_real_energy"] > 0.0
+    assert bn[0]["score_breakdown"]["normalized_weight"] == bn[0]["normalized_weight"]
+
+
+def test_relation_weight_affects_b_energy_for_same_tokens_different_order() -> None:
+    runtime = APV21Runtime()
+    runtime.process_text_tick("me bite dog")
+    runtime.process_text_tick("dog bite me")
+
+    query_items = [
+        {"sa_label": "text::me", "display_text": "me", "source_type": "external_text", "family": "text", "position": 0, "real_energy": 1.0},
+        {"sa_label": "text::bite", "display_text": "bite", "source_type": "external_text", "family": "text", "position": 1, "real_energy": 1.0},
+        {"sa_label": "text::dog", "display_text": "dog", "source_type": "external_text", "family": "text", "position": 2, "real_energy": 1.0},
+    ]
+    rows = runtime.memory.recall(query_items, memory_kind="state", top_k=5)
+    by_source = {row["source_text"]: row for row in rows}
+    same_order = by_source["me bite dog"]
+    reverse_order = by_source["dog bite me"]
+
+    assert same_order["relative_relation_score"] > reverse_order["relative_relation_score"]
+    assert same_order["normalized_weight"] > reverse_order["normalized_weight"]
+    assert same_order["b_real_energy"] > reverse_order["b_real_energy"]
+    assert same_order["energy_transfer"]["policy"] == "query_mass_times_normalized_score_times_nonlinear_grasp"
+
+
+def test_cn_virtual_energy_scales_with_source_b_weight() -> None:
+    from memory.store import MemoryStore
+
+    memory = MemoryStore(
+        recall_top_k=5,
+        predict_top_k=5,
+        prediction_energy_scale=0.5,
+        max_snapshots_per_kind=16,
+        candidate_limit=16,
+        scoring_candidate_limit=16,
+        online_enabled=False,
+    )
+
+    def text_items(text: str) -> list[dict]:
+        return [
+            {"sa_label": f"text::{unit}", "display_text": unit, "source_type": "external_text", "family": "text", "position": idx, "real_energy": 1.0}
+            for idx, unit in enumerate(text.split())
+        ]
+
+    memory.write_snapshot(tick_index=0, memory_kind="state", items=text_items("me bite dog"), focus_labels=[], source_text="me bite dog")
+    memory.write_snapshot(tick_index=1, memory_kind="state", items=text_items("pain"), focus_labels=[], source_text="pain")
+    memory.write_snapshot(tick_index=2, memory_kind="state", items=text_items("dog bite me"), focus_labels=[], source_text="dog bite me")
+    memory.write_snapshot(tick_index=3, memory_kind="state", items=text_items("fear"), focus_labels=[], source_text="fear")
+
+    bn = memory.recall(text_items("me bite dog"), memory_kind="state", top_k=5)
+    source_map = {row["source_text"]: row for row in bn}
+    same_b = source_map["me bite dog"]
+    reverse_b = source_map["dog bite me"]
+    same_best = memory.successors(same_b["memory_id"], memory_kind="state", source_b_row=same_b)[0]
+    reverse_best = memory.successors(reverse_b["memory_id"], memory_kind="state", source_b_row=reverse_b)[0]
+    same_energy = sum(float(item.get("virtual_energy", 0.0) or 0.0) for item in same_best.get("predicted_items", []))
+    reverse_energy = sum(float(item.get("virtual_energy", 0.0) or 0.0) for item in reverse_best.get("predicted_items", []))
+
+    assert same_b["relative_relation_score"] > reverse_b["relative_relation_score"]
+    assert same_best["source_b_weight"] > reverse_best["source_b_weight"]
+    assert same_best["energy_transfer_multiplier"] > reverse_best["energy_transfer_multiplier"]
+    assert same_energy > reverse_energy
+    assert all("base_virtual_energy" in item for item in same_best.get("predicted_items", []))
+
+
+def test_grasp_uses_bn_match_efficiency_contract() -> None:
+    from channels.cognitive_feelings.channel import CognitiveFeelingChannel
+
+    channel = CognitiveFeelingChannel(
+        min_activation=0.0,
+        surprise_gain=1.0,
+        coherence_gain=1.0,
+        dissonance_gain=1.0,
+        correctness_gain=1.0,
+        grasp_gain=1.0,
+        expectation_gain=1.0,
+        pressure_gain=1.0,
+    )
+    trace = channel.derive(
+        state_snapshot_items=[{"sa_label": "text::probe", "real_energy": 1.0, "virtual_energy": 0.8}],
+        fast_bn=[{"score": 0.1, "normalized_weight": 1.0, "match_efficiency": 0.86, "grasp_confidence": 0.86}],
+        fast_cn=[],
+        slow_bn=[],
+        slow_cn=[],
+    )
+    assert trace["channels"]["grasp"] > 0.25
+    grasp_item = next(item for item in trace["items"] if item["sa_label"] == "feeling::grasp")
+    derived = grasp_item["anchor_meta"]["derived_from"]
+    assert derived["fast_grasp"] == 0.86
+
+
+def test_prediction_alignment_lowers_surprise_dissonance_and_raises_coherence_correctness() -> None:
+    from channels.cognitive_feelings.channel import CognitiveFeelingChannel
+
+    channel = CognitiveFeelingChannel(
+        min_activation=0.0,
+        surprise_gain=1.0,
+        coherence_gain=1.0,
+        dissonance_gain=1.0,
+        correctness_gain=1.0,
+        grasp_gain=1.0,
+        expectation_gain=1.0,
+        pressure_gain=1.0,
+    )
+    bad = channel.derive(
+        state_snapshot_items=[{"sa_label": "text::x", "real_energy": 1.0, "virtual_energy": 2.4}],
+        fast_bn=[{"score": 0.2, "normalized_weight": 1.0, "match_efficiency": 0.2}],
+        fast_cn=[{"predicted_items": [{"sa_label": "text::wrong", "virtual_energy": 1.0}]}],
+        slow_bn=[],
+        slow_cn=[],
+        prediction_trace={"alignment_score": 0.0, "mismatch_ratio": 0.9, "unexpected_count": 2, "missed_count": 2},
+        residual_summary={"total_unresolved_mass": 2.0},
+    )
+    good = channel.derive(
+        state_snapshot_items=[{"sa_label": "text::x", "real_energy": 1.0, "virtual_energy": 0.9}],
+        fast_bn=[{"score": 2.7, "normalized_weight": 1.0, "match_efficiency": 0.92, "grasp_confidence": 0.92}],
+        fast_cn=[{"predicted_items": [{"sa_label": "text::x", "virtual_energy": 0.9}]}],
+        slow_bn=[{"score": 2.4, "normalized_weight": 1.0, "match_efficiency": 0.86, "grasp_confidence": 0.86}],
+        slow_cn=[],
+        prediction_trace={"alignment_score": 0.95, "mismatch_ratio": 0.0, "unexpected_count": 0, "missed_count": 0},
+        residual_summary={"total_unresolved_mass": 0.0},
+    )
+    assert good["channels"]["surprise"] < bad["channels"]["surprise"]
+    assert good["channels"]["dissonance"] < bad["channels"]["dissonance"]
+    assert good["channels"]["coherence"] > bad["channels"]["coherence"]
+    assert good["channels"]["correctness"] > bad["channels"]["correctness"]
+    assert any(item["sa_label"] == "feeling::coherence" for item in good["items"])
+    assert any(item["sa_label"] == "feeling::correctness" for item in good["items"])
+
+
+def test_relative_relation_learning_summary_is_bounded_and_white_boxed() -> None:
+    runtime = APV21Runtime()
+    runtime.process_text_tick("alpha beta gamma")
+    runtime.process_text_tick("alpha beta gamma")
+    online = runtime.memory.online_embedding_summary()
+    summary = online["relative_relations"]
+    assert summary["schema_id"] == "relative_relation_store/v1"
+    assert summary["snapshot_count"] >= 1
+    assert summary["total_events"] >= 1
+    assert summary["policy"]["update_semantics"] == "typed_relation_view;shared_evidence_not_shared_score"
+    layered = online["layered_online_learning"]
+    assert layered["policy"]["local_only"] is True
+    assert layered["policy"]["online_update"] is True
+    assert layered["policy"]["black_box_replacement"] is False
+    layer_names = {row["name"] for row in layered["layers"]}
+    assert "content_recognition_embedding" in layer_names
+    assert "relation_order_embedding" in layer_names
+    assert "multimodal_binding_embedding" in layer_names
+
+
+def test_state_memory_write_can_store_large_sa_distribution() -> None:
+    from config.defaults import RuntimeConfig, StatePoolConfig, TextSensorConfig
+
+    config = RuntimeConfig(
+        text_sensor=TextSensorConfig(budget_limit=1400, competition_limit=1400),
+        state_pool=StatePoolConfig(snapshot_limit=24, memory_snapshot_limit=1200),
+    )
+    runtime = APV21Runtime(config=config)
+    text = " ".join(f"tok{i}" for i in range(1100))
+    runtime.process_text_tick(text)
+    state_snapshot = runtime.memory.latest_snapshot("state")
+    assert state_snapshot is not None
+    assert len(state_snapshot["items"]) >= 1024
+    assert len(state_snapshot["core_items"]) >= 1024
+    assert len(runtime.state_pool.snapshot()["items"]) <= 24
+
+
+def test_idle_maintenance_processes_heavy_state_index_jobs_outside_tick() -> None:
+    from config.performance_profiles import runtime_config_for_profile
+
+    runtime = APV21Runtime(config=runtime_config_for_profile("balanced", target_tick_ms=100))
+    text = " ".join(f"tok{i}" for i in range(1100))
+    runtime.process_text_tick(text)
+    pending = runtime.memory.pending_index_job_summary()
+    assert pending["heavy"] >= 1
+
+    trace = runtime.process_idle_maintenance(include_heavy=True, budget=1, max_ms=50.0)
+    assert trace["policy"] == "idle_heavy_index_maintenance"
+    assert trace["processed"] >= 1
+    assert runtime.memory.pending_index_job_summary()["heavy"] < pending["heavy"]
+
+
+def test_observatory_can_reconstruct_full_memory_detail_from_summary_refs() -> None:
+    from config.performance_profiles import runtime_config_for_profile
+    from observatory import reconstruct_bn_row_detail, reconstruct_memory_detail, reconstruct_tick_observatory
+
+    runtime = APV21Runtime(config=runtime_config_for_profile("balanced", target_tick_ms=100))
+    text = " ".join(f"tok{i}" for i in range(1100))
+    runtime.process_text_tick(text)
+    trace = runtime.process_text_tick(text)
+    state_snapshot = runtime.memory.latest_snapshot("state")
+    assert state_snapshot is not None
+
+    detail = reconstruct_memory_detail(
+        state_snapshot["memory_id"],
+        snapshot_lookup=runtime.memory.snapshot_by_id,
+        successor_lookup=runtime.memory.successor_links,
+    )
+    assert detail["found"]
+    assert detail["item_count"] >= 1024
+    assert detail["energy_summary"]["positive_real_count"] >= 1024
+
+    bn = trace["fast_system"]["bn"]
+    if bn:
+        bn_detail = reconstruct_bn_row_detail(
+            bn[0],
+            snapshot_lookup=runtime.memory.snapshot_by_id,
+            successor_lookup=runtime.memory.successor_links,
+        )
+        assert bn_detail["found"]
+        assert "score_breakdown" in bn_detail
+
+    observatory = reconstruct_tick_observatory(
+        trace,
+        snapshot_lookup=runtime.memory.snapshot_by_id,
+        successor_lookup=runtime.memory.successor_links,
+    )
+    assert observatory["schema_id"] == "apv21_observatory_reconstruction/v1"
+    assert observatory["state_pool"]["energy_summary"]["positive_real_count"] > 0
+    assert "fast_system" in observatory
+    assert "slow_system" in observatory
+    assert "inner_world" in observatory
+    assert "action" in observatory
+
+
+def test_slow_system_query_uses_focus_continuation_buffer() -> None:
+    runtime = APV21Runtime()
+    runtime.process_text_tick("alpha beta gamma")
+    runtime.process_text_tick("")
+    trace = runtime.process_text_tick("")
+    slow_query = trace["slow_system"]["query"]
+    assert slow_query
+    assert any(str(item.get("source_type", "")) == "focus_continuation" or float(item.get("query_weight", 0.0) or 0.0) > 0.0 for item in slow_query)
+
+
+def test_focus_buffer_episode_replay_is_bounded_and_weighted() -> None:
+    from memory.short_term.focus_buffer import FocusBuffer
+
+    buffer = FocusBuffer(focus_history_limit=8, max_replay_items=2, episode_break_overlap=0.25)
+    buffer.push(
+        [
+            {"sa_label": "text::alpha", "focus_score": 1.0, "real_energy": 1.0},
+            {"sa_label": "text::beta", "focus_score": 0.8, "real_energy": 0.8},
+        ],
+        tick_index=0,
+    )
+    buffer.push(
+        [
+            {"sa_label": "text::gamma", "focus_score": 1.0, "real_energy": 1.0},
+            {"sa_label": "text::delta", "focus_score": 0.7, "real_energy": 0.7},
+        ],
+        tick_index=1,
+    )
+
+    trace = buffer.trace(tick_index=2)
+    assert trace["schema_id"] == "focus_continuation_trace/v1"
+    assert trace["active_episode_id"] >= 1
+    assert trace["replay_candidates"]
+    assert len(trace["replay_candidates"][0]["labels"]) <= 2
+
+    replay_rows = buffer.build_replay_query_items([], tick_index=2)
+    assert replay_rows
+    assert len(replay_rows) <= 2
+    assert all(row["source_type"] == "focus_replay" for row in replay_rows)
+    assert all(float(row.get("query_weight", 0.0) or 0.0) > 0.0 for row in replay_rows)
+
+
+def test_runtime_slow_system_exposes_focus_replay_without_mixing_memory_kind() -> None:
+    runtime = APV21Runtime()
+    runtime.process_text_tick("alpha beta gamma", trace_mode="debug")
+    runtime.process_text_tick("delta epsilon zeta", trace_mode="debug")
+    trace = runtime.process_text_tick("", trace_mode="debug")
+
+    continuation = trace["slow_system"]["focus_continuation"]
+    assert continuation["schema_id"] == "focus_continuation_trace/v1"
+    assert continuation["replay_candidates"]
+
+    slow_query = trace["slow_system"]["query"]
+    assert any("focus_replay" in (item.get("query_sources", []) or []) for item in slow_query)
+    assert all(row["memory_kind"] == "focus" for row in trace["slow_system"]["bn_prime"])
+
+
+def test_observatory_reconstruction_exposes_focus_continuation_trace() -> None:
+    from observatory import reconstruct_tick_observatory
+
+    runtime = APV21Runtime()
+    runtime.process_text_tick("alpha beta gamma")
+    runtime.process_text_tick("delta epsilon zeta")
+    trace = runtime.process_text_tick("")
+    reconstructed = reconstruct_tick_observatory(
+        trace,
+        snapshot_lookup=runtime.memory.snapshot_by_id,
+        successor_lookup=runtime.memory.successor_links,
+    )
+    assert reconstructed["slow_system"]["focus_continuation"]["schema_id"] == "focus_continuation_trace/v1"
+    assert reconstructed["focus"]["continuation"]["schema_id"] == "focus_continuation_trace/v1"
+
+
+def test_attention_selector_keeps_continuation_bonus_in_trace() -> None:
+    runtime = APV21Runtime()
+    first = runtime.process_text_tick("red blue green")
+    second = runtime.process_text_tick("")
+    first_focus = set(first["attention"]["selected_labels"])
+    ranked_second = second["attention"]["ranked_items"]
+    assert ranked_second
+    continuation_rows = [row for row in ranked_second if str(row.get("sa_label", "") or "") in first_focus]
+    assert continuation_rows
+    assert any(float(row.get("continuation_bonus", 0.0) or 0.0) >= 0.0 for row in continuation_rows)
+
+
+def test_focus_successor_bias_learns_unique_text_continuation() -> None:
+    runtime = APV21Runtime()
+    for _ in range(4):
+        runtime.process_text_tick("hello")
+        runtime.process_text_tick("world")
+
+    runtime.process_text_tick("hello")
+    trace = runtime.process_text_tick("")
+    successor_bias = trace["slow_system"]["successor_bias"]
+    assert successor_bias["schema_id"] == "focus_successor_bias/v1"
+    assert successor_bias["items"]
+    assert any(row["sa_label"] == "text::world" and float(row["bias"]) > 0.0 for row in successor_bias["items"])
+    ranked = trace["attention"]["ranked_items"]
+    world_rows = [row for row in ranked if row.get("sa_label") == "text::world"]
+    assert world_rows
+    assert float(world_rows[0].get("successor_bias", 0.0) or 0.0) > 0.0
+
+
+def test_focus_successor_bias_branch_entropy_weakens_ambiguous_context() -> None:
+    from memory.short_term.focus_successor_bias import FocusSuccessorBias
+
+    unique = FocusSuccessorBias(gain=0.42, max_bias=0.48)
+    for tick in range(5):
+        unique.observe_transition(
+            previous_focus_labels=["text::cue"],
+            current_focus_items=[{"sa_label": "text::answer", "real_energy": 1.0}],
+            tick_index=tick,
+        )
+    unique_trace = unique.build_bias(
+        previous_focus_labels=["text::cue"],
+        candidate_items=[{"sa_label": "text::answer"}],
+        tick_index=10,
+    )
+    unique_bias = max(float(row.get("bias", 0.0) or 0.0) for row in unique_trace["items"])
+
+    ambiguous = FocusSuccessorBias(gain=0.42, max_bias=0.48)
+    words = ["red", "blue", "green", "yellow", "purple"]
+    for tick, word in enumerate(words):
+        ambiguous.observe_transition(
+            previous_focus_labels=["text::cue"],
+            current_focus_items=[{"sa_label": f"text::{word}", "real_energy": 1.0}],
+            tick_index=tick,
+        )
+    ambiguous_trace = ambiguous.build_bias(
+        previous_focus_labels=["text::cue"],
+        candidate_items=[{"sa_label": f"text::{word}"} for word in words],
+        tick_index=10,
+    )
+    ambiguous_items = ambiguous_trace["items"]
+    ambiguous_bias = max(float(row.get("bias", 0.0) or 0.0) for row in ambiguous_items)
+    assert unique_bias > ambiguous_bias
+
+
+def test_focus_successor_bias_does_not_override_strong_real_stimulus() -> None:
+    from core.attention.selector import AttentionSelector
+
+    selector = AttentionSelector(
+        focus_limit=1,
+        pressure_gain=0.6,
+        attention_gain_weight=0.8,
+        fatigue_weight=0.5,
+        continuation_bias=0.0,
+    )
+    trace = selector.select(
+        [
+            {"sa_label": "text::world", "real_energy": 0.2, "cognitive_pressure": 0.1, "attention_gain": 0.0, "virtual_energy": 0.1},
+            {"sa_label": "text::danger", "real_energy": 2.0, "cognitive_pressure": 2.0, "attention_gain": 1.2, "virtual_energy": 0.0},
+        ],
+        successor_bias={"bias_by_label": {"text::world": 0.48}},
+    )
+    assert trace["selected_labels"] == ["text::danger"]
+    world = next(row for row in trace["ranked_items"] if row["sa_label"] == "text::world") if len(trace["ranked_items"]) > 1 else None
+    assert world is not None
+    assert float(world.get("successor_bias", 0.0) or 0.0) > 0.0
+
+
+def test_cognitive_feelings_enter_trace_and_state_pool() -> None:
+    runtime = APV21Runtime()
+    runtime.process_text_tick("apple is fruit")
+    trace = runtime.process_text_tick("apple is fruit")
+    feelings = trace["cognitive_feelings"]
+    assert feelings["channels"]
+    assert feelings["items"]
+    snapshot = trace["state_pool"]["snapshot"]["items"]
+    feeling_labels = {str(item.get("sa_label", "") or "") for item in feelings["items"]}
+    assert any(str(item.get("sa_label", "") or "") in feeling_labels for item in snapshot)
+
+
+def test_runtime_load_feeling_enters_trace_state_pool_and_tuner() -> None:
+    from config.defaults import ObservabilityConfig, RuntimeConfig, RuntimeLoadFeelingConfig
+
+    runtime = APV21Runtime(
+        config=RuntimeConfig(
+            observability=ObservabilityConfig(target_tick_ms=1.0),
+            runtime_load_feeling=RuntimeLoadFeelingConfig(
+                min_activation=0.01,
+                state_item_soft_limit=1,
+                r_state_item_soft_limit=1,
+                attention_candidate_soft_limit=1,
+                pending_index_soft_limit=1,
+            ),
+        )
+    )
+    trace = runtime.process_text_tick("alpha beta gamma")
+    load = trace["runtime_load_feeling"]
+
+    assert load["schema_id"] == "runtime_load_feeling/v1"
+    assert load["policy"] == "trace_first_no_runtime_budget_mutation"
+    assert load["suggested_modulation"]["applied"] is False
+    assert "complexity" in load["channels"]
+    assert "simplicity" in load["channels"]
+    assert load["items"]
+
+    snapshot_labels = [item["sa_label"] for item in trace["state_pool"]["snapshot"]["items"]]
+    assert any(label in {"feeling::complexity", "feeling::simplicity"} for label in snapshot_labels)
+    assert "runtime_load_coupling" in trace["cognitive_feelings"]
+
+    tuner_metrics = trace["tuner"]["metrics"]
+    assert "runtime_load_ratio" in tuner_metrics
+    assert "runtime_complexity" in tuner_metrics
+
+
+def test_runtime_budget_controller_applies_next_tick_nonsemantic_budget() -> None:
+    from config.defaults import (
+        MemoryConfig,
+        ObservabilityConfig,
+        RuntimeBudgetControllerConfig,
+        RuntimeConfig,
+        RuntimeLoadFeelingConfig,
+        StatePoolConfig,
+        TextSensorConfig,
+    )
+
+    config = RuntimeConfig(
+        observability=ObservabilityConfig(target_tick_ms=1.0, trace_item_preview_limit=20, trace_r_state_item_preview_limit=6),
+        text_sensor=TextSensorConfig(budget_limit=256, competition_limit=256),
+        state_pool=StatePoolConfig(r_state_items_per_head=64, r_state_head_limit=5, memory_snapshot_limit=256),
+        memory=MemoryConfig(index_jobs_per_tick=1, index_maintenance_min_remaining_ms=0.0, index_maintenance_max_ms=10.0),
+        runtime_load_feeling=RuntimeLoadFeelingConfig(
+            min_activation=0.01,
+            state_item_soft_limit=1,
+            r_state_item_soft_limit=1,
+            attention_candidate_soft_limit=1,
+            pending_index_soft_limit=1,
+        ),
+        runtime_budget_controller=RuntimeBudgetControllerConfig(
+            smoothing_alpha=1.0,
+            readout_min_multiplier=0.72,
+            min_r_state_items_per_head=8,
+        ),
+    )
+    runtime = APV21Runtime(config=config)
+    first = runtime.process_text_tick(" ".join(f"load{i}" for i in range(180)))
+    second = runtime.process_text_tick(" ".join(f"load{i}" for i in range(180)))
+
+    first_budget = first["runtime_budget_controller"]
+    second_budget = second["runtime_budget_controller"]
+
+    assert first_budget["applied"] is False
+    assert second_budget["applied"] is True
+    assert second_budget["source_tick_index"] == first["tick_index"]
+    assert second_budget["readout_budget"]["items_per_head"] < config.state_pool.r_state_items_per_head
+    assert second["state_pool"]["r_state"]["items_per_head"] == second_budget["readout_budget"]["items_per_head"]
+    assert second["learning"]["index_maintenance"]["runtime_budget"]["jobs_per_tick"] <= config.memory.index_jobs_per_tick
+    assert second["runtime_budget_controller"]["trace_budget"]["item_preview_limit"] <= config.observability.trace_item_preview_limit
+    assert second_budget["semantic_mutation"] == {
+        "real_decay": False,
+        "virtual_decay": False,
+        "prune_threshold": False,
+    }
+    assert runtime.state_pool.real_decay == config.state_pool.real_decay
+    assert runtime.state_pool.virtual_decay == config.state_pool.virtual_decay
+    assert runtime.state_pool.prune_threshold == config.state_pool.prune_threshold
+
+
+def test_cognitive_feeling_items_have_explanatory_anchor_meta() -> None:
+    runtime = APV21Runtime()
+    trace = runtime.process_text_tick("today weather nice")
+    items = trace["cognitive_feelings"]["items"]
+    if not items:
+        trace = runtime.process_text_tick("today weather nice")
+        items = trace["cognitive_feelings"]["items"]
+    assert items
+    assert all(isinstance(item.get("anchor_meta"), dict) for item in items)
+
+
+def test_online_embedding_summary_is_exposed_and_updates() -> None:
+    runtime = APV21Runtime()
+    runtime.process_text_tick("apple fruit sweet")
+    trace = runtime.process_text_tick("apple fruit sweet")
+    summary = trace["learning"]["online_embedding"]
+    assert summary["token_count"] > 0
+    assert summary["token_limit"] >= summary["token_count"]
+
+
+def test_online_embedding_negative_evidence_lowers_similarity() -> None:
+    from memory.embedding.online_store import OnlineEmbeddingStore
+
+    store = OnlineEmbeddingStore(dim=16, token_limit=64, min_support_to_promote=1, per_tick_update_limit=16)
+    store.begin_tick(0)
+    store.observe_positive_pair("text::apple", "vision_obj::round", weight=1.0)
+    positive = store.learned_similarity(["text::apple"], ["vision_obj::round"])
+    assert positive["score"] > 0.0
+    assert positive["contributions"]
+
+    store.begin_tick(1)
+    store.observe_negative_pair("text::apple", "vision_obj::round", weight=3.0)
+    corrected = store.learned_similarity(["text::apple"], ["vision_obj::round"])
+    assert corrected["score"] < positive["score"]
+    assert corrected["negative_contributions"]
+
+
+def test_online_embedding_directed_anchor_updates_only_source_token() -> None:
+    from memory.embedding.online_store import OnlineEmbeddingStore
+
+    store = OnlineEmbeddingStore(dim=16, token_limit=64, min_support_to_promote=1, per_tick_update_limit=16)
+    store.begin_tick(0)
+    store.observe_positive_anchor("text::pressure_subject", "text::stable_anchor", weight=1.0)
+    forward = store.learned_similarity(["text::pressure_subject"], ["text::stable_anchor"])
+    reverse = store.learned_similarity(["text::stable_anchor"], ["text::pressure_subject"])
+    assert forward["score"] > 0.0
+    assert reverse["score"] == 0.0
+    assert not reverse["contributions"]
+
+    store.begin_tick(1)
+    store.observe_negative_anchor("text::missed_prediction", "text::actual_anchor", weight=1.0)
+    forward_negative = store.learned_similarity(["text::missed_prediction"], ["text::actual_anchor"])
+    reverse_negative = store.learned_similarity(["text::actual_anchor"], ["text::missed_prediction"])
+    assert forward_negative["score"] < 0.0
+    assert reverse_negative["score"] == 0.0
+    assert not reverse_negative["negative_contributions"]
+
+
+def test_directed_pressure_update_does_not_move_normal_anchor_relations() -> None:
+    from memory.embedding.online_store import OnlineEmbeddingStore
+
+    store = OnlineEmbeddingStore(dim=16, token_limit=64, min_support_to_promote=1, per_tick_update_limit=16)
+    store.begin_tick(0)
+    store.observe_positive_pair("text::normal_a", "text::normal_b", weight=1.0)
+    before_ab = store.learned_similarity(["text::normal_a"], ["text::normal_b"])
+    before_ba = store.learned_similarity(["text::normal_b"], ["text::normal_a"])
+
+    store.begin_tick(1)
+    store.observe_negative_anchor("text::abnormal_subject", "text::normal_a", weight=3.0)
+    after_ab = store.learned_similarity(["text::normal_a"], ["text::normal_b"])
+    after_ba = store.learned_similarity(["text::normal_b"], ["text::normal_a"])
+    abnormal_to_anchor = store.learned_similarity(["text::abnormal_subject"], ["text::normal_a"])
+    anchor_to_abnormal = store.learned_similarity(["text::normal_a"], ["text::abnormal_subject"])
+
+    assert after_ab["score"] == before_ab["score"]
+    assert after_ba["score"] == before_ba["score"]
+    assert abnormal_to_anchor["score"] < 0.0
+    assert anchor_to_abnormal["score"] == 0.0
+
+
+def test_directed_multi_anchor_updates_preserve_requested_negative_ratio() -> None:
+    from memory.embedding.online_store import OnlineEmbeddingStore
+
+    store = OnlineEmbeddingStore(dim=16, token_limit=64, min_support_to_promote=1, per_tick_update_limit=16)
+    store.begin_tick(0)
+    store.observe_positive_pair("text::normal_a", "text::normal_b", weight=1.0)
+    before_anchor_relation = store.learned_similarity(["text::normal_a"], ["text::normal_b"])
+
+    store.begin_tick(1)
+    store.observe_negative_anchor("text::abnormal_subject", "text::normal_a", weight=2.0)
+    store.observe_negative_anchor("text::abnormal_subject", "text::normal_b", weight=1.0)
+    away_a = store.learned_similarity(["text::abnormal_subject"], ["text::normal_a"])
+    away_b = store.learned_similarity(["text::abnormal_subject"], ["text::normal_b"])
+    after_anchor_relation = store.learned_similarity(["text::normal_a"], ["text::normal_b"])
+
+    assert away_a["score"] < away_b["score"] < 0.0
+    ratio = abs(float(away_a["score"])) / abs(float(away_b["score"]))
+    assert 1.95 <= ratio <= 2.05
+    assert after_anchor_relation["score"] == before_anchor_relation["score"]
+    assert store.learned_similarity(["text::normal_a"], ["text::abnormal_subject"])["score"] == 0.0
+    assert store.learned_similarity(["text::normal_b"], ["text::abnormal_subject"])["score"] == 0.0
+
+
+def test_energy_pressure_learning_records_positive_and_negative_events() -> None:
+    from memory.store import MemoryStore
+
+    memory = MemoryStore(
+        recall_top_k=3,
+        predict_top_k=2,
+        prediction_energy_scale=0.5,
+        max_snapshots_per_kind=16,
+        candidate_limit=8,
+        scoring_candidate_limit=8,
+        online_min_support_to_promote=1,
+        online_per_tick_update_limit=32,
+    )
+    items = [
+        {
+            "sa_label": "text::unexpected_apple",
+            "display_text": "unexpected apple",
+            "source_type": "external_text",
+            "family": "text",
+            "real_energy": 1.2,
+            "virtual_energy": 0.2,
+            "cognitive_pressure": 1.0,
+        },
+        {
+            "sa_label": "text::actual_context",
+            "display_text": "actual context",
+            "source_type": "external_text",
+            "family": "text",
+            "real_energy": 1.1,
+            "virtual_energy": 0.1,
+            "cognitive_pressure": 0.0,
+        },
+        {
+            "sa_label": "text::missed_prediction",
+            "display_text": "missed prediction",
+            "source_type": "external_text",
+            "family": "text",
+            "real_energy": 0.0,
+            "virtual_energy": 1.4,
+            "cognitive_pressure": -1.4,
+        },
+    ]
+    memory.write_snapshot(tick_index=0, memory_kind="state", items=items, focus_labels=[], source_text="")
+    memory.process_idle_index_maintenance(budget=4, max_ms=50.0)
+
+    summary = memory.online_embedding_summary()
+    energy = summary["energy_learning"]
+    assert energy["schema_id"] == "energy_pressure_online_learning/v1"
+    assert energy["total_events"] > 0
+    structured = summary["structured_learning_events"]
+    assert structured["schema_id"] == "apv21_learning_event_summary/v1"
+    assert structured["total_by_type"]["prediction_error_positive"] > 0
+    assert structured["total_by_type"]["prediction_error_negative"] > 0
+    assert structured["total_by_layer"]["content_recognition_embedding"] > 0
+    assert all(row["schema_id"] == "apv21_learning_event/v1" for row in structured["last_events"])
+    relations = {event["relation"] for event in energy["last_events"]}
+    assert "positive" in relations
+    assert "negative" in relations
+
+    negative_score = memory._online.learned_similarity(["text::missed_prediction"], ["text::actual_context"])
+    assert negative_score["score"] < 0.0
+    assert negative_score["negative_contributions"]
+    reverse_negative_score = memory._online.learned_similarity(["text::actual_context"], ["text::missed_prediction"])
+    assert reverse_negative_score["score"] == 0.0
+    assert not reverse_negative_score["negative_contributions"]
+
+
+def test_energy_learning_does_not_treat_action_feedback_as_concept_teaching() -> None:
+    from memory.store import MemoryStore
+
+    memory = MemoryStore(
+        recall_top_k=3,
+        predict_top_k=2,
+        prediction_energy_scale=0.5,
+        max_snapshots_per_kind=16,
+        candidate_limit=8,
+        scoring_candidate_limit=8,
+        online_min_support_to_promote=1,
+        online_per_tick_update_limit=32,
+    )
+    items = [
+        {
+            "sa_label": "text::context",
+            "display_text": "context",
+            "source_type": "external_text",
+            "family": "text",
+            "real_energy": 1.0,
+            "virtual_energy": 0.1,
+            "cognitive_pressure": 0.9,
+        },
+        {
+            "sa_label": "action_feedback::reward_probe",
+            "display_text": "reward probe",
+            "source_type": "action_feedback",
+            "family": "action_feedback",
+            "real_energy": 2.0,
+            "virtual_energy": 0.0,
+            "cognitive_pressure": 2.0,
+            "anchor_meta": {"feedback": {"reward": 1.0, "punishment": 0.0}},
+        },
+    ]
+    memory.write_snapshot(tick_index=0, memory_kind="state", items=items, focus_labels=[], source_text="")
+    memory.process_idle_index_maintenance(budget=4, max_ms=50.0)
+
+    energy = memory.online_embedding_summary()["energy_learning"]
+    assert all("action_feedback::" not in event["source"] for event in energy["last_events"])
+    assert all("action_feedback::" not in event["target"] for event in energy["last_events"])
+
+
+def test_energy_learning_weights_each_sa_by_its_own_real_energy() -> None:
+    from memory.store import MemoryStore
+
+    memory = MemoryStore(
+        recall_top_k=3,
+        predict_top_k=2,
+        prediction_energy_scale=0.5,
+        max_snapshots_per_kind=16,
+        candidate_limit=8,
+        scoring_candidate_limit=8,
+        online_min_support_to_promote=1,
+        online_per_tick_update_limit=32,
+    )
+    items = [
+        {
+            "sa_label": "text::unexpected_subject",
+            "display_text": "unexpected subject",
+            "source_type": "external_text",
+            "family": "text",
+            "real_energy": 1.2,
+            "virtual_energy": 0.1,
+            "cognitive_pressure": 1.1,
+        },
+        {
+            "sa_label": "text::strong_context",
+            "display_text": "strong context",
+            "source_type": "external_text",
+            "family": "text",
+            "real_energy": 1.4,
+            "virtual_energy": 0.1,
+            "cognitive_pressure": 0.0,
+        },
+        {
+            "sa_label": "text::weak_context",
+            "display_text": "weak context",
+            "source_type": "external_text",
+            "family": "text",
+            "real_energy": 0.12,
+            "virtual_energy": 0.01,
+            "cognitive_pressure": 0.0,
+        },
+    ]
+    memory.write_snapshot(tick_index=0, memory_kind="state", items=items, focus_labels=[], source_text="")
+    memory.process_idle_index_maintenance(budget=4, max_ms=50.0)
+
+    events = memory.online_embedding_summary()["energy_learning"]["last_events"]
+    subject_events = [
+        event
+        for event in events
+        if event["relation"] == "positive" and event["source"] == "text::unexpected_subject"
+    ]
+    weights = {event["target"]: float(event["weight"]) for event in subject_events}
+    assert weights["text::strong_context"] > weights["text::weak_context"]
+    strong = next(event for event in subject_events if event["target"] == "text::strong_context")
+    weak = next(event for event in subject_events if event["target"] == "text::weak_context")
+    assert strong["evidence"]["target_real_signal"] > weak["evidence"]["target_real_signal"]
+    assert strong["evidence"]["source_real_signal"] > 0.0
+    reverse = memory._online.learned_similarity(["text::strong_context"], ["text::unexpected_subject"])
+    assert reverse["score"] == 0.0
+
+
+def test_bn_rows_expose_learned_contribution_without_replacing_main_score() -> None:
+    runtime = APV21Runtime()
+    runtime.process_text_tick("apple fruit sweet")
+    runtime.process_text_tick("apple fruit sweet")
+    trace = runtime.process_text_tick("apple fruit sweet")
+    bn = trace["fast_system"]["bn"]
+    assert bn
+    assert all("learned_score" in row for row in bn)
+    assert all("score_breakdown" in row for row in bn)
+
+
+def test_numeric_feature_channels_can_recall_without_label_overlap() -> None:
+    from memory.store import MemoryStore
+
+    memory = MemoryStore(
+        recall_top_k=3,
+        predict_top_k=2,
+        prediction_energy_scale=0.5,
+        max_snapshots_per_kind=16,
+        candidate_limit=8,
+        scoring_candidate_limit=8,
+        numeric_enabled=True,
+        numeric_weight=2.0,
+    )
+    historical_items = [
+        {
+            "sa_label": "vision_obj::apple_old",
+            "display_text": "old apple",
+            "source_type": "vision_numeric",
+            "family": "vision_object",
+            "real_energy": 1.0,
+            "numeric_features": {
+                "vision.shape": [0.9, 0.1, 0.2, 0.0],
+                "vision.color": [0.95, 0.85, 0.12],
+            },
+        }
+    ]
+    memory.write_snapshot(tick_index=0, memory_kind="state", items=historical_items, focus_labels=[], source_text="")
+    memory.process_idle_index_maintenance(budget=4, max_ms=50.0)
+
+    query_items = [
+        {
+            "sa_label": "vision_obj::query_yellow_round",
+            "display_text": "query object",
+            "source_type": "vision_numeric",
+            "family": "vision_object",
+            "real_energy": 1.0,
+            "numeric_features": {
+                "vision.shape": [0.88, 0.12, 0.2, 0.0],
+                "vision.color": [0.93, 0.82, 0.1],
+            },
+        }
+    ]
+    rows = memory.recall(query_items, memory_kind="state", top_k=3)
+    assert rows
+    assert rows[0]["memory_id"] == "mem-1"
+    assert rows[0]["label_overlap"] == 0
+    assert rows[0]["score_breakdown"]["numeric_score"] > 0.0
+    assert rows[0]["numeric_score_breakdown"]["vision.shape"] > 0.9
+    assert any(str(source).startswith("numeric:") or str(source).startswith("numeric_rerank:") for source in rows[0]["candidate_sources"])
+
+
+def test_cn_rows_expose_learned_transition_contribution() -> None:
+    runtime = APV21Runtime()
+    runtime.process_text_tick("alpha beta")
+    runtime.process_text_tick("gamma delta")
+    trace = runtime.process_text_tick("alpha beta")
+    cn = trace["fast_system"]["cn"]
+    assert cn
+    assert all("learned_transition_score" in row for row in cn)
+
+
+def test_time_feeling_enters_trace_and_state_pool() -> None:
+    runtime = APV21Runtime()
+    runtime.process_text_tick("apple is fruit")
+    runtime.process_text_tick("banana is fruit")
+    trace = runtime.process_text_tick("apple is fruit")
+    time_trace = trace["time_feeling"]
+    assert "channels" in time_trace
+    assert time_trace["dominant_peak"] is not None
+    snapshot_labels = {str(item.get("sa_label", "") or "") for item in trace["state_pool"]["snapshot"]["items"]}
+    if time_trace["items"]:
+        assert "timefelt::elapsed" in snapshot_labels
+        assert "confidence" in time_trace["items"][0]["anchor_meta"]
+
+
+def test_time_feeling_biases_recall_score_breakdown_when_active() -> None:
+    runtime = APV21Runtime()
+    runtime.process_text_tick("red apple sweet")
+    runtime.process_text_tick("green apple sour")
+    trace = runtime.process_text_tick("red apple sweet")
+    bn = trace["fast_system"]["bn"]
+    assert bn
+    assert all("time_match" in row["score_breakdown"] for row in bn)
+
+
+def test_rhythm_channel_generates_pulse_or_phase_expectation() -> None:
+    runtime = APV21Runtime()
+    runtime.process_text_tick("tick pulse")
+    runtime.process_text_tick("")
+    runtime.process_text_tick("tick pulse")
+    runtime.process_text_tick("")
+    trace = runtime.process_text_tick("tick pulse")
+    rhythm = trace["rhythm"]
+    assert "channels" in rhythm
+    snapshot_labels = {str(item.get("sa_label", "") or "") for item in trace["state_pool"]["snapshot"]["items"]}
+    if rhythm["items"]:
+        assert any(label in snapshot_labels for label in {"rhythmfelt::pulse", "rhythmfelt::phase_expectation"})
+
+
+def test_action_trace_exposes_candidates_selected_actions_and_feedback_items() -> None:
+    runtime = APV21Runtime()
+    runtime.process_text_tick("alpha beta gamma")
+    trace = runtime.process_text_tick("")
+    action = trace["action"]
+    assert action["candidates"]
+    assert "drive_state" in action
+    snapshot_labels = {str(item.get("sa_label", "") or "") for item in trace["state_pool"]["snapshot"]["items"]}
+    if action["selected_actions"]:
+        assert action["action_items"]
+        assert any(str(item.get("sa_label", "") or "").startswith("action::") for item in action["action_items"])
+        assert any(str(item.get("sa_label", "") or "").startswith("action_feedback::") for item in action["feedback_items"])
+        assert any(label.startswith("action::") or label.startswith("action_feedback::") for label in snapshot_labels)
+
+
+def test_action_feedback_updates_future_drive_bias() -> None:
+    runtime = APV21Runtime()
+    first = runtime.process_text_tick("today weather nice")
+    second = runtime.process_text_tick("")
+    third = runtime.process_text_tick("")
+    first_bias = dict((second["action"].get("drive_state", {}) or {}).get("bias", {}))
+    third_bias = dict((third["action"].get("drive_state", {}) or {}).get("bias", {}))
+    assert first["action"]["candidates"]
+    assert second["action"]["candidates"]
+    assert third["action"]["candidates"]
+    assert third_bias or third["action"]["selected_actions"]
+    if first_bias or third_bias:
+        assert first_bias != third_bias or third["action"]["selected_actions"]
+
+
+def test_action_consequence_trace_uses_successor_feedback_evidence() -> None:
+    runtime = APV21Runtime()
+    for _ in range(4):
+        runtime.process_text_tick("alpha beta gamma")
+        runtime.process_text_tick("")
+
+    trace = runtime.process_text_tick("alpha beta gamma")
+    consequence = trace["action"]["consequence_trace"]
+    assert consequence["schema_id"] == "action_consequence_trace/v1"
+    assert "action_estimates" in consequence
+    assert consequence["supported_action_count"] >= 1
+
+    candidates = trace["action"]["candidates"]
+    assert candidates
+    assert any("experience_support" in row["predicted_outcome"] for row in candidates)
+    assert any(row.get("consequence_estimate", {}).get("method") == "successor_action_feedback" for row in candidates)
+    supported = [row.get("consequence_estimate", {}) for row in candidates if row.get("consequence_estimate", {}).get("support")]
+    assert any(int(row.get("outcome_window_count", 0) or 0) >= 1 for row in supported)
+    assert "consequence_trace" in trace["explainability"]["action"]
+
+
+def test_action_consequence_trace_keeps_bounded_multistep_paths() -> None:
+    runtime = APV21Runtime()
+    for _ in range(5):
+        runtime.process_text_tick("start")
+        runtime.process_text_tick("middle")
+        runtime.process_text_tick("")
+        runtime.process_text_tick("")
+
+    trace = runtime.process_text_tick("start")
+    consequence = trace["action"]["consequence_trace"]
+    policy = consequence["path_policy"]
+    assert policy["max_horizon"] >= 2
+    assert consequence["successor_context_count"] <= policy["max_successor_rows"]
+
+    estimates = consequence["action_estimates"]
+    assert estimates
+    max_depth = max(int(row.get("max_depth", 0) or 0) for row in estimates.values())
+    assert max_depth >= 2
+    assert max_depth <= policy["max_horizon"]
+
+
+def test_action_feedback_preserves_causal_window_for_future_learning() -> None:
+    runtime = APV21Runtime()
+    first = runtime.process_text_tick("cause probe")
+    second = runtime.process_text_tick("")
+    third = runtime.process_text_tick("")
+
+    assert first["action"]["selected_actions"] or second["action"]["selected_actions"]
+    feedback = third["action_feedback"]
+    if not feedback["applied"]:
+        feedback = second["action_feedback"]
+    assert feedback["applied"]
+    window = feedback["causal_window"]
+    assert window["schema_id"] == "action_causal_window/v1"
+    assert window["action_ids"]
+    assert "before_top_labels" in window
+    assert "after_top_labels" in window
+
+    feedback_items = feedback["feedback_items"]
+    assert feedback_items
+    assert any((item.get("anchor_meta", {}) or {}).get("causal_window", {}).get("schema_id") == "action_causal_window/v1" for item in feedback_items)
+
+
+def test_action_outcome_memory_shapes_drive_without_concept_teaching() -> None:
+    from core.action import ActionConsequencePlanner
+
+    planner = ActionConsequencePlanner(
+        enabled=True,
+        selection_threshold=0.1,
+        max_selected_actions=1,
+        fatigue_decay=0.9,
+        fatigue_step=0.0,
+        bias_learning_rate=0.0,
+        bias_gain=0.0,
+        confidence_gain=0.18,
+        wait_base_drive=0.18,
+        outcome_memory_enabled=True,
+        outcome_memory_learning_rate=0.22,
+        outcome_memory_decay_per_tick=1.0,
+        outcome_memory_support_scale=2.0,
+        outcome_memory_max_drive_bias=0.75,
+    )
+    selected = [
+        {
+            "action_id": "action::inspect_residual",
+            "actuator_id": "actuator::attention",
+            "predicted_outcome": {
+                "reward": 0.12,
+                "punishment": 0.08,
+                "correctness": 0.1,
+                "pressure": 0.05,
+                "confidence": 0.5,
+            },
+        }
+    ]
+    for idx in range(6):
+        planner.plan(
+            tick_index=idx,
+            state_snapshot_items=[],
+            fast_bn=[],
+            fast_cn=[],
+            slow_bn=[],
+            slow_cn=[],
+            cognitive_feelings={"channels": {}},
+            rhythm_trace={"channels": {}},
+            time_trace={"channels": {}},
+        )
+        feedback = planner.record_feedback(
+            selected_actions=selected,
+            observed_feedback={"reward": 0.0, "punishment": 0.62, "correctness": 0.0, "confidence": 0.88},
+        )
+    memory = feedback["outcome_memory"]
+    estimate = next(row for row in memory["estimates"] if row["action_id"] == "action::inspect_residual")
+    assert estimate["failure_count"] >= 6
+    assert estimate["avoidance_bias"] > estimate["approach_bias"]
+    assert estimate["drive_bias"] < 0.0
+
+    trace = planner.plan(
+        tick_index=7,
+        state_snapshot_items=[],
+        fast_bn=[],
+        fast_cn=[],
+        slow_bn=[],
+        slow_cn=[],
+        cognitive_feelings={"channels": {"dissonance": 1.0, "pressure": 1.0}},
+        rhythm_trace={"channels": {}},
+        time_trace={"channels": {}},
+    )
+    candidate = next(row for row in trace["candidates"] if row["action_id"] == "action::inspect_residual")
+    assert candidate["outcome_memory_estimate"]["support"] > 0.0
+    assert candidate["outcome_drive_bias"] < 0.0
+    assert "outcome_memory_support" in candidate["predicted_outcome"]
+
+
+def test_action_feedback_item_encodes_punishment_as_virtual_drive_shaping() -> None:
+    runtime = APV21Runtime()
+    selected = [
+        {
+            "action_id": "action::inspect_residual",
+            "predicted_outcome": {"reward": 0.0, "punishment": 0.2, "correctness": 0.0, "pressure": 0.2},
+            "consequence_estimate": {},
+        }
+    ]
+    planner_feedback = {
+        "outcome_memory": {
+            "estimates": [
+                {
+                    "action_id": "action::inspect_residual",
+                    "support": 0.5,
+                    "drive_bias": -0.2,
+                }
+            ]
+        }
+    }
+    items = runtime._build_action_feedback_items(
+        selected_actions=selected,
+        observed_feedback={"reward": 0.0, "punishment": 0.8, "correctness": 0.0, "confidence": 0.9},
+        planner_feedback=planner_feedback,
+        causal_window={"schema_id": "action_causal_window/v1", "action_ids": ["action::inspect_residual"]},
+    )
+    item = items[0]
+    assert item["real_energy"] == 0.0
+    assert item["virtual_energy"] > 0.0
+    meta = item["anchor_meta"]
+    assert meta["outcome_memory_estimate"]["drive_bias"] < 0.0
+    assert meta["feedback_energy_semantics"]["meaning"].startswith("reward_correctness_as_real")
+
+
+def test_multimodal_runtime_accepts_legacy_vision_bridge_and_emits_inner_vision() -> None:
+    runtime = APV21Runtime()
+    image_path = next((Path.cwd() / "legacy_apv2" / "evidence").rglob("*.png"))
+    trace = runtime.process_multimodal_tick("看这个图", image_bytes=image_path.read_bytes())
+    assert trace["multimodal"]["inner_vision"]
+    assert trace["multimodal"]["ingested_modalities"]
+    snapshot_labels = {str(item.get("sa_label", "") or "") for item in trace["state_pool"]["snapshot"]["items"]}
+    assert any(label.startswith("vision") for label in snapshot_labels)
+
+
+def test_native_vision_numeric_sensor_emits_channel_features_and_recall_scores() -> None:
+    runtime = APV21Runtime()
+    image_path = next((Path.cwd() / "legacy_apv2" / "evidence").rglob("*.png"))
+    raw = image_path.read_bytes()
+    first = runtime.process_multimodal_tick("看这个图", image_bytes=raw)
+    runtime.process_idle_maintenance(include_heavy=True, budget=4, max_ms=50.0)
+    second = runtime.process_multimodal_tick("看这个图", image_bytes=raw)
+
+    assert first["multimodal"]["inner_vision"]["schema_id"] == "inner_vision_numeric/v1"
+    snapshot = second["state_pool"]["snapshot"]["items"]
+    numeric_rows = [row for row in snapshot if str(row.get("source_type", "")) == "vision_numeric"]
+    assert numeric_rows
+    assert any((row.get("numeric_features", {}) or {}).get("vision.shape") for row in numeric_rows)
+    field_rows = [row for row in numeric_rows if str(row.get("sa_label", "") or "").startswith("vision::field::")]
+    assert field_rows
+    assert any((row.get("reconstruction_payload", {}) or {}).get("channel") == "vision.field.color_grid" for row in field_rows)
+    bn = second["fast_system"]["bn"]
+    assert bn
+    assert any(float(row.get("score_breakdown", {}).get("numeric_score", 0.0) or 0.0) > 0.0 for row in bn)
+
+
+def test_vision_inner_replay_uses_state_pool_channels_not_raw_assets() -> None:
+    runtime = APV21Runtime()
+    image_path = next((Path.cwd() / "legacy_apv2" / "evidence").rglob("*.png"))
+    raw = image_path.read_bytes()
+    first = runtime.process_multimodal_tick("vision state replay", image_bytes=raw)
+    runtime.process_idle_maintenance(include_heavy=True, budget=4, max_ms=50.0)
+    second = runtime.process_multimodal_tick("vision state replay", image_bytes=raw)
+
+    assert first["multimodal"]["asset_refs"] == []
+    current_frame = first["multimodal"]["inner_vision"]["current_frame"]
+    assert current_frame["reconstruction_basis"] == "state_pool_numeric_channels"
+    assert current_frame["raw_preview_payload"] is False
+    assert "preview_png_b64" not in current_frame
+    assert "asset_ref" not in current_frame
+    assert "raw_asset_ref" not in current_frame
+    vision_obj_rows = [
+        row
+        for row in first["state_pool"]["snapshot"]["items"]
+        if str(row.get("sa_label", "") or "").startswith("vision_obj::")
+    ]
+    assert vision_obj_rows
+    assert all(not ((row.get("anchor_meta", {}) or {}).get("asset_refs", []) or []) for row in vision_obj_rows)
+    assert first["multimodal"]["inner_vision"]["object_reconstruction"]
+    field_payloads = first["multimodal"]["inner_vision"]["field_reconstruction"]["payloads"]
+    assert {"vision.field.color_grid", "vision.field.luma_grid", "vision.field.edge_grid"} <= set(field_payloads)
+    object_bundle = first["multimodal"]["inner_vision"]["object_reconstruction"][0]["reconstruction_payload"]
+    assert {"vision.object.mask_grid", "vision.object.palette", "vision.object.contour_points", "vision.object.color_layout"} <= set(object_bundle["channels"])
+    assert "asset_ref" not in first["multimodal"]["inner_vision"]["object_reconstruction"][0]
+    assert runtime.memory.latest_snapshot("state")["asset_refs"] == []
+    assert second["fast_system"]["bn"]
+    assert all(not row.get("snapshot_preview", {}).get("asset_refs") for row in second["fast_system"]["bn"])
+
+
+def test_multimodal_runtime_accepts_legacy_audio_bridge_and_emits_inner_audio() -> None:
+    runtime = APV21Runtime()
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(16000)
+        frames = []
+        for idx in range(3200):
+            value = int(12000 * math.sin(2 * math.pi * 440 * idx / 16000))
+            frames.append(struct.pack("<h", value))
+        wav.writeframes(b"".join(frames))
+    trace = runtime.process_multimodal_tick("听这个声音", audio_bytes=buf.getvalue())
+    assert trace["multimodal"]["inner_audio"]
+    snapshot_labels = {str(item.get("sa_label", "") or "") for item in trace["state_pool"]["snapshot"]["items"]}
+    assert any(label.startswith("audio") for label in snapshot_labels)
+
+
+def test_native_audio_numeric_sensor_emits_channel_features_and_recall_scores() -> None:
+    runtime = APV21Runtime()
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(16000)
+        frames = []
+        for idx in range(3200):
+            value = int(12000 * math.sin(2 * math.pi * 440 * idx / 16000))
+            frames.append(struct.pack("<h", value))
+        wav.writeframes(b"".join(frames))
+    raw = buf.getvalue()
+    first = runtime.process_multimodal_tick("听这个声音", audio_bytes=raw)
+    runtime.process_idle_maintenance(include_heavy=True, budget=4, max_ms=50.0)
+    second = runtime.process_multimodal_tick("听这个声音", audio_bytes=raw)
+
+    assert first["multimodal"]["inner_audio"]["schema_id"] == "inner_audio_numeric/v1"
+    audio_payloads = first["multimodal"]["inner_audio"]["focus_reconstruction"]["payloads"]
+    assert {
+        "audio.focus.waveform_slice",
+        "audio.focus.envelope",
+        "audio.focus.stft_magnitude",
+        "audio.focus.stft_phase",
+        "audio.focus.pitch_contour",
+        "audio.focus.onset_events",
+    } <= set(audio_payloads)
+    snapshot = second["state_pool"]["snapshot"]["items"]
+    numeric_rows = [row for row in snapshot if str(row.get("source_type", "")) == "audio_numeric"]
+    assert numeric_rows
+    assert any((row.get("numeric_features", {}) or {}).get("audio.spectrum") for row in numeric_rows)
+    assert any((row.get("reconstruction_payload", {}) or {}).get("channel") == "audio.focus.waveform_slice" for row in numeric_rows)
+    bn = second["fast_system"]["bn"]
+    assert bn
+    assert any(float(row.get("score_breakdown", {}).get("numeric_score", 0.0) or 0.0) > 0.0 for row in bn)
+
+
+def test_audio_inner_playback_uses_state_pool_synthesis_not_raw_assets() -> None:
+    runtime = APV21Runtime()
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(16000)
+        frames = []
+        for idx in range(3200):
+            value = int(12000 * math.sin(2 * math.pi * 440 * idx / 16000))
+            frames.append(struct.pack("<h", value))
+        wav.writeframes(b"".join(frames))
+    trace = runtime.process_multimodal_tick("audio state playback", audio_bytes=buf.getvalue())
+    assert trace["multimodal"]["asset_refs"] == []
+    preview = trace["multimodal"]["inner_audio"]["preview_asset_ref"]
+    assert preview["reconstruction_basis"] == "state_pool_numeric_channels"
+    assert preview["raw_preview_payload"] is False
+    assert "preview_wav_b64" not in preview
+    assert "asset_ref" not in preview
+    assert "focus_window_asset_ref" not in preview
+    assert "feature_asset_ref" not in preview
+    audio_rows = [
+        row
+        for row in trace["state_pool"]["snapshot"]["items"]
+        if str(row.get("source_type", "")) == "audio_numeric"
+    ]
+    assert audio_rows
+    event_row = next(row for row in audio_rows if str(row.get("sa_label", "")) == "audio_event::current")
+    bundle = event_row["reconstruction_payload"]
+    assert bundle["schema_id"] == "reconstruction_payload_bundle/v1"
+    assert "audio.focus.waveform_slice" in bundle["channels"]
+    assert all(not ((row.get("anchor_meta", {}) or {}).get("asset_refs", []) or []) for row in audio_rows)
+    assert runtime.memory.latest_snapshot("state")["asset_refs"] == []
+
+
+def test_multimodal_handle_learning_records_events_and_contributions() -> None:
+    runtime = APV21Runtime()
+    image_path = next((Path.cwd() / "legacy_apv2" / "evidence").rglob("*.png"))
+    raw = image_path.read_bytes()
+
+    for _ in range(4):
+        runtime.process_multimodal_tick("苹果", image_bytes=raw)
+        runtime.process_idle_maintenance(include_heavy=True, budget=4, max_ms=50.0)
+
+    trace = runtime.process_multimodal_tick("苹果", image_bytes=raw)
+    learning = trace["learning"]["online_embedding"]
+    multimodal = learning["multimodal_learning"]
+    assert multimodal["schema_id"] == "multimodal_handle_learning/v1"
+    assert multimodal["total_events"] > 0
+    assert any(event["event_type"] in {"cross_modal_copresence_positive", "handle_continuity_positive"} for event in multimodal["last_events"])
+
+    bn = trace["fast_system"]["bn"]
+    assert bn
+    assert any(row.get("learned_contributions") for row in bn)
+
+
+def test_multimodal_relation_reconstruction_scores_relation_channel() -> None:
+    from experiments.multimodal_relation_reconstruction import run_multimodal_relation_reconstruction_experiment
+
+    result = run_multimodal_relation_reconstruction_experiment()
+    summary = result["summary"]
+    assert summary["passed"] is True
+    assert "vision_spatial" in result["query_relation_event_types"]
+    assert {"audio_order", "audio_band", "audio_rhythm"} & set(result["query_relation_event_types"])
+    assert summary["match_relation_score"] > 0.0
+    assert summary["match_score"] > summary["contrast_score"]
+    assert summary["asset_shortcut_used"] is False
+    assert summary["reconstruction_basis"] == "state_pool_numeric_channels"
+
+
+def test_focus_buffer_tracks_interruption_resumption_and_replay_governance() -> None:
+    from memory.short_term.focus_buffer import FocusBuffer
+
+    buffer = FocusBuffer(focus_history_limit=8, episode_break_overlap=0.25, max_replay_items=4)
+    buffer.push(
+        [{"sa_label": "text::A", "display_text": "A", "family": "text", "query_weight": 1.0, "real_energy": 1.0}],
+        tick_index=0,
+    )
+    buffer.push(
+        [{"sa_label": "text::A", "display_text": "A", "family": "text", "query_weight": 1.0, "real_energy": 1.0}],
+        tick_index=1,
+    )
+    buffer.push(
+        [{"sa_label": "text::B", "display_text": "B", "family": "text", "query_weight": 1.0, "real_energy": 1.0}],
+        tick_index=2,
+    )
+    buffer.push(
+        [{"sa_label": "text::A", "display_text": "A", "family": "text", "query_weight": 1.0, "real_energy": 1.0}],
+        tick_index=3,
+    )
+
+    trace = buffer.trace(tick_index=3)
+    dynamics = trace["continuity_dynamics"]
+    assert dynamics["schema_id"] == "focus_continuity_dynamics/v1"
+    assert dynamics["recent_interruptions"]
+    assert dynamics["recent_resumptions"]
+    assert any(event["resumed_episode_id"] == 0 for event in dynamics["recent_resumptions"])
+
+    candidates = trace["replay_candidates"]
+    assert candidates
+    episode_id = int(candidates[0]["episode_id"])
+    buffer.mark_replay_selected(episode_id)
+    cooled = next(row for row in buffer.replay_candidates(tick_index=4, limit=4) if int(row["episode_id"]) == episode_id)
+    assert "repetition_cooldown" in cooled["governance"]["reasons"]
+    assert cooled["governance"]["weight_multiplier"] < 1.0
+
+
+def test_thought_view_and_observatory_summary_expose_new_contracts() -> None:
+    runtime = APV21Runtime()
+    trace = runtime.process_text_tick("apple is fruit")
+    thought_view = trace["thought_view"]
+    assert "fast" in thought_view
+    assert "slow" in thought_view
+    assert "feelings" in thought_view
+    from observatory.trace_view import summarize_tick
+
+    summary = summarize_tick(trace)
+    assert "thought_feelings" in summary
+
+
+def test_observatory_reconstruction_exposes_action_outcome_and_inner_world() -> None:
+    from observatory import reconstruct_tick_observatory
+
+    runtime = APV21Runtime()
+    for _ in range(3):
+        runtime.process_text_tick("alpha beta gamma")
+        runtime.process_text_tick("")
+    trace = runtime.process_text_tick("alpha beta gamma")
+    reconstructed = reconstruct_tick_observatory(
+        trace,
+        snapshot_lookup=runtime.memory.snapshot_by_id,
+        successor_lookup=runtime.memory.successor_links,
+    )
+    assert reconstructed["action"]["schema_id"] == "apv21_action_observatory/v1"
+    assert "outcome_memory" in reconstructed["action"]["drive_state"]
+    assert reconstructed["inner_world"]["schema_id"] == "apv21_inner_world_view/v2"
+    assert "inner_thought" in reconstructed["inner_world"]
+    assert "numeric_channels" in reconstructed["learning"]
+
+
+def test_observatory_inner_world_layers_are_state_pool_reconstruction_only() -> None:
+    from observatory import reconstruct_tick_observatory
+
+    runtime = APV21Runtime()
+    image_path = next((Path.cwd() / "legacy_apv2" / "evidence").rglob("*.png"))
+    raw = image_path.read_bytes()
+    runtime.process_multimodal_tick("vision memory", image_bytes=raw)
+    runtime.process_idle_maintenance(include_heavy=True, budget=4, max_ms=50.0)
+    trace = runtime.process_multimodal_tick("vision memory", image_bytes=raw)
+    reconstructed = reconstruct_tick_observatory(
+        trace,
+        snapshot_lookup=runtime.memory.snapshot_by_id,
+        successor_lookup=runtime.memory.successor_links,
+    )
+    inner_world = reconstructed["inner_world"]
+    vision = inner_world["inner_vision_reconstruction"]
+    assert vision["schema_id"] == "inner_vision_reconstruction/v2"
+    assert vision["reconstruction_basis"] == "state_pool_numeric_channels"
+    assert vision["asset_shortcut_used"] is False
+    assert any(layer["layer_type"] == "real" for layer in vision["layers"])
+    assert vision["assets"] == []
+    assert vision["asset_groups"] == {}
+    assert vision["resolver_hints"] == []
+    assert vision["objects"]
+    assert vision["field"]["payloads"]["vision.field.color_grid"]["payload_values"]
+    assert any(row.get("color_layout_payload", {}).get("payload_values") for row in vision["objects"])
+    assert all(not row.get("asset_ref") for row in vision["objects"])
+    assert all(not row.get("focus_tile_asset_ref") for row in vision["objects"])
+    assert vision["recalled_assets"] == []
+
+
+def test_inner_world_render_model_exports_canvas_and_audio_ready_payload() -> None:
+    from observatory import build_inner_world_render_model, reconstruct_tick_observatory, render_inner_world_html
+
+    runtime = APV21Runtime()
+    image_path = next((Path.cwd() / "legacy_apv2" / "evidence").rglob("*.png"))
+    image_raw = image_path.read_bytes()
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(16000)
+        frames = []
+        for idx in range(3200):
+            value = int(12000 * math.sin(2 * math.pi * 330 * idx / 16000))
+            frames.append(struct.pack("<h", value))
+        wav.writeframes(b"".join(frames))
+    trace = runtime.process_multimodal_tick("render model", image_bytes=image_raw, audio_bytes=buf.getvalue())
+    reconstructed = reconstruct_tick_observatory(
+        trace,
+        snapshot_lookup=runtime.memory.snapshot_by_id,
+        successor_lookup=runtime.memory.successor_links,
+    )
+    model = build_inner_world_render_model(reconstructed)
+    assert model["schema_id"] == "apv21_inner_world_render_model/v1"
+    assert model["vision_panel"]["objects"]
+    assert model["vision_panel"]["reconstruction_source"] == "state_pool_numeric_channels"
+    assert model["vision_panel"]["asset_shortcut_used"] is False
+    assert model["vision_panel"]["image_sources"] == []
+    assert model["audio_panel"]["spectrum_bands"]
+    assert model["audio_panel"]["waveform_preview"]
+    assert "audio.focus.waveform_slice" in model["audio_panel"]["focus_payload_channels"]
+    assert "audio.focus.waveform_slice" in model["audio_panel"]["playback"]["source"]["numeric_channels_used"]
+    assert model["audio_panel"]["waveform_source"] == "state_pool_numeric_synthesis"
+    assert model["audio_panel"]["spectrum_source"] == "state_pool_numeric_channels"
+    assert model["audio_panel"]["audio_sources"] == []
+    assert model["audio_panel"]["playback"]["enabled"] is True
+    assert model["audio_panel"]["playback"]["source"]["role"] == "state_pool_synthesis"
+    assert model["audio_panel"]["playback"]["source"]["asset_id"] == ""
+    assert model["audio_panel"]["playback"]["source"]["data_url"].startswith("data:audio/wav;base64,")
+    assert model["audio_panel"]["playback"]["decoded_for_preview"] is False
+    html = render_inner_world_html(reconstructed)
+    assert "<canvas id=\"visionCanvas\"" in html
+    assert "apv21_inner_world_render_model/v1" in html
+
+
+def test_foveated_object_resolution_tracks_visual_focus() -> None:
+    from sensors.vision.numeric_sensor import NativeVisionNumericSensor
+    from PIL import Image, ImageDraw
+
+    sensor = NativeVisionNumericSensor(max_objects=1)
+    image = Image.new("RGB", (96, 72), (235, 238, 240))
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((35, 20, 61, 52), fill=(230, 90, 60), outline=(30, 40, 55), width=3)
+    buf = io.BytesIO()
+    image.save(buf, format="PNG")
+    raw = buf.getvalue()
+    focused = sensor.ingest_image_bytes(
+        raw,
+        tick_index=0,
+        focus_state={"center_x": 0.5, "center_y": 0.5, "scale": 0.55},
+    )
+    peripheral = sensor.ingest_image_bytes(
+        raw,
+        tick_index=1,
+        focus_state={"center_x": 0.0, "center_y": 0.0, "scale": 0.55},
+    )
+    focused_obj = focused["inner_vision"]["object_reconstruction"][0]
+    peripheral_obj = peripheral["inner_vision"]["object_reconstruction"][0]
+    focused_shape = focused_obj["reconstruction_payload"]["channels"]["vision.object.color_layout"]["payload_shape"]
+    peripheral_shape = peripheral_obj["reconstruction_payload"]["channels"]["vision.object.color_layout"]["payload_shape"]
+
+    assert focused_obj["sampling_focus"]["precision"] > peripheral_obj["sampling_focus"]["precision"]
+    assert focused_shape[0] >= peripheral_shape[0]
+    assert focused_shape[1] >= peripheral_shape[1]
+    assert focused_obj["variable_resolution"]["policy"] == "continuous_foveated_object_payload_resolution"
+    assert peripheral_obj["variable_resolution"]["policy"] == "continuous_foveated_object_payload_resolution"
+    assert "vision.object.focus_detail_patch" in focused_obj["reconstruction_payload"]["channels"]
+    assert "vision.object.focus_detail_patch" not in peripheral_obj["reconstruction_payload"]["channels"]
+    patch_shape = focused_obj["reconstruction_payload"]["channels"]["vision.object.focus_detail_patch"]["payload_shape"]
+    assert patch_shape[0] >= focused_shape[0]
+    assert patch_shape[1] >= focused_shape[1]
+    assert focused_obj["variable_resolution"]["near_original_focus_patch"] is True
+    assert peripheral_obj["variable_resolution"]["near_original_focus_patch"] is False
+
+
+def test_explainability_contract_exposes_fast_bn_focus_and_action_reasons() -> None:
+    runtime = APV21Runtime()
+    trace = runtime.process_text_tick("apple is fruit")
+    explainability = trace["explainability"]
+    assert "fast_bn" in explainability
+    assert "focus" in explainability
+    assert "action" in explainability
+    if explainability["fast_bn"]:
+        assert "top_score_components" in explainability["fast_bn"][0]
+
+
+def test_emotion_modulation_is_used_by_attention_and_feedback() -> None:
+    runtime = APV21Runtime()
+    first = runtime.process_text_tick("alpha beta gamma")
+    second = runtime.process_text_tick("")
+    third = runtime.process_text_tick("")
+
+    assert first["emotion"]["modulation"]["attention"]
+    ranked = second["attention"]["ranked_items"]
+    assert ranked
+    assert any("emotion_multiplier" in row for row in ranked)
+    assert any(float(row.get("emotion_multiplier", 1.0) or 1.0) != 1.0 for row in ranked)
+
+    feedback_deltas = dict((third["emotion"]["update"].get("rwd_pun_deltas", {}) or {}))
+    assert feedback_deltas
+    assert any(abs(float(value or 0.0)) > 0.0 for value in feedback_deltas.values())
+    assert "prior_attention_modulation" in third["explainability"]["emotion"]
+
+
+def test_state_pool_records_prediction_trace_and_residuals() -> None:
+    runtime = APV21Runtime()
+    for _ in range(3):
+        runtime.process_text_tick("A")
+        runtime.process_text_tick("B")
+
+    runtime.process_text_tick("A")
+    trace = runtime.process_text_tick("C")
+
+    prediction_trace = trace["state_pool"]["snapshot"]["prediction_trace"]
+    assert prediction_trace["schema_id"] == "prediction_energy_trace/v1"
+    assert prediction_trace["predicted_labels"] or prediction_trace["actual_labels"]
+    assert "missed_predicted_labels" in prediction_trace
+    assert "unexpected_labels" in prediction_trace
+
+    residual_summary = trace["state_pool"]["snapshot"]["residual_summary"]
+    assert residual_summary["schema_id"] == "state_pool_residual_bucket/v1"
+    if prediction_trace["missed_predicted_labels"] or prediction_trace["unexpected_labels"]:
+        assert residual_summary["count"] > 0
+        assert residual_summary["top"]
+        assert residual_summary["top"][0]["last_reason"] in {"prediction_miss", "prediction_unexpected"}
+
+    r_state = trace["state_pool"]["r_state"]
+    assert "prediction_trace" in r_state
+    assert "residual_summary" in trace["explainability"]["state_pool"]
+
+
+def test_state_pool_energy_flow_explains_dual_energy_views() -> None:
+    runtime = APV21Runtime()
+    runtime.state_pool.begin_tick(0)
+    runtime.state_pool.apply_predictions(
+        [
+            {"sa_label": "text::expected", "display_text": "expected", "family": "text", "virtual_energy": 0.9},
+            {"sa_label": "text::match", "display_text": "match", "family": "text", "virtual_energy": 0.5},
+        ],
+        tick_index=0,
+        source="test_prediction",
+    )
+    runtime.state_pool.apply_external_items(
+        [
+            {"sa_label": "text::actual", "display_text": "actual", "family": "text", "source_type": "external_text", "real_energy": 0.8},
+            {"sa_label": "text::match", "display_text": "match", "family": "text", "source_type": "external_text", "real_energy": 0.5},
+        ],
+        tick_index=0,
+    )
+
+    snapshot = runtime.state_pool.snapshot()
+    memory_view = runtime.state_pool.snapshot_for_memory_write()
+    energy_flow = runtime.state_pool.energy_flow_trace(
+        items=snapshot["items"],
+        r_state=runtime.state_pool.read_r_state(items_per_head=8, head_limit=4),
+        memory_write_items=memory_view["items"],
+    )
+
+    assert energy_flow["schema_id"] == "state_pool_energy_flow/v1"
+    assert energy_flow["mass"]["positive_pressure"] > 0.0
+    assert energy_flow["mass"]["negative_pressure"] > 0.0
+    assert energy_flow["prediction_validation"]["missed_count"] >= 1
+    assert energy_flow["prediction_validation"]["unexpected_count"] >= 1
+    assert energy_flow["residual_semantics"]["interpretation"] in {
+        "mixed_mismatch_expected_and_actual_compete",
+        "over_prediction_virtual_without_actual",
+        "under_prediction_actual_without_virtual",
+    }
+    assert energy_flow["view_contracts"]["memory_write"]["external_evidence_count"] >= 1
+    assert energy_flow["view_contracts"]["r_state"]["has_residual_head"] is True
+
+
+def test_expectation_pressure_channel_enters_state_pool_and_action_drive() -> None:
+    runtime = APV21Runtime()
+    for _ in range(3):
+        runtime.process_text_tick("A")
+        runtime.process_text_tick("B")
+
+    runtime.process_text_tick("A")
+    trace = runtime.process_text_tick("C")
+
+    ep = trace["expectation_pressure"]
+    assert ep["channels"]
+    assert "expectation_level" in ep["channels"]
+    assert "pressure_level" in ep["channels"]
+    assert ep["items"]
+
+    snapshot_labels = {str(item.get("sa_label", "") or "") for item in trace["state_pool"]["snapshot"]["items"]}
+    assert any(label.startswith("expectation_pressure::") for label in snapshot_labels)
+    assert "expectation_pressure" in trace["thought_view"]
+    assert "expectation_pressure" in trace["explainability"]
+
+    action_notes = [
+        note
+        for row in trace["action"]["candidates"]
+        for note in (row.get("notes", []) or [])
+    ]
+    assert any(str(note).startswith(("expectation_gap=", "pressure_level=", "expectation_level=")) for note in action_notes)
+
+
+def test_acceptance_suite_runs_and_reports_known_result_shape() -> None:
+    from experiments.acceptance_suite import run_acceptance_suite
+
+    summary = run_acceptance_suite()
+    assert summary["schema_id"] == "apv21_acceptance_suite/v1"
+    results = {row["experiment"]: row for row in summary["results"]}
+    assert {"synonym_bridge", "long_distance_dependency", "yellow_apple", "slip_correction"} <= set(results)
+    assert results["synonym_bridge"]["verdict"] in {"pass", "partial", "fail"}
+    assert results["long_distance_dependency"]["verdict"] in {"pass", "partial", "fail"}

@@ -528,6 +528,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         # === 6. 消息段解析（text / reply / image / file / face） ===
         reply_id = ""
         image_segments = []
+        voice_segments = []
         file_segments = []
         face_only = False
         content = ""
@@ -556,6 +557,8 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                     face_seg_count += 1
                 elif seg_type == "video":
                     image_segments.append(p)  # 视频同图片处理
+                elif seg_type == "record":
+                    voice_segments.append(p)
             # 是否纯表情消息
             non_face = [p for p in raw_message if p.get("type") != "face"]
             face_only = face_seg_count > 0 and not non_face
@@ -643,10 +646,36 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                         extra["has_media"] = True
                         has_media = True
                         if not content:
-                            content = f"[图片: {result.description[:100]}]"
-                        break
+                            content = f"[图片]"
+                        # AP 视觉融合 — 注入认知引擎
+                        try:
+                            from core.miya_multimodal_fusion import get_multimodal_fusion
+
+                            fusion = get_multimodal_fusion()
+                            fusion.process_qq_image(image_bytes, image_url="")
+                        except Exception:
+                            pass
+                    break
                 except Exception as e:
                     logger.debug(f"[{self.platform_id}] 直接图片分析失败: {e}")
+
+        # === 语音消息处理: 下载 + AP听觉 + STT ===
+        if voice_segments:
+            for seg in voice_segments[:2]:
+                try:
+                    voice_bytes = await self._download_reference_image(seg.get("data", {}))
+                    if voice_bytes:
+                        from core.miya_multimodal_fusion import get_multimodal_fusion
+
+                        fusion = get_multimodal_fusion()
+                        info = fusion.process_qq_voice(voice_bytes)
+                        if info.get("transcript"):
+                            content = f"[语音: {info['transcript']}] " + content
+                        elif info.get("has_voice"):
+                            content = f"[语音 {info['duration_ms']:.0f}ms] " + content
+                        break
+                except Exception as e:
+                    logger.debug(f"[{self.platform_id}] 语音处理失败: {e}")
 
         # === 10. 自动保存直接图片 ===
         if has_direct_images:

@@ -28,8 +28,10 @@ echo ===========================================================================
 echo.
 echo   [1] Terminal    Claude Code + DeepSeek V4
 echo   [2] Daemon      Backend (core + platforms + API :9800)
+echo   [2p] Daemon AP   Daemon + APV2.1 cognitive engine
 echo   [3] Desktop     Electron desktop app
 echo   [4] Web         Browser frontend
+echo   [5] AP Engine    Miya interact terminal (APV2.1 + LLM cortex)
 echo.
 echo   [A] All         Start everything
 echo   [0] Exit
@@ -43,9 +45,11 @@ if "%choice%"=="0" goto :exit
 if "%choice%"=="1" goto :terminal
 if /i "%choice%"=="t" goto :terminal
 if "%choice%"=="2" goto :daemon
+if /i "%choice%"=="2p" goto :daemon_ap
 if /i "%choice%"=="d" goto :daemon
 if "%choice%"=="3" goto :desktop
 if "%choice%"=="4" goto :web
+if "%choice%"=="5" goto :ap_engine
 if /i "%choice%"=="a" goto :all
 
 echo [ERROR] Invalid choice
@@ -97,6 +101,58 @@ echo.
 python run/daemon.py --api-port 9800
 echo.
 echo [OK] Daemon stopped
+goto :restart
+
+:: ============================================================
+:daemon_ap
+cls
+echo.
+echo ================================================================================
+echo   MIYA Daemon + APV2.1 Cognitive Engine
+echo ================================================================================
+echo.
+echo   Platforms: QQ/Telegram/Discord/OneBot/napcat...
+echo   API: http://localhost:9800/api/v1/health
+echo   Observatory: http://127.0.0.1:8765
+echo   Proactive: Enabled (Miya will speak first when bored)
+echo.
+python --version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [ERROR] Python not found
+    timeout /t 3 >nul
+    goto :restart
+)
+echo Starting MIYA Daemon with APV2.1 engine...
+echo.
+set MIYA_PSYARCH_ENABLED=1
+python run/daemon.py --api-port 9800
+echo.
+echo [OK] Daemon stopped
+goto :restart
+
+:: ============================================================
+:ap_engine
+cls
+echo.
+echo ================================================================================
+echo   MIYA AP Engine - Interactive Terminal
+echo ================================================================================
+echo.
+echo   Engine: APV2.1 white-box cognitive loop
+echo   LLM: DeepSeek V4 Flash (language cortex)
+echo   Observatory: /obs to start web dashboard
+echo.
+python --version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [ERROR] Python not found
+    timeout /t 3 >nul
+    goto :restart
+)
+echo Starting AP Engine...
+echo.
+python -X utf8 scripts/interact_miya.py
+echo.
+echo [OK] AP Engine stopped
 goto :restart
 
 :: ============================================================

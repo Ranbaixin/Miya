@@ -1,5 +1,5 @@
 """
-记忆统计与分类查询工具
+记忆统计与分类查询工具 — 使用 MiyaMemoryCore V3.1 统一 API
 """
 
 import logging
@@ -36,53 +36,25 @@ class MemoryStats(BaseTool):
         include_categories = args.get("include_categories", True)
 
         try:
-            from memory.unified_memory import get_unified_memory, init_unified_memory
+            from memory import get_memory_core
 
-            memory = get_unified_memory("data/memory")
-
-            # 确保初始化
-            try:
-                await init_unified_memory("data/memory")
-            except Exception as e:
-                logger.warning(f"初始化统一记忆失败: {e}")
-
-            if hasattr(memory, "get_stats"):
-                stats = memory.get_stats()
-            else:
-                stats = {
-                    "short_term_count": len(memory.short_term_memories)
-                    if hasattr(memory, "short_term_memories")
-                    else 0,
-                    "cognitive_count": len(memory.cognitive_memories)
-                    if hasattr(memory, "cognitive_memories")
-                    else 0,
-                    "long_term_count": len(memory.long_term_memories)
-                    if hasattr(memory, "long_term_memories")
-                    else 0,
-                }
+            core = await get_memory_core()
+            stats = await core.get_statistics() if hasattr(core, "get_statistics") else {}
 
             result = "📊 记忆统计\n"
+            result += f"├─ 对话记忆: {stats.get('dialogue_count', 0)} 条\n"
             result += f"├─ 短期记忆: {stats.get('short_term_count', 0)} 条\n"
-            result += f"├─ 认知记忆: {stats.get('cognitive_count', 0)} 条\n"
-            result += f"└─ 长期记忆: {stats.get('long_term_count', 0)} 条\n"
+            result += f"├─ 长期记忆: {stats.get('long_term_count', 0)} 条\n"
+            result += f"├─ 语义记忆: {stats.get('semantic_count', 0)} 条\n"
+            result += f"├─ 知识记忆: {stats.get('knowledge_count', 0)} 条\n"
+            result += f"├─ 置顶记忆: {stats.get('pinned_count', 0)} 条\n"
+            result += f"└─ 总记忆数: {stats.get('total_count', 0)} 条\n"
 
-            if include_categories and hasattr(memory, "get_all_categories"):
-                categories = memory.get_all_categories()
-                if categories:
-                    result += "\n📈 分类统计:\n"
-                    cat_names = {
-                        "emotion": "情感类",
-                        "chat": "闲聊类",
-                        "daily": "日常类",
-                        "important": "重要记录",
-                        "task": "任务类",
-                        "knowledge": "知识类",
-                        "unknown": "未分类",
-                    }
-                    for cat, count in categories.items():
-                        if count > 0:
-                            name = cat_names.get(cat, cat)
-                            result += f"  • {name}: {count}\n"
+            if include_categories and "level_distribution" in stats:
+                dist = stats["level_distribution"]
+                result += "\n📈 层级分布:\n"
+                for level, count in dist.items():
+                    result += f"  • {level}: {count}\n"
 
             return result
 
@@ -136,17 +108,16 @@ class MemorySearchByCategory(BaseTool):
         limit = args.get("limit", 10)
 
         try:
-            from memory.unified_memory import MemoryCategory, get_unified_memory
+            from memory import get_memory_core
 
-            memory = get_unified_memory("data/memory")
+            core = await get_memory_core()
 
             if category == "all":
-                memories = memory.get_short_term(limit)
+                results = await core.retrieve(limit=limit)
             else:
-                cat = MemoryCategory(category)
-                memories = memory.get_by_category(cat, limit)
+                results = await core.retrieve(tags=[category], limit=limit)
 
-            if not memories:
+            if not results:
                 return f"📭 暂无分类为「{category}」的记忆"
 
             cat_names = {
@@ -159,13 +130,10 @@ class MemorySearchByCategory(BaseTool):
                 "unknown": "❓ 未分类",
             }
 
-            result = (
-                f"{cat_names.get(category, category)} 记忆 (共 {len(memories)} 条)\n\n"
-            )
-            for i, mem in enumerate(memories, 1):
-                content = (
-                    mem.content[:80] + "..." if len(mem.content) > 80 else mem.content
-                )
+            result = f"{cat_names.get(category, category)} 记忆 (共 {len(results)} 条)\n\n"
+            for i, mem in enumerate(results, 1):
+                content = mem.content if hasattr(mem, "content") else str(mem)
+                content = content[:80] + "..." if len(content) > 80 else content
                 result += f"{i}. {content}\n"
 
             return result

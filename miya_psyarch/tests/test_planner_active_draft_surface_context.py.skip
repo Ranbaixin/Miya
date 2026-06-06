@@ -1,0 +1,48 @@
+from __future__ import annotations
+
+from experiments.p1l1_skill_scaffold_draft_commit import _planner
+
+
+def _draft_item(text: str, *, active: bool, task_key: str) -> dict:
+    return {
+        "sa_label": "text_action::draft_state" if active else f"text_action::inactive_draft_state::{task_key}",
+        "display_text": "draft_state",
+        "family": "text_action",
+        "source_type": "text_action",
+        "real_energy": 0.08,
+        "anchor_meta": {
+            "schema_id": "text_draft_state/v1",
+            "visible_text": text,
+            "visible_tokens": list(text),
+            "visible_length": len(text),
+            "insert_count": len(text),
+            "revision_count": 0,
+            "reread_count": 0,
+            "commit_count": 0,
+            "last_event_tick": 1,
+            "last_insert_tick": 1,
+            "last_reread_tick": -1,
+            "last_delete_tick": -1,
+            "last_replace_tick": -1,
+            "last_revision_tick": -1,
+            "last_mutation_tick": 1,
+            "last_commit_tick": -1,
+            "active_draft_surface": active,
+            "task_key": task_key,
+        },
+    }
+
+
+def test_draft_context_prefers_active_surface_over_inactive_text_draft_schema() -> None:
+    planner = _planner()
+    context = planner.draft_writing_context(
+        [
+            _draft_item("inactive B text", active=False, task_key="B"),
+            _draft_item("active A text", active=True, task_key="A"),
+        ],
+        current_tick=8,
+    )
+
+    assert context["visible_text"] == "active A text"
+    assert context["task_key"] == "A"
+    assert context["active_draft_surface"] is True

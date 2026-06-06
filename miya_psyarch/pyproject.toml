@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "miya_psyarch"
+version = "8.0.0-alpha"
+description = "弥娅心灵引擎 — 基于 APV2.1 白箱认知架构的 AI 化身认知内核"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+readme = "README.md"
+keywords = ["ai", "cognitive-architecture", "psyarch", "apv21", "miya"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "numpy>=1.24",
+    "pyyaml>=6.0",
+    "scipy>=1.10",
+    "jieba>=0.42",
+    "pillow>=10.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7.0"]
+faiss = ["faiss-cpu>=1.7"]
+
+[project.urls]
+Homepage = "https://github.com/anomalyco/Miya"
+
+[tool.setuptools.packages.find]
+include = ["miya_psyarch*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
