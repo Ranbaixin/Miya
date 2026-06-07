@@ -146,3 +146,11 @@ check_in_responses:
   morning: "简洁的晨间问候。"
   day: "日常的在线状态。"
 
+ap_base:
+  OXY: 0.00
+  DA: 0.00
+  SER: 0.00
+  COR: 0.00
+  NOV: 0.00
+  FOC: 0.00
+

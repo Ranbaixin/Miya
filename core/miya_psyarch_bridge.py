@@ -105,24 +105,24 @@ class MiyaPsyArchBridge:
     # ── 情绪合并 ──
 
     def emotion_snapshot(self) -> dict:
-        """获取 AP 情绪快照，供旧情绪系统使用"""
+        """获取 AP 情绪快照"""
         self._init_engine()
         s = self._engine.soul_state()
-        # 从状态池读取所有情绪相关项
+        # 优先从实时 emotion_modulator 读取 NT 通道（反映最新变更）
+        nt_channels = dict(s.emotion_nt)
+        if self._engine._runtime and hasattr(self._engine._runtime, "emotion_modulator"):
+            live_state = self._engine._runtime.emotion_modulator.state.get_state()
+            if live_state:
+                nt_channels.update({k: round(v, 4) for k, v in live_state.items()})
         real_emotions = {}
         if self._engine._runtime:
-            from miya_psyarch.emotion_pool import EMOTION_CN_MAP
-
             pool = self._engine._runtime.state_pool
             for k, v in pool._entries.items():
-                # 情绪池项 (emotion_pool) 或 先天规则项 (miya_emotion)
                 if str(v.family) == "miya_emotion":
                     name = str(k).replace("miya_emotion::", "").replace("miya::", "")
-                    if name and name not in ("contentment", "curious"):  # 先天规则项转换中文
-                        pass
                     real_emotions[name] = round(v.real_energy, 4)
         return {
-            "nt_channels": s.emotion_nt,
+            "nt_channels": nt_channels,
             "miya_feelings": real_emotions if real_emotions else s.miya_feelings,
             "cognitive": s.feelings,
             "has_active_intent": s.has_active_intent,
@@ -134,6 +134,247 @@ class MiyaPsyArchBridge:
         """启动 AP 观测台 Web 服务器"""
         self._init_engine()
         return self._engine.start_observatory(port=port)
+
+    # ── 信号注入 (AI→AP规则触发) ──
+
+    def inject_signals(self, signals: dict) -> dict:
+        """
+        将 AI 融合情绪映射为 AP 条件信号并注入引擎
+
+        AP 有 52 条先天规则等待这些信号触发:
+        - social_reward: 主人发亲昵/撒娇 → 激活 MIYA-LOVE/MIYA-DOTE/MIYA-GENTLE
+        - novelty: 新信息 → 激活 MIYA-CURIOUS
+        - negative_pressure: 主人不开心 → 激活 MIYA-CARE/MIYA-FEAR
+        - fatigue: 沉默/无聊 → 激活 MIYA-MISS
+        - coherence/alignment: 认知和谐 → 激活 MIYA-CLEAR
+
+        注入后触发一次 tick()，让规则有机会产生情感输出。
+        """
+        self._init_engine()
+        if not self._engine._runtime:
+            return {"injected": False, "reason": "no_runtime"}
+
+        runtime = self._engine._runtime
+        pool = runtime.state_pool
+
+        # 信号 → NT 通道增量
+        signal_to_nt = {
+            "social_reward": {"OXY": 0.08, "DA": 0.06, "SER": 0.04},
+            "satisfaction": {"SER": 0.06, "DA": 0.04, "END": 0.03},
+            "novelty": {"NOV": 0.08, "DA": 0.04, "FOC": 0.04},
+            "coherence": {"SER": 0.05, "FOC": 0.04, "END": 0.03},
+            "alignment": {"OXY": 0.05, "SER": 0.04, "DA": 0.03},
+            "negative_pressure": {"COR": 0.06, "ADR": 0.04, "SER": -0.03},
+            "social_punishment": {"COR": 0.08, "OXY": -0.06, "SER": -0.04},
+            "fatigue": {"COR": 0.04, "DA": -0.03, "END": -0.02},
+        }
+
+        # 信号 → 弥娅情感标签 (直接发射到状态池)
+        signal_to_feelings = {
+            "social_reward": [
+                ("love_warmth", "爱意"),
+                ("doting", "宠溺"),
+                ("gentle_warmth", "温柔"),
+                ("deep_bond", "羁绊"),
+                ("happiness", "幸福"),
+            ],
+            "novelty": [
+                ("curious", "好奇"),
+                ("deep_curious", "深入探索"),
+                ("playful", "调皮"),
+            ],
+            "coherence": [
+                ("clarity", "清醒"),
+                ("contentment", "满足"),
+                ("accompanying", "陪伴"),
+            ],
+            "alignment": [
+                ("deep_bond", "羁绊"),
+                ("contentment", "满足"),
+                ("burning_support", "燃烧的支持"),
+            ],
+            "negative_pressure": [
+                ("heart_ache", "心疼"),
+                ("concern", "担心"),
+                ("fragile_light", "碎光"),
+            ],
+            "social_punishment": [
+                ("fear_losing", "不安"),
+                ("unease", "暗涌"),
+                ("restraint", "克制"),
+            ],
+            "fatigue": [
+                ("miss_jia", "想念佳"),
+                ("waiting_quiet", "安静等待"),
+                ("undercurrent", "海面下的暗涌"),
+            ],
+        }
+
+        es = runtime.emotion_modulator.state
+        applied = {}
+
+        tick_index = runtime.tick_index
+        items_to_emit = []
+
+        for signal_name, strength in signals.items():
+            if strength < 0.05:
+                continue
+
+            # 1) NT 通道增量
+            if signal_name in signal_to_nt:
+                for ch, base_delta in signal_to_nt[signal_name].items():
+                    if ch in es.channels:
+                        delta = base_delta * strength * 0.5
+                        es.channels[ch] = max(0.02, min(1.0, es.channels[ch] + delta))
+                        applied[f"{signal_name}â†'{ch}"] = round(delta, 4)
+
+            # 2) 直接发射情感标签到状态池
+            if signal_name in signal_to_feelings:
+                for label, display in signal_to_feelings[signal_name]:
+                    items_to_emit.append(
+                        {
+                            "sa_label": f"miya::{label}",
+                            "display_text": display,
+                            "source_type": "signal_injection",
+                            "family": "miya_emotion",
+                            "real_energy": round(strength * 1.2, 4),
+                            "anchor_meta": {
+                                "channel": "emotion",
+                                "source": f"signal::{signal_name}",
+                                "intensity": round(strength, 4),
+                            },
+                        }
+                    )
+
+        if items_to_emit:
+            pool.apply_external_items(items_to_emit, tick_index=tick_index + 1)
+
+        return {
+            "injected": True,
+            "signals": list(signals.keys()),
+            "applied": applied,
+            "feelings_emitted": len(items_to_emit),
+        }
+
+    def get_rule_feelings(self) -> dict:
+        """
+        提取 AP 先天规则产生的弥娅情感
+
+        Returns: {feeling_name: strength}
+        e.g. {"love_warmth": 0.72, "doting": 0.45, "deep_bond": 0.38}
+        """
+        self._init_engine()
+        if not self._engine._runtime:
+            return {}
+
+        pool = self._engine._runtime.state_pool
+        feelings = {}
+        for k, v in pool._entries.items():
+            if str(v.family) == "miya_emotion":
+                name = str(k).replace("miya_emotion::", "").replace("miya::", "")
+                energy = round(v.real_energy, 4)
+                if energy > 0.05:
+                    feelings[name] = energy
+
+        return dict(sorted(feelings.items(), key=lambda x: -x[1]))
+
+    def get_rule_feelings_text(self) -> str:
+        """
+        AP 规则情感 → 可注入 system prompt 的文本
+        """
+        feelings = self.get_rule_feelings()
+        if not feelings:
+            return ""
+
+        display_map = {
+            "love_warmth": "爱意",
+            "doting": "宠溺",
+            "helpless_doting": "无奈宠溺",
+            "deep_bond": "羁绊",
+            "happiness": "幸福",
+            "contentment": "满足",
+            "heart_ache": "心疼",
+            "concern": "担心",
+            "gentle_warmth": "温柔",
+            "accompanying": "陪伴",
+            "clarity": "清醒",
+            "deep_clarity": "深刻清醒",
+            "remembered": "记得",
+            "deep_memory": "深深记得",
+            "burning_support": "燃烧的支持",
+            "focused_support": "专注陪伴",
+            "fear_losing": "不安",
+            "unease": "暗涌",
+            "undercurrent": "海面下的暗涌",
+            "miss_jia": "想念佳",
+            "miss_stir": "思念微动",
+            "curious": "好奇",
+            "deep_curious": "深入探索",
+            "playful": "调皮",
+            "restraint": "克制",
+            "leave_space": "留白",
+            "honest": "坦诚",
+            "fragile_light": "碎光",
+            "self_identity": "我是弥娅",
+            "waiting_quiet": "安静等待",
+            "waited_for": "等到了",
+        }
+
+        parts = []
+        for name, strength in sorted(feelings.items(), key=lambda x: -x[1])[:5]:
+            display = display_map.get(name, name)
+            parts.append(f"{display}({strength:.2f})")
+
+        if parts:
+            return "【AP灵魂感知】" + " ".join(parts)
+        return ""
+
+    # ── 人设AP基线调整 ──
+
+    def set_personality_baseline(self, form_name: str) -> dict:
+        """
+        切换形态时调整 AP NT 基线
+
+        每个人设 YAML 的 ap_base 字段定义了这个形态下的情感底色偏移:
+        - 阿尔法态: OXY↓ FOC↑ (冷冽专注)
+        - 坎特蕾拉态: OXY↑ COR↓ (亲密放松)
+        - 申鹤态: OXY↓ COR↑ FOC↑ (孤冷专注)
+        - 常态: 默认基线
+        """
+        self._init_engine()
+        if not self._engine._runtime:
+            return {"applied": False, "reason": "no_runtime"}
+
+        ap_base = {}
+        try:
+            from core.personality_loader import PersonalityLoader
+
+            loader = PersonalityLoader()
+            config = loader.load(form_name)
+            ap_base = config.get("ap_base", {}) if config else {}
+        except Exception:
+            return {"applied": False, "reason": "config_load_error"}
+
+        if not ap_base:
+            return {"applied": False, "reason": "no_ap_base_in_config"}
+
+        es = self._engine._runtime.emotion_modulator.state
+        from miya_psyarch.core.emotion.emotion_state import NT_CHANNEL_META
+        from miya_psyarch.rules.miya_rules import MIYA_EMOTION_BASELINE
+
+        applied = {}
+        for ch, offset in ap_base.items():
+            if ch not in NT_CHANNEL_META:
+                continue
+            default_base = MIYA_EMOTION_BASELINE.get(ch, (NT_CHANNEL_META[ch]["baseline"],))[0]
+            new_baseline = max(0.02, min(0.95, default_base + offset))
+            NT_CHANNEL_META[ch]["baseline"] = new_baseline
+            # 绝对校准：直接设置到目标基线（不是增量）
+            es.channels[ch] = new_baseline
+            applied[ch] = round(new_baseline, 3)
+
+        logger.info(f"[AP基线] {form_name}: {', '.join(f'{k}={v}' for k, v in applied.items())}")
+        return {"applied": True, "form": form_name, "baselines": applied}
 
     # ── NT 回写 (闭环反馈) ──
 

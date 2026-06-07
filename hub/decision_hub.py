@@ -1949,7 +1949,7 @@ class DecisionHub:
 
             logger.debug(f"[决策层-跨平台] 系统提示词前200字符: {prompt_info['system'][:200]}")
 
-            # 【弥娅综合感知】谛听策略 + 灵魂情绪 融合为统一画像
+            # 【弥娅综合感知】谛听策略 + 灵魂情绪 + AP规则情感 融合为统一画像
             strategy_guidance = context.get("_strategy_guidance", "")
             msg_strategy = context.get("_message_strategy", {})
             if strategy_guidance or emotion_context_for_collab:
@@ -1960,6 +1960,17 @@ class DecisionHub:
                     msg_strategy.get("style", "normal"),
                     msg_strategy.get("intent", "chat"),
                 )
+                # 附加 AP 先天规则产生的情感
+                try:
+                    from core.miya_psyarch_bridge import get_psyarch_bridge
+
+                    bridge = get_psyarch_bridge()
+                    if bridge and bridge._initialized:
+                        ap_feelings_text = bridge.get_rule_feelings_text()
+                        if ap_feelings_text:
+                            integrated += "\n" + ap_feelings_text
+                except Exception:
+                    pass
                 prompt_info["system"] = integrated + "\n" + prompt_info["system"]
                 logger.info(f"[弥娅-感知] 综合状态指引已注入 system prompt ({len(integrated)} 字符)")
 

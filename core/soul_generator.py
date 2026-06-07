@@ -1593,6 +1593,20 @@ class SoulGenerator:
                         except Exception:
                             pass
 
+                    # 注入 AI 情绪 → AP 规则信号 (激活先天规则)
+                    try:
+                        from core.ap_signal_injector import get_signal_injector
+
+                        injector = get_signal_injector()
+                        ap_signals = injector.translate_fusion_to_signals(fused_result)
+                        if ap_signals:
+                            bridge.inject_signals(ap_signals)
+                            logger.debug(
+                                f"[信号注入] {', '.join(f'{k}={v:.2f}' for k, v in sorted(ap_signals.items(), key=lambda x: -x[1])[:5])}"
+                            )
+                    except Exception:
+                        pass
+
                     # 用融合结果替换原始 AI 情绪列表
                     fused_emotions = [
                         {"name": name, "intensity": int(val)}

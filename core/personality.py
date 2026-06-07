@@ -104,8 +104,20 @@ class Personality:
             self._current_config = self._loader.load(form_name)
             self.current_form = form_name
             self._persist_last_form()
+            self._apply_ap_baseline(form_name)
             return True
         return False
+
+    def _apply_ap_baseline(self, form_name: str) -> None:
+        """切换形态时同步调整 AP 认知引擎的情感基线"""
+        try:
+            from core.miya_psyarch_bridge import get_psyarch_bridge
+
+            bridge = get_psyarch_bridge()
+            if bridge._initialized:
+                bridge.set_personality_baseline(form_name)
+        except Exception:
+            pass
 
     def get_current_form(self) -> Dict:
         if self._use_yaml and self._current_config:
