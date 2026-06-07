@@ -115,7 +115,6 @@ async def run_daemon(
     await daemon.start(platform_ids=platform_ids)
 
     # 2.5 APV2.1 认知引擎 — 默认启用，弥娅的认知心脏
-    psyarch_bridge = None
     try:
         from core.miya_psyarch_bridge import get_psyarch_bridge
 

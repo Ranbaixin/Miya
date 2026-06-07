@@ -88,7 +88,6 @@ class MiyaPsyArchBridge:
         nt = self.emotion_snapshot().get("nt_channels", {})
 
         oxy = nt.get("OXY", 0.3)
-        cor = nt.get("COR", 0.3)
         da = nt.get("DA", 0.3)
         nov = nt.get("NOV", 0.3)
 

@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "tick_index": 2,
+  "message_count": 0,
+  "personality_form": null,
+  "nt_channels": {
+    "DA": 0.45,
+    "ADR": 0.6271981310345458,
+    "OXY": 0.5,
+    "SER": 0.4247412916303268,
+    "END": 0.5184708037449604,
+    "COR": 0.6276765787017393,
+    "NOV": 0.48852288839001456,
+    "FOC": 0.20431104402756906
+  },
+  "emotions": {
+    "curious": 2.6063,
+    "joy": 2.3693,
+    "amusement": 2.187,
+    "love": 2.187,
+    "playful": 2.0048,
+    "sweetness": 2.0048,
+    "closeness": 2.0048,
+    "heartbeat": 1.8225,
+    "attachment": 1.539,
+    "warmth": 1.2825,
+    "caring": 1.026,
+    "waited_for": 0.6063,
+    "clarity": 1.8605,
+    "gentle_warmth": 0.6063,
+    "accompanying": 1.8605,
+    "love_warmth": 0.6063,
+    "context::now::亲爱的佳，我好开心今天能见到你": 0.72,
+    "context::now::你今天过得好吗？": 0.8
+  }
+}

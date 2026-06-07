@@ -267,13 +267,12 @@ class MessageMixin:
 
             if hasattr(miya, "decision_hub"):
                 # ── AP 聆听：先让弥娅\"听到\"消息，产生实时内心反应 ──
-                ap_soul = None
                 try:
                     from core.miya_psyarch_bridge import get_psyarch_bridge
 
                     bridge = get_psyarch_bridge()
                     if bridge and bridge._initialized:
-                        ap_soul = bridge.hear_message(content)
+                        bridge.hear_message(content)
                 except Exception:
                     pass
 
