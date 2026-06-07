@@ -9,6 +9,7 @@ MiyaEngine 提供两种模式：
 from __future__ import annotations
 
 import asyncio
+import io
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -215,7 +216,7 @@ class MiyaEngine:
         self._apply_cognitive_feeling_gains()
 
         self._memory_bridge = get_memory_bridge()
-        self._memory_bridge.warmup(limit=50)
+        self._memory_bridge.warmup(limit=100)
         self._memory_fusion = get_memory_fusion(self)
         self._memory_fusion.load_all()
         self._inject_memories_into_state_pool()

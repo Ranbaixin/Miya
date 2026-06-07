@@ -1,5 +1,5 @@
 """
-弥娅记忆桥接 — SQLite 直读，同步注入 AP 状态池 + LLM 上下文
+弥娅记忆桥接 — SQLite 直读 + Jieba 分词搜索，同步注入 AP 状态池 + LLM 上下文
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ class MiyaMemoryBridge:
         self._recent: list[dict] = []
         self._initialized = False
 
-    def warmup(self, limit: int = 30) -> None:
+    def warmup(self, limit: int = 100) -> None:
         try:
             conn = _connect()
             rows = conn.execute(
@@ -40,23 +40,86 @@ class MiyaMemoryBridge:
             logger.warning(f"memory warmup failed: {e}")
 
     def search(self, query: str, limit: int = 8) -> list[dict]:
+        """多关键词分词搜索——比单 LIKE 召回率大幅提升"""
         if not query or len(query) < 2:
             return []
         if not self._initialized:
             self.warmup()
+
         try:
+            tokens = self._tokenize(query)
+            if not tokens:
+                return []
+
             conn = _connect()
-            rows = conn.execute(
-                "SELECT role, content, created_at FROM memories "
-                "WHERE content LIKE ? AND level='dialogue' "
-                "ORDER BY created_at DESC LIMIT ?",
-                (f"%{query}%", limit),
-            ).fetchall()
+            results: dict[int, dict] = {}
+
+            for token in tokens[:5]:
+                if len(token) < 2:
+                    continue
+                rows = conn.execute(
+                    "SELECT rowid, role, content, created_at FROM memories "
+                    "WHERE content LIKE ? AND level='dialogue' "
+                    "ORDER BY created_at DESC LIMIT ?",
+                    (f"%{token}%", limit * 2),
+                ).fetchall()
+                for r in rows:
+                    rowid = r[0]
+                    if rowid not in results:
+                        results[rowid] = {"role": r[1] or "", "content": r[2], "created_at": r[3], "score": 0}
+                    results[rowid]["score"] += 1
+
             conn.close()
-            return [{"role": r[0] or "", "content": r[1], "created_at": r[2]} for r in rows if r[1]]
+
+            ranked = sorted(
+                results.values(),
+                key=lambda x: (
+                    -x["score"],
+                    x.get("created_at", ""),
+                ),
+            )[:limit]
+            return [{"role": m["role"], "content": m["content"], "created_at": m.get("created_at", "")} for m in ranked]
         except Exception as e:
             logger.debug(f"memory search failed: {e}")
             return []
+
+    def _tokenize(self, text: str) -> list[str]:
+        try:
+            import jieba
+
+            return [w for w in jieba.lcut(text) if len(w.strip()) >= 1]
+        except Exception:
+            return text.split()
+
+    def search_and_inject(self, query: str, state_pool, tick_index: int, limit: int = 12) -> int:
+        """搜索并立即注入 AP 状态池——让 Bn/Cn 能自然召回深层记忆"""
+        memories = self.search(query, limit=limit)
+        if not memories:
+            return 0
+
+        items = []
+        for i, m in enumerate(memories):
+            content = m.get("content", "")
+            if not content or len(content) < 3:
+                continue
+            items.append(
+                {
+                    "sa_label": f"memory_recall::{content[:25]}",
+                    "display_text": f"[记忆] {content[:40]}",
+                    "family": "memory_recall",
+                    "source_type": "deep_search",
+                    "real_energy": 0.8 + i * 0.05,
+                    "anchor_meta": {
+                        "role": m.get("role", ""),
+                        "created_at": m.get("created_at", ""),
+                        "full_content": content,
+                    },
+                }
+            )
+
+        if items:
+            state_pool.apply_external_items(items, tick_index=tick_index)
+        return len(items)
 
     def as_state_items(self, memories: list[dict], base_energy: float = 0.6) -> list[dict]:
         items = []

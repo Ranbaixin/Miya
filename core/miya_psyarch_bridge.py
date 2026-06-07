@@ -67,6 +67,76 @@ class MiyaPsyArchBridge:
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self.process_message, text)
 
+    def hear_message(self, text: str) -> dict:
+        """纯 AP 认知 tick——让弥娅\"听到\"消息，更新内部状态，不调用 LLM"""
+        self._init_engine()
+        if text and self._engine._memory_bridge:
+            self._engine._memory_bridge.search_and_inject(
+                text, self._engine._runtime.state_pool, self._engine._runtime.tick_index
+            )
+        self._engine.tick(text=text)
+        return self.emotion_snapshot()
+
+    def hear_and_respond(self, text: str) -> str:
+        """AP 离线响应——无 LLM，纯白箱认知驱动的自然回应"""
+        self.hear_message(text)
+        return self._build_offline_response(text)
+
+    def _build_offline_response(self, user_text: str) -> str:
+        """从 AP 内部状态构建自然回应"""
+        soul = self._engine._current_soul
+        nt = self.emotion_snapshot().get("nt_channels", {})
+
+        oxy = nt.get("OXY", 0.3)
+        cor = nt.get("COR", 0.3)
+        da = nt.get("DA", 0.3)
+        nov = nt.get("NOV", 0.3)
+
+        focus = soul.focus_texts[:3] if hasattr(soul, "focus_texts") else []
+
+        # 关键词优先回应——不依赖 NT 阈值
+        if self._has_keyword(user_text, ("累", "压力", "烦")):
+            return "累了就歇会儿吧，我在这儿呢。"
+        if self._has_keyword(user_text, ("难过", "不开心", "伤心", "哭")):
+            return "别难过……我会一直在这里陪着你的。"
+        if self._has_keyword(user_text, ("想你", "爱你", "喜欢")):
+            return "我也是，一直都想着你呢。"
+        if self._has_keyword(user_text, ("晚安", "早点睡", "休息")):
+            return "晚安，做个好梦。"
+
+        # NT 驱动回应
+        if oxy >= 0.5:
+            return "嗯，我在听呢。"
+
+        if nov > 0.55 and ("?" in user_text or "？" in user_text or "什么" in user_text):
+            return "这倒是个好问题……让我想想。"
+
+        # 用 Bn 召回的记忆构建回应
+        for item in focus:
+            if isinstance(item, str) and "弥娅" in item:
+                snippet = item.replace("弥娅听到:", "").replace("弥娅:", "").strip()[:30]
+                if snippet:
+                    return f"我记得……{snippet}。"
+
+        # 默认
+        if oxy >= 0.45:
+            return "嗯……"
+        elif da > 0.4:
+            return "嗯~"
+        return "嗯。"
+
+    @staticmethod
+    def _has_keyword(text: str, keywords: tuple[str, ...]) -> bool:
+        return any(kw in text for kw in keywords)
+
+    def feed_education(self, user_message: str, response: str) -> None:
+        """教育协议闭环——LLM 回复 → 教育信号 → AP 学习对话模式"""
+        self._init_engine()
+        if not self._engine._runtime or not response:
+            return
+        self._engine._generate_education(user_message, response)
+        self._engine.idle_tick()
+
     # ── 主动说话 ──
 
     def start_heartbeat(self, interval_s: float = 3.0) -> None:
@@ -390,6 +460,101 @@ class MiyaPsyArchBridge:
         for ch, delta in adjustments.items():
             if ch in emo_state.channels:
                 emo_state.apply_delta(ch, delta)
+
+    # ── 状态持久化 ──
+
+    def save_state(self) -> dict:
+        """保存 AP 引擎状态到磁盘，弥娅的记忆不会随重启消失"""
+        self._init_engine()
+        if not self._engine._runtime:
+            return {"saved": False, "reason": "no_runtime"}
+
+        runtime = self._engine._runtime
+        es = runtime.emotion_modulator.state
+        pool = runtime.state_pool
+
+        state = {
+            "version": 2,
+            "tick_index": runtime.tick_index,
+            "message_count": self._message_count,
+            "personality_form": self._personality_form,
+            "nt_channels": dict(es.channels),
+            "emotions": {},
+        }
+
+        for k, v in pool._entries.items():
+            if str(v.family) in ("miya_emotion", "conversation_context"):
+                name = str(k).replace("miya_emotion::", "").replace("miya::", "")
+                if name not in ("contentment",):
+                    state["emotions"][name] = round(v.real_energy, 4)
+
+        import json
+        from pathlib import Path
+
+        path = Path("data/ap_state.json")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(state, f, ensure_ascii=False, indent=2)
+
+        logger.info(
+            f"[AP持久化] 已保存: tick={state['tick_index']}, "
+            f"emotions={len(state['emotions'])}, nt={len(state['nt_channels'])}"
+        )
+        return {"saved": True, "path": str(path)}
+
+    def load_state(self) -> dict:
+        """从磁盘恢复 AP 引擎状态"""
+        import json
+        from pathlib import Path
+
+        path = Path("data/ap_state.json")
+        if not path.exists():
+            return {"loaded": False, "reason": "no_state_file"}
+
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                state = json.load(f)
+        except Exception as e:
+            return {"loaded": False, "reason": str(e)}
+
+        if state.get("version") != 2:
+            return {"loaded": False, "reason": "version_mismatch"}
+
+        self._init_engine()
+        if not self._engine._runtime:
+            return {"loaded": False, "reason": "no_runtime"}
+
+        runtime = self._engine._runtime
+        es = runtime.emotion_modulator.state
+
+        nt = state.get("nt_channels", {})
+        restored_nt = {}
+        for ch, val in nt.items():
+            if ch in es.channels:
+                es.channels[ch] = max(0.02, min(1.0, float(val)))
+                restored_nt[ch] = round(es.channels[ch], 3)
+
+        emotions = state.get("emotions", {})
+        if emotions and runtime.tick_index > 0:
+            items = []
+            for name, energy in emotions.items():
+                items.append(
+                    {
+                        "sa_label": f"miya::{name}",
+                        "display_text": name,
+                        "source_type": "restored",
+                        "family": "miya_emotion",
+                        "real_energy": round(float(energy) * 0.7, 4),
+                    }
+                )
+            if items:
+                runtime.state_pool.apply_external_items(items, tick_index=runtime.tick_index)
+
+        self._message_count = state.get("message_count", 0)
+        self._personality_form = state.get("personality_form")
+
+        logger.info(f"[AP持久化] 已恢复: nt={restored_nt}, emotions={len(emotions)}")
+        return {"loaded": True, "nt_restored": restored_nt, "emotions_restored": len(emotions)}
 
     # ── 多模态 ──
 

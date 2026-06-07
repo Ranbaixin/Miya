@@ -266,10 +266,20 @@ class MessageMixin:
             )
 
             if hasattr(miya, "decision_hub"):
+                # ── AP 聆听：先让弥娅\"听到\"消息，产生实时内心反应 ──
+                ap_soul = None
+                try:
+                    from core.miya_psyarch_bridge import get_psyarch_bridge
+
+                    bridge = get_psyarch_bridge()
+                    if bridge and bridge._initialized:
+                        ap_soul = bridge.hear_message(content)
+                except Exception:
+                    pass
+
                 # APV2.1 引擎路由: 如果启用了 AP 认知引擎，优先走 AP
                 if getattr(miya, "use_psyarch", False) and getattr(miya, "psyarch_bridge", None):
                     response, soul = miya.psyarch_bridge.process_message(content)
-                    # 终端显示 AP 内心状态
                     if soul:
                         mf = soul.get("miya_feelings", {})
                         top = sorted(mf.items(), key=lambda x: -x[1])[:3]
@@ -280,6 +290,29 @@ class MessageMixin:
                         print(f"\n  ♡ AP引擎 | {feats} | OXY:{oxy:.0%} COR:{cor:.0%}\n")
                 else:
                     response = await miya.decision_hub.process_perception_cross_platform(mlink_msg)
+
+                # ── AP 教育闭环：LLM 回复 → 教育信号 → AP 学习对话模式 ──
+                if response and content:
+                    try:
+                        from core.miya_psyarch_bridge import get_psyarch_bridge
+
+                        bridge = get_psyarch_bridge()
+                        if bridge and bridge._initialized:
+                            bridge.feed_education(content, response)
+                    except Exception:
+                        pass
+
+                # ── AP 离线兜底：LLM 不可用时，白箱认知引擎自主回应 ──
+                if not response and content:
+                    try:
+                        from core.miya_psyarch_bridge import get_psyarch_bridge
+
+                        bridge = get_psyarch_bridge()
+                        if bridge and bridge._initialized:
+                            response = bridge.hear_and_respond(content)
+                    except Exception:
+                        pass
+
                 # === 通用后处理 ===
                 if response:
                     response = self._filter_thinking(response)
@@ -295,6 +328,14 @@ class MessageMixin:
 
         except Exception as e:
             logger.error(f"[{self.platform_id}] 消息处理异常: {e}", exc_info=True)
+            try:
+                from core.miya_psyarch_bridge import get_psyarch_bridge
+
+                bridge = get_psyarch_bridge()
+                if bridge and bridge._initialized and content:
+                    return bridge.hear_and_respond(content)
+            except Exception:
+                pass
             return f"处理消息时出错了: {e}"
 
     # ============ TTS 通用处理 ============

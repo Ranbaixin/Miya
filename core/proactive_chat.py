@@ -358,6 +358,7 @@ class ProactiveChatSystem:
                 "time": 300,
                 "check_in": 1800,
                 "ai": 180,
+                "ap_boredom": 300,
             }
         )
 
@@ -1138,6 +1139,11 @@ class ProactiveChatSystem:
             if result:
                 return result
 
+        # 7. AP 无聊度触发 — AP 引擎内心感到无聊时，弥娅主动开口
+        result = await self._check_ap_boredom_trigger(target_id, context)
+        if result:
+            return result
+
         # AI 判断本轮不需要主动发言，记录检查时间避免短时间重复评估
         self._last_trigger_time[target_id] = datetime.now()
         return None
@@ -1539,6 +1545,61 @@ class ProactiveChatSystem:
 
         except Exception as e:
             logger.warning(f"[主动聊天] AI触发失败: {e}")
+
+        return None
+
+    async def _check_ap_boredom_trigger(self, target_id: int, context: ChatContext) -> Optional[ProactiveResult]:
+        """AP 无聊度触发 — AP 引擎内心无聊时，弥娅主动开口"""
+        try:
+            from core.miya_psyarch_bridge import get_psyarch_bridge
+
+            bridge = get_psyarch_bridge()
+            if not bridge or not bridge._initialized:
+                return None
+
+            snap = bridge.emotion_snapshot()
+            boredom = snap.get("cognitive", {}).get("boredom", 0)
+            if boredom < 0.45:
+                return None
+
+            if not self._check_trigger_type_cooldown(target_id, "ap_boredom"):
+                return None
+
+            # 无聊度越高，消息越密集
+            if boredom < 0.6 and random.random() > 0.2:
+                return None
+
+            nt = snap.get("nt_channels", {})
+            oxy = nt.get("OXY", 0)
+
+            message = await self._generate_and_fallback(
+                "ap_boredom",
+                {"boredom": boredom, "oxy": oxy},
+                [self._load_text_config("proactive_chat.default_prompts.ap_boredom", "")],
+                target_id,
+            )
+            if not message:
+                return None
+
+            if self._check_message_content_duplicate(target_id, message):
+                return None
+
+            if not self._is_duplicate(target_id, message):
+                self._record_trigger(target_id)
+                self._record_trigger_by_type(target_id, "ap_boredom")
+                self._record_sent_message(target_id, message)
+
+                logger.info(f"[主动聊天] [AP无聊] target={target_id}, boredom={boredom:.2f}: {message[:50]}")
+
+                return ProactiveResult(
+                    should_respond=True,
+                    message=message,
+                    trigger_type="ap_boredom",
+                    context=context,
+                )
+
+        except Exception as e:
+            logger.debug(f"[主动聊天] AP无聊触发跳过: {e}")
 
         return None
 
