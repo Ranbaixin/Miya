@@ -1559,60 +1559,86 @@ class SoulGenerator:
                 logger.warning(f"[灵魂] 所有JSON解析策略失败: {response[:100]}")
                 return None
 
-            # 多情绪格式
-            emotions = result.get("emotions", [])
-            # 直接分析当前消息文本 → 43规则情绪池 → 随对话变化的真实情绪
-            try:
-                from miya_psyarch.emotion_pool import analyze_emotions, EMOTION_CN_MAP
-                pool_emotions = analyze_emotions(message)
-                real_emotions = []
-                for name, val in sorted(pool_emotions.items(), key=lambda x: -x[1])[:8]:
-                    cn = EMOTION_CN_MAP.get(name, name)
-                    real_emotions.append({"name": cn, "intensity": max(25, min(100, int(val * 140)))})
-                if real_emotions:
-                    emotions = real_emotions
-                    result["emotions"] = emotions
-                    result["source"] = "ap_engine"
-            except Exception:
-                pass
+            # ─── AP + AI 混合情绪融合 ───
+            ai_emotions = result.get("emotions", [])
+            fused_result = None
+
+            # 获取 AP 快照
+            ap_snapshot = None
             try:
                 from core.miya_psyarch_bridge import get_psyarch_bridge
 
                 bridge = get_psyarch_bridge()
                 if bridge and bridge._initialized:
-                    snapshot = bridge.emotion_snapshot()
-                    mf = snapshot.get("miya_feelings", {})
-                    nt = snapshot.get("nt_channels", {})
-                    real_emotions = []
-                    # NT通道 → 情绪 (OXY=温柔, COR=戒备, NOV=好奇, DA=积极)
-                    nt_map = {"OXY": "温柔", "COR": "戒备", "NOV": "好奇", "DA": "积极", "SER": "稳定"}
-                    for ch, label in nt_map.items():
-                        val = nt.get(ch, 0)
-                        if val > 0.3:
-                            real_emotions.append({"name": label, "intensity": max(25, min(100, int(val * 140)))})
-                    # 弥娅感受 Top 5
-                    for name, val in sorted(mf.items(), key=lambda x: -x[1])[:5]:
-                        if isinstance(val, (int, float)) and val > 0.5:
-                            real_emotions.append({"name": name, "intensity": max(25, min(100, int(val * 20)))})
-                    if real_emotions:
-                        emotions = real_emotions[:8]
-                        result["emotions"] = emotions
-                        result["source"] = "ap_engine"
+                    ap_snapshot = bridge.emotion_snapshot()
             except Exception:
                 pass
+
+            if ap_snapshot and ai_emotions:
+                # 使用融合引擎：AP 惯性 + AI 增量
+                try:
+                    from core.ap_emotion_fusion import get_fusion_engine
+
+                    fusion = get_fusion_engine()
+                    fused_result = fusion.fuse(
+                        message=message,
+                        ai_emotions=ai_emotions,
+                        ap_nt_snapshot=ap_snapshot,
+                    )
+
+                    # 回写 NT 调整量到 AP 状态池 (闭环反馈)
+                    if fused_result.nt_adjustments:
+                        try:
+                            bridge.apply_nt_adjustments(fused_result.nt_adjustments)
+                        except Exception:
+                            pass
+
+                    # 用融合结果替换原始 AI 情绪列表
+                    fused_emotions = [
+                        {"name": name, "intensity": int(val)}
+                        for name, val in sorted(fused_result.emotions.items(), key=lambda x: -x[1])[:8]
+                    ]
+                    result["emotions"] = fused_emotions
+                    result["dominant_emotion"] = fused_result.dominant
+                    result["intensity"] = int(fused_result.dominant_intensity)
+                    result["source"] = "ap_ai_fusion"
+                except Exception as e:
+                    logger.warning(f"[灵魂] 融合引擎失败: {e}")
+                    fused_result = None
+
+            if not fused_result:
+                # 降级：使用 AP 43规则情绪池
+                emotions = ai_emotions
+                try:
+                    from miya_psyarch.emotion_pool import analyze_emotions, EMOTION_CN_MAP
+
+                    pool_emotions = analyze_emotions(message)
+                    real_emotions = []
+                    for name, val in sorted(pool_emotions.items(), key=lambda x: -x[1])[:8]:
+                        cn = EMOTION_CN_MAP.get(name, name)
+                        real_emotions.append({"name": cn, "intensity": max(25, min(100, int(val * 140)))})
+                    if real_emotions:
+                        result["emotions"] = real_emotions
+                        result["source"] = "ap_emotion_pool"
+                except Exception:
+                    pass
+
+            # 显示融合/分析结果
+            emotions = result.get("emotions", [])
             if emotions:
                 emotion_parts = []
                 for emo in emotions:
                     name = emo.get("name", "未知")
                     intensity = emo.get("intensity", 50)
                     emotion_parts.append(f"{name}({intensity}%)")
-                SoulDisplay.emotion_analysis(
-                    emotion_parts[0],
-                    emotions[0].get("intensity", 50),
-                    f"多情绪: {' + '.join(emotion_parts)}",
-                )
+                display_name = result.get("dominant_emotion", emotion_parts[0] if emotion_parts else "未知")
+                display_intensity = emotions[0].get("intensity", 50) if emotions else 50
+                extra = f"多情绪: {' + '.join(emotion_parts)}"
+                source_tag = result.get("source", "")
+                if source_tag:
+                    extra += f" | [{source_tag}]"
+                SoulDisplay.emotion_analysis(display_name, display_intensity, extra)
             else:
-                # 兼容旧格式
                 SoulDisplay.emotion_analysis(
                     result.get("dominant_emotion", "未知"),
                     result.get("intensity", 50),

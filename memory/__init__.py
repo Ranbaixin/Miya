@@ -264,7 +264,6 @@ async def retrieve_cognition(
         user_id=user_id,
         tags=["cognition"],
         limit=limit,
-        sort_by="created_at",
     )
 
     cognition_list = []

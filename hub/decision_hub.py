@@ -1770,17 +1770,6 @@ class DecisionHub:
                     miya_intensity = 40
                     emotion_str = "平静"
                 logger.info(f"[灵魂] 主导情绪: {dominant} | 弥娅: {emotion_str}")
-                {
-                    "dominant": miya_dominant,
-                    "intensity": miya_intensity,
-                    "emotions": miya_emotions,
-                    "emotion_str": emotion_str,
-                    "reflection": soul_result.get("analysis", {}).get("reflection", ""),
-                    "raw_result": soul_result,
-                }
-                from core.soul_generator import SoulDisplay
-
-                SoulDisplay.emotion_analysis(miya_dominant, miya_intensity, f"多情绪: {emotion_str}")
                 inner_thought = soul_result.get("analysis", {}).get("reflection", "")
 
                 # 从配置文件加载情感引导文案
@@ -1792,6 +1781,22 @@ class DecisionHub:
                 )
                 if inner_thought:
                     emotion_context_for_collab += eg["inner_thought"].format(inner_thought=inner_thought)
+                # 注入 AP 实时状态快照到情绪上下文
+                try:
+                    from core.miya_psyarch_bridge import get_psyarch_bridge
+
+                    bridge = get_psyarch_bridge()
+                    if bridge and bridge._initialized:
+                        ap_snap = bridge.emotion_snapshot()
+                        nt = ap_snap.get("nt_channels", {})
+                        ap_status = (
+                            f"\n【AP认知状态】OXY={nt.get('OXY', 0):.1%} DA={nt.get('DA', 0):.1%} "
+                            f"COR={nt.get('COR', 0):.1%} NOV={nt.get('NOV', 0):.1%} "
+                            f"SER={nt.get('SER', 0):.1%} FOC={nt.get('FOC', 0):.1%}"
+                        )
+                        emotion_context_for_collab += ap_status
+                except Exception:
+                    pass
                 emotion_context_for_collab += eg["footer"]
 
             logger.warning(
@@ -2252,6 +2257,22 @@ class DecisionHub:
                 )
                 if inner_thought:
                     ai_emotion_context += eg["inner_thought"].format(inner_thought=inner_thought)
+                # 注入 AP 实时状态到情绪上下文
+                try:
+                    from core.miya_psyarch_bridge import get_psyarch_bridge
+
+                    bridge = get_psyarch_bridge()
+                    if bridge and bridge._initialized:
+                        ap_snap = bridge.emotion_snapshot()
+                        nt = ap_snap.get("nt_channels", {})
+                        ap_status = (
+                            f"\n【AP认知状态】OXY={nt.get('OXY', 0):.1%} DA={nt.get('DA', 0):.1%} "
+                            f"COR={nt.get('COR', 0):.1%} NOV={nt.get('NOV', 0):.1%} "
+                            f"SER={nt.get('SER', 0):.1%} FOC={nt.get('FOC', 0):.1%}"
+                        )
+                        ai_emotion_context += ap_status
+                except Exception:
+                    pass
                 ai_emotion_context += eg["single_model_footer"]
                 logger.info(f"[灵魂-单模型] 使用预计算结果: user_emotion={dominant}, miya={miya_dominant}")
 

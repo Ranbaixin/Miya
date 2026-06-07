@@ -135,6 +135,21 @@ class MiyaPsyArchBridge:
         self._init_engine()
         return self._engine.start_observatory(port=port)
 
+    # ── NT 回写 (闭环反馈) ──
+
+    def apply_nt_adjustments(self, adjustments: dict) -> None:
+        """将 AI 情绪分析结果回写到 AP NT 通道 (闭环反馈)"""
+        self._init_engine()
+        if not self._engine._runtime:
+            return
+        runtime = self._engine._runtime
+        if not hasattr(runtime, "_emotion_state") or not runtime._emotion_state:
+            return
+        emo_state = runtime._emotion_state
+        for ch, delta in adjustments.items():
+            if ch in emo_state.channels:
+                emo_state.apply_delta(ch, delta)
+
     # ── 多模态 ──
 
     def see_image(self, image_bytes: bytes, description: str = "") -> dict:
