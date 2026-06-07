@@ -94,7 +94,7 @@ class APSignalInjector:
         self._signal_history: List[Dict[str, float]] = []
         self._max_history = 20
 
-    def translate_fusion_to_signals(self, fusion_result: "FusionResult") -> Dict[str, float]:
+    def translate_fusion_to_signals(self, fusion_result: FusionResult) -> Dict[str, float]:
         """
         将融合结果转化为 AP 条件信号
 
