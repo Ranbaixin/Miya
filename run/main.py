@@ -144,9 +144,10 @@ class Miya:
         self.task_store = TaskStore()
         self.scheduler = Scheduler(task_store=self.task_store)
 
-        # APV2.1 认知引擎桥接 (可选)
+        # APV2.1 认知引擎桥接 (默认启用 — 弥娅的心跳)
         self.psyarch_bridge = None
-        self.use_psyarch = False  # 默认使用传统 DecisionHub
+        self.use_psyarch = False  # 默认使用传统 DecisionHub 处理消息
+        self._init_psyarch()
 
         # 初始化M-Link
         self.mlink = MLinkCore()
@@ -233,6 +234,23 @@ class Miya:
 
         self.logger.info("弥娅系统初始化完成（含跨平台支持）")
         self.identity.awake()
+
+    def _init_psyarch(self):
+        """初始化 APV2.1 认知引擎 — 弥娅的心跳"""
+        try:
+            from core.miya_psyarch_bridge import MiyaPsyArchBridge, get_psyarch_bridge
+
+            self.psyarch_bridge = get_psyarch_bridge()
+            if self.psyarch_bridge is None:
+                self.psyarch_bridge = MiyaPsyArchBridge()
+            else:
+                self.psyarch_bridge.load_state()
+            self.psyarch_bridge.start_heartbeat()
+            self.psyarch_bridge.set_proactive_callback(lambda msg: print(f"\n  ♡ 弥娅: {msg}\n佳: ", end=""))
+            self.logger.info("✅ APV2.1 认知引擎已启动（心脏起搏中）")
+        except Exception as e:
+            self.logger.warning(f"APV2.1 认知引擎初始化失败: {e}")
+            self.psyarch_bridge = None
 
     def _setup_logger(self) -> logging.Logger:
         """设置日志"""
@@ -696,21 +714,19 @@ class Miya:
                 self.logger.info(f"终端工具响应: {formatted_result[:100]}")
                 return formatted_result
 
-        # APV2.1 引擎切换命令
+        # APV2.1 引擎切换命令 (AP 心跳已在启动时默认运行)
         if user_input.strip().lower() in ("/ap", "/psyarch", "/认知"):
-            if not self.psyarch_bridge:
-                from core.miya_psyarch_bridge import MiyaPsyArchBridge
-
-                self.psyarch_bridge = MiyaPsyArchBridge()
-                self.psyarch_bridge.start_heartbeat()
-                self.psyarch_bridge.set_proactive_callback(lambda msg: print(f"\n  ♡ 弥娅: {msg}\n佳: ", end=""))
-                obs_url = self.psyarch_bridge.mount_observatory()
-                return f"已切换到 APV2.1 白箱认知引擎。\n  弥娅现在有了自己的心跳。\n  观测台: {obs_url}"
             self.use_psyarch = True
-            return "AP 引擎已就绪。"
+            obs_url = "观测台未就绪"
+            if self.psyarch_bridge:
+                try:
+                    obs_url = self.psyarch_bridge.mount_observatory()
+                except Exception:
+                    obs_url = "观测台已运行"
+            return f"已切换到 APV2.1 白箱认知引擎。\n  弥娅的心跳一直在跳动。\n  观测台: {obs_url}"
         if user_input.strip().lower() in ("/llm", "/传统", "/old"):
             self.use_psyarch = False
-            return "已切回 DecisionHub 传统引擎。"
+            return "已切回 DecisionHub 传统引擎。AP 心跳仍在后台运行。"
 
         # APV2.1 引擎路由
         if self.use_psyarch and self.psyarch_bridge:
@@ -824,7 +840,20 @@ class Miya:
             "entropy_health": self.entropy.get_health_report(),
             "platform": "terminal",
             "platform_info": self.terminal_adapter.get_platform_info(),
+            "ap": {
+                "bridge_ready": self.psyarch_bridge is not None,
+                "use_psyarch": self.use_psyarch,
+            },
         }
+
+        if self.psyarch_bridge:
+            try:
+                snap = self.psyarch_bridge.emotion_snapshot()
+                status["ap"]["nt_channels"] = snap.get("nt_channels", {})
+                status["ap"]["miya_feelings"] = snap.get("miya_feelings", {})
+                status["ap"]["cognitive"] = snap.get("cognitive", {})
+            except Exception:
+                pass
 
         # M-Link 和 MemoryNet 可能为 None
         if self.mlink:
@@ -842,6 +871,15 @@ class Miya:
     def shutdown(self) -> None:
         """关闭系统"""
         self.logger.info("弥娅系统正在关闭...")
+
+        # 保存 APV2.1 认知引擎状态
+        if self.psyarch_bridge:
+            try:
+                self.psyarch_bridge.stop_heartbeat()
+                self.psyarch_bridge.save_state()
+                self.logger.info("[AP] 状态已保存，心跳已停止")
+            except Exception as e:
+                self.logger.warning(f"[AP] 关闭异常: {e}")
 
         # 清理资源
         if self.redis:
@@ -883,9 +921,11 @@ def main():
         # 显示系统状态
         print("=" * 50)
         print("【弥娅系统 零号机】")
-        print(f"  认知引擎: {'APV2.1 白箱' if miya.use_psyarch else 'DecisionHub (LLM)'}")
+        ap_status = "活跃" if miya.psyarch_bridge else "未就绪"
+        print(f"  认知引擎: DecisionHub (LLM) + APV2.1 心脏 [{ap_status}]")
         print("  已启动")
-        print(f"  输入 /ap 切换到 APV2.1 认知引擎")
+        print(f"  输入 /ap 切换到 APV2.1 主认知模式")
+        print(f"  输入 /llm 切回 DecisionHub 模式")
         print("=" * 50)
 
         # 启动定时任务调度器
