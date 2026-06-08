@@ -1662,6 +1662,28 @@ class DecisionHub:
                                     if top:
                                         parts.append(", ".join(f"{k}:{v:.1f}" for k, v in top))
                                     ap_hint = " | ".join(parts)
+                                # 注入 AP 认知感受 + 注意焦点
+                                cog = bridge.cognitive_state()
+                                if cog.get("ready"):
+                                    cfs = cog.get("cognitive_feelings", {})
+                                    if cfs:
+                                        cfs_zh = {
+                                            "surprise": "惊讶",
+                                            "coherence": "连贯感",
+                                            "dissonance": "违和感",
+                                            "correctness": "正确感",
+                                            "grasp": "把握感",
+                                            "expectation": "期待",
+                                            "pressure": "压力",
+                                        }
+                                        cfs_parts = [
+                                            f"{cfs_zh.get(k, k)}:{v:.1f}"
+                                            for k, v in sorted(cfs.items(), key=lambda x: -abs(x[1]))[:4]
+                                        ]
+                                        ap_hint += f"\n认知感受: {', '.join(cfs_parts)}"
+                                    focus = cog.get("focus_texts", [])[:3]
+                                    if focus:
+                                        ap_hint += f"\n当前注意: {'; '.join(focus[:3])}"
                                 # 注入 AP 记忆召回上下文
                                 mem_ctx = bridge.engine._memory_fusion.get_memory_context_for_llm()
                                 if mem_ctx:

@@ -70,6 +70,14 @@ nt_levels:
 nt_display_order: ["OXY", "SER", "DA", "NOV", "COR"]
 nt_default_value: 0.5
 
+# ── 情绪天花板 (防止情绪过饱和，留出波动空间) ──
+emotion_ceiling:
+  enabled: true
+  OXY: 0.50
+  SER: 0.45
+  DA: 0.45
+  FOC: 0.40
+
 # ── 状态输出模板 ──
 output_templates:
   miya_feeling_prefix: "弥娅当前内心感受: "

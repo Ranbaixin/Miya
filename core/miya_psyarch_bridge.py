@@ -33,6 +33,8 @@ class MiyaPsyArchBridge:
         self._total_latency_ms: float = 0.0
         self._initialized = False
         self._proactive_callback = proactive_callback
+        self._platform_sender: callable | None = None
+        self._current_trace: dict | None = None
         self._heartbeat_thread: threading.Thread | None = None
         self._heartbeat_running = False
 
@@ -47,8 +49,19 @@ class MiyaPsyArchBridge:
             personality_form=self._personality_form,
         )
         self._engine.start()
+        self._register_toolnet_actions()
         self._initialized = True
         logger.info("MiyaPsyArchBridge initialized")
+
+    def _register_toolnet_actions(self) -> None:
+        try:
+            from miya_psyarch.action_bridge import register_miya_actions_to_ap
+
+            count = register_miya_actions_to_ap(self._engine)
+            if count > 0:
+                logger.info(f"[AP] ActionPlanner 已接入 ToolNet: {count} 个工具注册为行动节点")
+        except Exception as e:
+            logger.debug(f"[AP] ActionPlanner 接入 ToolNet 跳过: {e}")
 
     def process_message(self, text: str) -> tuple[str, dict]:
         self._init_engine()
@@ -157,12 +170,19 @@ class MiyaPsyArchBridge:
             try:
                 for _ in range(ticks_per_interval):
                     trace = self._engine.idle_tick()
+                    self._current_trace = trace
                     if isinstance(trace, dict):
                         proactive = trace.get("proactive", {})
                         if proactive.get("proactive"):
                             msg = proactive.get("message", "")
-                            if msg and self._proactive_callback:
-                                self._proactive_callback(msg)
+                            if msg:
+                                if self._proactive_callback:
+                                    self._proactive_callback(msg)
+                                if hasattr(self, "_platform_sender") and self._platform_sender:
+                                    try:
+                                        self._platform_sender(msg)
+                                    except Exception:
+                                        pass
                 time.sleep(interval_s)
             except Exception as e:
                 logger.warning(f"AP heartbeat error: {e}")
@@ -196,6 +216,57 @@ class MiyaPsyArchBridge:
             "cognitive": s.feelings,
             "has_active_intent": s.has_active_intent,
         }
+
+    def cognitive_state(self) -> dict:
+        """获取 AP 完整认知状态（注意力/认知感受/聚焦/记忆召回）"""
+        self._init_engine()
+        if not self._engine._runtime:
+            return {"ready": False}
+
+        runtime = self._engine._runtime
+        trace = self._current_trace if hasattr(self, "_current_trace") else {}
+
+        focus_labels = []
+        focus_texts = []
+        if hasattr(self._engine, "_current_soul"):
+            soul = self._engine._current_soul
+            focus_labels = soul.focus_labels[:10] if hasattr(soul, "focus_labels") else []
+            focus_texts = soul.focus_texts[:10] if hasattr(soul, "focus_texts") else []
+
+        cfs = {}
+        if hasattr(runtime, "cognitive_feelings"):
+            cf = runtime.cognitive_feelings
+            for attr in ("surprise", "coherence", "dissonance", "correctness", "grasp", "expectation", "pressure"):
+                val = round(getattr(cf, attr, 0), 4)
+                if abs(val) > 0.01:
+                    cfs[attr] = val
+
+        recalled = trace.get("attention", {}).get("selected_items", [])
+        recalled_texts = []
+        for item in recalled[:5]:
+            content = item.get("display_text", "") or item.get("anchor_meta", {}).get("full_content", "")
+            if content:
+                recalled_texts.append(str(content)[:80])
+
+        rhythm_state = {}
+        if hasattr(runtime, "rhythm"):
+            r = runtime.rhythm
+            for attr in ("burst_count", "interval_avg", "phase"):
+                if hasattr(r, attr):
+                    rhythm_state[attr] = getattr(r, attr)
+
+        return {
+            "ready": True,
+            "focus_labels": focus_labels,
+            "focus_texts": focus_texts,
+            "cognitive_feelings": cfs,
+            "recalled_memories": recalled_texts,
+            "rhythm": rhythm_state,
+        }
+
+    def set_platform_sender(self, sender: callable) -> None:
+        """设置跨平台主动消息发送路由"""
+        self._platform_sender = sender
 
     # ── 观测台 ──
 

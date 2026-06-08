@@ -276,17 +276,20 @@ class MiyaEngine:
         return trace
 
     def _clamp_emotion_ceiling(self) -> None:
-        """限制情绪通道天花板，留出波动空间"""
+        """限制情绪通道天花板，留出波动空间 (从 miya_config.yaml 读取)"""
         if self._runtime is None:
             return
         es = self._runtime.emotion_modulator.state
-        # 每个通道设置硬限制
-        limits = {
+        default_limits = {
             "OXY": 0.50,
             "SER": 0.45,
             "DA": 0.45,
             "FOC": 0.40,
         }
+        cfg_ceiling = _ENGINE_CFG.get("emotion_ceiling", {})
+        if not cfg_ceiling.get("enabled", True):
+            return
+        limits = {k: cfg_ceiling.get(k, v) for k, v in default_limits.items()}
         for ch, ceil in limits.items():
             if ch in es.channels and es.channels[ch] > ceil:
                 es.channels[ch] = ceil

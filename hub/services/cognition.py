@@ -65,7 +65,8 @@ class CognitionService:
         def _loop():
             while self._heartbeat_running:
                 try:
-                    self._ap_bridge.idle_heartbeat()
+                    if hasattr(self._ap_bridge, "_engine") and self._ap_bridge._engine:
+                        self._ap_bridge._engine.idle_tick()
                 except Exception as e:
                     logger.debug(f"[认知] 心跳异常: {e}")
                 threading.Event().wait(interval)

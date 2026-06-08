@@ -1621,16 +1621,23 @@ class SoulGenerator:
                     fused_result = None
 
             if not fused_result:
-                # 降级：使用 AP 43规则情绪池
+                # 降级：从 AP 情感池读取已计算的情绪 (避免重复 analyze_emotions)
                 emotions = ai_emotions
                 try:
-                    from miya_psyarch.emotion_pool import analyze_emotions, EMOTION_CN_MAP
+                    from core.miya_psyarch_bridge import get_psyarch_bridge
 
-                    pool_emotions = analyze_emotions(message)
+                    bridge = get_psyarch_bridge()
+                    if bridge and bridge._initialized:
+                        snap = bridge.emotion_snapshot()
+                        pool_emotions = snap.get("miya_feelings", {})
+                    else:
+                        from miya_psyarch.emotion_pool import analyze_emotions
+
+                        pool_emotions = analyze_emotions(message)
                     real_emotions = []
                     for name, val in sorted(pool_emotions.items(), key=lambda x: -x[1])[:8]:
-                        cn = EMOTION_CN_MAP.get(name, name)
-                        real_emotions.append({"name": cn, "intensity": max(25, min(100, int(val * 140)))})
+                        cn_name = name
+                        real_emotions.append({"name": cn_name, "intensity": max(25, min(100, int(val * 140)))})
                     if real_emotions:
                         result["emotions"] = real_emotions
                         result["source"] = "ap_emotion_pool"

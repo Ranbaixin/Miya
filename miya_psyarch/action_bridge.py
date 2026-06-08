@@ -119,23 +119,26 @@ def register_miya_actions_to_ap(engine) -> int:
     if not hasattr(runtime, "action_planner"):
         return 0
 
-    pass  # planner = runtime.action_planner
+    planner = runtime.action_planner
     registered = 0
 
     for action_id, meta in tools.items():
         try:
-            # 注册为 AP action node (通过 registry)
             from miya_psyarch.core.action.registry import action_node, register_action
 
-            @action_node(
-                action_id=action_id,
-                display_text=meta.get("display_text", action_id),
-                base_drive=0.08,  # 低驱动力——AP 需要场景触发才用
-                apply_fatigue=True,
-            )
-            def _miya_action(tick_index: int = 0, **kwargs) -> dict:
-                return {"action_id": action_id, "executed": False, "tick_index": tick_index, "source": "miya_bridge"}
+            def _make_action(aid: str):
+                @action_node(
+                    action_id=aid,
+                    display_text=meta.get("display_text", aid),
+                    base_drive=0.08,
+                    apply_fatigue=True,
+                )
+                def _miya_action(tick_index: int = 0, **kwargs) -> dict:
+                    return {"action_id": aid, "executed": False, "tick_index": tick_index, "source": "miya_bridge"}
 
+                return _miya_action
+
+            _make_action(action_id)
             registered += 1
         except Exception as e:
             logger.debug(f"Register action {action_id} failed: {e}")

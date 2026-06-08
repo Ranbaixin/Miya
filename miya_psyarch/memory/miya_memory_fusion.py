@@ -169,8 +169,6 @@ class MiyaMemoryFusion:
 
         if items:
             self._engine._runtime.state_pool.apply_external_items(items, tick_index=self._engine._runtime.tick_index)
-        if items:
-            self._engine._runtime.state_pool.apply_external_items(items, tick_index=self._engine._runtime.tick_index)
 
     async def vector_search_inject(self, query: str, limit: int = 8) -> list[str]:
         """用 MiyaMemoryCore 做向量语义搜索，注入 AP 状态池"""

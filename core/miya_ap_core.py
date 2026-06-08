@@ -1,6 +1,11 @@
 """
 弥娅 v10.0 认知核心 — APV2.1 驱动的一等公民
 
+⚠️ DEPRECATED (2026-06-08):
+  此模块已被 MiyaPsyArchBridge (core/miya_psyarch_bridge.py) 统一替代。
+  MiyaAPCore 从未被任何生产代码使用，保留仅作设计参考。
+  所有新功能请直接在 MiyaPsyArchBridge 中扩展。
+
 APV2.1 Runtime 是弥娅的唯一认知引擎。
 此模块负责:
 1. 包装 MiyaEngine 为标准 process_message API

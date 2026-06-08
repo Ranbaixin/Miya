@@ -84,6 +84,48 @@ def _send_ap_proactive(daemon, msg: str) -> None:
         pass
 
 
+def _wire_ap_proactive_routing(bridge, daemon) -> None:
+    """将 AP 主动说话消息路由到跨平台分发系统"""
+
+    async def _send_ap_proactive(message: str):
+        if not daemon.registry:
+            return
+        try:
+            target_id = (
+                daemon._miya.identity.user_id
+                if daemon._miya and hasattr(daemon._miya.identity, "user_id")
+                else "default"
+            )
+            for platform_id in daemon.registry.list_active():
+                inst = daemon.registry.get(platform_id)
+                if inst and hasattr(inst, "is_online") and inst.is_online:
+                    if hasattr(inst, "send_private_message"):
+                        try:
+                            if hasattr(inst, "get_active_user_id"):
+                                uid = inst.get_active_user_id() or target_id
+                            else:
+                                uid = target_id
+                            inst.send_private_message(uid, message)
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+
+    def _sync_send(message: str):
+        import asyncio
+
+        try:
+            loop = asyncio.get_running_loop()
+            loop.call_soon_threadsafe(lambda: asyncio.create_task(_send_ap_proactive(message)))
+        except RuntimeError:
+            try:
+                asyncio.run(_send_ap_proactive(message))
+            except Exception:
+                pass
+
+    bridge.set_platform_sender(_sync_send)
+
+
 async def run_daemon(
     api_enabled: bool = True,
     api_port: int = 9800,
@@ -121,10 +163,11 @@ async def run_daemon(
         bridge = get_psyarch_bridge()
         bridge.load_state()
         bridge.start_heartbeat()
-        # AP 主动信号通过 ProactiveChatSystem 统一调度，不直发 QQ
+        # 将 AP 主动消息路由到跨平台分发
         daemon.psyarch_bridge = bridge
         if daemon._miya:
             daemon._miya.psyarch_bridge = bridge
+        _wire_ap_proactive_routing(bridge, daemon)
         logger.info("APV2.1 认知引擎已就绪（默认启用）")
         print("  > APV2.1 认知引擎: 已激活")
     except Exception as e:
