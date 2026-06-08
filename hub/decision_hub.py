@@ -1692,6 +1692,20 @@ class DecisionHub:
                                 recent = bridge.engine._current_soul.recent_context[-4:]
                                 if recent:
                                     ap_hint += "\n最近对话:\n" + "\n".join(recent[-4:])
+                                # 注入 AP 感知通道状态
+                                channels = bridge.channels_state()
+                                if channels.get("ready"):
+                                    task = channels.get("task", {})
+                                    rhythm = channels.get("rhythm", {})
+                                    chan_parts = []
+                                    if task.get("boredom", 0) > 0.5:
+                                        chan_parts.append(f"有些无聊({task['boredom']:.1f})")
+                                    if task.get("fulfillment", 0) > 0.5:
+                                        chan_parts.append(f"感到充实({task['fulfillment']:.1f})")
+                                    if rhythm.get("phase") and rhythm["phase"] != "idle":
+                                        chan_parts.append(f"对话节奏:{rhythm['phase']}")
+                                    if chan_parts:
+                                        ap_hint += "\n弥娅内在状态: " + ", ".join(chan_parts)
                                 if ap_hint:
                                     personality_info["ap_state"] = ap_hint
                             # 多模态融合上下文

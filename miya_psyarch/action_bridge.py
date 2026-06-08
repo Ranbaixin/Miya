@@ -154,6 +154,11 @@ class MiyaActionBridge:
         self._engine = engine
         self._tool_cache: dict[str, Any] = {}
         self._mcp_cache: dict[str, Any] = {}
+        self._platform_context: dict | None = None
+
+    def set_platform_context(self, ctx: dict) -> None:
+        """注入运行时上下文（user_id, group_id, platform等）"""
+        self._platform_context = ctx
 
     def execute_action(self, action_id: str, **context) -> dict:
         """执行 AP 选择的行动"""
@@ -198,13 +203,40 @@ class MiyaActionBridge:
         return {"action_id": action_id, "executed": False, "error": "mcp not found"}
 
     def _execute_platform(self, action_id: str, **context) -> dict:
-        platform = action_id.replace("miya_platform::", "")
-        return {
-            "action_id": action_id,
-            "executed": False,
-            "reason": "platform action needs runtime context",
-            "platform_action": platform,
-        }
+        platform_action = action_id.replace("miya_platform::", "")
+        ctx = self._platform_context or {}
+        ctx.update(context)
+        try:
+            from core.unified_platform.registry import get_registry
+
+            registry = get_registry()
+            platform_id = ctx.get("platform", "")
+            platform_inst = registry.get(platform_id) if platform_id else None
+            if platform_inst:
+                user_id = ctx.get("user_id") or ctx.get("target_id")
+                group_id = ctx.get("group_id")
+                message = ctx.get("message") or ctx.get("text") or ""
+                if platform_action == "send_message" and user_id and message:
+                    if hasattr(platform_inst, "send_message"):
+                        platform_inst.send_message(user_id, message)
+                        return {"action_id": action_id, "executed": True, "result": "message sent", "target": user_id}
+                elif platform_action == "send_like" and user_id:
+                    if hasattr(platform_inst, "send_like"):
+                        platform_inst.send_like(user_id)
+                        return {"action_id": action_id, "executed": True, "result": "like sent"}
+                elif platform_action == "react_emoji" and user_id:
+                    emoji = ctx.get("emoji", "128077")
+                    if hasattr(platform_inst, "react_emoji"):
+                        platform_inst.react_emoji(user_id, group_id or 0, emoji)
+                        return {"action_id": action_id, "executed": True, "result": "react sent"}
+            return {
+                "action_id": action_id,
+                "executed": False,
+                "reason": f"context missing: platform={platform_id}, user={ctx.get('user_id')}",
+                "platform_action": platform_action,
+            }
+        except Exception as e:
+            return {"action_id": action_id, "executed": False, "error": str(e)}
 
     def inject_action_feedback(self, result: dict) -> None:
         """将行动执行结果注入 AP 状态池"""

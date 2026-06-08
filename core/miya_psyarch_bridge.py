@@ -142,12 +142,62 @@ class MiyaPsyArchBridge:
         return any(kw in text for kw in keywords)
 
     def feed_education(self, user_message: str, response: str) -> None:
-        """教育协议闭环——LLM 回复 → 教育信号 → AP 学习对话模式"""
+        """教育协议闭环——LLM 回复 → 教育信号 → AP 真正学习对话模式"""
         self._init_engine()
         if not self._engine._runtime or not response:
             return
         self._engine._generate_education(user_message, response)
         self._engine.idle_tick()
+        self._accumulate_education_history(response)
+
+    def _accumulate_education_history(self, response: str) -> None:
+        """累积教育记录，用于调整先天规则敏感度和 NT 基线"""
+        if not hasattr(self, "_edu_history"):
+            self._edu_history: list[dict] = []
+            self._edu_total_reward = 0.0
+            self._edu_message_count = 0
+        self._edu_message_count += 1
+        response_len = len(response)
+        quality = min(1.0, response_len / 80.0) if response_len > 8 else 0.3
+        self._edu_total_reward += quality
+        self._edu_history.append({"len": response_len, "quality": quality, "count": self._edu_message_count})
+        if len(self._edu_history) > 100:
+            self._edu_history = self._edu_history[-50:]
+        # 每 20 轮优质对话，微调 NT 基线
+        if self._edu_message_count % 20 == 0 and self._edu_total_reward > 15.0:
+            self._apply_education_nt_shift()
+
+    def _apply_education_nt_shift(self) -> None:
+        """教育积累足够后，微调 NT 通道基线"""
+        runtime = self._engine._runtime
+        if not runtime:
+            return
+        es = runtime.emotion_modulator.state
+        avg_quality = self._edu_total_reward / max(1, self._edu_message_count)
+        shift = min(0.03, avg_quality * 0.02)
+        channels_to_boost = ["OXY", "SER", "END"]
+        for ch in channels_to_boost:
+            if ch in es.baselines:
+                es.baselines[ch] = min(0.50, es.baselines[ch] + shift)
+        logger.info(
+            f"[AP教育] 累计{self._edu_message_count}轮对话, "
+            f"质量={avg_quality:.2f}, NT基线微调 +{shift:.3f} → OXY/SER/END"
+        )
+        self._edu_total_reward = 0.0
+        self._edu_message_count = 0
+
+    def education_stats(self) -> dict:
+        """获取教育统计"""
+        return {
+            "message_count": getattr(self, "_edu_message_count", 0),
+            "total_reward": round(getattr(self, "_edu_total_reward", 0.0), 3),
+            "history_len": len(getattr(self, "_edu_history", [])),
+            "last_nt_baselines": {
+                ch: round(v, 3) for ch, v in self._engine._runtime.emotion_modulator.state.baselines.items()
+            }
+            if self._engine._runtime
+            else {},
+        }
 
     # ── 主动说话 ──
 
@@ -263,6 +313,51 @@ class MiyaPsyArchBridge:
             "recalled_memories": recalled_texts,
             "rhythm": rhythm_state,
         }
+
+    def channels_state(self) -> dict:
+        """获取 AP 5条感知通道的完整状态"""
+        self._init_engine()
+        if not self._engine._runtime:
+            return {"ready": False}
+
+        runtime = self._engine._runtime
+        state = {"ready": True}
+
+        if hasattr(runtime, "runtime_load") and runtime.runtime_load:
+            load = runtime.runtime_load
+            state["runtime_load"] = {
+                "complexity": round(getattr(load, "complexity", 0), 3),
+                "simplicity": round(getattr(load, "simplicity", 0), 3),
+            }
+        if hasattr(runtime, "rhythm") and runtime.rhythm:
+            r = runtime.rhythm
+            state["rhythm"] = {
+                "burst_count": getattr(r, "burst_count", 0),
+                "interval_avg": round(getattr(r, "interval_avg", 0.0), 2),
+                "phase": getattr(r, "phase", "idle"),
+            }
+        if hasattr(runtime, "time_feeling") and runtime.time_feeling:
+            t = runtime.time_feeling
+            state["time"] = {
+                "elapsed_text": getattr(t, "elapsed_text", ""),
+                "time_pressure": round(getattr(t, "time_pressure", 0.0), 3),
+            }
+        if hasattr(runtime, "expectation_pressure"):
+            ep = runtime.expectation_pressure
+            state["expectation_pressure"] = {
+                "expectation": round(getattr(ep, "expectation", 0), 3),
+                "pressure": round(getattr(ep, "pressure", 0), 3),
+                "fulfillment": round(getattr(ep, "fulfillment", 0), 3),
+            }
+        if hasattr(runtime, "task_feeling") and runtime.task_feeling:
+            tf = runtime.task_feeling
+            state["task"] = {
+                "boredom": round(getattr(tf, "boredom", 0), 3),
+                "fulfillment": round(getattr(tf, "fulfillment", 0), 3),
+                "task_available": round(getattr(tf, "task_available", 0), 3),
+            }
+
+        return state
 
     def set_platform_sender(self, sender: callable) -> None:
         """设置跨平台主动消息发送路由"""

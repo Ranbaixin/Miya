@@ -266,29 +266,23 @@ class MessageMixin:
             )
 
             if hasattr(miya, "decision_hub"):
-                # ── AP 聆听：先让弥娅\"听到\"消息，产生实时内心反应 ──
+                # ── AP 聆听：先让弥娅"听到"消息，产生实时内心反应 ──
                 try:
                     from core.miya_psyarch_bridge import get_psyarch_bridge
+                    from miya_psyarch.action_bridge import get_action_bridge
 
                     bridge = get_psyarch_bridge()
                     if bridge and bridge._initialized:
                         bridge.hear_message(content)
+                        action_bridge = get_action_bridge(bridge._engine)
+                        action_bridge.set_platform_context(
+                            {"platform": self.platform_id, "user_id": user_id, "group_id": group_id}
+                        )
                 except Exception:
                     pass
 
-                # APV2.1 引擎路由: 如果启用了 AP 认知引擎，优先走 AP
-                if getattr(miya, "use_psyarch", False) and getattr(miya, "psyarch_bridge", None):
-                    response, soul = miya.psyarch_bridge.process_message(content)
-                    if soul:
-                        mf = soul.get("miya_feelings", {})
-                        top = sorted(mf.items(), key=lambda x: -x[1])[:3]
-                        nt = soul.get("emotion", {})
-                        oxy = nt.get("OXY", 0)
-                        cor = nt.get("COR", 0)
-                        feats = ", ".join(f"{k}:{v:.1f}" for k, v in top) if top else "平静"
-                        print(f"\n  ♡ AP引擎 | {feats} | OXY:{oxy:.0%} COR:{cor:.0%}\n")
-                else:
-                    response = await miya.decision_hub.process_perception_cross_platform(mlink_msg)
+                # ── 统一路由：DecisionHub 融合 AP 认知状态处理所有消息 ──
+                response = await miya.decision_hub.process_perception_cross_platform(mlink_msg)
 
                 # ── AP 教育闭环：LLM 回复 → 教育信号 → AP 学习对话模式 ──
                 if response and content:

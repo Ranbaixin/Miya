@@ -327,7 +327,7 @@ class MiyaEngine:
             self._runtime.state_pool.apply_external_items(items, tick_index=self._runtime.tick_index)
 
     def _inject_emotion_pool(self, text: str) -> None:
-        """用 SoulGenerator 分析用户消息，将 70+ 情绪注入 AP 状态池"""
+        """用情绪池分析用户消息，注入 AP 状态池并联动 NT 通道"""
         if not text or self._runtime is None:
             return
         try:
@@ -335,8 +335,110 @@ class MiyaEngine:
             if emotions:
                 items = emotions_to_state_items(emotions)
                 self._runtime.state_pool.apply_external_items(items, tick_index=self._runtime.tick_index)
+                self._emotion_pool_to_nt(emotions)
         except Exception as e:
             logger.debug(f"emotion pool injection failed: {e}")
+
+    def _emotion_pool_to_nt(self, emotions: dict[str, float]) -> None:
+        """情绪池 → NT 通道联动：70+ 情绪直接调制 8 通道神经递质"""
+        if self._runtime is None:
+            return
+        es = self._runtime.emotion_modulator.state
+        nt_deltas: dict[str, float] = {}
+        emotion_nt_map: dict[str, dict[str, float]] = {
+            # ── 正面 / 联结 (OXY 催产素 + DA 多巴胺) ──
+            "joy": {"DA": 0.10, "SER": 0.06, "END": 0.04},
+            "happiness": {"DA": 0.12, "SER": 0.08, "END": 0.06},
+            "love": {"OXY": 0.14, "DA": 0.10, "END": 0.06},
+            "sweetness": {"OXY": 0.12, "DA": 0.08, "END": 0.06},
+            "heartbeat": {"DA": 0.10, "OXY": 0.10, "ADR": 0.04},
+            "warmth": {"OXY": 0.12, "END": 0.08, "SER": 0.06},
+            "caring": {"OXY": 0.10, "SER": 0.04, "FOC": 0.04},
+            "protectiveness": {"OXY": 0.10, "ADR": 0.04, "FOC": 0.04},
+            "empathy": {"OXY": 0.08, "SER": 0.04},
+            "comfort": {"OXY": 0.08, "END": 0.10, "SER": 0.06},
+            "attachment": {"OXY": 0.14, "SER": 0.04, "END": 0.04},
+            "adoration": {"OXY": 0.12, "DA": 0.10, "END": 0.04},
+            "admiration": {"DA": 0.08, "OXY": 0.06, "FOC": 0.06},
+            "gratitude": {"OXY": 0.08, "DA": 0.06, "SER": 0.06, "END": 0.04},
+            "moved": {"OXY": 0.10, "DA": 0.06, "SER": 0.04, "END": 0.04},
+            "pride": {"DA": 0.10, "SER": 0.08, "FOC": 0.04},
+            "closeness": {"OXY": 0.14, "END": 0.06, "SER": 0.06},
+            "habitual_care": {"OXY": 0.08, "SER": 0.06},
+            "trust": {"OXY": 0.12, "SER": 0.08},
+            "openness": {"OXY": 0.06, "NOV": 0.04, "FOC": 0.04},
+            "forgiveness": {"SER": 0.08, "OXY": 0.08, "END": 0.06},
+            "sharing": {"OXY": 0.06, "NOV": 0.06, "DA": 0.04},
+            "hope": {"DA": 0.08, "NOV": 0.06, "SER": 0.04},
+            "resilient": {"DA": 0.06, "SER": 0.08, "FOC": 0.06},
+            "active": {"DA": 0.08, "FOC": 0.06},
+            # ── 安定 / 满足 (SER 血清素 + END 内啡肽) ──
+            "peaceful": {"SER": 0.12, "END": 0.10, "OXY": 0.04},
+            "contentment": {"SER": 0.12, "END": 0.10, "DA": 0.04},
+            "satisfaction": {"SER": 0.10, "END": 0.08, "DA": 0.06},
+            "security": {"SER": 0.12, "END": 0.06, "OXY": 0.06},
+            "relief": {"SER": 0.08, "END": 0.10, "COR": -0.06},
+            # ── 思念 / 依恋 (OXY 催产素 + NOV 期待) ──
+            "missing": {"OXY": 0.10, "NOV": 0.06, "SER": -0.04},
+            "longing": {"OXY": 0.12, "NOV": 0.04, "SER": -0.04},
+            "nostalgia": {"OXY": 0.08, "SER": 0.04, "END": 0.04},
+            "clingy": {"OXY": 0.14, "SER": -0.04, "COR": 0.04},
+            "dependence": {"OXY": 0.10, "SER": -0.04},
+            # ── 好奇 / 惊讶 (NOV 新奇探索) ──
+            "curiosity": {"NOV": 0.14, "DA": 0.06, "FOC": 0.04},
+            "surprise": {"NOV": 0.12, "ADR": 0.08, "DA": 0.04},
+            "anticipation": {"NOV": 0.10, "DA": 0.08, "FOC": 0.04},
+            "excitement": {"DA": 0.12, "ADR": 0.08, "NOV": 0.08},
+            "amusement": {"DA": 0.10, "END": 0.06, "NOV": 0.04},
+            "playful": {"DA": 0.10, "NOV": 0.08, "END": 0.04},
+            "confusion": {"NOV": 0.08, "FOC": 0.04, "COR": 0.04},
+            # ── 负面 / 压力 (COR 皮质醇 + ADR 肾上腺素) ──
+            "sadness": {"SER": -0.08, "DA": -0.04, "END": -0.04, "COR": 0.04},
+            "heartache": {"OXY": 0.06, "SER": -0.06, "COR": 0.06, "END": -0.04},
+            "fragile": {"SER": -0.08, "COR": 0.06, "END": -0.04},
+            "fear": {"COR": 0.12, "ADR": 0.10, "SER": -0.06, "DA": -0.04},
+            "anxiety": {"COR": 0.12, "ADR": 0.08, "SER": -0.08, "NOV": -0.04},
+            "nervous": {"ADR": 0.10, "COR": 0.08, "SER": -0.06},
+            "insecurity": {"COR": 0.08, "SER": -0.08, "OXY": -0.04, "NOV": -0.04},
+            "helpless": {"SER": -0.10, "COR": 0.06, "DA": -0.04},
+            "anger": {"COR": 0.12, "ADR": 0.10, "OXY": -0.06, "SER": -0.06},
+            "frustration": {"COR": 0.10, "ADR": 0.06, "SER": -0.06, "DA": -0.04},
+            "irritable": {"COR": 0.08, "ADR": 0.06, "SER": -0.06},
+            "aggression": {"COR": 0.10, "ADR": 0.08, "OXY": -0.08},
+            "defensive": {"COR": 0.08, "ADR": 0.06, "OXY": -0.04},
+            "estrangement": {"OXY": -0.08, "COR": 0.06, "SER": -0.04},
+            "push_away": {"OXY": -0.10, "COR": 0.06, "SER": -0.06},
+            "disgust": {"COR": 0.08, "ADR": 0.04, "SER": -0.06, "OXY": -0.04},
+            "aversion": {"COR": 0.06, "SER": -0.06, "OXY": -0.04},
+            "grievance": {"COR": 0.08, "SER": -0.06, "OXY": -0.04},
+            "disappointment": {"SER": -0.10, "DA": -0.06, "COR": 0.04},
+            "guilt": {"SER": -0.08, "DA": -0.06, "COR": 0.06},
+            "shame": {"SER": -0.10, "DA": -0.08, "COR": 0.06},
+            "loneliness": {"SER": -0.08, "OXY": -0.06, "COR": 0.04, "END": -0.04},
+            "emptiness": {"SER": -0.12, "DA": -0.08, "END": -0.04, "NOV": -0.04},
+            "boredom": {"DA": -0.06, "NOV": 0.06, "SER": -0.04, "FOC": -0.04},
+            "passive": {"DA": -0.06, "NOV": -0.04, "FOC": -0.04},
+            "doubt": {"NOV": 0.04, "COR": 0.06, "SER": -0.04, "FOC": 0.04},
+            "lost": {"SER": -0.08, "COR": 0.06, "NOV": 0.04, "DA": -0.04},
+            # ── 依恋类冲突 (OXY↑ COR↑ 并存) ──
+            "jealousy": {"OXY": 0.06, "COR": 0.08, "SER": -0.06},
+            "jealous_playful": {"OXY": 0.06, "COR": 0.04, "NOV": 0.04, "DA": 0.04},
+            # ── 认知 / 复合 ──
+            "reflection": {"FOC": 0.08, "SER": 0.04, "NOV": 0.04},
+            "mixed_feelings": {"NOV": 0.04, "COR": 0.04, "OXY": 0.04},
+            "bitter_sweet": {"OXY": 0.06, "SER": -0.04, "END": 0.04},
+            # ── 疲劳 ──
+            "fatigue": {"SER": -0.06, "DA": -0.08, "END": 0.04, "FOC": -0.06},
+        }
+        for name, val in emotions.items():
+            if val > 0.25 and name in emotion_nt_map:
+                for ch, delta in emotion_nt_map[name].items():
+                    nt_deltas[ch] = nt_deltas.get(ch, 0) + delta * val
+
+        for ch, delta in nt_deltas.items():
+            if ch in es.channels:
+                clamped = max(-0.15, min(0.15, delta))
+                es.channels[ch] = max(0.02, min(1.0, es.channels[ch] + clamped))
 
     def _apply_text_reactions(self, text: str) -> None:
         """根据输入文本中的触发词直接调整 AP 情绪 (保留做补充)"""

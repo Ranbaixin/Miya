@@ -714,41 +714,27 @@ class Miya:
                 self.logger.info(f"终端工具响应: {formatted_result[:100]}")
                 return formatted_result
 
-        # APV2.1 引擎切换命令 (AP 心跳已在启动时默认运行)
+        # APV2.1 状态查询 (AP 心跳始终在后台运行)
         if user_input.strip().lower() in ("/ap", "/psyarch", "/认知"):
-            self.use_psyarch = True
-            obs_url = "观测台未就绪"
             if self.psyarch_bridge:
-                try:
-                    obs_url = self.psyarch_bridge.mount_observatory()
-                except Exception:
-                    obs_url = "观测台已运行"
-            return f"已切换到 APV2.1 白箱认知引擎。\n  弥娅的心跳一直在跳动。\n  观测台: {obs_url}"
-        if user_input.strip().lower() in ("/llm", "/传统", "/old"):
-            self.use_psyarch = False
-            return "已切回 DecisionHub 传统引擎。AP 心跳仍在后台运行。"
-
-        # APV2.1 引擎路由
-        if self.use_psyarch and self.psyarch_bridge:
-            reply, soul = self.psyarch_bridge.process_message(user_input)
-            try:
-                from memory.lifebook import get_lifebook
-
-                lifebook = get_lifebook()
-                await lifebook.record_interaction(
-                    user_message=user_input,
-                    lover_response=reply or "",
-                    topics=[],
-                    emotion="AP认知",
-                )
-            except Exception:
-                pass
-            if soul:
-                mf = soul.get("miya_feelings", {})
+                stats = self.psyarch_bridge.education_stats()
+                cog = self.psyarch_bridge.cognitive_state()
+                channels = self.psyarch_bridge.channels_state()
+                emo = self.psyarch_bridge.emotion_snapshot()
+                nt = emo.get("nt_channels", {})
+                mf = emo.get("miya_feelings", {})
                 top = sorted(mf.items(), key=lambda x: -x[1])[:3]
-                emo = ", ".join(f"{k}:{v:.1f}" for k, v in top) if top else "平静"
-                return f"{reply}\n  [AP 弥娅感受: {emo}]"
-            return reply or ""
+                parts = [
+                    "◆ APV2.1 白箱认知引擎",
+                    f"  NT: OXY={nt.get('OXY', 0):.0%} DA={nt.get('DA', 0):.0%} COR={nt.get('COR', 0):.0%} NOV={nt.get('NOV', 0):.0%}",
+                    f"  感受: {', '.join(f'{k}:{v:.1f}' for k, v in top) if top else '平静'}",
+                    f"  认知: {', '.join(f'{k}={v:.2f}' for k, v in cog.get('cognitive_feelings', {}).items())[:60] or '无'}",
+                    f"  节奏: {channels.get('rhythm', {}).get('phase', '-')} 任务: boredom={channels.get('task', {}).get('boredom', 0):.2f}",
+                    f"  教育: {stats.get('message_count', 0)}轮 质量={stats.get('total_reward', 0):.1f}",
+                    f"  路径: {'AP直连' if self.use_psyarch else 'DecisionHub融合'} (AP始终运行)",
+                ]
+                return "\n".join(parts)
+            return "APV2.1 认知引擎未就绪"
 
         # 使用平台适配器转换为M-Link Message
         message = self.terminal_adapter.to_message(
@@ -922,10 +908,9 @@ def main():
         print("=" * 50)
         print("【弥娅系统 零号机】")
         ap_status = "活跃" if miya.psyarch_bridge else "未就绪"
-        print(f"  认知引擎: DecisionHub (LLM) + APV2.1 心脏 [{ap_status}]")
+        print(f"  认知引擎: DecisionHub + APV2.1 [{ap_status}]")
         print("  已启动")
-        print(f"  输入 /ap 切换到 APV2.1 主认知模式")
-        print(f"  输入 /llm 切回 DecisionHub 模式")
+        print(f"  输入 /ap 查看 AP 认知状态")
         print("=" * 50)
 
         # 启动定时任务调度器
