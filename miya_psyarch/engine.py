@@ -163,6 +163,36 @@ class MiyaEngine:
         if hasattr(self._runtime.emotion_modulator, "cfs_gain"):
             self._runtime.emotion_modulator.cfs_gain = 0.08
 
+    def _apply_training_state(self) -> None:
+        """加载训练结果: 离线预训练锚点 → 状态池 + 规则蒸馏调制"""
+        try:
+            from miya_psyarch.miya_trainer import get_trainer
+
+            trainer = get_trainer()
+            # 离线预训练锚点注入
+            anchors = trainer.get_baseline_anchors()
+            if anchors and self._runtime:
+                items = [
+                    {
+                        "sa_label": f"pretrain::{a.get('text', '')[:25]}",
+                        "display_text": a.get("text", "")[:40],
+                        "family": a.get("family", "pretrain_anchor"),
+                        "real_energy": a.get("energy", 0.5),
+                        "anchor_meta": {"tags": a.get("tags", []), "source": "pretrain"},
+                    }
+                    for a in anchors[:40]
+                ]
+                if items:
+                    self._runtime.state_pool.apply_external_items(items, tick_index=0)
+
+            # 规则蒸馏调制 → 存为引擎属性
+            modulation = trainer.get_rule_modulation()
+            if modulation:
+                self._training_modulation = modulation
+                logger.info(f"[训练] 已加载 {len(modulation)} 条规则蒸馏调制")
+        except Exception as e:
+            logger.debug(f"[训练] 状态加载跳过: {e}")
+
     def _apply_tuner_modulation(self, modulation: dict) -> None:
         """消费 tuner 调制输出，调整 runtime 参数"""
         mem_mod = modulation.get("memory", {})
@@ -281,6 +311,9 @@ class MiyaEngine:
         trace = self._runtime.process_multimodal_tick(text="", trace_mode=self._trace_mode)
         self._ticks.append(trace)
         self._current_soul = self._extract_soul(trace)
+
+        # 加载训练结果: 离线预训练锚点 + 规则蒸馏调制
+        self._apply_training_state()
 
     def tick(
         self,

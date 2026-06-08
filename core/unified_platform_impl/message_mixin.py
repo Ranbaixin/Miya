@@ -266,6 +266,22 @@ class MessageMixin:
             )
 
             if hasattr(miya, "decision_hub"):
+                # ── 斜杠命令拦截 (在路由到 DecisionHub 之前) ──
+                cmd_response = _handle_slash_command(self, content, user_id, group_id)
+                if cmd_response:
+                    import asyncio
+                    import inspect
+
+                    if hasattr(self, "send_private_message"):
+                        try:
+                            result = self.send_private_message(user_id, cmd_response)
+                            if inspect.isawaitable(result):
+                                loop = asyncio.get_event_loop()
+                                loop.create_task(result)
+                        except Exception:
+                            pass
+                    return
+
                 # ── AP 聆听：先让弥娅"听到"消息，产生实时内心反应 ──
                 try:
                     from core.miya_psyarch_bridge import get_psyarch_bridge
@@ -441,3 +457,82 @@ class MessageMixin:
                 logger.warning(f"[{self.platform_id}] TTS 合成返回空路径")
         except Exception as e:
             logger.warning(f"[{self.platform_id}] TTS 本地播放失败: {e}")
+
+
+def _handle_slash_command(self, content: str, user_id: str, group_id: str) -> str | None:
+    """拦截并处理斜杠命令，返回响应字符串，不匹配时返回 None"""
+    import json
+    from pathlib import Path
+
+    text = content.strip().lower()
+
+    # 加载命令配置
+    cfg = {}
+    try:
+        cp = Path(__file__).resolve().parent.parent.parent / "config" / "text_config.json"
+        cfg = json.loads(cp.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+
+    slash = cfg.get("slash_commands", {})
+    responses = cfg.get("command_responses", {})
+
+    # /train
+    train_cfg = slash.get("train", {})
+    if text in [a.lower() for a in train_cfg.get("aliases", [])] or text.startswith("/train"):
+        from core.miya_psyarch_bridge import get_psyarch_bridge
+
+        bridge = get_psyarch_bridge()
+        if not bridge or not bridge._initialized:
+            return responses.get("train", {}).get("not_ready", "AP 未就绪")
+        mode = text.replace("/train", "").strip() or "all"
+        if mode not in train_cfg.get("modes", ["all", "distill", "pretrain"]):
+            return responses.get("train", {}).get("unsupported_mode", "").format(mode=mode)
+        result = bridge.train(mode)
+        if result.get("error"):
+            return f"训练失败: {result['error']}"
+        summary = bridge.training_summary()
+        return (
+            responses.get("train", {})
+            .get("success", "")
+            .format(
+                mode=mode,
+                distilled=result.get("distill", {}).get("rules_adjusted", 0) or summary.get("distilled_rules", 0),
+                pretrained=result.get("pretrain", {}).get("anchors", summary.get("pretrain_anchors", 0)) or 0,
+                rl=summary.get("rl_events", 0),
+            )
+        )
+
+    # /ap
+    ap_cfg = slash.get("ap", {})
+    if text in [a.lower() for a in ap_cfg.get("aliases", [])]:
+        from core.miya_psyarch_bridge import get_psyarch_bridge
+
+        bridge = get_psyarch_bridge()
+        if not bridge:
+            return "AP 未就绪"
+        emo = bridge.emotion_snapshot()
+        nt = emo.get("nt_channels", {})
+        mf = emo.get("miya_feelings", {})
+        top = sorted(mf.items(), key=lambda x: -x[1])[:3]
+        mp = "locked" if bridge.memory_protection else "unlocked"
+        summary = bridge.training_summary()
+        return (
+            f"◆ APV2.1 | OXY={nt.get('OXY', 0):.0%} DA={nt.get('DA', 0):.0%} "
+            f"COR={nt.get('COR', 0):.0%} NOV={nt.get('NOV', 0):.0%}\n"
+            f"  感受: {', '.join(f'{k}:{v:.1f}' for k, v in top) if top else '平静'}\n"
+            f"  训练: {summary.get('distilled_rules', 0)}规则 {summary.get('rl_events', 0)}RL\n"
+            f"  记忆: {mp}"
+        )
+
+    # /状态
+    status_cfg = slash.get("status", {})
+    if text in [a.lower() for a in status_cfg.get("aliases", [])]:
+        return "弥娅系统运行中 | APV2.1 激活 | 5/5 平台在线 | 输入 /ap 查看详情"
+
+    # /帮助
+    help_cfg = slash.get("help", {})
+    if text in [a.lower() for a in help_cfg.get("aliases", [])]:
+        return responses.get("help", {}).get("all", "可用: /ap /train /状态 /帮助")
+
+    return None

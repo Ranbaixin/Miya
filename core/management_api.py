@@ -324,6 +324,33 @@ class ManagementAPI:
             except Exception as e:
                 return {"error": str(e)}
 
+        @app.post("/api/v1/ap/train")
+        async def ap_train(data: dict):
+            """触发 AP 训练"""
+            try:
+                from core.miya_psyarch_bridge import get_psyarch_bridge
+
+                bridge = get_psyarch_bridge()
+                if not bridge:
+                    return {"error": "AP 引擎未就绪"}
+                mode = data.get("mode", "all")
+                return bridge.train(mode)
+            except Exception as e:
+                return {"error": str(e)}
+
+        @app.get("/api/v1/ap/train")
+        async def ap_train_status():
+            """查看训练状态"""
+            try:
+                from core.miya_psyarch_bridge import get_psyarch_bridge
+
+                bridge = get_psyarch_bridge()
+                if not bridge:
+                    return {"error": "AP 引擎未就绪"}
+                return bridge.training_summary()
+            except Exception as e:
+                return {"error": str(e)}
+
         async def _ap_stream():
             """SSE 流：实时推送 AP 8 通道 NT 数据"""
             from core.miya_psyarch_bridge import get_psyarch_bridge

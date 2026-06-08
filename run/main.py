@@ -737,6 +737,26 @@ class Miya:
                 return "\n".join(parts)
             return "APV2.1 认知引擎未就绪"
 
+        # APV2.1 训练命令
+        if user_input.strip().lower().startswith("/train"):
+            if not self.psyarch_bridge:
+                return "AP 引擎未就绪，无法训练"
+            mode = user_input.strip().lower().replace("/train", "").strip() or "all"
+            result = self.psyarch_bridge.train(mode)
+            if result.get("error"):
+                return f"训练失败: {result['error']}"
+            summary = self.psyarch_bridge.training_summary()
+            distilled = result.get("distill", {}).get("rules_adjusted", 0)
+            pretrained = result.get("pretrain", {}).get("anchors", summary.get("pretrain_anchors", 0))
+            rl = summary.get("rl_events", 0)
+            return (
+                f"◆ AP 训练完成 ({mode})\n"
+                f"  📊 规则蒸馏: {distilled} 条调整\n"
+                f"  🏗 预训练锚点: {pretrained} 条注入\n"
+                f"  🎯 强化学习事件: {rl} 次\n"
+                f"  下次启动时自动生效"
+            )
+
         # 使用平台适配器转换为M-Link Message
         message = self.terminal_adapter.to_message(
             user_input=user_input,

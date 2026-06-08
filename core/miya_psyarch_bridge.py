@@ -125,6 +125,40 @@ class MiyaPsyArchBridge:
         self.hear_message(text)
         return self._build_offline_response(text)
 
+    # ── 训练 API ──
+
+    def train(self, mode: str = "all") -> dict:
+        """触发 AP 训练: distill | pretrain | all"""
+        try:
+            from miya_psyarch.miya_trainer import get_trainer
+
+            trainer = get_trainer()
+            if mode == "distill":
+                return trainer.distill_rules()
+            elif mode == "pretrain":
+                r = trainer.pretrain()
+                self._init_engine()
+                if self._engine and self._engine._runtime:
+                    self._engine._apply_training_state()
+                return r
+            elif mode == "all":
+                result = trainer.train_all()
+                self._init_engine()
+                if self._engine and self._engine._runtime:
+                    self._engine._apply_training_state()
+                return result
+            return {"error": f"unknown mode: {mode}"}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def training_summary(self) -> dict:
+        try:
+            from miya_psyarch.miya_trainer import get_trainer
+
+            return get_trainer().get_training_summary()
+        except Exception as e:
+            return {"error": str(e)}
+
     def _build_offline_response(self, user_text: str) -> str:
         """从 AP 内部状态构建自然回应"""
         soul = self._engine._current_soul
