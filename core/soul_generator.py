@@ -1552,6 +1552,69 @@ class SoulGenerator:
                         logger.warning(f"[灵魂] 策略3正则解析缺字段: {missing} | 原始响应前200字: {text[:200]}")
                     return result
 
+                # 策略4: 从碎片化中文文本中提取情绪关键词和内心独白
+                frag_result = {}
+                chinese_field_patterns = {
+                    "inner_thought": r'内心独白[：:]\s*["""]?\s*([^。"\n]{5,60})',
+                    "attribution": r'归因[：:]\s*["""]?\s*([^。"\n]{5,80})',
+                    "reflection": r'反思[：:]\s*["""]?\s*([^。"\n]{5,80})',
+                }
+                for field, pat in chinese_field_patterns.items():
+                    m = re.search(pat, text)
+                    if m:
+                        frag_result[field] = m.group(1).strip()
+
+                emotion_chinese_map = {
+                    "温暖": "温暖",
+                    "温柔": "温柔",
+                    "开心": "开心",
+                    "幸福": "幸福",
+                    "挂念": "挂念",
+                    "思念": "思念",
+                    "心疼": "心疼",
+                    "担心": "担心",
+                    "不安": "不安",
+                    "失落": "失落",
+                    "难过": "难过",
+                    "焦虑": "焦虑",
+                    "满足": "满足",
+                    "欣慰": "欣慰",
+                    "期待": "期待",
+                    "好奇": "好奇",
+                    "骄傲": "骄傲",
+                    "感动": "感动",
+                    "无奈": "无奈",
+                    "疲惫": "疲惫",
+                    "依赖": "依赖",
+                    "依恋": "依恋",
+                    "爱意": "爱意",
+                    "关怀": "关怀",
+                    "欣喜": "欣喜",
+                    "惊喜": "惊喜",
+                    "羞耻": "羞耻",
+                    "愧疚": "愧疚",
+                    "恐惧": "恐惧",
+                    "愤怒": "愤怒",
+                    "平静": "平静",
+                    "冷静": "冷静",
+                }
+                extracted_emos = []
+                for cn_word, en_word in emotion_chinese_map.items():
+                    intensity_match = re.search(
+                        rf"{cn_word}[（(]?\s*强度[：:]\s*(\d+)\s*[)）]?\s*|{cn_word}\s*[:：]\s*(\d+)",
+                        text,
+                    )
+                    if intensity_match:
+                        val = int(intensity_match.group(1) or intensity_match.group(2) or 50)
+                        extracted_emos.append({"name": cn_word, "intensity": val})
+                if extracted_emos:
+                    frag_result["emotions"] = extracted_emos
+                frag_result["source"] = "regex_fallback_v4"
+
+                if frag_result:
+                    logger.info(f"[灵魂] 策略4碎片解析成功: {list(frag_result.keys())}")
+                    return frag_result
+
                 return None
 
             result = _try_parse_json(response)

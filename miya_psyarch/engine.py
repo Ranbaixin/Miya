@@ -11,8 +11,12 @@ from __future__ import annotations
 import asyncio
 import io
 import logging
+import sys
+import threading
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any, Optional
 
 import yaml
 
@@ -108,6 +112,8 @@ class MiyaEngine:
         self._proactive_cooldown: int = 0
         self._observatory: MiyaObservatory | None = None
         self._multimodal: MultiModalContext = MultiModalContext()
+        self._perf_stats: dict = {"tick_times_ms": [], "max_samples": 100, "total_ticks": 0}
+        self._perf_detail: dict[str, list[float]] = {}
 
     def _build_config(self) -> RuntimeConfig:
         return RuntimeConfig()
@@ -269,59 +275,84 @@ class MiyaEngine:
         education_interventions: dict | list[dict] | None = None,
     ) -> dict:
         """推进一次认知 tick（纯 AP 引擎，不调用 LLM）。批量写入优化版。"""
+        t0 = time.perf_counter()
+        trace: dict = {}
+
+        def _step(name: str):
+            t = time.perf_counter()
+            self._perf_detail.setdefault(name, [])
+            return t
+
+        def _done(name: str, t_start: float):
+            ms = (time.perf_counter() - t_start) * 1000
+            times = self._perf_detail.setdefault(name, [])
+            times.append(ms)
+            if len(times) > 200:
+                self._perf_detail[name] = times[-100:]
+
         if self._runtime is None:
             self.start()
 
         batch_items: list[dict] = []
 
-        # 情绪池注入
+        t_s = _step("emotion_pool")
         emotion_items = self._inject_emotion_pool(text)
         if emotion_items:
             batch_items.extend(emotion_items)
+        _done("emotion_pool", t_s)
 
-        # 注入上一轮的教育协议信号
         combined_edu = list(education_interventions or []) + list(self._pending_education)
         self._pending_education = []
 
+        t_s = _step("multimodal_tick")
         trace = self._runtime.process_multimodal_tick(
             text=text,
             trace_mode=self._trace_mode,
             education_interventions=combined_edu if combined_edu else None,
         )
+        _done("multimodal_tick", t_s)
 
-        # 上下文注入
+        t_s = _step("context_inject")
         ctx_items = self._inject_context_into_state_pool(text)
         if ctx_items:
             batch_items.extend(ctx_items)
+        _done("context_inject", t_s)
 
-        # 永久锚定（缓存版，零开销）
+        t_s = _step("anchors")
         anchor_items = self._memory_fusion.inject_permanent_anchors()
         if anchor_items:
             batch_items.extend(anchor_items)
         cog_items = self._memory_fusion.inject_cognitive_memories()
         if cog_items:
             batch_items.extend(cog_items)
+        _done("anchors", t_s)
 
-        # 每 20 tick 刷新记忆注入
         if self._current_soul.tick_index % 20 == 0 and text:
+            t_s = _step("memory_reload")
             mem_items = self._collect_memory_items()
             if mem_items:
                 batch_items.extend(mem_items)
+            _done("memory_reload", t_s)
 
-        # ★ 批量写入：一次 apply_external_items 替代原来的 5+ 次
+        t_s = _step("batch_write")
         if batch_items:
             self._runtime.state_pool.apply_external_items(batch_items, tick_index=self._runtime.tick_index)
+        _done("batch_write", t_s)
 
-        # ★ 自适应调参：tuner 调制实际生效于 runtime 配置
+        t_s = _step("tuner_modulation")
         if hasattr(self._runtime, "tuner") and self._runtime.tuner:
             try:
                 mod = self._runtime.tuner.active_modulation()
                 self._apply_tuner_modulation(mod)
             except Exception:
                 pass
+        _done("tuner_modulation", t_s)
 
+        t_s = _step("clamp")
         self._clamp_emotion_ceiling()
-        # 文本触发的 NT 调整已在 _inject_emotion_pool → _emotion_pool_to_nt 中完成 (68 种情绪映射)
+        _done("clamp", t_s)
+
+        t_s = _step("record")
         self._ticks.append(trace)
         self._current_soul = self._extract_soul(trace)
         record_tick(self)
@@ -329,8 +360,51 @@ class MiyaEngine:
             self._observatory.set_trace(trace)
         if len(self._ticks) > _TICK_HISTORY_MAX:
             self._ticks = self._ticks[-_TICK_HISTORY_KEEP:]
+        _done("record", t_s)
+
+        elapsed_ms = (time.perf_counter() - t0) * 1000
+        self._perf_stats["total_ticks"] += 1
+        self._perf_stats["tick_times_ms"].append(elapsed_ms)
+        if len(self._perf_stats["tick_times_ms"]) > self._perf_stats["max_samples"]:
+            self._perf_stats["tick_times_ms"] = self._perf_stats["tick_times_ms"][-self._perf_stats["max_samples"] :]
 
         return trace
+
+    def perf_stats(self) -> dict:
+        """返回 tick 性能统计 — CPU 火焰图 + GPU 监控"""
+        times = self._perf_stats.get("tick_times_ms", [])
+        result: dict = {"ready": bool(times), "total_ticks": self._perf_stats["total_ticks"]}
+
+        if times:
+            s = sorted(times)
+            result.update(
+                {
+                    "cpu_avg_ms": round(sum(times) / len(times), 2),
+                    "cpu_p50_ms": round(s[len(s) // 2], 2),
+                    "cpu_p95_ms": round(s[int(len(s) * 0.95)], 2) if len(s) > 5 else round(s[-1], 2),
+                    "cpu_max_ms": round(max(times), 2),
+                    "cpu_samples": len(times),
+                }
+            )
+
+        # 子步骤火焰图
+        detail = {}
+        for step, step_times in getattr(self, "_perf_detail", {}).items():
+            if step_times:
+                detail[step] = {
+                    "avg_ms": round(sum(step_times) / len(step_times), 3),
+                    "max_ms": round(max(step_times), 3),
+                    "count": len(step_times),
+                }
+        if detail:
+            result["cpu_flame_steps"] = dict(sorted(detail.items(), key=lambda x: -x[1]["avg_ms"]))
+
+        # GPU 监控
+        gpu = _collect_gpu_stats()
+        if gpu:
+            result["gpu"] = gpu
+
+        return result
 
     def _clamp_emotion_ceiling(self) -> None:
         """限制情绪通道天花板，留出波动空间 (从 miya_config.yaml 读取)"""
@@ -812,5 +886,62 @@ class MiyaEngine:
             "llm_model": s.llm_model,
             "llm_latency_ms": s.llm_latency_ms,
             "active_intent": s.has_active_intent,
-            "state_items_count": len(s.state_top),
         }
+
+
+# ── GPU 监控 ──
+
+
+def _collect_gpu_stats() -> dict | None:
+    """收集 GPU 状态 (NVIDIA NVML + PyTorch CUDA)"""
+    gpu = {}
+
+    # 方案A: nvidia-ml-py3 (NVML)
+    try:
+        import pynvml
+
+        pynvml.nvmlInit()
+        device_count = pynvml.nvmlDeviceGetCount()
+        gpu["devices"] = device_count
+        for i in range(device_count):
+            handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+            info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+            util = pynvml.nvmlDeviceGetUtilizationRates(handle)
+            temp = pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
+            gpu[f"gpu{i}"] = {
+                "name": pynvml.nvmlDeviceGetName(handle).decode()
+                if hasattr(pynvml.nvmlDeviceGetName(handle), "decode")
+                else str(pynvml.nvmlDeviceGetName(handle)),
+                "mem_total_gb": round(info.total / 1024**3, 1),
+                "mem_used_gb": round(info.used / 1024**3, 1),
+                "mem_free_gb": round(info.free / 1024**3, 1),
+                "gpu_util_pct": util.gpu,
+                "mem_util_pct": info.used * 100 // info.total,
+                "temp_c": temp,
+            }
+        pynvml.nvmlShutdown()
+        return gpu if gpu.get("devices", 0) > 0 else None
+    except ImportError:
+        pass
+    except Exception:
+        pass
+
+    # 方案B: PyTorch CUDA
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            gpu["devices"] = torch.cuda.device_count()
+            for i in range(torch.cuda.device_count()):
+                gpu[f"gpu{i}"] = {
+                    "name": torch.cuda.get_device_name(i),
+                    "mem_allocated_gb": round(torch.cuda.memory_allocated(i) / 1024**3, 2),
+                    "mem_reserved_gb": round(torch.cuda.memory_reserved(i) / 1024**3, 2),
+                }
+            return gpu if gpu.get("devices", 0) > 0 else None
+    except ImportError:
+        pass
+    except Exception:
+        pass
+
+    return None

@@ -237,6 +237,39 @@ class MiyaPsyArchBridge:
             else {},
         }
 
+    def perf_stats(self) -> dict:
+        """AP tick 性能统计 (火焰图数据)"""
+        self._init_engine()
+        if not self._engine._runtime:
+            return {"ready": False}
+        return self._engine.perf_stats()
+
+    def trigger_memory_compression(self) -> dict:
+        """触发记忆潮汐压缩——睡眠/闲置阶段的认知清理"""
+        self._init_engine()
+        if not self._engine._runtime:
+            return {"compressed": False, "reason": "no_runtime"}
+        try:
+            pool = self._engine._runtime.state_pool
+            before = len(pool._entries)
+            stale_cutoff = self._engine._runtime.tick_index - 50
+            purged = 0
+            for k, v in list(pool._entries.items()):
+                if v.real_energy < 0.15 and v.family not in ("memory_anchor", "cognitive_memory"):
+                    purged += 1
+                    del pool._entries[k]
+            self._engine.idle_tick()
+            after = len(pool._entries)
+            return {
+                "compressed": True,
+                "before": before,
+                "after": after,
+                "purged": purged,
+                "stale_cutoff": stale_cutoff,
+            }
+        except Exception as e:
+            return {"compressed": False, "error": str(e)}
+
     # ── 主动说话 ──
 
     def start_heartbeat(self, interval_s: float = 3.0) -> None:
@@ -254,6 +287,7 @@ class MiyaPsyArchBridge:
 
     def _heartbeat_loop(self, interval_s: float) -> None:
         ticks_per_interval = max(1, int(interval_s * 10))
+        compression_counter = 0
         while self._heartbeat_running:
             try:
                 for _ in range(ticks_per_interval):
@@ -271,6 +305,13 @@ class MiyaPsyArchBridge:
                                         self._platform_sender(msg)
                                     except Exception:
                                         pass
+                # 每 60 次心跳 (约5分钟) 触发一次记忆潮汐压缩
+                compression_counter += 1
+                if compression_counter % 60 == 0:
+                    try:
+                        self.trigger_memory_compression()
+                    except Exception:
+                        pass
                 time.sleep(interval_s)
             except Exception as e:
                 logger.warning(f"AP heartbeat error: {e}")
