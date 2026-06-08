@@ -146,7 +146,9 @@ class AdaptiveTuner:
         runtime_load = dict((trace or {}).get("runtime_load_feeling", {}) or {})
         runtime_load_channels = dict(runtime_load.get("channels", {}) or {})
         performance = dict((trace or {}).get("performance", {}) or {})
-        target_tick_ms = max(1.0, float(performance.get("target_tick_ms", runtime_load_channels.get("target_tick_ms", 100.0)) or 100.0))
+        target_tick_ms = max(
+            1.0, float(performance.get("target_tick_ms", runtime_load_channels.get("target_tick_ms", 100.0)) or 100.0)
+        )
         total_ms = max(0.0, float(performance.get("total_ms", runtime_load_channels.get("elapsed_ms", 0.0)) or 0.0))
         load_ratio = float(runtime_load_channels.get("load_ratio", total_ms / target_tick_ms) or 0.0)
         return {
@@ -154,20 +156,36 @@ class AdaptiveTuner:
             "mean_abs_cognitive_pressure": total_abs_pressure / max(1, pressure_count),
             "prediction_alignment": _clamp(float(prediction_trace.get("alignment_score", 0.0) or 0.0), 0.0, 1.0),
             "prediction_mismatch": _clamp(float(prediction_trace.get("mismatch_ratio", 0.0) or 0.0), 0.0, 1.0),
-            "action_success": (sum(success_scores) / max(1, len(success_scores))) if success_scores else feedback_success,
-            "action_punishment": (sum(punishment_scores) / max(1, len(punishment_scores))) if punishment_scores else _clamp(feedback_punishment, 0.0, 1.0),
+            "action_success": (sum(success_scores) / max(1, len(success_scores)))
+            if success_scores
+            else feedback_success,
+            "action_punishment": (sum(punishment_scores) / max(1, len(punishment_scores)))
+            if punishment_scores
+            else _clamp(feedback_punishment, 0.0, 1.0),
             "expectation_anchor_active": _clamp(len(expectation_anchor_levels) / 8.0, 0.0, 1.0),
             "pressure_anchor_active": _clamp(len(pressure_anchor_levels) / 8.0, 0.0, 1.0),
-            "expectation_anchor_level": (sum(expectation_anchor_levels) / max(1, len(expectation_anchor_levels))) if expectation_anchor_levels else 0.0,
-            "pressure_anchor_level": (sum(pressure_anchor_levels) / max(1, len(pressure_anchor_levels))) if pressure_anchor_levels else 0.0,
-            "anchor_validation_rate": _clamp(anchor_verified / max(1, anchor_verified + anchor_missed), 0.0, 1.0) if (anchor_verified or anchor_missed) else 0.0,
-            "anchor_miss_rate": _clamp(anchor_missed / max(1, anchor_verified + anchor_missed), 0.0, 1.0) if (anchor_verified or anchor_missed) else 0.0,
+            "expectation_anchor_level": (sum(expectation_anchor_levels) / max(1, len(expectation_anchor_levels)))
+            if expectation_anchor_levels
+            else 0.0,
+            "pressure_anchor_level": (sum(pressure_anchor_levels) / max(1, len(pressure_anchor_levels)))
+            if pressure_anchor_levels
+            else 0.0,
+            "anchor_validation_rate": _clamp(anchor_verified / max(1, anchor_verified + anchor_missed), 0.0, 1.0)
+            if (anchor_verified or anchor_missed)
+            else 0.0,
+            "anchor_miss_rate": _clamp(anchor_missed / max(1, anchor_verified + anchor_missed), 0.0, 1.0)
+            if (anchor_verified or anchor_missed)
+            else 0.0,
             "expectation_recall_selected": 1.0 if "action::recall_by_expectation" in selected_action_ids else 0.0,
-            "safety_anchor_pressure": _clamp(float((safety_gate.get("anchor_risk", {}) or {}).get("pressure", 0.0) or 0.0), 0.0, 1.0),
+            "safety_anchor_pressure": _clamp(
+                float((safety_gate.get("anchor_risk", {}) or {}).get("pressure", 0.0) or 0.0), 0.0, 1.0
+            ),
             "runtime_load_ratio": _clamp(load_ratio, 0.0, 4.0),
             "runtime_complexity": _clamp(float(runtime_load_channels.get("complexity", 0.0) or 0.0), 0.0, 1.0),
             "runtime_simplicity": _clamp(float(runtime_load_channels.get("simplicity", 0.0) or 0.0), 0.0, 1.0),
-            "runtime_pending_index": _clamp(float(runtime_load_channels.get("pending_index_total", 0.0) or 0.0) / 64.0, 0.0, 1.0),
+            "runtime_pending_index": _clamp(
+                float(runtime_load_channels.get("pending_index_total", 0.0) or 0.0) / 64.0, 0.0, 1.0
+            ),
         }
 
     def _recommend(self) -> dict:
@@ -186,8 +204,14 @@ class AdaptiveTuner:
         pressure_excess = _clamp((pressure - self.max_normal_pressure) / max(1.0, self.max_normal_pressure), 0.0, 1.0)
         alignment_deficit = _clamp(self.target_prediction_alignment - alignment, 0.0, 1.0)
         action_deficit = _clamp(self.target_action_success - action_success, 0.0, 1.0)
-        action_risk = _clamp(action_punishment + action_deficit * 0.5 + pressure_anchor_level * 0.22 + safety_anchor_pressure * 0.20, 0.0, 1.0)
-        runtime_pressure = _clamp(runtime_complexity + runtime_overload * 0.65 + pending_pressure * 0.35 - runtime_simplicity * 0.35, 0.0, 1.0)
+        action_risk = _clamp(
+            action_punishment + action_deficit * 0.5 + pressure_anchor_level * 0.22 + safety_anchor_pressure * 0.20,
+            0.0,
+            1.0,
+        )
+        runtime_pressure = _clamp(
+            runtime_complexity + runtime_overload * 0.65 + pending_pressure * 0.35 - runtime_simplicity * 0.35, 0.0, 1.0
+        )
         return {
             "schema_id": "adaptive_tuner_recommendation/v1",
             "support_ready": self._tick_count >= self.min_support_ticks,
@@ -199,22 +223,27 @@ class AdaptiveTuner:
             "anchor_miss_rate": _round4(anchor_miss_rate),
             "pressure_anchor_level": _round4(pressure_anchor_level),
             "suggested": {
-                "attention_threshold_delta": _round4(pressure_excess * 0.04 + runtime_pressure * 0.018 - alignment_deficit * 0.025),
-                "prediction_gain_delta": _round4(alignment_deficit * 0.05 + mismatch * 0.025 - runtime_pressure * 0.012),
-                "action_threshold_delta": _round4(action_risk * 0.045 + pressure_anchor_level * 0.018 - action_success * 0.015),
-                "learning_rate_multiplier_delta": _round4(alignment_deficit * 0.035 + anchor_miss_rate * 0.018 - pressure_excess * 0.02 - runtime_pressure * 0.018),
+                "attention_threshold_delta": _round4(
+                    pressure_excess * 0.04 + runtime_pressure * 0.018 - alignment_deficit * 0.025
+                ),
+                "prediction_gain_delta": _round4(
+                    alignment_deficit * 0.05 + mismatch * 0.025 - runtime_pressure * 0.012
+                ),
+                "action_threshold_delta": _round4(
+                    action_risk * 0.045 + pressure_anchor_level * 0.018 - action_success * 0.015
+                ),
+                "learning_rate_multiplier_delta": _round4(
+                    alignment_deficit * 0.035
+                    + anchor_miss_rate * 0.018
+                    - pressure_excess * 0.02
+                    - runtime_pressure * 0.018
+                ),
             },
         }
 
     def _apply_recommendation(self, recommendation: dict) -> None:
-        suggested = dict((recommendation or {}).get("suggested", {}) or {})
-        old = self._copy_modulation()
-        self._modulation["attention"]["threshold_adjustment"] = self._bounded_step(
-            self._modulation["attention"]["threshold_adjustment"],
-            float(suggested.get("attention_threshold_delta", 0.0) or 0.0),
-            -0.08,
-            0.08,
-        )
+        old = {section: dict(values or {}) for section, values in self._modulation.items()}
+        suggested = recommendation.get("suggested", {})
         self._modulation["memory"]["prediction_gain_multiplier"] = self._bounded_step(
             self._modulation["memory"]["prediction_gain_multiplier"],
             float(suggested.get("prediction_gain_delta", 0.0) or 0.0),
@@ -242,6 +271,10 @@ class AdaptiveTuner:
             event = {"tick_count": int(self._tick_count), "event": "apply", "suggested": dict(suggested)}
             self._start_or_update_experiment(old=old, suggested=suggested, recommendation=recommendation)
         self._history.append(event)
+
+    def active_modulation(self) -> dict:
+        """返回实际生效的调制参数（供引擎消费）"""
+        return {section: dict(values) for section, values in self._modulation.items()}
         self._history = self._history[-64:]
 
     def _bounded_step(self, current: float, delta: float, low: float, high: float, *, center: float = 0.0) -> float:
@@ -300,7 +333,9 @@ class AdaptiveTuner:
         experiment = self._active_experiment
         if not experiment or experiment.get("state") != "probing":
             return
-        experiment["probe_ticks"] = max(0, int(self._tick_count) - int(experiment.get("started_tick_count", self._tick_count) or self._tick_count))
+        experiment["probe_ticks"] = max(
+            0, int(self._tick_count) - int(experiment.get("started_tick_count", self._tick_count) or self._tick_count)
+        )
         if int(experiment.get("probe_ticks", 0) or 0) < max(3, self.min_support_ticks // 2):
             return
         current = self._metrics_for_experiment()
@@ -349,10 +384,18 @@ class AdaptiveTuner:
         return {key: _round4(float(self._metrics.get(key, 0.0) or 0.0)) for key in keys}
 
     def _experiment_degradation(self, baseline: dict, current: dict) -> dict:
-        pressure_delta = float(current.get("mean_abs_cognitive_pressure", 0.0) or 0.0) - float(baseline.get("mean_abs_cognitive_pressure", 0.0) or 0.0)
-        alignment_delta = float(current.get("prediction_alignment", 0.0) or 0.0) - float(baseline.get("prediction_alignment", 0.0) or 0.0)
-        punishment_delta = float(current.get("action_punishment", 0.0) or 0.0) - float(baseline.get("action_punishment", 0.0) or 0.0)
-        runtime_delta = float(current.get("runtime_load_ratio", 0.0) or 0.0) - float(baseline.get("runtime_load_ratio", 0.0) or 0.0)
+        pressure_delta = float(current.get("mean_abs_cognitive_pressure", 0.0) or 0.0) - float(
+            baseline.get("mean_abs_cognitive_pressure", 0.0) or 0.0
+        )
+        alignment_delta = float(current.get("prediction_alignment", 0.0) or 0.0) - float(
+            baseline.get("prediction_alignment", 0.0) or 0.0
+        )
+        punishment_delta = float(current.get("action_punishment", 0.0) or 0.0) - float(
+            baseline.get("action_punishment", 0.0) or 0.0
+        )
+        runtime_delta = float(current.get("runtime_load_ratio", 0.0) or 0.0) - float(
+            baseline.get("runtime_load_ratio", 0.0) or 0.0
+        )
         reasons = []
         if pressure_delta > max(0.18, self.max_normal_pressure * 0.10):
             reasons.append("abs_pressure_increased")
@@ -372,9 +415,15 @@ class AdaptiveTuner:
         }
 
     def _experiment_improved(self, baseline: dict, current: dict) -> bool:
-        pressure_delta = float(current.get("mean_abs_cognitive_pressure", 0.0) or 0.0) - float(baseline.get("mean_abs_cognitive_pressure", 0.0) or 0.0)
-        alignment_delta = float(current.get("prediction_alignment", 0.0) or 0.0) - float(baseline.get("prediction_alignment", 0.0) or 0.0)
-        punishment_delta = float(current.get("action_punishment", 0.0) or 0.0) - float(baseline.get("action_punishment", 0.0) or 0.0)
+        pressure_delta = float(current.get("mean_abs_cognitive_pressure", 0.0) or 0.0) - float(
+            baseline.get("mean_abs_cognitive_pressure", 0.0) or 0.0
+        )
+        alignment_delta = float(current.get("prediction_alignment", 0.0) or 0.0) - float(
+            baseline.get("prediction_alignment", 0.0) or 0.0
+        )
+        punishment_delta = float(current.get("action_punishment", 0.0) or 0.0) - float(
+            baseline.get("action_punishment", 0.0) or 0.0
+        )
         return alignment_delta >= 0.04 or pressure_delta <= -0.12 or punishment_delta <= -0.08
 
     def _experiment_trace(self) -> dict:

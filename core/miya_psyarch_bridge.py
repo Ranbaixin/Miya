@@ -683,7 +683,26 @@ class MiyaPsyArchBridge:
             "personality_form": self._personality_form,
             "nt_channels": dict(es.channels),
             "emotions": {},
+            "cognitive_feelings": {
+                k: round(v, 4) for k, v in self.cognitive_state().get("cognitive_feelings", {}).items()
+            },
+            "education": {
+                "msg_count": getattr(self, "_edu_message_count", 0),
+                "total_reward": round(getattr(self, "_edu_total_reward", 0.0), 3),
+            },
         }
+
+        # 心跳状态
+        try:
+            idle_streak = getattr(self._engine, "_proactive_cooldown", 0)
+            state["idle_streak"] = idle_streak
+            ch = self.channels_state()
+            if ch.get("rhythm"):
+                state["rhythm"] = ch["rhythm"]
+            if ch.get("task"):
+                state["task"] = ch["task"]
+        except Exception:
+            pass
 
         for k, v in pool._entries.items():
             if str(v.family) in ("miya_emotion", "conversation_context"):

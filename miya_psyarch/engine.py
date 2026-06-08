@@ -143,6 +143,29 @@ class MiyaEngine:
         if hasattr(self._runtime.emotion_modulator, "cfs_gain"):
             self._runtime.emotion_modulator.cfs_gain = 0.08
 
+    def _apply_tuner_modulation(self, modulation: dict) -> None:
+        """消费 tuner 调制输出，调整 runtime 参数"""
+        mem_mod = modulation.get("memory", {})
+        gain = mem_mod.get("prediction_gain_multiplier", 1.0)
+        if hasattr(self._runtime, "attention_selector"):
+            sel = self._runtime.attention_selector
+            if hasattr(sel, "recency_boost"):
+                sel.recency_boost = max(0.1, min(3.0, getattr(sel, "recency_boost", 1.0) * gain))
+
+        action_mod = modulation.get("action", {})
+        threshold = action_mod.get("threshold_adjustment", 0.0)
+        if abs(threshold) > 0.001 and hasattr(self._runtime, "action_planner"):
+            ap = self._runtime.action_planner
+            if hasattr(ap, "base_threshold"):
+                ap.base_threshold = max(0.05, min(0.5, getattr(ap, "base_threshold", 0.2) + threshold))
+
+        learn_mod = modulation.get("learning", {})
+        rate = learn_mod.get("rate_multiplier", 1.0)
+        if abs(rate - 1.0) > 0.05 and hasattr(self._runtime, "learning_router"):
+            lr = self._runtime.learning_router
+            if hasattr(lr, "event_rate"):
+                lr.event_rate = max(0.01, min(1.0, getattr(lr, "event_rate", 0.5) * rate))
+
     def _inject_memories_into_state_pool(self) -> list[dict]:
         """收集记忆 items（不直接写入，由调用方批量写入）"""
         if self._runtime is None or self._memory_bridge is None:
@@ -288,6 +311,14 @@ class MiyaEngine:
         # ★ 批量写入：一次 apply_external_items 替代原来的 5+ 次
         if batch_items:
             self._runtime.state_pool.apply_external_items(batch_items, tick_index=self._runtime.tick_index)
+
+        # ★ 自适应调参：tuner 调制实际生效于 runtime 配置
+        if hasattr(self._runtime, "tuner") and self._runtime.tuner:
+            try:
+                mod = self._runtime.tuner.active_modulation()
+                self._apply_tuner_modulation(mod)
+            except Exception:
+                pass
 
         self._clamp_emotion_ceiling()
         # 文本触发的 NT 调整已在 _inject_emotion_pool → _emotion_pool_to_nt 中完成 (68 种情绪映射)
