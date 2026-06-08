@@ -401,6 +401,74 @@ class MiyaPsyArchBridge:
         """设置跨平台主动消息发送路由"""
         self._platform_sender = sender
 
+    def feed_visual(self, image_bytes: bytes, description: str = "") -> dict:
+        """注入视觉感知到 AP 状态池"""
+        self._init_engine()
+        if not self._engine._runtime:
+            return {"injected": False}
+        try:
+            from miya_psyarch.multimodal import perceive_image
+
+            vis = perceive_image(image_bytes) if image_bytes else None
+            items = []
+            if vis:
+                items.append(
+                    {
+                        "sa_label": "visual::scene",
+                        "display_text": f"画面: {vis.llm_description or description or '场景'}"[:40],
+                        "family": "multimodal_visual",
+                        "real_energy": 0.6,
+                        "anchor_meta": {
+                            "brightness": vis.avg_brightness,
+                            "complexity": vis.complexity,
+                            "description": vis.llm_description or description,
+                        },
+                    }
+                )
+            if items:
+                self._engine._runtime.state_pool.apply_external_items(
+                    items, tick_index=self._engine._runtime.tick_index
+                )
+            return {
+                "injected": bool(items),
+                "brightness": vis.avg_brightness if vis else 0,
+                "complexity": vis.complexity if vis else 0,
+            }
+        except Exception as e:
+            return {"injected": False, "error": str(e)}
+
+    def feed_audio(self, audio_bytes: bytes, transcription: str = "") -> dict:
+        """注入音频感知到 AP 状态池"""
+        self._init_engine()
+        if not self._engine._runtime:
+            return {"injected": False}
+        try:
+            from miya_psyarch.multimodal import perceive_audio
+
+            aud = perceive_audio(audio_bytes) if audio_bytes else None
+            items = []
+            if aud:
+                items.append(
+                    {
+                        "sa_label": "audio::capture",
+                        "display_text": f"音频: {aud.transcription or transcription or '声音'}"[:40],
+                        "family": "multimodal_audio",
+                        "real_energy": 0.5,
+                        "anchor_meta": {
+                            "duration_s": aud.duration_s,
+                            "amplitude": aud.rms_amplitude,
+                            "transcription": aud.transcription or transcription,
+                        },
+                    }
+                )
+            if items:
+                self._engine._runtime.state_pool.apply_external_items(
+                    items, tick_index=self._engine._runtime.tick_index
+                )
+            return {"injected": bool(items), "duration_s": aud.duration_s if aud else 0}
+        except Exception as e:
+            return {"injected": False, "error": str(e)}
+
     # ── 观测台 ──
 
     def mount_observatory(self, port: int = 8765) -> str:

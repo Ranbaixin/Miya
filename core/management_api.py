@@ -25,16 +25,75 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import asyncio
 import json
 import logging
+import time
 from datetime import datetime
 from typing import Dict, Optional, Set
 
 import uvicorn
 from fastapi import APIRouter, FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, StreamingResponse
 
 logger = logging.getLogger("Miya.ManagementAPI")
+
+_AP_PANEL_HTML = """<!DOCTYPE html>
+<html lang="zh"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>弥娅 NT 仪表盘</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0f;color:#c0c8d0;font:14px monospace;padding:16px}
+h1{color:#78d0f0;margin-bottom:12px;font-size:20px}
+h2{color:#a0b8c0;font-size:14px;margin:16px 0 6px}
+.nt-grid{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.nt-card{flex:1;min-width:90px;background:#111;border-radius:6px;padding:8px;text-align:center}
+.nt-card .label{font-size:10px;color:#687080;margin-bottom:4px}
+.nt-card .val{font-size:16px;font-weight:bold}
+.nt-card .bar{height:6px;margin-top:4px;border-radius:3px;transition:width .3s}
+.row-label{font-size:10px;color:#687080}
+.da{color:#f0a040}.adr{color:#ff6060}.oxy{color:#f060b0}
+.ser{color:#60d080}.end{color:#a0d0ff}.cor{color:#ff8040}
+.nov{color:#d080ff}.foc{color:#50d0e0}
+</style></head><body>
+<h1>🫀 弥娅 NT 通道实时监控</h1>
+<div class="nt-grid" id="nt"></div>
+<h2>♡ 弥娅感受</h2><div id="feels" style="color:#c0a0ff;min-height:20px"></div>
+<h2>🧠 认知感受</h2><div id="cog" style="color:#70a0b0;min-height:20px"></div>
+<h2>📊 记忆召回</h2><div id="mem" style="color:#80b090;min-height:20px"></div>
+<script>
+const CHS={DA:{label:"多巴胺",cls:"da"},ADR:{label:"肾上腺素",cls:"adr"},
+OXY:{label:"催产素",cls:"oxy"},SER:{label:"血清素",cls:"ser"},
+END:{label:"内啡肽",cls:"end"},COR:{label:"皮质醇",cls:"cor"},
+NOV:{label:"新奇探索",cls:"nov"},FOC:{label:"专注",cls:"foc"}};
+function renderNT(d){
+ let h="";
+ for(let ch of["DA","ADR","OXY","SER","END","COR","NOV","FOC"]){
+  let v=d[ch]||0,p=v*100,c=CHS[ch];
+  h+=`<div class="nt-card"><div class="row-label">${c.label}</div>
+   <div class="val ${c.cls}">${Math.round(p)}%</div>
+   <div class="bar ${c.cls}" style="width:${p}%;background:var(--c,currentColor)"></div></div>`;
+ }
+ document.getElementById("nt").innerHTML=h;
+}
+function renderFeels(d){
+ let f=Object.entries(d).map(([k,v])=>`${k}:${v.toFixed(1)}`).join(" · ");
+ document.getElementById("feels").textContent=f||"平静";
+}
+function renderCog(d){
+ let f=Object.entries(d).map(([k,v])=>`${k}:${v.toFixed(2)}`).join(" · ");
+ document.getElementById("cog").textContent=f||"-";
+}
+const src=new EventSource("/api/v1/ap/stream");
+src.onmessage=e=>{
+ let d=JSON.parse(e.data);
+ renderNT(d.nt);
+ renderFeels(d.feels);
+ renderCog(d.cog);
+};
+src.onerror=()=>{document.getElementById("nt").innerHTML+='<span style="color:red">连接中断</span>'};
+</script></body></html>"""
 
 
 class ManagementAPI:
@@ -248,6 +307,34 @@ class ManagementAPI:
                 }
             except Exception as e:
                 return {"ready": False, "error": str(e)}
+
+        async def _ap_stream():
+            """SSE 流：实时推送 AP 8 通道 NT 数据"""
+            from core.miya_psyarch_bridge import get_psyarch_bridge
+
+            while True:
+                try:
+                    bridge = get_psyarch_bridge()
+                    if bridge and bridge._initialized:
+                        emo = bridge.emotion_snapshot()
+                        data = {
+                            "ts": time.time(),
+                            "nt": {k: round(v, 3) for k, v in emo.get("nt_channels", {}).items()},
+                            "feels": dict(sorted(emo.get("miya_feelings", {}).items(), key=lambda x: -x[1])[:4]),
+                            "cog": bridge.cognitive_state().get("cognitive_feelings", {}),
+                        }
+                        yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+                    await asyncio.sleep(0.5)
+                except Exception:
+                    await asyncio.sleep(1)
+
+        @app.get("/api/v1/ap/stream")
+        async def ap_stream():
+            return StreamingResponse(_ap_stream(), media_type="text/event-stream")
+
+        @app.get("/api/v1/ap/panel", response_class=HTMLResponse)
+        async def ap_panel():
+            return _AP_PANEL_HTML
 
         @app.websocket("/api/v1/ws")
         async def websocket_endpoint(ws: WebSocket):
