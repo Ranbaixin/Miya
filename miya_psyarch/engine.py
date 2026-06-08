@@ -143,16 +143,20 @@ class MiyaEngine:
         if hasattr(self._runtime.emotion_modulator, "cfs_gain"):
             self._runtime.emotion_modulator.cfs_gain = 0.08
 
-    def _inject_memories_into_state_pool(self) -> None:
-        """引擎启动时：将弥娅记忆预加载到 AP 状态池，让 Bn/Cn 能自然召回"""
+    def _inject_memories_into_state_pool(self) -> list[dict]:
+        """收集记忆 items（不直接写入，由调用方批量写入）"""
         if self._runtime is None or self._memory_bridge is None:
-            return
+            return []
         all_recent = list(self._memory_bridge._recent)
         if not all_recent:
-            return
+            return []
         items = self._memory_bridge.as_state_items(all_recent[-40:], base_energy=1.2)
-        self._runtime.state_pool.apply_external_items(items, tick_index=0)
-        logger.info(f"injected {len(items)} memories into state pool")
+        logger.debug(f"collected {len(items)} memories for batch injection")
+        return items
+
+    def _collect_memory_items(self) -> list[dict]:
+        """每 20 tick 收集记忆 items（供 tick() 批量写入）"""
+        return self._inject_memories_into_state_pool()
 
     def _tick_memory_context(self, user_message: str) -> None:
         """从 AP 注意力中提取 Bn 召回的記憶 + 情绪上下文 + SQL 关键词搜索补充"""
@@ -206,7 +210,7 @@ class MiyaEngine:
         return f"弥娅对这句话的情绪反应: {', '.join(parts)}"
 
     def start(self) -> None:
-        """初始化并启动心灵引擎"""
+        """初始化并启动心灵引擎（批量写入优化版）"""
         self._runtime = APV21Runtime(
             config=self._config,
             innate_rules=self._miya_rules_list,
@@ -219,9 +223,16 @@ class MiyaEngine:
         self._memory_bridge.warmup(limit=100)
         self._memory_fusion = get_memory_fusion(self)
         self._memory_fusion.load_all()
-        self._inject_memories_into_state_pool()
-        self._memory_fusion.inject_permanent_anchors()
-        self._memory_fusion.inject_cognitive_memories()
+
+        # 批量收集初始 items → 一次写入
+        batch = []
+        batch.extend(self._inject_memories_into_state_pool())
+        batch.extend(self._memory_fusion.inject_permanent_anchors())
+        batch.extend(self._memory_fusion.inject_cognitive_memories())
+        if batch:
+            self._runtime.state_pool.apply_external_items(batch, tick_index=0)
+            logger.info(f"injected {len(batch)} items into state pool (batched)")
+
         self._memory_context = self._memory_bridge.recent_context_text()
 
         trace = self._runtime.process_multimodal_tick(text="", trace_mode=self._trace_mode)
@@ -234,12 +245,16 @@ class MiyaEngine:
         *,
         education_interventions: dict | list[dict] | None = None,
     ) -> dict:
-        """推进一次认知 tick（纯 AP 引擎，不调用 LLM）。"""
+        """推进一次认知 tick（纯 AP 引擎，不调用 LLM）。批量写入优化版。"""
         if self._runtime is None:
             self.start()
 
-        # 情绪池注入（放在 tick 之前，让 AP 本轮就能感知）
-        self._inject_emotion_pool(text)
+        batch_items: list[dict] = []
+
+        # 情绪池注入
+        emotion_items = self._inject_emotion_pool(text)
+        if emotion_items:
+            batch_items.extend(emotion_items)
 
         # 注入上一轮的教育协议信号
         combined_edu = list(education_interventions or []) + list(self._pending_education)
@@ -251,17 +266,31 @@ class MiyaEngine:
             education_interventions=combined_edu if combined_edu else None,
         )
 
-        # tick 后立即注入当前消息上下文 → Bn/Cn 立即感知
-        self._inject_context_into_state_pool(text)
+        # 上下文注入
+        ctx_items = self._inject_context_into_state_pool(text)
+        if ctx_items:
+            batch_items.extend(ctx_items)
 
-        # 刷新永久锚定（身份/用户事实）→ 确保永不衰减
-        self._memory_fusion.inject_permanent_anchors()
-        # 刷新认知记忆（弥娅的思考模式）→ Bn/Cn 自然召回
-        self._memory_fusion.inject_cognitive_memories()
+        # 永久锚定（缓存版，零开销）
+        anchor_items = self._memory_fusion.inject_permanent_anchors()
+        if anchor_items:
+            batch_items.extend(anchor_items)
+        cog_items = self._memory_fusion.inject_cognitive_memories()
+        if cog_items:
+            batch_items.extend(cog_items)
 
-        # 先钳制 CFS 带来的天花板，再让文本触发生效
+        # 每 20 tick 刷新记忆注入
+        if self._current_soul.tick_index % 20 == 0 and text:
+            mem_items = self._collect_memory_items()
+            if mem_items:
+                batch_items.extend(mem_items)
+
+        # ★ 批量写入：一次 apply_external_items 替代原来的 5+ 次
+        if batch_items:
+            self._runtime.state_pool.apply_external_items(batch_items, tick_index=self._runtime.tick_index)
+
         self._clamp_emotion_ceiling()
-        self._apply_text_reactions(text)
+        # 文本触发的 NT 调整已在 _inject_emotion_pool → _emotion_pool_to_nt 中完成 (68 种情绪映射)
         self._ticks.append(trace)
         self._current_soul = self._extract_soul(trace)
         record_tick(self)
@@ -269,9 +298,6 @@ class MiyaEngine:
             self._observatory.set_trace(trace)
         if len(self._ticks) > _TICK_HISTORY_MAX:
             self._ticks = self._ticks[-_TICK_HISTORY_KEEP:]
-
-        if self._current_soul.tick_index % 20 == 0 and text:
-            self._inject_memories_into_state_pool()
 
         return trace
 
@@ -294,10 +320,10 @@ class MiyaEngine:
             if ch in es.channels and es.channels[ch] > ceil:
                 es.channels[ch] = ceil
 
-    def _inject_context_into_state_pool(self, user_message: str) -> None:
-        """将对话上下文注入 AP 状态池——让 Bn/Cn 能\"回忆\"最近对话"""
+    def _inject_context_into_state_pool(self, user_message: str) -> list[dict]:
+        """构建对话上下文 items（不直接写入，由 tick() 统一批量写入）"""
         if self._runtime is None:
-            return
+            return []
         items = []
         for i, line in enumerate(self._current_soul.recent_context[-6:]):
             if len(line) < 5:
@@ -309,11 +335,10 @@ class MiyaEngine:
                     "display_text": preview,
                     "family": "conversation_context",
                     "source_type": "recent_context",
-                    "real_energy": 0.4 + i * 0.05,  # 越近越高
+                    "real_energy": 0.4 + i * 0.05,
                     "anchor_meta": {"full_text": line},
                 }
             )
-        # 当前消息最高能量
         items.append(
             {
                 "sa_label": f"context::now::{user_message[:25]}",
@@ -323,21 +348,21 @@ class MiyaEngine:
                 "real_energy": 0.8,
             }
         )
-        if items:
-            self._runtime.state_pool.apply_external_items(items, tick_index=self._runtime.tick_index)
+        return items
 
-    def _inject_emotion_pool(self, text: str) -> None:
-        """用情绪池分析用户消息，注入 AP 状态池并联动 NT 通道"""
+    def _inject_emotion_pool(self, text: str) -> list[dict]:
+        """分析用户消息情绪，返回 state_items（不直接写入，由 tick() 批量写入）"""
         if not text or self._runtime is None:
-            return
+            return []
         try:
             emotions = analyze_emotions(text)
             if emotions:
                 items = emotions_to_state_items(emotions)
-                self._runtime.state_pool.apply_external_items(items, tick_index=self._runtime.tick_index)
                 self._emotion_pool_to_nt(emotions)
+                return items
         except Exception as e:
             logger.debug(f"emotion pool injection failed: {e}")
+        return []
 
     def _emotion_pool_to_nt(self, emotions: dict[str, float]) -> None:
         """情绪池 → NT 通道联动：70+ 情绪直接调制 8 通道神经递质"""
@@ -439,28 +464,6 @@ class MiyaEngine:
             if ch in es.channels:
                 clamped = max(-0.15, min(0.15, delta))
                 es.channels[ch] = max(0.02, min(1.0, es.channels[ch] + clamped))
-
-    def _apply_text_reactions(self, text: str) -> None:
-        """根据输入文本中的触发词直接调整 AP 情绪 (保留做补充)"""
-        if not text or self._runtime is None:
-            return
-        es = self._runtime.emotion_modulator.state
-        text_lower = text.lower()
-
-        triggers = {
-            ("可爱", "喜欢", "爱你", "想你了", "真美"): {"OXY": 0.10, "DA": 0.08, "END": 0.06},
-            ("累", "难过", "疼", "哭", "不开心", "伤心"): {"OXY": 0.06, "SER": -0.04},
-            ("烦", "滚", "讨厌", "恶心"): {"COR": 0.10, "OXY": -0.08},
-            ("好笑", "哈哈", "笑死", "有趣"): {"DA": 0.08, "END": 0.05, "NOV": 0.06},
-            ("惊讶", "什么", "真的", "居然"): {"NOV": 0.10, "ADR": 0.05},
-        }
-
-        for words, effects in triggers.items():
-            if any(w in text_lower for w in words):
-                for ch, delta in effects.items():
-                    if ch in es.channels:
-                        es.channels[ch] = min(1.0, max(0.0, es.channels[ch] + delta))
-                break
 
     def idle_tick(self) -> dict:
         trace = self.tick(text="")
@@ -573,9 +576,6 @@ class MiyaEngine:
             fallback = self._cortex.select_fallback(self._current_soul) if self._cortex else ""
             self._current_soul.llm_response = fallback
             return fallback
-
-        # 注入对话上下文到 AP 状态池 (下一次 tick 可被 Bn/Cn 召回)
-        self._inject_context_into_state_pool(user_message)
 
         # 从 AP 注意力提取被 Bn/Cn 召回的記憶
         self._tick_memory_context(user_message)

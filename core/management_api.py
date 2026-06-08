@@ -214,6 +214,41 @@ class ManagementAPI:
                 "allowed": engine.check(user_id, permission),
             }
 
+        # ======== APV2.1 脑内仪表盘 (v8.1) ========
+
+        @app.get("/api/v1/ap/dashboard")
+        async def ap_dashboard():
+            """APV2.1 认知引擎实时仪表盘"""
+            try:
+                from core.miya_psyarch_bridge import get_psyarch_bridge
+
+                bridge = get_psyarch_bridge()
+                if not bridge or not bridge._initialized:
+                    return {"ready": False, "message": "AP 引擎未就绪"}
+
+                emo = bridge.emotion_snapshot()
+                cog = bridge.cognitive_state()
+                channels = bridge.channels_state()
+                edu = bridge.education_stats()
+
+                return {
+                    "ready": True,
+                    "timestamp": datetime.now().isoformat(),
+                    "nt_channels": emo.get("nt_channels", {}),
+                    "miya_feelings": dict(sorted(emo.get("miya_feelings", {}).items(), key=lambda x: -x[1])[:8]),
+                    "cognitive_feelings": cog.get("cognitive_feelings", {}),
+                    "focus_labels": cog.get("focus_labels", []),
+                    "recalled_memories": cog.get("recalled_memories", []),
+                    "rhythm": channels.get("rhythm", {}),
+                    "task": channels.get("task", {}),
+                    "expectation_pressure": channels.get("expectation_pressure", {}),
+                    "runtime_load": channels.get("runtime_load", {}),
+                    "time": channels.get("time", {}),
+                    "education": edu,
+                }
+            except Exception as e:
+                return {"ready": False, "error": str(e)}
+
         @app.websocket("/api/v1/ws")
         async def websocket_endpoint(ws: WebSocket):
             await ws.accept()

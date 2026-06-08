@@ -142,13 +142,51 @@ class MiyaPsyArchBridge:
         return any(kw in text for kw in keywords)
 
     def feed_education(self, user_message: str, response: str) -> None:
-        """教育协议闭环——LLM 回复 → 教育信号 → AP 真正学习对话模式"""
+        """教育协议闭环——LLM 回复 → 教育信号 → AP 真正学习 + 记忆同步"""
         self._init_engine()
         if not self._engine._runtime or not response:
             return
         self._engine._generate_education(user_message, response)
         self._engine.idle_tick()
         self._accumulate_education_history(response)
+        self._sync_significant_memory(user_message, response)
+
+    def _sync_significant_memory(self, user_message: str, response: str) -> None:
+        """将重要对话记忆从 AP 同步写入 Miya 统一记忆系统"""
+        if not hasattr(self, "_sync_counter"):
+            self._sync_counter = 0
+        self._sync_counter += 1
+        if self._sync_counter % 10 != 0:  # 每 10 条同步一次
+            return
+        try:
+            from memory import get_memory_core
+            import asyncio
+
+            async def _store():
+                core = await get_memory_core()
+                snap = self.emotion_snapshot()
+                nt = snap.get("nt_channels", {})
+                oxy = nt.get("OXY", 0)
+                cor = nt.get("COR", 0)
+                tags = ["ap_sync"]
+                if oxy > 0.35:
+                    tags.append("positive")
+                if cor > 0.35:
+                    tags.append("tense")
+                await core.store_memory(
+                    content=f"[弥娅记忆] {user_message[:60]} → {response[:60]}",
+                    importance=0.5 + oxy * 0.3,
+                    tags=tags,
+                    source="ap_memory_sync",
+                )
+
+            try:
+                loop = asyncio.get_running_loop()
+                loop.call_soon_threadsafe(lambda: asyncio.ensure_future(_store()))
+            except RuntimeError:
+                pass
+        except Exception:
+            pass
 
     def _accumulate_education_history(self, response: str) -> None:
         """累积教育记录，用于调整先天规则敏感度和 NT 基线"""

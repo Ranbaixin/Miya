@@ -63,55 +63,18 @@ class MiyaMemoryFusion:
             f"{len(self._user_anchors)} user, {len(self._cognitive_entries)} cognitive"
         )
 
-    def inject_permanent_anchors(self) -> None:
-        """注入永久锚定项——每次 tick 都刷新，永不消失"""
+    def inject_permanent_anchors(self) -> list[dict]:
+        """获取永久锚定 items（缓存版，每 tick 零开销）"""
         if self._engine._runtime is None:
-            return
-        items = []
+            return []
+        return self._build_cached_anchor_items()
 
-        # 身份锚定: 弥娅是谁
-        for anchor in self._identity_anchors:
-            content = (anchor.get("fact") or anchor.get("content") or "")[:50]
-            if content:
-                items.append(
-                    {
-                        "sa_label": f"anchor::identity::{content[:20]}",
-                        "display_text": _MF_LABELS.get("identity_prefix", "[身份] {content}").replace(
-                            "{content}", content[: _MF_TRUNC.get("identity", 30)]
-                        ),
-                        "family": "memory_anchor",
-                        "source_type": "identity_anchor",
-                        "real_energy": 2.0,
-                        "anchor_meta": {"type": "identity", "full": content},
-                    }
-                )
-
-        # 用户锚定: 佳是谁
-        for anchor in self._user_anchors:
-            content = (anchor.get("fact") or anchor.get("content") or "")[:50]
-            if content:
-                items.append(
-                    {
-                        "sa_label": f"anchor::user::{content[:20]}",
-                        "display_text": _MF_LABELS.get("user_prefix", "[佳] {content}").replace(
-                            "{content}", content[: _MF_TRUNC.get("user", 30)]
-                        ),
-                        "family": "memory_anchor",
-                        "source_type": "user_anchor",
-                        "real_energy": 2.0,
-                        "anchor_meta": {"type": "user", "full": content},
-                    }
-                )
-
-        if items:
-            self._engine._runtime.state_pool.apply_external_items(items, tick_index=self._engine._runtime.tick_index)
-
-    def inject_cognitive_memories(self) -> None:
-        """注入认知记忆——让 AP 永久持有弥娅的思考模式"""
+    def inject_cognitive_memories(self) -> list[dict]:
+        """获取认知记忆 items——让 AP 永久持有弥娅的思考模式"""
         if self._engine._runtime is None:
-            return
+            return []
         items = []
-        for entry in self._cognitive_entries:  # 全部 50 条
+        for entry in self._cognitive_entries:
             thought = entry.get("inner_thought", "")
             thinking = entry.get("thinking", "")
             attr = entry.get("attribution", "")
@@ -119,7 +82,6 @@ class MiyaMemoryFusion:
             emos = entry.get("emotions", {})
             top_emo = max(emos.items(), key=lambda x: x[1]) if emos else ("思考", 50)
 
-            # 内心独白
             if thought:
                 items.append(
                     {
@@ -138,7 +100,6 @@ class MiyaMemoryFusion:
                         },
                     }
                 )
-            # 归因模式
             if attr and len(attr) > 3:
                 items.append(
                     {
@@ -152,7 +113,6 @@ class MiyaMemoryFusion:
                         "anchor_meta": {"emotion": top_emo[0], "attribution": attr, "type": "attr"},
                     }
                 )
-            # 反思
             if refl and len(refl) > 5:
                 items.append(
                     {
@@ -166,9 +126,7 @@ class MiyaMemoryFusion:
                         "anchor_meta": {"reflection": refl, "type": "refl"},
                     }
                 )
-
-        if items:
-            self._engine._runtime.state_pool.apply_external_items(items, tick_index=self._engine._runtime.tick_index)
+        return items
 
     async def vector_search_inject(self, query: str, limit: int = 8) -> list[str]:
         """用 MiyaMemoryCore 做向量语义搜索，注入 AP 状态池"""
@@ -241,6 +199,7 @@ class MiyaMemoryFusion:
                 self._identity_anchors = json.loads(path.read_text(encoding="utf-8"))
             except Exception:
                 pass
+        self._cached_anchor_items = None  # 文件变化时清除缓存
 
     def _load_user_anchors(self) -> None:
         path = _PROJECT_ROOT / "data" / "memory_anchors_user.json"
@@ -249,6 +208,45 @@ class MiyaMemoryFusion:
                 self._user_anchors = json.loads(path.read_text(encoding="utf-8"))
             except Exception:
                 pass
+        self._cached_anchor_items = None  # 文件变化时清除缓存
+
+    def _build_cached_anchor_items(self) -> list[dict]:
+        """构建永久锚定 items（缓存，仅数据变更时重建）"""
+        if self._cached_anchor_items is not None:
+            return self._cached_anchor_items
+        items = []
+        for anchor in self._identity_anchors:
+            content = (anchor.get("fact") or anchor.get("content") or "")[:50]
+            if content:
+                items.append(
+                    {
+                        "sa_label": f"anchor::identity::{content[:20]}",
+                        "display_text": _MF_LABELS.get("identity_prefix", "[身份] {content}").replace(
+                            "{content}", content[: _MF_TRUNC.get("identity", 30)]
+                        ),
+                        "family": "memory_anchor",
+                        "source_type": "identity_anchor",
+                        "real_energy": 2.0,
+                        "anchor_meta": {"type": "identity", "full": content},
+                    }
+                )
+        for anchor in self._user_anchors:
+            content = (anchor.get("fact") or anchor.get("content") or "")[:50]
+            if content:
+                items.append(
+                    {
+                        "sa_label": f"anchor::user::{content[:20]}",
+                        "display_text": _MF_LABELS.get("user_prefix", "[佳] {content}").replace(
+                            "{content}", content[: _MF_TRUNC.get("user", 30)]
+                        ),
+                        "family": "memory_anchor",
+                        "source_type": "user_anchor",
+                        "real_energy": 2.0,
+                        "anchor_meta": {"type": "user", "full": content},
+                    }
+                )
+        self._cached_anchor_items = items
+        return items
 
     def _load_cognitive_memories(self) -> None:
         path = _PROJECT_ROOT / "data" / "memory" / "cognitive_memories.json"
