@@ -161,6 +161,4 @@ def test_intensity_amplifier():
 def test_intensity_diminisher():
     normal = analyze_emotions("我难过")
     diminished = analyze_emotions("我有点难过")
-    normal_sad = normal.get("sadness", 0)
-    dim_sad = diminished.get("sadness", 0)
-    assert normal_sad > 0
+    assert normal.get("sadness", 0) > diminished.get("sadness", 0)
