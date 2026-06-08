@@ -119,7 +119,7 @@ def register_miya_actions_to_ap(engine) -> int:
     if not hasattr(runtime, "action_planner"):
         return 0
 
-    planner = runtime.action_planner
+    _planner = runtime.action_planner  # action_node 装饰器自动注册，无需显式使用
     registered = 0
 
     for action_id, meta in tools.items():
