@@ -308,6 +308,22 @@ class ManagementAPI:
             except Exception as e:
                 return {"ready": False, "error": str(e)}
 
+        @app.post("/api/v1/ap/memory-protection")
+        async def ap_memory_protection(data: dict):
+            """开关记忆保护"""
+            try:
+                from core.miya_psyarch_bridge import get_psyarch_bridge
+
+                bridge = get_psyarch_bridge()
+                if bridge:
+                    new_val = data.get("protect", True)
+                    bridge.memory_protection = bool(new_val)
+                    status = "locked" if bridge.memory_protection else "unlocked"
+                    return {"memory_protection": bridge.memory_protection, "status": status}
+                return {"error": "AP 引擎未就绪"}
+            except Exception as e:
+                return {"error": str(e)}
+
         async def _ap_stream():
             """SSE 流：实时推送 AP 8 通道 NT 数据"""
             from core.miya_psyarch_bridge import get_psyarch_bridge

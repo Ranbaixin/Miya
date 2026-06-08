@@ -12,7 +12,7 @@ import yaml
 
 # ── 加载配置 ──
 
-_CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "miya_config.yaml"
+_CONFIG_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "miya_config.yaml"
 
 with open(_CONFIG_PATH, "r", encoding="utf-8") as _f:
     _CFG = yaml.safe_load(_f) or {}

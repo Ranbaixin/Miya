@@ -21,7 +21,7 @@ import yaml
 
 logger = logging.getLogger("miya_psyarch.cortex")
 
-_CFG_PATH = Path(__file__).resolve().parent.parent / "config" / "miya_config.yaml"
+_CFG_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "miya_config.yaml"
 with open(_CFG_PATH, "r", encoding="utf-8") as _f:
     _CFG = yaml.safe_load(_f) or {}
 

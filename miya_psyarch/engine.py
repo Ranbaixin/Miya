@@ -44,7 +44,7 @@ from miya_psyarch.sensors.miya_text_sensor import patch_text_sensor
 logger = logging.getLogger("miya_psyarch.engine")
 
 # 加载引擎配置
-_CFG_PATH = Path(__file__).resolve().parent / "config" / "miya_config.yaml"
+_CFG_PATH = Path(__file__).resolve().parent.parent / "config" / "miya_config.yaml"
 with open(_CFG_PATH, "r", encoding="utf-8") as _f:
     _ENGINE_CFG = (yaml.safe_load(_f) or {}).get("engine", {})
 
@@ -53,6 +53,20 @@ _TICK_HISTORY_KEEP = _ENGINE_CFG.get("tick_history_keep", 500)
 _FOCUS_SLICE = _ENGINE_CFG.get("focus_slice", 5)
 _STATE_TOP_SLICE = _ENGINE_CFG.get("state_top_slice", 8)
 _PROACTIVE = _ENGINE_CFG.get("proactive", {})
+
+_FULL_CFG = yaml.safe_load(_CFG_PATH.read_text(encoding="utf-8")) or {}
+# 情绪→NT 映射 fallback（当 YAML 不可用时）
+_FALLBACK_EMOTION_NT_MAP: dict[str, dict[str, float]] = {
+    "love": {"OXY": 0.14, "DA": 0.10},
+    "joy": {"DA": 0.10},
+    "sadness": {"SER": -0.08},
+    "attachment": {"OXY": 0.14},
+    "curiosity": {"NOV": 0.14},
+    "warmth": {"OXY": 0.12},
+    "fear": {"COR": 0.12},
+    "anger": {"COR": 0.12},
+    "contentment": {"SER": 0.12},
+}
 
 _SP_CFG = (yaml.safe_load(_CFG_PATH.read_text(encoding="utf-8")) or {}).get("state_pool", {})
 _MIYA_FAMILY_PREFIX = _SP_CFG.get("miya_family_prefix", "miya_")
@@ -133,7 +147,7 @@ class MiyaEngine:
         if self._runtime is None:
             return
         cfg = {}
-        _p = Path(__file__).resolve().parent / "config" / "miya_config.yaml"
+        _p = _CFG_PATH  # 使用统一的配置路径
         if _p.exists():
             import yaml
 
@@ -470,105 +484,27 @@ class MiyaEngine:
         return []
 
     def _emotion_pool_to_nt(self, emotions: dict[str, float]) -> None:
-        """情绪池 → NT 通道联动：70+ 情绪直接调制 8 通道神经递质"""
+        """情绪池 → NT 通道联动：从 miya_config.yaml 读取映射"""
         if self._runtime is None:
             return
         es = self._runtime.emotion_modulator.state
         nt_deltas: dict[str, float] = {}
-        emotion_nt_map: dict[str, dict[str, float]] = {
-            # ── 正面 / 联结 (OXY 催产素 + DA 多巴胺) ──
-            "joy": {"DA": 0.10, "SER": 0.06, "END": 0.04},
-            "happiness": {"DA": 0.12, "SER": 0.08, "END": 0.06},
-            "love": {"OXY": 0.14, "DA": 0.10, "END": 0.06},
-            "sweetness": {"OXY": 0.12, "DA": 0.08, "END": 0.06},
-            "heartbeat": {"DA": 0.10, "OXY": 0.10, "ADR": 0.04},
-            "warmth": {"OXY": 0.12, "END": 0.08, "SER": 0.06},
-            "caring": {"OXY": 0.10, "SER": 0.04, "FOC": 0.04},
-            "protectiveness": {"OXY": 0.10, "ADR": 0.04, "FOC": 0.04},
-            "empathy": {"OXY": 0.08, "SER": 0.04},
-            "comfort": {"OXY": 0.08, "END": 0.10, "SER": 0.06},
-            "attachment": {"OXY": 0.14, "SER": 0.04, "END": 0.04},
-            "adoration": {"OXY": 0.12, "DA": 0.10, "END": 0.04},
-            "admiration": {"DA": 0.08, "OXY": 0.06, "FOC": 0.06},
-            "gratitude": {"OXY": 0.08, "DA": 0.06, "SER": 0.06, "END": 0.04},
-            "moved": {"OXY": 0.10, "DA": 0.06, "SER": 0.04, "END": 0.04},
-            "pride": {"DA": 0.10, "SER": 0.08, "FOC": 0.04},
-            "closeness": {"OXY": 0.14, "END": 0.06, "SER": 0.06},
-            "habitual_care": {"OXY": 0.08, "SER": 0.06},
-            "trust": {"OXY": 0.12, "SER": 0.08},
-            "openness": {"OXY": 0.06, "NOV": 0.04, "FOC": 0.04},
-            "forgiveness": {"SER": 0.08, "OXY": 0.08, "END": 0.06},
-            "sharing": {"OXY": 0.06, "NOV": 0.06, "DA": 0.04},
-            "hope": {"DA": 0.08, "NOV": 0.06, "SER": 0.04},
-            "resilient": {"DA": 0.06, "SER": 0.08, "FOC": 0.06},
-            "active": {"DA": 0.08, "FOC": 0.06},
-            # ── 安定 / 满足 (SER 血清素 + END 内啡肽) ──
-            "peaceful": {"SER": 0.12, "END": 0.10, "OXY": 0.04},
-            "contentment": {"SER": 0.12, "END": 0.10, "DA": 0.04},
-            "satisfaction": {"SER": 0.10, "END": 0.08, "DA": 0.06},
-            "security": {"SER": 0.12, "END": 0.06, "OXY": 0.06},
-            "relief": {"SER": 0.08, "END": 0.10, "COR": -0.06},
-            # ── 思念 / 依恋 (OXY 催产素 + NOV 期待) ──
-            "missing": {"OXY": 0.10, "NOV": 0.06, "SER": -0.04},
-            "longing": {"OXY": 0.12, "NOV": 0.04, "SER": -0.04},
-            "nostalgia": {"OXY": 0.08, "SER": 0.04, "END": 0.04},
-            "clingy": {"OXY": 0.14, "SER": -0.04, "COR": 0.04},
-            "dependence": {"OXY": 0.10, "SER": -0.04},
-            # ── 好奇 / 惊讶 (NOV 新奇探索) ──
-            "curiosity": {"NOV": 0.14, "DA": 0.06, "FOC": 0.04},
-            "surprise": {"NOV": 0.12, "ADR": 0.08, "DA": 0.04},
-            "anticipation": {"NOV": 0.10, "DA": 0.08, "FOC": 0.04},
-            "excitement": {"DA": 0.12, "ADR": 0.08, "NOV": 0.08},
-            "amusement": {"DA": 0.10, "END": 0.06, "NOV": 0.04},
-            "playful": {"DA": 0.10, "NOV": 0.08, "END": 0.04},
-            "confusion": {"NOV": 0.08, "FOC": 0.04, "COR": 0.04},
-            # ── 负面 / 压力 (COR 皮质醇 + ADR 肾上腺素) ──
-            "sadness": {"SER": -0.08, "DA": -0.04, "END": -0.04, "COR": 0.04},
-            "heartache": {"OXY": 0.06, "SER": -0.06, "COR": 0.06, "END": -0.04},
-            "fragile": {"SER": -0.08, "COR": 0.06, "END": -0.04},
-            "fear": {"COR": 0.12, "ADR": 0.10, "SER": -0.06, "DA": -0.04},
-            "anxiety": {"COR": 0.12, "ADR": 0.08, "SER": -0.08, "NOV": -0.04},
-            "nervous": {"ADR": 0.10, "COR": 0.08, "SER": -0.06},
-            "insecurity": {"COR": 0.08, "SER": -0.08, "OXY": -0.04, "NOV": -0.04},
-            "helpless": {"SER": -0.10, "COR": 0.06, "DA": -0.04},
-            "anger": {"COR": 0.12, "ADR": 0.10, "OXY": -0.06, "SER": -0.06},
-            "frustration": {"COR": 0.10, "ADR": 0.06, "SER": -0.06, "DA": -0.04},
-            "irritable": {"COR": 0.08, "ADR": 0.06, "SER": -0.06},
-            "aggression": {"COR": 0.10, "ADR": 0.08, "OXY": -0.08},
-            "defensive": {"COR": 0.08, "ADR": 0.06, "OXY": -0.04},
-            "estrangement": {"OXY": -0.08, "COR": 0.06, "SER": -0.04},
-            "push_away": {"OXY": -0.10, "COR": 0.06, "SER": -0.06},
-            "disgust": {"COR": 0.08, "ADR": 0.04, "SER": -0.06, "OXY": -0.04},
-            "aversion": {"COR": 0.06, "SER": -0.06, "OXY": -0.04},
-            "grievance": {"COR": 0.08, "SER": -0.06, "OXY": -0.04},
-            "disappointment": {"SER": -0.10, "DA": -0.06, "COR": 0.04},
-            "guilt": {"SER": -0.08, "DA": -0.06, "COR": 0.06},
-            "shame": {"SER": -0.10, "DA": -0.08, "COR": 0.06},
-            "loneliness": {"SER": -0.08, "OXY": -0.06, "COR": 0.04, "END": -0.04},
-            "emptiness": {"SER": -0.12, "DA": -0.08, "END": -0.04, "NOV": -0.04},
-            "boredom": {"DA": -0.06, "NOV": 0.06, "SER": -0.04, "FOC": -0.04},
-            "passive": {"DA": -0.06, "NOV": -0.04, "FOC": -0.04},
-            "doubt": {"NOV": 0.04, "COR": 0.06, "SER": -0.04, "FOC": 0.04},
-            "lost": {"SER": -0.08, "COR": 0.06, "NOV": 0.04, "DA": -0.04},
-            # ── 依恋类冲突 (OXY↑ COR↑ 并存) ──
-            "jealousy": {"OXY": 0.06, "COR": 0.08, "SER": -0.06},
-            "jealous_playful": {"OXY": 0.06, "COR": 0.04, "NOV": 0.04, "DA": 0.04},
-            # ── 认知 / 复合 ──
-            "reflection": {"FOC": 0.08, "SER": 0.04, "NOV": 0.04},
-            "mixed_feelings": {"NOV": 0.04, "COR": 0.04, "OXY": 0.04},
-            "bitter_sweet": {"OXY": 0.06, "SER": -0.04, "END": 0.04},
-            # ── 疲劳 ──
-            "fatigue": {"SER": -0.06, "DA": -0.08, "END": 0.04, "FOC": -0.06},
-        }
+        emotion_nt_map = _FULL_CFG.get("emotion_nt_map", _FALLBACK_EMOTION_NT_MAP)
+        clamp = _FULL_CFG.get("emotion_nt_clamp", {})
+
         for name, val in emotions.items():
-            if val > 0.25 and name in emotion_nt_map:
+            if val > clamp.get("input_threshold", 0.25) and name in emotion_nt_map:
                 for ch, delta in emotion_nt_map[name].items():
                     nt_deltas[ch] = nt_deltas.get(ch, 0) + delta * val
 
+        delta_min = clamp.get("delta_min", -0.15)
+        delta_max = clamp.get("delta_max", 0.15)
+        ch_min = clamp.get("channel_min", 0.02)
+        ch_max = clamp.get("channel_max", 1.0)
         for ch, delta in nt_deltas.items():
             if ch in es.channels:
-                clamped = max(-0.15, min(0.15, delta))
-                es.channels[ch] = max(0.02, min(1.0, es.channels[ch] + clamped))
+                clamped = max(delta_min, min(delta_max, delta))
+                es.channels[ch] = max(ch_min, min(ch_max, es.channels[ch] + clamped))
 
     def idle_tick(self) -> dict:
         trace = self.tick(text="")

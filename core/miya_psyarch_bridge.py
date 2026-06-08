@@ -18,6 +18,35 @@ from typing import Any, Callable
 
 logger = logging.getLogger("miya.psyarch_bridge")
 
+# 加载 miya_config.yaml
+try:
+    import yaml
+    from pathlib import Path
+
+    _BRIDGE_CFG = {}
+    _CFG_P = Path(__file__).resolve().parent.parent / "config" / "miya_config.yaml"
+    if _CFG_P.exists():
+        _BRIDGE_CFG = yaml.safe_load(_CFG_P.read_text(encoding="utf-8")) or {}
+except Exception:
+    _BRIDGE_CFG = {}
+
+_FALLBACK_FEELING_LABELS = {
+    "love_warmth": "爱意",
+    "doting": "宠溺",
+    "deep_bond": "羁绊",
+    "happiness": "幸福",
+    "contentment": "满足",
+    "heart_ache": "心疼",
+    "concern": "担心",
+    "gentle_warmth": "温柔",
+    "accompanying": "陪伴",
+    "fear_losing": "不安",
+    "remembered": "记得",
+    "deep_memory": "深深记得",
+}
+
+logger = logging.getLogger("miya.psyarch_bridge")
+
 
 class MiyaPsyArchBridge:
     def __init__(
@@ -37,6 +66,7 @@ class MiyaPsyArchBridge:
         self._current_trace: dict | None = None
         self._heartbeat_thread: threading.Thread | None = None
         self._heartbeat_running = False
+        self.memory_protection: bool = True  # True=永不清理任何记忆
 
     def _init_engine(self) -> None:
         if self._initialized:
@@ -245,7 +275,7 @@ class MiyaPsyArchBridge:
         return self._engine.perf_stats()
 
     def trigger_memory_compression(self) -> dict:
-        """触发记忆潮汐压缩——睡眠/闲置阶段的认知清理"""
+        """触发记忆潮汐压缩——睡眠/闲置阶段的认知清理。仅删除极低能量的临时条目。"""
         self._init_engine()
         if not self._engine._runtime:
             return {"compressed": False, "reason": "no_runtime"}
@@ -269,6 +299,19 @@ class MiyaPsyArchBridge:
             }
         except Exception as e:
             return {"compressed": False, "error": str(e)}
+
+    def _soft_decay_weak_entries(self) -> None:
+        """轻量降权：仅降低临时对话上下文的能量，不删除任何记忆"""
+        if not self._engine._runtime:
+            return
+        pool = self._engine._runtime.state_pool
+        decayed = 0
+        for k, v in list(pool._entries.items()):
+            if v.family not in ("memory_anchor", "cognitive_memory") and v.real_energy < 0.15:
+                v.real_energy = max(0.01, v.real_energy * 0.5)
+                decayed += 1
+        if decayed > 0:
+            logger.debug(f"[AP记忆] 轻量降权: {decayed} 条低能量临时条目降权")
 
     # ── 主动说话 ──
 
@@ -305,11 +348,11 @@ class MiyaPsyArchBridge:
                                         self._platform_sender(msg)
                                     except Exception:
                                         pass
-                # 每 60 次心跳 (约5分钟) 触发一次记忆潮汐压缩
+                # 每 60 次心跳 (约5分钟) 轻量降权 (受 memory_protection 保护)
                 compression_counter += 1
-                if compression_counter % 60 == 0:
+                if compression_counter % 60 == 0 and not self.memory_protection:
                     try:
-                        self.trigger_memory_compression()
+                        self._soft_decay_weak_entries()
                     except Exception:
                         pass
                 time.sleep(interval_s)
@@ -661,46 +704,11 @@ class MiyaPsyArchBridge:
         return dict(sorted(feelings.items(), key=lambda x: -x[1]))
 
     def get_rule_feelings_text(self) -> str:
-        """
-        AP 规则情感 → 可注入 system prompt 的文本
-        """
+        """AP 规则情感 → 可注入 system prompt 的文本 (从配置读取展式名)"""
         feelings = self.get_rule_feelings()
         if not feelings:
             return ""
-
-        display_map = {
-            "love_warmth": "爱意",
-            "doting": "宠溺",
-            "helpless_doting": "无奈宠溺",
-            "deep_bond": "羁绊",
-            "happiness": "幸福",
-            "contentment": "满足",
-            "heart_ache": "心疼",
-            "concern": "担心",
-            "gentle_warmth": "温柔",
-            "accompanying": "陪伴",
-            "clarity": "清醒",
-            "deep_clarity": "深刻清醒",
-            "remembered": "记得",
-            "deep_memory": "深深记得",
-            "burning_support": "燃烧的支持",
-            "focused_support": "专注陪伴",
-            "fear_losing": "不安",
-            "unease": "暗涌",
-            "undercurrent": "海面下的暗涌",
-            "miss_jia": "想念佳",
-            "miss_stir": "思念微动",
-            "curious": "好奇",
-            "deep_curious": "深入探索",
-            "playful": "调皮",
-            "restraint": "克制",
-            "leave_space": "留白",
-            "honest": "坦诚",
-            "fragile_light": "碎光",
-            "self_identity": "我是弥娅",
-            "waiting_quiet": "安静等待",
-            "waited_for": "等到了",
-        }
+        display_map = _BRIDGE_CFG.get("feeling_display_names", _FALLBACK_FEELING_LABELS)
 
         parts = []
         for name, strength in sorted(feelings.items(), key=lambda x: -x[1])[:5]:

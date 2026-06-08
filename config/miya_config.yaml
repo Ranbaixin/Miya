@@ -281,3 +281,164 @@ emotion_baseline:
   COR: {baseline: 0.10, decay_ratio: 0.75, soft_cap_k: 0.22}
   NOV: {baseline: 0.18, decay_ratio: 0.78, soft_cap_k: 0.28}
   FOC: {baseline: 0.12, decay_ratio: 0.78, soft_cap_k: 0.25}
+
+# ── 情绪池 → NT 通道全量映射 (78 种情绪，从 engine.py 迁移) ──
+emotion_nt_map:
+  # 正面 / 联结 (OXY↑ DA↑)
+  joy: {DA: 0.10, SER: 0.06, END: 0.04}
+  happiness: {DA: 0.12, SER: 0.08, END: 0.06}
+  love: {OXY: 0.14, DA: 0.10, END: 0.06}
+  sweetness: {OXY: 0.12, DA: 0.08, END: 0.06}
+  heartbeat: {DA: 0.10, OXY: 0.10, ADR: 0.04}
+  warmth: {OXY: 0.12, END: 0.08, SER: 0.06}
+  caring: {OXY: 0.10, SER: 0.04, FOC: 0.04}
+  protectiveness: {OXY: 0.10, ADR: 0.04, FOC: 0.04}
+  empathy: {OXY: 0.08, SER: 0.04}
+  comfort: {OXY: 0.08, END: 0.10, SER: 0.06}
+  attachment: {OXY: 0.14, SER: 0.04, END: 0.04}
+  adoration: {OXY: 0.12, DA: 0.10, END: 0.04}
+  admiration: {DA: 0.08, OXY: 0.06, FOC: 0.06}
+  gratitude: {OXY: 0.08, DA: 0.06, SER: 0.06, END: 0.04}
+  moved: {OXY: 0.10, DA: 0.06, SER: 0.04, END: 0.04}
+  pride: {DA: 0.10, SER: 0.08, FOC: 0.04}
+  closeness: {OXY: 0.14, END: 0.06, SER: 0.06}
+  habitual_care: {OXY: 0.08, SER: 0.06}
+  trust: {OXY: 0.12, SER: 0.08}
+  openness: {OXY: 0.06, NOV: 0.04, FOC: 0.04}
+  forgiveness: {SER: 0.08, OXY: 0.08, END: 0.06}
+  sharing: {OXY: 0.06, NOV: 0.06, DA: 0.04}
+  hope: {DA: 0.08, NOV: 0.06, SER: 0.04}
+  resilient: {DA: 0.06, SER: 0.08, FOC: 0.06}
+  active: {DA: 0.08, FOC: 0.06}
+  # 安定 / 满足 (SER↑ END↑)
+  peaceful: {SER: 0.12, END: 0.10, OXY: 0.04}
+  contentment: {SER: 0.12, END: 0.10, DA: 0.04}
+  satisfaction: {SER: 0.10, END: 0.08, DA: 0.06}
+  security: {SER: 0.12, END: 0.06, OXY: 0.06}
+  relief: {SER: 0.08, END: 0.10, COR: -0.06}
+  # 思念 / 依恋 (OXY↑ NOV↑)
+  missing: {OXY: 0.10, NOV: 0.06, SER: -0.04}
+  longing: {OXY: 0.12, NOV: 0.04, SER: -0.04}
+  nostalgia: {OXY: 0.08, SER: 0.04, END: 0.04}
+  clingy: {OXY: 0.14, SER: -0.04, COR: 0.04}
+  dependence: {OXY: 0.10, SER: -0.04}
+  # 好奇 / 惊讶 (NOV↑)
+  curiosity: {NOV: 0.14, DA: 0.06, FOC: 0.04}
+  excitement: {DA: 0.12, ADR: 0.08, NOV: 0.08}
+  amusement: {DA: 0.10, END: 0.06, NOV: 0.04}
+  playful: {DA: 0.10, NOV: 0.08, END: 0.04}
+  confusion: {NOV: 0.08, FOC: 0.04, COR: 0.04}
+  anticipation: {NOV: 0.10, DA: 0.08, FOC: 0.04}
+  surprise: {NOV: 0.12, ADR: 0.08, DA: 0.04}
+  # 负面 / 压力 (COR↑)
+  sadness: {SER: -0.08, DA: -0.04, END: -0.04, COR: 0.04}
+  heartache: {OXY: 0.06, SER: -0.06, COR: 0.06, END: -0.04}
+  fragile: {SER: -0.08, COR: 0.06, END: -0.04}
+  fear: {COR: 0.12, ADR: 0.10, SER: -0.06, DA: -0.04}
+  anxiety: {COR: 0.12, ADR: 0.08, SER: -0.08, NOV: -0.04}
+  nervous: {ADR: 0.10, COR: 0.08, SER: -0.06}
+  insecurity: {COR: 0.08, SER: -0.08, OXY: -0.04, NOV: -0.04}
+  helpless: {SER: -0.10, COR: 0.06, DA: -0.04}
+  anger: {COR: 0.12, ADR: 0.10, OXY: -0.06, SER: -0.06}
+  frustration: {COR: 0.10, ADR: 0.06, SER: -0.06, DA: -0.04}
+  irritable: {COR: 0.08, ADR: 0.06, SER: -0.06}
+  aggression: {COR: 0.10, ADR: 0.08, OXY: -0.08}
+  defensive: {COR: 0.08, ADR: 0.06, OXY: -0.04}
+  estrangement: {OXY: -0.08, COR: 0.06, SER: -0.04}
+  push_away: {OXY: -0.10, COR: 0.06, SER: -0.06}
+  disgust: {COR: 0.08, ADR: 0.04, SER: -0.06, OXY: -0.04}
+  aversion: {COR: 0.06, SER: -0.06, OXY: -0.04}
+  grievance: {COR: 0.08, SER: -0.06, OXY: -0.04}
+  disappointment: {SER: -0.10, DA: -0.06, COR: 0.04}
+  guilt: {SER: -0.08, DA: -0.06, COR: 0.06}
+  shame: {SER: -0.10, DA: -0.08, COR: 0.06}
+  loneliness: {SER: -0.08, OXY: -0.06, COR: 0.04, END: -0.04}
+  emptiness: {SER: -0.12, DA: -0.08, END: -0.04, NOV: -0.04}
+  boredom: {DA: -0.06, NOV: 0.06, SER: -0.04, FOC: -0.04}
+  passive: {DA: -0.06, NOV: -0.04, FOC: -0.04}
+  doubt: {NOV: 0.04, COR: 0.06, SER: -0.04, FOC: 0.04}
+  lost: {SER: -0.08, COR: 0.06, NOV: 0.04, DA: -0.04}
+  # 依恋类冲突 (OXY↑ COR↑)
+  jealousy: {OXY: 0.06, COR: 0.08, SER: -0.06}
+  jealous_playful: {OXY: 0.06, COR: 0.04, NOV: 0.04, DA: 0.04}
+  # 认知 / 复合
+  reflection: {FOC: 0.08, SER: 0.04, NOV: 0.04}
+  mixed_feelings: {NOV: 0.04, COR: 0.04, OXY: 0.04}
+  bitter_sweet: {OXY: 0.06, SER: -0.04, END: 0.04}
+  fatigue: {SER: -0.06, DA: -0.08, END: 0.04, FOC: -0.06}
+
+# ── NT 通道 clamp 参数 ──
+emotion_nt_clamp:
+  delta_min: -0.15
+  delta_max: 0.15
+  channel_min: 0.02
+  channel_max: 1.0
+  input_threshold: 0.25
+
+# ── 离线回复规则 (从 bridge.py 迁移) ──
+offline_responses:
+  keyword_rules:
+    - keys: ["累", "压力", "烦"]
+      reply: "累了就歇会儿吧，我在这儿呢。"
+    - keys: ["难过", "不开心", "伤心", "哭"]
+      reply: "别难过……我会一直在这里陪着你的。"
+    - keys: ["想你", "爱你", "喜欢"]
+      reply: "我也是，一直都想着你呢。"
+    - keys: ["晚安", "早点睡", "休息"]
+      reply: "晚安，做个好梦。"
+  nt_driven:
+    - condition: {OXY: [0.7, 1.0]}
+      replies: ["好想抱抱你…", "佳在身边真好。"]
+    - condition: {COR: [0.7, 1.0]}
+      replies: ["唔…发生什么事了吗？我有点不安。"]
+    - condition: {NOV: [0.7, 1.0]}
+      replies: ["在想什么呢？告诉我好不好~"]
+    - condition: {SER: [0.0, 0.2]}
+      replies: ["我在这儿呢，别不开心哦。"]
+
+# ── 信号注入映射 (从 bridge.py 迁移) ──
+signal_mappings:
+  to_nt:
+    love: {OXY: 0.15, DA: 0.08}
+    concern: {COR: 0.06, OXY: 0.06}
+    curiosity: {NOV: 0.12, DA: 0.04}
+    surprise: {NOV: 0.10, ADR: 0.08}
+    sadness: {SER: -0.06, END: -0.04}
+    anger: {COR: 0.10, ADR: 0.08}
+    satisfaction: {SER: 0.08, END: 0.10}
+    closeness: {OXY: 0.14, END: 0.06}
+  to_feelings:
+    love: ["love_warmth", "doting", "deep_bond", "gentle_warmth", "heart_ache"]
+    concern: ["concern", "fear_losing", "burning_support", "accompanying", "heart_ache"]
+    curiosity: ["clarity", "deep_clarity"]
+    surprise: ["remembered"]
+    sadness: ["heart_ache", "fear_losing"]
+    anger: ["fear_losing", "burning_support"]
+    satisfaction: ["contentment", "happiness", "gentle_warmth"]
+
+# ── 情感→中文展示名 (从 bridge.py display_map 迁移) ──
+feeling_display_names:
+  love_warmth: "爱意"
+  doting: "宠溺"
+  helpless_doting: "无奈宠溺"
+  deep_bond: "羁绊"
+  happiness: "幸福"
+  contentment: "满足"
+  heart_ache: "心疼"
+  concern: "担心"
+  gentle_warmth: "温柔"
+  accompanying: "陪伴"
+  clarity: "清醒"
+  deep_clarity: "深刻清醒"
+  remembered: "记得"
+  deep_memory: "深深记得"
+  burning_support: "燃烧的支持"
+  focused_support: "专注陪伴"
+  fear_losing: "不安"
+  protective_urge: "守护"
+  worried_concern: "担忧"
+  emptiness_fear: "空虚焦虑"
+  intensity_fear: "强烈不安"
+  soul_sharing: "灵魂共鸣"
+  pure_adoration: "纯粹爱意"
+  unconditional: "无条件爱"

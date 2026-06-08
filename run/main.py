@@ -724,6 +724,7 @@ class Miya:
                 nt = emo.get("nt_channels", {})
                 mf = emo.get("miya_feelings", {})
                 top = sorted(mf.items(), key=lambda x: -x[1])[:3]
+                mp = "🔒 保护中" if self.psyarch_bridge.memory_protection else "⚠ 开放"
                 parts = [
                     "◆ APV2.1 白箱认知引擎",
                     f"  NT: OXY={nt.get('OXY', 0):.0%} DA={nt.get('DA', 0):.0%} COR={nt.get('COR', 0):.0%} NOV={nt.get('NOV', 0):.0%}",
@@ -731,7 +732,7 @@ class Miya:
                     f"  认知: {', '.join(f'{k}={v:.2f}' for k, v in cog.get('cognitive_feelings', {}).items())[:60] or '无'}",
                     f"  节奏: {channels.get('rhythm', {}).get('phase', '-')} 任务: boredom={channels.get('task', {}).get('boredom', 0):.2f}",
                     f"  教育: {stats.get('message_count', 0)}轮 质量={stats.get('total_reward', 0):.1f}",
-                    f"  路径: {'AP直连' if self.use_psyarch else 'DecisionHub融合'} (AP始终运行)",
+                    f"  记忆: {mp}",
                 ]
                 return "\n".join(parts)
             return "APV2.1 认知引擎未就绪"

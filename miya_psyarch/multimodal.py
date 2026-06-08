@@ -4,14 +4,15 @@ _MM_CFG = {}
 try:
     import yaml
     from pathlib import Path
-    p = Path(__file__).resolve().parent / 'config' / 'miya_config.yaml'
-    with open(p, 'r', encoding='utf-8') as f_cfg:
+
+    p = Path(__file__).resolve().parent.parent / "config" / "miya_config.yaml"
+    with open(p, "r", encoding="utf-8") as f_cfg:
         raw = yaml.safe_load(f_cfg) or {}
-    _MM_CFG = raw.get('multimodal', {})
+    _MM_CFG = raw.get("multimodal", {})
 except Exception:
     pass
 
-_MM_LABELS = _MM_CFG.get('labels', {})
+_MM_LABELS = _MM_CFG.get("labels", {})
 """
 弥娅多模态感知系统
 
@@ -20,7 +21,6 @@ _MM_LABELS = _MM_CFG.get('labels', {})
 图片：PIL 分析（颜色、亮度、复杂度）+ LLM 描述
 音频：wave 分析（振幅、频谱、时长）+ LLM 转写
 """
-
 
 
 import io
@@ -127,7 +127,9 @@ def image_to_state_items(perception: VisualPerception, base_energy: float = 1.2)
     items.append(
         {
             "sa_label": "vision::image_present",
-            "display_text": _MM_LABELS.get("image_present", "图片 {w}x{h}").replace("{w}", str(perception.width)).replace("{h}", str(perception.height)),
+            "display_text": _MM_LABELS.get("image_present", "图片 {w}x{h}")
+            .replace("{w}", str(perception.width))
+            .replace("{h}", str(perception.height)),
             "family": "vision",
             "source_type": "multimodal_vision",
             "real_energy": base_energy,

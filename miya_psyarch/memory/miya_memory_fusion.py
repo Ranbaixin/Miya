@@ -5,7 +5,7 @@ try:
     import yaml
     from pathlib import Path
 
-    p = Path(__file__).resolve().parent.parent / "config" / "miya_config.yaml"
+    p = Path(__file__).resolve().parent.parent.parent / "config" / "miya_config.yaml"
     with open(p, "r", encoding="utf-8") as f_cfg:
         raw = yaml.safe_load(f_cfg) or {}
     _MEM_F_CFG = raw.get("memory_fusion", {})
