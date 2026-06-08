@@ -72,6 +72,18 @@ data/conversations/
 data/user_personas/
 data/lifebook/
 data/.emoji_backups/
+
+# AP runtime state (generated at runtime)
+data/ap_state.json
+data/ap_training.json
+data/cognition_cache.db
+data/downloads/
+data/emoji/user_uploaded/
+data/singing/
+data/singing_input/
+data/auth/
+data/blog/
+data/interaction_scenarios/
 data/working_memory.json
 *.db-shm
 *.db-wal
