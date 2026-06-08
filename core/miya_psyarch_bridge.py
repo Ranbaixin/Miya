@@ -237,9 +237,9 @@ class MiyaPsyArchBridge:
                     tags.append("positive")
                 if cor > 0.35:
                     tags.append("tense")
-                await core.store_memory(
+                await core.store(
                     content=f"[弥娅记忆] {user_message[:60]} → {response[:60]}",
-                    importance=0.5 + oxy * 0.3,
+                    priority=0.5 + oxy * 0.3,
                     tags=tags,
                     source="ap_memory_sync",
                 )
