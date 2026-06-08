@@ -269,7 +269,6 @@ class MessageMixin:
                 # ── 斜杠命令拦截 (在路由到 DecisionHub 之前) ──
                 cmd_response = _handle_slash_command(self, content, user_id, group_id)
                 if cmd_response:
-                    import asyncio
                     import inspect
 
                     if hasattr(self, "send_private_message"):
