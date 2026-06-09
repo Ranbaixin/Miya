@@ -544,7 +544,8 @@
         "mode_overrides": {
           "simple_chat": "single",
           "chinese_understanding": "single",
-          "creative_writing": "chain"
+          "creative_writing": "single",
+          "music_composition": "single"
         }
       }
     }

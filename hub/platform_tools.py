@@ -27,6 +27,14 @@ class PlatformToolsManager:
         "weibohot",
         "baiduhot",
         "grok_search",
+        # MusicNet — MIDI 作曲/编曲
+        "midi_write",
+        "midi_diff",
+        "midi_batch_edit",
+        "midi_query",
+        "midi_inspect",
+        "midi_play",
+        "midi_render",
         # MCPNet — 全平台电脑操控
         "mcp_openclaw_send_message",
         "mcp_openclaw_start_gateway",

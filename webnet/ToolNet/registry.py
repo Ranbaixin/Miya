@@ -272,6 +272,7 @@ class ToolRegistry:
         self._load_social_tools()
         self._load_security_tools()
         self._load_agent_tools()
+        self._load_music_tools()
         self._load_mcp_tools()
 
     def _load_basic_tools(self):
@@ -741,6 +742,30 @@ class ToolRegistry:
             self.logger.info("Agent 工具加载完成")
         except Exception as e:
             self.logger.warning(f"加载 Agent 工具失败: {e}")
+
+    def _load_music_tools(self):
+        """加载 MIDI 音乐作曲+播放工具"""
+        try:
+            from webnet.MusicNet.midi_tools import (
+                MidiWriteTool,
+                MidiDiffTool,
+                MidiBatchEditTool,
+                MidiQueryTool,
+                MidiInspectTool,
+                MidiPlayTool,
+                MidiRenderTool,
+            )
+
+            self.register(MidiWriteTool())
+            self.register(MidiDiffTool())
+            self.register(MidiBatchEditTool())
+            self.register(MidiQueryTool())
+            self.register(MidiInspectTool())
+            self.register(MidiPlayTool())
+            self.register(MidiRenderTool())
+            self.logger.info("MusicNet MIDI 工具已加载: 7 个工具")
+        except Exception as e:
+            self.logger.warning(f"加载 MusicNet 工具失败: {e}")
 
     def _load_mcp_tools(self):
         """加载 MCP 服务工具到格式塔 Agent"""
