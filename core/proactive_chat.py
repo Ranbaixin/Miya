@@ -1488,15 +1488,13 @@ class ProactiveChatSystem:
                 logger.info(f"[主动聊天] AI决策包含弥娅之眼: {screen_ctx[:120]}...")
 
             memory_empty = self._load_text_config("scene.memory_empty", "（无近期对话记录）")
-            scene_private = self._load_text_config("scene.scene_private", "私聊场景")
             group_warning = (
                 self._load_text_config("scene.group_warning", "")
                 if context.chat_type == "group" and self._scene_enabled
                 else ""
             )
-            scene_info = f"{scene_context}" if scene_context else scene_private
 
-            # 构建系统 prompt（使用真实人格 + 记忆）
+            # 构建系统 prompt
             system_prompt = ""
             if self._prompt_manager:
                 system_prompt = self._prompt_manager.get_system_prompt() or ""

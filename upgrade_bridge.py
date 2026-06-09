@@ -175,7 +175,7 @@ class MiyaUpgradeBridge:
             try:
                 import asyncio
 
-                observation = await self._screen_aware.observe()
+                await self._screen_aware.observe()
                 result["screen_observed"] = True
 
                 intent = self._screen_aware.should_proactive()

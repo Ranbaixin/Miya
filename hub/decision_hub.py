@@ -1887,7 +1887,7 @@ class DecisionHub:
 
                 sa = get_screen_aware()
                 if sa and sa.should_observe:
-                    obs = await sa.observe(allow_vision=False)
+                    await sa.observe(allow_vision=False)
                 if sa:
                     card = sa.build_timeline_card(max_entries=12)
                     if card and len(card) > 30:
