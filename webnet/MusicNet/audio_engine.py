@@ -31,7 +31,6 @@ def _note_to_samples(
     vel_ratio = velocity / 127.0
 
     beat_duration = 60.0 / bpm
-    start_sample = int(start_beat * beat_duration * SAMPLE_RATE)
     num_samples = int(duration_beats * beat_duration * SAMPLE_RATE)
 
     if num_samples <= 0:

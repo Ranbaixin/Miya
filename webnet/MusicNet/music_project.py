@@ -1066,9 +1066,7 @@ def _normalize_midi_event(event: dict[str, Any]) -> dict[str, Any]:
         normalized["value"] = _bounded_int(event.get("value"), 0, -8192, 8191)
     elif event_type == "program_change":
         normalized["program"] = _bounded_int(event.get("program", event.get("value")), 0, 0, 127)
-    elif event_type == "channel_pressure":
-        normalized["pressure"] = _bounded_int(event.get("pressure", event.get("value")), 0, 0, 127)
-    elif event_type == "polyphonic_key_pressure":
+    elif event_type in {"channel_pressure", "polyphonic_key_pressure"}:
         normalized["pressure"] = _bounded_int(event.get("pressure", event.get("value")), 0, 0, 127)
     elif event_type == "sysex":
         normalized["data_b64"] = _normalize_sysex_b64(event)
