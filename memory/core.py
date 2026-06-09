@@ -39,7 +39,7 @@ import logging
 import os
 import uuid
 from collections import defaultdict
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
@@ -179,12 +179,8 @@ class MemoryItem:
         """转换为字典"""
         data = asdict(self)
         # 处理枚举
-        data["level"] = (
-            self.level.value if isinstance(self.level, MemoryLevel) else self.level
-        )
-        data["source"] = (
-            self.source.value if isinstance(self.source, MemorySource) else self.source
-        )
+        data["level"] = self.level.value if isinstance(self.level, MemoryLevel) else self.level
+        data["source"] = self.source.value if isinstance(self.source, MemorySource) else self.source
         # 处理 metadata 中可能存在的枚举
         if "metadata" in data and isinstance(data["metadata"], dict):
             data["metadata"] = self._serialize_dict(data["metadata"])
@@ -230,6 +226,10 @@ class MemoryItem:
 
         # 移除None值
         data = {k: v for k, v in data.items() if v is not None}
+
+        # 过滤未知字段，避免 __init__() got an unexpected keyword argument
+        valid_fields = {f.name for f in fields(cls)}
+        data = {k: v for k, v in data.items() if k in valid_fields}
 
         return cls(**data)
 
@@ -427,9 +427,7 @@ class JsonBackend(MemoryBackend):
                 stale_ids.append(memory_id)
 
         if stale_ids:
-            logger.warning(
-                f"[JsonBackend] 发现 {len(stale_ids)} 条失效索引条目，正在清理..."
-            )
+            logger.warning(f"[JsonBackend] 发现 {len(stale_ids)} 条失效索引条目，正在清理...")
             for memory_id in stale_ids:
                 info = self._index[memory_id]
                 tags = info.get("tags", [])
@@ -473,9 +471,7 @@ class JsonBackend(MemoryBackend):
                 file_path = self._get_file_path(memory)
 
                 async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
-                    await f.write(
-                        json.dumps(memory.to_dict(), ensure_ascii=False, indent=2)
-                    )
+                    await f.write(json.dumps(memory.to_dict(), ensure_ascii=False, indent=2))
 
                 self._index[memory.id] = {
                     "level": memory.level.value,
@@ -587,13 +583,7 @@ class JsonBackend(MemoryBackend):
             group_candidates = self._get_candidates_by_group(query.group_id)
             candidate_ids = group_candidates if candidate_ids is None else candidate_ids & group_candidates
 
-        search_levels = (
-            [query.levels]
-            if query.levels
-            else [query.level]
-            if query.level
-            else list(MemoryLevel)
-        )
+        search_levels = [query.levels] if query.levels else [query.level] if query.level else list(MemoryLevel)
 
         for level in search_levels:
             level_dir = self._get_dir(level)
@@ -640,15 +630,11 @@ class JsonBackend(MemoryBackend):
 
     def _get_candidates_by_user(self, user_id: str) -> Set[str]:
         """通过用户获取候选ID"""
-        return {
-            mid for mid, info in self._index.items() if info.get("user_id") == user_id
-        }
+        return {mid for mid, info in self._index.items() if info.get("user_id") == user_id}
 
     def _get_candidates_by_group(self, group_id: str) -> Set[str]:
         """通过群组获取候选ID"""
-        return {
-            mid for mid, info in self._index.items() if info.get("group_id") == group_id
-        }
+        return {mid for mid, info in self._index.items() if info.get("group_id") == group_id}
 
     def _match_query(self, memory: Optional[MemoryItem], query: MemoryQuery) -> bool:
         """检查是否匹配查询"""
@@ -714,18 +700,13 @@ class JsonBackend(MemoryBackend):
             return False
         if query.location and memory.location != query.location:
             return False
-        if (
-            query.conversation_partner
-            and memory.conversation_partner != query.conversation_partner
-        ):
+        if query.conversation_partner and memory.conversation_partner != query.conversation_partner:
             return False
         if query.emotional_tone and memory.emotional_tone != query.emotional_tone:
             return False
         return not (memory.significance < query.min_significance or memory.significance > query.max_significance)
 
-    def _sort_results(
-        self, results: List[MemoryItem], sort_by: str, order: str
-    ) -> List[MemoryItem]:
+    def _sort_results(self, results: List[MemoryItem], sort_by: str, order: str) -> List[MemoryItem]:
         """排序结果"""
         reverse = order == "desc"
 
@@ -743,19 +724,13 @@ class JsonBackend(MemoryBackend):
     async def get_all_ids(self, level: Optional[MemoryLevel] = None) -> List[str]:
         """获取所有记忆ID"""
         if level:
-            return [
-                mid
-                for mid, info in self._index.items()
-                if info.get("level") == level.value
-            ]
+            return [mid for mid, info in self._index.items() if info.get("level") == level.value]
         return list(self._index.keys())
 
     async def count(self, level: Optional[MemoryLevel] = None) -> int:
         """统计数量"""
         if level:
-            return sum(
-                1 for info in self._index.values() if info.get("level") == level.value
-            )
+            return sum(1 for info in self._index.values() if info.get("level") == level.value)
         return len(self._index)
 
 
@@ -923,9 +898,7 @@ class MiyaMemoryCore:
             if self.sqlite_backend.enabled:
                 logger.info("[MiyaMemoryCore] SQLite 后端已启用")
             else:
-                logger.warning(
-                    "[MiyaMemoryCore] SQLite 后端未启用，检查 text_config.json"
-                )
+                logger.warning("[MiyaMemoryCore] SQLite 后端未启用，检查 text_config.json")
         except Exception as e:
             logger.debug(f"[MiyaMemoryCore] SQLite 后端初始化失败（不影响运行）: {e}")
 
@@ -942,9 +915,7 @@ class MiyaMemoryCore:
 
             from core.embedding_client import EmbeddingClient, EmbeddingProvider
 
-            model_config_path = (
-                Path(__file__).parent.parent / "config" / "multi_model_config.json"
-            )
+            model_config_path = Path(__file__).parent.parent / "config" / "multi_model_config.json"
             if not model_config_path.exists():
                 return
 
@@ -963,9 +934,7 @@ class MiyaMemoryCore:
                 if name not in models:
                     return False
                 info = models[name]
-                provider = provider_map.get(
-                    info.get("provider", "openai"), EmbeddingProvider.OPENAI
-                )
+                provider = provider_map.get(info.get("provider", "openai"), EmbeddingProvider.OPENAI)
                 api_key = info.get("api_key", "")
                 if not api_key and info.get("env_key"):
                     api_key = os.getenv(info["env_key"], "")
@@ -983,18 +952,12 @@ class MiyaMemoryCore:
             primary_name = emb_config.get("primary", "siliconflow_bge_large")
             fallback_name = emb_config.get("fallback", "")
 
-            if await _try_init(
-                primary_name, "[MiyaMemoryCore] 真实 Embedding 客户端已启用: "
-            ):
+            if await _try_init(primary_name, "[MiyaMemoryCore] 真实 Embedding 客户端已启用: "):
                 return
-            if fallback_name and await _try_init(
-                fallback_name, "[MiyaMemoryCore] Embedding 使用 fallback: "
-            ):
+            if fallback_name and await _try_init(fallback_name, "[MiyaMemoryCore] Embedding 使用 fallback: "):
                 return
         except Exception as e:
-            logger.warning(
-                "[MiyaMemoryCore] Embedding 客户端初始化失败，使用伪向量回退: %s", e
-            )
+            logger.warning("[MiyaMemoryCore] Embedding 客户端初始化失败，使用伪向量回退: %s", e)
 
         if lazy_load:
             self._loaded = True
@@ -1055,9 +1018,7 @@ class MiyaMemoryCore:
                         continue
 
                     # 检查是否已存在（避免重复加载）
-                    existing = await self.retrieve(
-                        query=fact[:20], user_id=user_id, limit=1
-                    )
+                    existing = await self.retrieve(query=fact[:20], user_id=user_id, limit=1)
                     if existing and any(fact[:30] in e.content for e in existing):
                         continue
 
@@ -1157,9 +1118,7 @@ class MiyaMemoryCore:
 
         # 自动分类
         if level is None:
-            level = self._auto_classify(
-                content, tags, source, significance, emotional_tone, event_type
-            )
+            level = self._auto_classify(content, tags, source, significance, emotional_tone, event_type)
 
         # 计算过期时间
         expires_at = None
@@ -1240,9 +1199,7 @@ class MiyaMemoryCore:
 
         self._stats["total_stored"] += 1
 
-        logger.debug(
-            f"[MiyaMemoryCore] 存储: {memory.id}, level={level.value}, user={user_id}"
-        )
+        logger.debug(f"[MiyaMemoryCore] 存储: {memory.id}, level={level.value}, user={user_id}")
         return memory.id
 
     def _flush_index(self):
@@ -1253,9 +1210,7 @@ class MiyaMemoryCore:
             self._store_count_since_save = 0
             logger.debug("[MiyaMemoryCore] 批量索引已刷新")
 
-    async def get_daily_dialogues(
-        self, date_key: str, user_id: Optional[str] = None
-    ) -> List[MemoryItem]:
+    async def get_daily_dialogues(self, date_key: str, user_id: Optional[str] = None) -> List[MemoryItem]:
         """获取某天的所有对话记忆（情节记忆检索）
 
         Args:
@@ -1368,11 +1323,7 @@ class MiyaMemoryCore:
 
         if source == MemorySource.MANUAL:
             threshold = cfg.get("manual_significance_threshold", 0.4)
-            return (
-                MemoryLevel.LONG_TERM
-                if significance >= threshold
-                else MemoryLevel.SHORT_TERM
-            )
+            return MemoryLevel.LONG_TERM if significance >= threshold else MemoryLevel.SHORT_TERM
 
         return MemoryLevel.SHORT_TERM
 
@@ -1509,33 +1460,11 @@ class MiyaMemoryCore:
             "total_indexed": await self.backend.count(),
             "total_sqlite": sqlite_count,
             "by_level": {
-                "dialogue": len(
-                    [m for m in self._cache.values() if m.level == MemoryLevel.DIALOGUE]
-                ),
-                "short_term": len(
-                    [
-                        m
-                        for m in self._cache.values()
-                        if m.level == MemoryLevel.SHORT_TERM
-                    ]
-                ),
-                "long_term": len(
-                    [
-                        m
-                        for m in self._cache.values()
-                        if m.level == MemoryLevel.LONG_TERM
-                    ]
-                ),
-                "semantic": len(
-                    [m for m in self._cache.values() if m.level == MemoryLevel.SEMANTIC]
-                ),
-                "knowledge": len(
-                    [
-                        m
-                        for m in self._cache.values()
-                        if m.level == MemoryLevel.KNOWLEDGE
-                    ]
-                ),
+                "dialogue": len([m for m in self._cache.values() if m.level == MemoryLevel.DIALOGUE]),
+                "short_term": len([m for m in self._cache.values() if m.level == MemoryLevel.SHORT_TERM]),
+                "long_term": len([m for m in self._cache.values() if m.level == MemoryLevel.LONG_TERM]),
+                "semantic": len([m for m in self._cache.values() if m.level == MemoryLevel.SEMANTIC]),
+                "knowledge": len([m for m in self._cache.values() if m.level == MemoryLevel.KNOWLEDGE]),
             },
             "by_level_db": by_level_db,
             "by_user": len(self._user_index),
@@ -1582,17 +1511,11 @@ class MiyaMemoryCore:
             return False
         if query.location and memory.location != query.location:
             return False
-        if (
-            query.conversation_partner
-            and memory.conversation_partner != query.conversation_partner
-        ):
+        if query.conversation_partner and memory.conversation_partner != query.conversation_partner:
             return False
         if query.emotional_tone and memory.emotional_tone != query.emotional_tone:
             return False
-        if (
-            memory.significance < query.min_significance
-            or memory.significance > query.max_significance
-        ):
+        if memory.significance < query.min_significance or memory.significance > query.max_significance:
             return False
         # 时间过滤
         if query.start_time or query.end_time:
@@ -1606,9 +1529,7 @@ class MiyaMemoryCore:
                 pass
         return True
 
-    def _sort_results(
-        self, results: List[MemoryItem], sort_by: str, order: str
-    ) -> List[MemoryItem]:
+    def _sort_results(self, results: List[MemoryItem], sort_by: str, order: str) -> List[MemoryItem]:
         """排序"""
         reverse = order == "desc"
         if sort_by == "priority":
@@ -1918,9 +1839,7 @@ class MiyaMemoryCore:
         asyncio.create_task(cleanup_loop())
         logger.info(f"[MiyaMemoryCore] 定时清理任务已启动, 间隔: {interval}秒")
 
-    async def decay_low_priority_memories(
-        self, days: int = 90, threshold: float = 0.3
-    ) -> int:
+    async def decay_low_priority_memories(self, days: int = 90, threshold: float = 0.3) -> int:
         """
         优先级衰减 - 长时间未访问的低优先级记忆降低优先级
 
@@ -2021,33 +1940,11 @@ class MiyaMemoryCore:
             "total_cached": len(self._cache),
             "total_indexed": await self.backend.count(),
             "by_level": {
-                "dialogue": len(
-                    [m for m in self._cache.values() if m.level == MemoryLevel.DIALOGUE]
-                ),
-                "short_term": len(
-                    [
-                        m
-                        for m in self._cache.values()
-                        if m.level == MemoryLevel.SHORT_TERM
-                    ]
-                ),
-                "long_term": len(
-                    [
-                        m
-                        for m in self._cache.values()
-                        if m.level == MemoryLevel.LONG_TERM
-                    ]
-                ),
-                "semantic": len(
-                    [m for m in self._cache.values() if m.level == MemoryLevel.SEMANTIC]
-                ),
-                "knowledge": len(
-                    [
-                        m
-                        for m in self._cache.values()
-                        if m.level == MemoryLevel.KNOWLEDGE
-                    ]
-                ),
+                "dialogue": len([m for m in self._cache.values() if m.level == MemoryLevel.DIALOGUE]),
+                "short_term": len([m for m in self._cache.values() if m.level == MemoryLevel.SHORT_TERM]),
+                "long_term": len([m for m in self._cache.values() if m.level == MemoryLevel.LONG_TERM]),
+                "semantic": len([m for m in self._cache.values() if m.level == MemoryLevel.SEMANTIC]),
+                "knowledge": len([m for m in self._cache.values() if m.level == MemoryLevel.KNOWLEDGE]),
             },
             "by_user": len(self._user_index),
             "by_tag": len(self._tag_index),
@@ -2200,9 +2097,7 @@ class MiyaMemoryCore:
                     )
                     return resp.data[0].embedding
             except Exception as e:
-                logger.warning(
-                    f"[MiyaMemoryCore] Embedding API 调用失败，使用回退方案: {e}"
-                )
+                logger.warning(f"[MiyaMemoryCore] Embedding API 调用失败，使用回退方案: {e}")
 
         # 回退：使用伪向量
         return self._simple_embed(text)
@@ -2228,9 +2123,7 @@ class MiyaMemoryCore:
                     if results:
                         return results
             except Exception as e:
-                logger.debug(
-                    f"[MiyaMemoryCore] SQLite 向量搜索失败，回退关键词搜索: {e}"
-                )
+                logger.debug(f"[MiyaMemoryCore] SQLite 向量搜索失败，回退关键词搜索: {e}")
 
         return await self.retrieve(
             query=query,
@@ -2263,9 +2156,7 @@ async def get_memory_core(
                     get_embedding_client,
                 )
 
-                model_config_path = (
-                    Path(__file__).parent.parent / "config" / "multi_model_config.json"
-                )
+                model_config_path = Path(__file__).parent.parent / "config" / "multi_model_config.json"
                 if model_config_path.exists():
                     import json
 
@@ -2274,9 +2165,7 @@ async def get_memory_core(
 
                     emb_config = model_config.get("embedding_config", {})
                     if emb_config.get("enabled"):
-                        primary_model_id = emb_config.get(
-                            "primary", "siliconflow_bge_large"
-                        )
+                        primary_model_id = emb_config.get("primary", "siliconflow_bge_large")
                         models = model_config.get("models", {})
                         model_info = models.get(primary_model_id)
 
@@ -2288,9 +2177,7 @@ async def get_memory_core(
                                 "siliconflow": EmbeddingProvider.SILICONFLOW,
                                 "sentence_transformers": EmbeddingProvider.SENTENCE_TRANSFORMERS,
                             }
-                            provider = provider_map.get(
-                                provider_str, EmbeddingProvider.OPENAI
-                            )
+                            provider = provider_map.get(provider_str, EmbeddingProvider.OPENAI)
                             model_name = model_info.get("name")
                             api_key = model_info.get("api_key", "")
                             if not api_key and model_info.get("env_key"):
@@ -2307,17 +2194,13 @@ async def get_memory_core(
                                 f"[MiyaMemoryCore] 自动加载 Embedding 客户端: {primary_model_id} ({model_name})"
                             )
                         else:
-                            logger.warning(
-                                f"[MiyaMemoryCore] Embedding 模型 {primary_model_id} 未在模型池中找到"
-                            )
+                            logger.warning(f"[MiyaMemoryCore] Embedding 模型 {primary_model_id} 未在模型池中找到")
                     else:
                         logger.info("[MiyaMemoryCore] Embedding 未启用，使用伪向量回退")
                 else:
                     logger.warning("[MiyaMemoryCore] multi_model_config.json 不存在")
             except Exception as e:
-                logger.debug(
-                    f"[MiyaMemoryCore] Embedding 客户端加载失败，使用伪向量: {e}"
-                )
+                logger.debug(f"[MiyaMemoryCore] Embedding 客户端加载失败，使用伪向量: {e}")
 
         _global_core = MiyaMemoryCore(
             data_dir=data_dir,
