@@ -80,6 +80,7 @@ class MiyaPsyArchBridge:
         )
         self._engine.start()
         self._register_toolnet_actions()
+        self._init_upgrade_bridge()
         self._initialized = True
         logger.info("MiyaPsyArchBridge initialized")
 
@@ -92,6 +93,25 @@ class MiyaPsyArchBridge:
                 logger.info(f"[AP] ActionPlanner 已接入 ToolNet: {count} 个工具注册为行动节点")
         except Exception as e:
             logger.debug(f"[AP] ActionPlanner 接入 ToolNet 跳过: {e}")
+
+    def _init_upgrade_bridge(self) -> None:
+        try:
+            from upgrade_bridge import get_upgrade_bridge
+
+            self._upgrade_bridge = get_upgrade_bridge()
+            result = self._upgrade_bridge.initialize(
+                browser_use_config={"enabled": True},
+                screen_aware_config={"enabled": True, "min_interval_seconds": 30.0},
+            )
+            logger.info(
+                f"[UpgradeBridge] 能力升级初始化: "
+                f"browser={result.get('browser_use')}, "
+                f"screen={result.get('screen_aware')}, "
+                f"plugin={result.get('plugin_sdk')}"
+            )
+        except Exception as e:
+            logger.debug(f"[UpgradeBridge] 初始化跳过: {e}")
+            self._upgrade_bridge = None
 
     def process_message(self, text: str) -> tuple[str, dict]:
         self._init_engine()

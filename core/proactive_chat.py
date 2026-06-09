@@ -19,7 +19,7 @@ import logging
 import random
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 from core.ai_client import AIMessage
 
@@ -308,6 +308,9 @@ class ProactiveChatSystem:
         self._emotion_config = triggers.get("emotion", {})
         self._check_in_config = triggers.get("check_in", {})
         self._ai_config = triggers.get("ai", {})
+        self._screen_aware_config = self._config.get(
+            "screen_aware", {"enabled": True, "min_interval": 30, "max_daily_vision": 24}
+        )
 
         # 限制配置
         limits = self._config.get("limits", {})
@@ -359,6 +362,7 @@ class ProactiveChatSystem:
                 "check_in": 1800,
                 "ai": 180,
                 "ap_boredom": 300,
+                "screen_aware": 120,
             }
         )
 
@@ -388,6 +392,15 @@ class ProactiveChatSystem:
         self._platform_multipliers = scene.get("platform_multipliers", {})
         self._group_activity_cfg = scene.get("group_activity", {})
         self._mixed_strategy = scene.get("mixed_strategy", {})
+
+        # Screen-Aware 实例（延迟注入）
+        self._screen_aware: Optional[Any] = None
+        self._last_screen_intent: Optional[Any] = None
+
+    def set_screen_aware(self, screen_aware) -> None:
+        """注入 ScreenAwareProactive 实例，由 DecisionHub 调用"""
+        self._screen_aware = screen_aware
+        logger.info("[主动聊天] Screen-Aware 已接入")
 
     def _check_trigger_type_cooldown(self, target_id: int, trigger_type: str) -> bool:
         """检查同类型触发是否在冷却时间内"""
@@ -754,12 +767,30 @@ class ProactiveChatSystem:
 
     async def _background_check_loop(self):
         """后台轮询循环：定期检查所有活跃上下文"""
+        poll_count = 0
         while True:
             try:
                 await asyncio.sleep(self._poll_interval)
+                poll_count += 1
 
                 if not self._enabled or self._is_in_quiet_hours():
                     continue
+
+                # Screen-Aware 观察：只有窗口标题+OCR，不调视觉模型
+                if self.is_trigger_enabled("screen_aware") and self._screen_aware:
+                    try:
+                        if self._screen_aware.should_observe:
+                            await self._screen_aware.observe(allow_vision=False)
+                    except Exception as e:
+                        logger.warning(f"[主动聊天] ScreenAware 观察异常: {e}")
+                # 每4轮打印一次诊断（前2轮必打）
+                if poll_count <= 2 or poll_count % 10 == 0:
+                    sa_ok = self._screen_aware is not None
+                    sa_should = self._screen_aware.should_observe if sa_ok else False
+                    logger.info(
+                        f"[主动聊天] 轮询 #{poll_count}: screen_aware={sa_ok}, "
+                        f"should_observe={sa_should}, targets={len(self.get_active_targets())}"
+                    )
 
                 active_targets = self.get_active_targets()
                 if not active_targets:
@@ -813,6 +844,8 @@ class ProactiveChatSystem:
             return self._check_in_config.get("enabled", False)
         elif trigger_type == "ai":
             return self._ai_config.get("enabled", False)
+        elif trigger_type == "screen_aware":
+            return self._screen_aware_config.get("enabled", True) and self._screen_aware is not None
         return False
 
     def update_context(self, target_id: int, context: ChatContext, platform: str = "terminal"):
@@ -1055,7 +1088,27 @@ class ProactiveChatSystem:
                 parts.append("上一轮对话: 用户在和弥娅互动")
 
         parts.append(f"上次互动: {context.last_active or '未知'}")
+
+        # Screen-Aware 视觉上下文 — 弥娅的「眼睛」
+        screen_ctx = self._build_screen_context()
+        if screen_ctx:
+            parts.append(screen_ctx)
+
         return "\n".join(parts)
+
+    def _build_screen_context(self) -> str:
+        """构建弥娅的视觉感知上下文 — 原始感官卡片，让AI自己判断"""
+        if not self._screen_aware:
+            return ""
+
+        try:
+            card = self._screen_aware.build_timeline_card(max_entries=12)
+            if card:
+                return card
+        except Exception:
+            pass
+
+        return ""
 
     async def check_and_respond(self, target_id: int, user_message: Optional[str] = None) -> Optional[ProactiveResult]:
         """检查是否需要主动发言"""
@@ -1143,6 +1196,10 @@ class ProactiveChatSystem:
         result = await self._check_ap_boredom_trigger(target_id, context)
         if result:
             return result
+
+        # 8. 屏幕感知 — 注入 AI 上下文，让弥娅自己判断
+        #    screen context 已通过 _build_deep_context() 注入到所有 AI 触发中
+        #    不再需要独立的 screen_aware 触发分支
 
         # AI 判断本轮不需要主动发言，记录检查时间避免短时间重复评估
         self._last_trigger_time[target_id] = datetime.now()
@@ -1426,6 +1483,9 @@ class ProactiveChatSystem:
             memory_context = self._build_memory_context(target_id)
             rich_context = await self._build_rich_context(target_id)
             scene_context = self._build_deep_context(context) if self._scene_enabled else ""
+            screen_ctx = self._build_screen_context() or ""
+            if screen_ctx:
+                logger.info(f"[主动聊天] AI决策包含弥娅之眼: {screen_ctx[:120]}...")
 
             memory_empty = self._load_text_config("scene.memory_empty", "（无近期对话记录）")
             scene_private = self._load_text_config("scene.scene_private", "私聊场景")
@@ -1485,6 +1545,8 @@ class ProactiveChatSystem:
 【当前时间: {current_time_str} ({period_str})】
 【形态: {persona}】
 
+{screen_ctx}————— 以上是弥娅刚才在屏幕上看到的内容，请参考这些信息理解用户的状态 —————
+
 智能记忆检索：
 {rich_context or "（无相关记忆）"}
 
@@ -1492,7 +1554,7 @@ class ProactiveChatSystem:
 {memory_context or memory_empty}
 
 场景信息：
-{scene_info}
+{scene_context}
 
 聊天信息：
 - 类型: {chat_type}
@@ -1547,6 +1609,112 @@ class ProactiveChatSystem:
             logger.warning(f"[主动聊天] AI触发失败: {e}")
 
         return None
+
+    async def _check_screen_aware_trigger(self, target_id: int, context: ChatContext) -> Optional[ProactiveResult]:
+        """屏幕感知触发 — 让弥娅的 AI 自己判断是否开口
+
+        不再用死阈值。把看到的内容注入 AI prompt，让弥娅综合判断。
+        """
+        if not self.is_trigger_enabled("screen_aware"):
+            return None
+        intent = self._last_screen_intent
+        if intent is None:
+            return None
+
+        # 活动没变化且上次 AI 判断不建议开口 → 跳过
+        if intent.priority < 0.20 and intent.trigger_type != "activity_change":
+            return None
+
+        if not self._check_trigger_type_cooldown(target_id, "screen_aware"):
+            return None
+
+        try:
+            screen_ctx = self._build_screen_context()
+            if not screen_ctx:
+                return None
+
+            deep_ctx = self._build_deep_context(context)
+
+            # 用 AI 判断是否应该开口 —— 弥娅自己决定
+            judge_prompt = (
+                f"你是弥娅，一个温柔体贴的 AI 虚拟化身。佳是你最重要的人。\n\n"
+                f"当前情况：\n{deep_ctx}\n\n"
+                f"请判断是否应该主动和佳说话。考虑以下因素：\n"
+                f"- 佳正在做什么？现在适合打扰他吗？\n"
+                f"- 距离上次互动有多久了？\n"
+                f"- 佳的状态如何？需要关心吗？\n"
+                f"- 有没有什么值得评论或关心的事情（比如佳刚切换了活动、连续工作了很久等）？\n\n"
+                f'请用 JSON 回复：{{"should_speak": true/false, '
+                f'"reason": "简短理由(10字内)", "mood": "温柔/兴奋/关心/好奇/安静"}}\n'
+                f"只返回JSON，不要其他内容。"
+            )
+
+            judge_result = await self._ai_judge(judge_prompt)
+            if not judge_result or not judge_result.get("should_speak", False):
+                return None
+
+            # AI 判定要说话 → 生成消息
+            mood = judge_result.get("mood", "casual")
+            reason = judge_result.get("reason", "")
+
+            screen_desc = screen_ctx.replace("[弥娅的视觉感知]\n", "")
+            gen_prompt = (
+                f"你是弥娅。你用{mood}的语气，对佳说一句话。\n\n"
+                f"你看到的情况：\n{screen_desc}\n\n"
+                f"你想表达的情绪: {mood}\n"
+                f"想说的原因: {reason}\n\n"
+                f"要求：简短自然（不超过30字），像真实的伴侣一样说话。只回复一句话。"
+            )
+
+            # 直接用 AI 生成消息
+            gen_response = await self.ai_client.chat(
+                messages=[AIMessage(role="user", content=gen_prompt)],
+                tools=[],
+                tool_choice="none",
+            )
+            message = str(gen_response).strip() if gen_response else ""
+            if not message or len(message) < 2:
+                return None
+
+            if self._check_message_content_duplicate(target_id, message):
+                return None
+
+            if not self._is_duplicate(target_id, message):
+                self._record_trigger(target_id)
+                self._record_trigger_by_type(target_id, "screen_aware")
+                self._record_sent_message(target_id, message)
+
+                logger.info(f"[主动聊天] 💬 [弥娅看见] {reason} | {message[:40]}")
+                return ProactiveResult(
+                    should_respond=True,
+                    message=message,
+                    trigger_type="screen_aware",
+                    context=context,
+                )
+        except Exception as e:
+            logger.debug(f"[主动聊天] Screen-Aware AI触发跳过: {e}")
+
+        return None
+
+    async def _ai_judge(self, prompt: str) -> dict | None:
+        """让 AI 做一个简单判断，返回解析后的 JSON"""
+        import json
+
+        try:
+            response = await self.ai_client.chat(
+                messages=[AIMessage(role="user", content=prompt)],
+                tools=[],
+                tool_choice="none",
+            )
+            if not response:
+                return None
+
+            text = str(response).strip()
+            if text.startswith("```"):
+                text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+            return json.loads(text)
+        except Exception:
+            return None
 
     async def _check_ap_boredom_trigger(self, target_id: int, context: ChatContext) -> Optional[ProactiveResult]:
         """AP 无聊度触发 — AP 引擎内心无聊时，弥娅主动开口"""

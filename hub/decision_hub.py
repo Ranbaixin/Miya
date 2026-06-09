@@ -350,6 +350,36 @@ class DecisionHub:
             self.proactive_chat.set_personality(self.personality)
             self.proactive_chat.set_prompt_manager(self.prompt_manager)
 
+            # 注入 Screen-Aware Proactive（屏幕感知主动聊天）
+            try:
+                from pathlib import Path
+
+                import yaml
+                from miya_psyarch.sensors.screen_aware import get_screen_aware
+
+                cfg = {}
+                cfg_path = Path(__file__).resolve().parent.parent / "config" / "screen_aware.yaml"
+                if cfg_path.exists():
+                    raw = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+                    cfg = raw.get("screen_aware", raw)
+
+                sa = get_screen_aware(
+                    enabled=cfg.get("enabled", True),
+                    min_interval_seconds=cfg.get("min_interval_seconds", 30),
+                    vision_mode=cfg.get("vision_mode", "on_demand"),
+                    vision_cooldown_seconds=cfg.get("vision_cooldown_seconds", 300),
+                    vision_daily_quota=cfg.get("vision_daily_quota", 24),
+                    vision_trigger_light_count=cfg.get("vision_trigger_light_count", 10),
+                    hash_similarity_threshold=cfg.get("hash_similarity_threshold", 8),
+                )
+                self.proactive_chat.set_screen_aware(sa)
+                logger.info(
+                    f"[决策层] Screen-Aware 已注入 "
+                    f"(vision_mode={sa.vision_mode}, interval={cfg.get('min_interval_seconds', 30)}s)"
+                )
+            except Exception as e:
+                logger.debug(f"[决策层] Screen-Aware 注入跳过: {e}")
+
             # 注册深度记忆检索提供者（认知引擎 + 对话历史）
             async def _rich_context_provider(target_id: int) -> str:
                 """为主动聊天构建完整的记忆上下文"""
@@ -1850,8 +1880,23 @@ class DecisionHub:
                     image_context = "\n[图片消息] 用户引用了一条包含图片的消息，但无法获取图片URL"
                     logger.info("[决策层] 检测到引用消息包含图片但无URL")
 
-            # 【陪玩】注入屏幕画面上下文
+            # 【弥娅之眼】屏幕感知 — 原始感官时间序列
             screen_context = ""
+            try:
+                from miya_psyarch.sensors.screen_aware import get_screen_aware
+
+                sa = get_screen_aware()
+                if sa and sa.should_observe:
+                    obs = await sa.observe(allow_vision=False)
+                if sa:
+                    card = sa.build_timeline_card(max_entries=12)
+                    if card and len(card) > 30:
+                        screen_context = card
+                        logger.info(f"[决策层] 弥娅之眼: {card[:120]}...")
+            except Exception:
+                pass
+
+            # 【陪玩】注入陪玩画面（如果游戏陪玩引擎活跃）
             try:
                 from core.game_play.engine import get_game_play_engine
 
@@ -1859,7 +1904,10 @@ class DecisionHub:
                 if engine._state.active and engine._state.vision_enabled:
                     summary = await engine.get_screen_summary()
                     if summary:
-                        screen_context = summary
+                        if screen_context:
+                            screen_context += "\n" + summary
+                        else:
+                            screen_context = summary
                         logger.debug(f"[决策层] 陪玩画面: {summary[:60]}...")
             except Exception:
                 pass
