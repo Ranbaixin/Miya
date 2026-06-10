@@ -80,16 +80,10 @@ COLUMN_TYPES = {
 
 
 def _load_sqlite_config() -> dict:
-    """从 text_config.json 加载 SQLite 配置"""
-    try:
-        config_path = Path(__file__).parent.parent / "config" / "text_config.json"
-        if config_path.exists():
-            with open(config_path, "r", encoding="utf-8") as f:
-                config = json.load(f)
-            return config.get("sqlite_backend", {})
-    except Exception as e:
-        logger.warning(f"[SQLiteBackend] 配置加载失败: {e}")
-    return {}
+    """从 text_config.json 加载 SQLite 配置（统一缓存）"""
+    from memory.memory_config import get_memory_section
+
+    return get_memory_section("sqlite_backend")
 
 
 class SQLiteBackend(MemoryBackend):

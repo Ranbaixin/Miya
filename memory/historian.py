@@ -22,21 +22,16 @@ from memory.cognitive_engine import (
     TOPIC_KEYWORDS,
     get_cognitive_engine,
 )
+from memory.memory_config import get_text_config_value
 
 logger = logging.getLogger(__name__)
 
 
 def _load_historian_config() -> Dict[str, Any]:
-    """从 text_config.json 加载 Historian 配置"""
-    try:
-        config_path = Path(__file__).parent.parent / "config" / "text_config.json"
-        if config_path.exists():
-            with open(config_path, "r", encoding="utf-8") as f:
-                config = json.load(f)
-            return config.get("historian", {})
-    except Exception as e:
-        logger.debug(f"[Historian] 加载配置失败: {e}")
-    return {}
+    """从 text_config.json 加载 Historian 配置（统一缓存）"""
+    from memory.memory_config import get_memory_section
+
+    return get_memory_section("historian")
 
 
 def _parse_patterns(raw: List) -> List[Tuple[str, str]]:
@@ -54,17 +49,7 @@ def _parse_group_patterns(raw: Dict) -> Dict[str, List[Tuple[str, str]]]:
 
 # 从配置加载（回退到内置默认值）
 _config = _load_historian_config()
-
-# 加载弥娅自记忆配置
-_assistant_self_config = {}
-try:
-    _config_path = Path(__file__).parent.parent / "config" / "text_config.json"
-    if _config_path.exists():
-        with open(_config_path, "r", encoding="utf-8") as _f:
-            _full_config = json.load(_f)
-            _assistant_self_config = _full_config.get("assistant_self", {})
-except Exception:
-    pass
+_assistant_self_config = get_text_config_value("assistant_self", default={})
 
 IGNORE_PATTERNS = _config.get(
     "ignore_patterns",

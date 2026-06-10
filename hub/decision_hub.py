@@ -42,58 +42,39 @@ from mlink.message import Message
 logger = logging.getLogger(__name__)
 
 
-_emotion_guidance_cache = None
 _strategy_descriptions_cache = None
+_emotion_guidance_cache = None
 
 
 def _load_strategy_descriptions() -> dict:
-    """加载策略描述映射（带缓存）"""
+    """加载策略描述映射（统一缓存）"""
     global _strategy_descriptions_cache
     if _strategy_descriptions_cache is not None:
         return _strategy_descriptions_cache
-    try:
-        import json
+    from memory.memory_config import get_memory_section
 
-        config_path = Path(__file__).parent.parent / "config" / "text_config.json"
-        with open(config_path, "r", encoding="utf-8") as f:
-            cfg = json.load(f)
-        _strategy_descriptions_cache = cfg.get("strategy_descriptions", {})
-    except Exception:
-        _strategy_descriptions_cache = {}
+    _strategy_descriptions_cache = get_memory_section("strategy_descriptions")
     return _strategy_descriptions_cache
 
 
 def _get_emotion_guidance() -> dict:
-    """加载情感引导配置（带缓存）"""
+    """加载情感引导配置（统一缓存）"""
     global _emotion_guidance_cache
     if _emotion_guidance_cache is not None:
         return _emotion_guidance_cache
-    try:
-        import json
+    from memory.memory_config import get_memory_section
 
-        config_path = Path(__file__).parent.parent / "config" / "text_config.json"
-        with open(config_path, "r", encoding="utf-8") as f:
-            cfg = json.load(f)
-        _emotion_guidance_cache = cfg.get(
-            "emotion_guidance",
-            {
-                "header": "\n\n【情感指引】\n",
-                "user_emotion": "- 用户情绪: {dominant}\n",
-                "miya_emotion": "- 你的情绪: {miya_dominant} ({miya_intensity}%)\n",
-                "inner_thought": "- 你的内心独白: {inner_thought}\n",
-                "footer": "请根据上述情感自然回应，展现你真实的情感。\n注意：内心独白仅供你参考理解自己的感受，请不要在回复中直接引用或输出内心独白内容。",
-                "single_model_footer": "请根据上述情感自然回应，展现你真实的情感。\n注意：内心独白仅供你参考理解自己的感受，请不要在回复中直接引用或输出内心独白内容。\n禁止在回复中使用小括号()描述动作，如（微笑）、（点头）等。",
-            },
-        )
-    except Exception:
-        _emotion_guidance_cache = {
+    _emotion_guidance_cache = get_memory_section(
+        "emotion_guidance",
+        {
             "header": "\n\n【情感指引】\n",
             "user_emotion": "- 用户情绪: {dominant}\n",
             "miya_emotion": "- 你的情绪: {miya_dominant} ({miya_intensity}%)\n",
             "inner_thought": "- 你的内心独白: {inner_thought}\n",
             "footer": "请根据上述情感自然回应，展现你真实的情感。\n注意：内心独白仅供你参考理解自己的感受，请不要在回复中直接引用或输出内心独白内容。",
             "single_model_footer": "请根据上述情感自然回应，展现你真实的情感。\n注意：内心独白仅供你参考理解自己的感受，请不要在回复中直接引用或输出内心独白内容。\n禁止在回复中使用小括号()描述动作，如（微笑）、（点头）等。",
-        }
+        },
+    )
     return _emotion_guidance_cache
 
 

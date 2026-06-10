@@ -47,18 +47,10 @@ _DEFAULT_CONFIG = {
 
 
 def _load_decay_config() -> dict:
-    """从 text_config.json 加载衰减配置"""
-    try:
-        import json
+    """从 text_config.json 加载衰减配置（统一缓存）"""
+    from memory.memory_config import get_memory_section
 
-        config_path = Path(__file__).parent.parent / "config" / "text_config.json"
-        if config_path.exists():
-            with open(config_path, "r", encoding="utf-8") as f:
-                full = json.load(f)
-            return full.get("session_decay", _DEFAULT_CONFIG)
-    except Exception as e:
-        logger.warning(f"[衰减] 配置加载失败: {e}")
-    return _DEFAULT_CONFIG
+    return get_memory_section("session_decay", _DEFAULT_CONFIG) or _DEFAULT_CONFIG
 
 
 def get_decay_config() -> dict:

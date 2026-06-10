@@ -21,19 +21,10 @@ logger = logging.getLogger(__name__)
 
 
 def _load_working_memory_config() -> dict:
-    """从 text_config.json 加载工作记忆配置"""
-    try:
-        import json
-        from pathlib import Path
+    """从 text_config.json 加载工作记忆配置（统一缓存，不再每次读文件）"""
+    from memory.memory_config import get_memory_section
 
-        config_path = Path(__file__).parent.parent / "config" / "text_config.json"
-        if config_path.exists():
-            with open(config_path, "r", encoding="utf-8") as f:
-                config = json.load(f)
-            return config.get("working_memory", {})
-    except Exception as e:
-        logger.warning(f"[工作记忆] 配置加载失败: {e}")
-    return {}
+    return get_memory_section("working_memory")
 
 
 @dataclass
@@ -274,6 +265,15 @@ class WorkingMemoryManager:
         self._ensure_data_dir()
         self._load()
 
+        # 写入防抖：延迟批量写入，避免每条消息都触发完整 I/O
+        self._dirty = False
+        self._save_timer = None
+        self._save_interval = 5.0  # 秒
+
+        # 缓存低信息量词汇（热路径避免每次 add_message 读配置）
+        cfg = _load_working_memory_config()
+        self._low_info_words = set(cfg.get("low_info_words", []))
+
         logger.info("[工作记忆] 管理器初始化完成")
 
     def _get_state(self, group_id: str) -> WorkingMemoryState:
@@ -348,8 +348,9 @@ class WorkingMemoryManager:
 
         state.last_update = time.time()
 
-        # 每条消息自动持久化
-        self.save()
+        # 写入防抖：标记脏数据，延迟批量写入（避免每条消息都全量序列化 I/O）
+        self._dirty = True
+        self._schedule_save()
 
         return {
             "is_drift": is_drift,
@@ -385,21 +386,16 @@ class WorkingMemoryManager:
         # 只保留最近5条分析记录
         if len(state.media_analysis) > 5:
             state.media_analysis = state.media_analysis[-5:]
-        # 更新最后活跃时间
         state.last_update = time.time()
-        # 自动持久化
-        self.save()
+        self._dirty = True
+        self._schedule_save()
 
     def _is_low_info(self, content: str) -> bool:
-        """检测是否为低信息量输入（从配置加载）"""
+        """检测是否为低信息量输入（使用初始化时缓存的词汇表，避免每次读文件）"""
         content = content.strip()
-        # 短消息检测
         if len(content) <= 3:
             return True
-        # 低信息量词汇检测（从配置加载）
-        config = _load_working_memory_config()
-        low_info_words = config.get("low_info_words", [])
-        return any(content == word for word in low_info_words)
+        return content in self._low_info_words
 
     def _create_new_topic(
         self, group_id: str, sender: str, content: str, sender_id: int = 0
@@ -880,8 +876,37 @@ class WorkingMemoryManager:
         except Exception as e:
             logger.warning(f"[工作记忆] 加载失败: {e}")
 
-    def save(self):
-        """保存工作记忆到文件"""
+    def _schedule_save(self):
+        """延迟批量写入——防抖，避免每条消息都触发完整 I/O"""
+        import asyncio
+
+        if self._save_timer is not None:
+            return  # 已有待执行的写入，无需重复调度
+        try:
+            loop = asyncio.get_event_loop()
+            self._save_timer = loop.call_later(self._save_interval, self._do_save)
+        except RuntimeError:
+            # 无事件循环时直接写入
+            self._do_save()
+
+    def _do_save(self):
+        """实际的写入操作"""
+        self._save_timer = None
+        self.save()
+
+    def save(self, force: bool = False):
+        """保存工作记忆到文件
+
+        Args:
+            force: True 时强制立即写入（关闭前调用），忽略防抖延迟
+        """
+        if force:
+            if self._save_timer is not None:
+                self._save_timer.cancel()
+                self._save_timer = None
+        elif not self._dirty:
+            return
+        self._dirty = False
         try:
             data = {
                 "states": {

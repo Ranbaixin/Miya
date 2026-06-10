@@ -7,6 +7,7 @@
 - 只返回最相关的记忆，减少干扰
 """
 
+import hashlib
 import json
 import logging
 import re
@@ -21,16 +22,10 @@ logger = logging.getLogger("Miya.CognitiveEngine")
 
 
 def _load_cognitive_config() -> Dict[str, Any]:
-    """从 text_config.json 加载 CognitiveEngine 配置"""
-    try:
-        config_path = Path(__file__).parent.parent / "config" / "text_config.json"
-        if config_path.exists():
-            with open(config_path, "r", encoding="utf-8") as f:
-                config = json.load(f)
-            return config.get("cognitive_engine", {})
-    except Exception as e:
-        logger.debug(f"[CognitiveEngine] 加载配置失败: {e}")
-    return {}
+    """从 text_config.json 加载 CognitiveEngine 配置（统一缓存）"""
+    from memory.memory_config import get_memory_section
+
+    return get_memory_section("cognitive_engine")
 
 
 _config = _load_cognitive_config()
@@ -82,7 +77,7 @@ class CognitiveEngine:
         self._last_retrieved_ids: List[str] = []  # 上次检索到的记忆ID列表
 
         # 语义相似度缓存（避免重复计算embedding）
-        self._embedding_cache: Dict[int, List[float]] = {}
+        self._embedding_cache: Dict[str, List[float]] = {}  # md5 hex → embedding
 
     def _record_co_occurrence(self, memory_ids: List[str]):
         """记录记忆共现关系，用于关联度学习"""
@@ -230,9 +225,9 @@ class CognitiveEngine:
             return 0.0
 
         try:
-            # 检查缓存
-            text_hash = hash(text)
-            memory_hash = hash(memory_content)
+            # 检查缓存（使用 md5 而非 Python hash()，跨进程稳定）
+            text_hash = hashlib.md5(text.encode()).hexdigest()
+            memory_hash = hashlib.md5(memory_content.encode()).hexdigest()
 
             # 获取或计算text的embedding
             if text_hash not in self._embedding_cache:

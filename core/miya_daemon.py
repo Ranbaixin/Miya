@@ -244,7 +244,7 @@ class MiyaDaemon:
 
             try:
                 wm = get_working_memory()
-                wm.save()
+                wm.save(force=True)  # 强制刷新防抖缓冲区
                 logger.debug("[关闭] 工作记忆已保存")
             except Exception as e:
                 logger.debug(f"[关闭] 工作记忆保存失败: {e}")

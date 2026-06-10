@@ -170,7 +170,6 @@ async def store_cognition(
     Returns:
         存储的记忆ID
     """
-    print(f"[store_cognition] 开始存储: thinking长度={len(thinking)}, user_id={user_id}")
     if emotions is None:
         emotions = {}
 

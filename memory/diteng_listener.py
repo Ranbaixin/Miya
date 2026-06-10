@@ -654,34 +654,28 @@ class DiTingListener:
             return MessageStrategy()
 
     def _load_strategy_config(self) -> Dict:
-        """加载策略配置 - 合并diteng_strategy_config和text_config的默认值"""
+        """加载策略配置 - 合并diteng_strategy_config和text_config的默认值（统一缓存）"""
         try:
-            # 加载策略配置
+            from memory.memory_config import get_memory_section
+
             config_path = (
                 Path(__file__).parent.parent / "config" / "diteng_strategy_config.json"
             )
+            config = {}
             if config_path.exists():
                 with open(config_path, "r", encoding="utf-8") as f:
                     config = json.load(f)
-            else:
-                config = {}
 
-            # 加载默认值配置
-            defaults_path = Path(__file__).parent.parent / "config" / "text_config.json"
-            if defaults_path.exists():
-                with open(defaults_path, "r", encoding="utf-8") as f:
-                    text_config = json.load(f)
-                    strategy_defaults = text_config.get("strategy_defaults", {})
+            strategy_defaults = get_memory_section("strategy_defaults")
 
-                    # 合并默认值
-                    if "max_responses_per_turn" not in config:
-                        config["max_responses_per_turn"] = strategy_defaults.get(
-                            "max_responses_per_turn", 3
-                        )
-                    if "default_max_messages" not in config:
-                        config["default_max_messages"] = strategy_defaults.get(
-                            "default_max_messages", 1
-                        )
+            if "max_responses_per_turn" not in config:
+                config["max_responses_per_turn"] = strategy_defaults.get(
+                    "max_responses_per_turn", 3
+                )
+            if "default_max_messages" not in config:
+                config["default_max_messages"] = strategy_defaults.get(
+                    "default_max_messages", 1
+                )
 
             return config
         except Exception:

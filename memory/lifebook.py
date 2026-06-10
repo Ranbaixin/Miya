@@ -46,15 +46,10 @@ class LifeBook:
         self._user_name = perspective_names.get("user", "佳")
 
     def _load_config(self) -> Dict:
-        """从 text_config.json 加载配置"""
-        try:
-            config_path = Path(__file__).parent.parent / "config" / "text_config.json"
-            if config_path.exists():
-                with open(config_path, "r", encoding="utf-8") as f:
-                    return json.load(f).get("lifebook", {})
-        except Exception as e:
-            logger.warning(f"[LifeBook] 加载配置失败: {e}")
-        return {}
+        """从 text_config.json 加载配置（统一缓存）"""
+        from memory.memory_config import get_memory_section
+
+        return get_memory_section("lifebook")
 
     def _get_config_value(self, key: str, default=None):
         """获取配置值"""
