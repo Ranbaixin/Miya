@@ -200,21 +200,23 @@ class GRAGMemoryManager:
             if not client:
                 raise ValueError("无法从模型池创建客户端")
 
-            prompt = f"""从以下对话中提取知识五元组（主体, 关系, 客体, 属性, 上下文）。
-返回JSON数组格式。
+            prompt = f"""从以下对话中提取知识五元组。返回JSON数组，key必须使用英文名。
 
 对话：
 {text}
 
-要求：
-- 主体：实体或角色
-- 关系：动作或关联
-- 客体：被影响的对象
-- 属性：额外描述
-- 上下文：对话背景
+格式要求（严格按此格式，只返回JSON）：
+[
+  {{
+    "subject": "实体或角色",
+    "relation": "动作或关联",
+    "object": "被影响的对象",
+    "attributes": {{"key": "额外描述"}},
+    "context": "对话背景"
+  }}
+]
 
-只返回JSON数组，不要其他内容。
-"""
+只返回JSON数组，不要markdown代码块，不要其他内容。"""
 
             from core.ai_client import AIMessage
 
@@ -224,16 +226,18 @@ class GRAGMemoryManager:
                 response.content if hasattr(response, "content") else str(response)
             )
 
-            # 解析JSON
+            # 解析JSON（兼容中英文key名）
             try:
                 data = json.loads(content)
+                if isinstance(data, dict):
+                    data = [data]  # LLM 可能返回单个对象而非数组
                 for item in data:
                     q = Quintuple(
-                        subject=item.get("subject", ""),
-                        relation=item.get("relation", ""),
-                        object=item.get("object", ""),
-                        attributes=item.get("attributes", {}),
-                        context=item.get("context", ""),
+                        subject=item.get("subject") or item.get("主体", ""),
+                        relation=item.get("relation") or item.get("关系", ""),
+                        object=item.get("object") or item.get("客体", ""),
+                        attributes=item.get("attributes") or item.get("属性", {}),
+                        context=item.get("context") or item.get("上下文", ""),
                         timestamp=time.time(),
                     )
                     if q.subject and q.relation:
