@@ -16,16 +16,21 @@ logger = logging.getLogger(__name__)
 
 
 async def auth_login(username: str, password: str) -> Dict:
-    """用户登录"""
+    """用户登录（从环境变量加载凭据，默认值仅用于本地开发）"""
+    import os
+    import secrets
+
     try:
-        if username == "miya" and password == "miya":
-            token = "miya_token_" + str(hash(username + password))[:16]
+        expected_user = os.getenv("MIYA_DASHBOARD_USER", "miya")
+        expected_pwd = os.getenv("MIYA_DASHBOARD_PASSWORD", "miya")
+
+        if username == expected_user and password == expected_pwd:
+            token = secrets.token_hex(32)
             return {
                 "status": "ok",
                 "data": {
                     "username": username,
                     "token": token,
-                    "change_ pwd_ hint": False,
                 },
             }
         return {"status": "error", "message": "用户名或密码错误"}

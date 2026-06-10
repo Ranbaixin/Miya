@@ -126,14 +126,14 @@ class BaseTool:
             执行结果
         """
         if asyncio.iscoroutinefunction(self.execute):
-            # 如果是异步方法，需要在事件循环中运行
             try:
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
-                    # 如果事件循环正在运行，返回协程
-                    return self.execute(context, **kwargs)
+                    import asyncio as _asyncio
+                    # 事件循环运行中：创建 Task 避免返回裸协程
+                    task = _asyncio.ensure_future(self.execute(context, **kwargs))
+                    return task
                 else:
-                    # 如果事件循环没有运行，直接运行
                     return loop.run_until_complete(self.execute(context, **kwargs))
             except RuntimeError:
                 # 创建新的事件循环

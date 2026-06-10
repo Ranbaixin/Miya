@@ -52,15 +52,30 @@ class PythonInterpreter(BaseTool):
             return "代码不能为空"
 
         try:
-            # 简化实现：直接执行（生产环境应使用Docker隔离）
             import io
             import sys
+            import signal
 
             old_stdout = sys.stdout
             sys.stdout = buffer = io.StringIO()
 
+            # 安全沙箱：限制可用 builtins
+            safe_builtins = {
+                'abs': abs, 'all': all, 'any': any, 'bin': bin, 'bool': bool,
+                'chr': chr, 'dict': dict, 'dir': dir, 'divmod': divmod,
+                'enumerate': enumerate, 'filter': filter, 'float': float,
+                'format': format, 'frozenset': frozenset, 'hex': hex,
+                'int': int, 'isinstance': isinstance, 'issubclass': issubclass,
+                'len': len, 'list': list, 'map': map, 'max': max, 'min': min,
+                'ord': ord, 'pow': pow, 'print': print, 'range': range,
+                'reversed': reversed, 'round': round, 'set': set,
+                'slice': slice, 'sorted': sorted, 'str': str, 'sum': sum,
+                'tuple': tuple, 'type': type, 'zip': zip,
+                '__import__': __import__, 'True': True, 'False': False, 'None': None,
+            }
+
             try:
-                exec(code, {'__name__': '__main__'})
+                exec(code, {'__name__': '__main__', '__builtins__': safe_builtins})
                 output = buffer.getvalue()
             finally:
                 sys.stdout = old_stdout

@@ -1280,7 +1280,9 @@ class AnthropicClient(BaseAIClient):
                 max_tokens=self.config.get("max_tokens", 2000),
             )
 
-            return response.content[0].text
+            if response.content and len(response.content) > 0:
+                return response.content[0].text
+            return ""
 
         except Exception as e:
             logger.error(f"Anthropic API调用失败: {e}")

@@ -88,11 +88,26 @@ class ComputerTools:
 
     @staticmethod
     async def execute_shell(command: str, timeout: int = 30) -> str:
-        """执行Shell命令"""
+        """执行Shell命令（安全加固：危险命令拦截 + shell=False 优先）"""
+        import shlex
+
+        # 危险命令拦截
+        DANGEROUS = {"rm -rf /", "mkfs.", "dd if=", ":(){ :|:& };:", "> /dev/sda",
+                     "format", "del /f /s /q", "shutdown", "reboot", "chmod 777 /",
+                     "wget", "curl -o", "base64 -d"}
+        cmd_lower = command.lower()
+        if any(d in cmd_lower for d in DANGEROUS):
+            return "安全拦截: 危险命令已被阻止"
+
         try:
+            try:
+                args = shlex.split(command)
+            except ValueError:
+                args = ["cmd", "/c", command] if os.name == "nt" else ["sh", "-c", command]
+
             result = subprocess.run(
-                command,
-                shell=True,
+                args if args[0] not in ("cmd", "sh") else args,
+                shell=False if args[0] not in ("cmd", "sh") else True,
                 capture_output=True,
                 text=True,
                 timeout=timeout,
@@ -106,10 +121,30 @@ class ComputerTools:
 
     @staticmethod
     async def python_exec(code: str, timeout: int = 30) -> str:
-        """执行Python代码"""
+        """执行Python代码（安全加固：禁止危险导入 + 超时限制）"""
+        import os
+        import tempfile
+        import uuid
+
+        # 危险导入拦截
+        DANGEROUS_IMPORTS = {
+            "os.system", "os.popen", "os.remove", "os.rmdir",
+            "subprocess", "shutil.rmtree", "shutil.move",
+            "ctypes", "__import__('os').system",
+            "eval(", "exec(",
+        }
+        code_lower = code.lower()
+        for d in DANGEROUS_IMPORTS:
+            if d in code_lower:
+                return f"安全拦截: 代码包含受限制的操作 ({d})"
+
+        # 在临时文件中执行，限制输出大小
+        script_path = os.path.join(tempfile.gettempdir(), f"miya_py_{uuid.uuid4().hex[:8]}.py")
         try:
+            with open(script_path, "w", encoding="utf-8") as f:
+                f.write(code)
             result = subprocess.run(
-                ["python", "-c", code],
+                ["python", script_path],
                 capture_output=True,
                 text=True,
                 timeout=timeout,
@@ -120,6 +155,11 @@ class ComputerTools:
             return f"代码执行超时 ({timeout}秒)"
         except Exception as e:
             return f"执行失败: {e}"
+        finally:
+            try:
+                os.remove(script_path)
+            except Exception:
+                pass
 
     @staticmethod
     async def grep(pattern: str, path: str, file_pattern: str = "*") -> str:
