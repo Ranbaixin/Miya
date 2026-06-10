@@ -297,6 +297,24 @@ class MemoryManager:
             except Exception as e:
                 logger.debug(f"[记忆管理器] 对话压缩失败: {e}")
 
+            # 存储到 Neo4j 知识图谱（异步提取五元组，不阻塞消息流）
+            if self.memory_net and self.memory_net.grag_memory:
+                try:
+                    user_text = user_content
+                    if isinstance(user_text, list):
+                        user_text = " ".join(
+                            item.get("data", {}).get("text", "")
+                            if isinstance(item, dict)
+                            else str(item)
+                            for item in user_text
+                        )
+                    await self.memory_net.grag_memory.add_conversation_memory(
+                        user_input=str(user_text),
+                        ai_response=response,
+                    )
+                except Exception as e:
+                    logger.debug(f"[记忆管理器] Neo4j 存储跳过: {e}")
+
         except Exception as e:
             logger.error(f"[记忆管理器] 存储 AI 响应失败: {e}")
 
