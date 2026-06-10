@@ -163,27 +163,28 @@ class MiyaDaemon:
         logger.info("=" * 60)
 
     async def _init_miya_core(self):
-        """初始化 Miya 核心（懒加载）"""
+        """初始化 Miya 核心（懒加载，优雅降级）"""
+        from run.main import Miya
+
+        self._miya = Miya()
+        logger.info("✅ Miya 核心初始化完成")
+
+        # MemoryNet 初始化失败不阻止启动
+        if self._miya.memory_net:
+            try:
+                await self._miya.memory_net.initialize()
+                logger.info("✅ MemoryNet 全局记忆系统初始化成功")
+            except Exception as e:
+                logger.warning(f"⚠️ MemoryNet 初始化失败（不影响核心服务）: {e}")
+
+        # 主动聊天后台轮询（可选，失败不影响核心服务）
         try:
-            from run.main import Miya
-
-            self._miya = Miya()
-            logger.info("✅ Miya 核心初始化完成")
-
-            if self._miya.memory_net:
-                try:
-                    await self._miya.memory_net.initialize()
-                    logger.info("✅ MemoryNet 全局记忆系统初始化成功")
-                except Exception as e:
-                    logger.error(f"⚠️ MemoryNet 初始化失败: {e}")
-
             dh = getattr(self._miya, "decision_hub", None)
             if dh and dh.proactive_chat and dh.proactive_chat.is_enabled():
                 await dh.start_proactive_background()
                 logger.info("✅ 主动聊天后台轮询已启动")
         except Exception as e:
-            logger.error(f"❌ Miya 核心初始化失败: {e}", exc_info=True)
-            raise
+            logger.warning(f"⚠️ 主动聊天启动失败（不影响核心服务）: {e}")
 
     async def _init_platforms(self, platform_ids: Optional[List[str]] = None):
         """初始化并连接所有平台"""

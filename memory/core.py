@@ -345,7 +345,11 @@ class MemoryBackend:
         raise NotImplementedError
 
     async def close(self):
-        pass
+        """关闭后端，强制刷盘脏索引"""
+        if getattr(self, "_index_dirty", False):
+            self._save_index()
+        if getattr(self, "_tag_dirty", False):
+            self._save_tag_index()
 
 
 class JsonBackend(MemoryBackend):
@@ -376,6 +380,11 @@ class JsonBackend(MemoryBackend):
         self._tag_index: Dict[str, Set[str]] = defaultdict(set)  # 倒排索引 (权威版本)
         self._query_cache: Dict[str, List[MemoryItem]] = {}  # 查询缓存
         self._cache_max_size = 100
+
+        # 写入脏标记：批量刷盘优化
+        self._index_dirty = False
+        self._tag_dirty = False
+        self._index_save_count = 0
 
         # 文件锁保护索引读写
         self._index_lock = asyncio.Lock()
@@ -487,13 +496,20 @@ class JsonBackend(MemoryBackend):
                     "file_path": str(file_path),
                     "priority": memory.priority,
                 }
-                self._save_index()
+                self._index_dirty = True
 
                 for tag in memory.tags:
                     self._tag_index[tag].add(memory.id)
-                self._save_tag_index()
+                self._tag_dirty = True
 
                 self._invalidate_cache()
+                # 每 10 次写入或显式 flush 时才刷盘
+                self._index_save_count = getattr(self, "_index_save_count", 0) + 1
+                if self._index_save_count % 10 == 0:
+                    self._save_index()
+                    self._save_tag_index()
+                    self._index_dirty = False
+                    self._tag_dirty = False
 
                 return True
             except Exception as e:
