@@ -36,6 +36,7 @@ class MemoryNet:
         self.memory_system = None  # MemorySystemInitializer
         self.conversation_history = None  # ConversationHistoryManager
         self.undefined_memory = None  # UndefinedMemoryAdapter
+        self.grag_memory = None  # GRAGMemoryManager (Neo4j 知识图谱)
 
         # 统计信息
         self.stats = {

@@ -153,14 +153,17 @@ class Miya:
         self._init_databases()
 
     def _init_databases(self):
-        """初始化可选数据库 - 默认禁用（SQLite 已替代）"""
-        self.logger.info("  [数据库] 外部数据库已禁用（SQLite 已替代 Redis/Milvus/Neo4j）")
+        """初始化可选数据库"""
+        # 初始化 Neo4j（如可用则注入到 MemoryNet，不可用则降级）
+        self.neo4j = self._init_neo4j()
         self.redis = None
         self.milvus = None
-        self.neo4j = None
 
         # 初始化全局记忆系统 (M-Link + MemoryNet)
         self._init_memory_system()
+
+        # 将 Neo4j 驱动的 GRAG 记忆系统注入到 MemoryNet
+        self._init_neo4j_system()
 
         # 【框架一致性】初始化 ToolNet 子网（符合 MIYA 蛛网式分布式架构）
         self.tool_subnet = None
@@ -638,27 +641,36 @@ class Miya:
             self.logger.warning(f"API 服务器启动失败: {e}")
 
     def _init_neo4j_system(self):
-        """初始化Neo4j知识图谱系统"""
+        """初始化Neo4j知识图谱系统 — 将 GRAG 记忆管理器注入 MemoryNet"""
         try:
-            # 使用已初始化的neo4j客户端（在第81行已初始化）
-            self.neo4j_client = self.neo4j
+            from core.grag_memory import DEFAULT_CONFIG, initialize_grag
 
-            # 检查是否为模拟模式
-            if self.neo4j_client and not self.neo4j_client.is_mock_mode():
-                self.logger.info("Neo4j知识图谱连接成功")
+            neo4j_uri = os.getenv("NEO4J_URI", DEFAULT_CONFIG["neo4j_uri"])
+            neo4j_user = os.getenv("NEO4J_USER", DEFAULT_CONFIG["neo4j_user"])
+            neo4j_password = os.getenv("NEO4J_PASSWORD", DEFAULT_CONFIG["neo4j_password"])
 
-                # 使用统一的记忆系统处理知识图谱
-                # Neo4j功能已整合到MiyaMemoryCore中
+            if not neo4j_password:
+                self.logger.warning("[Neo4j] 未配置密码，跳过知识图谱初始化")
                 self.grag_memory = None
-                self.logger.info("知识图谱功能已整合到统一记忆系统")
-            else:
-                self.logger.warning("Neo4j连接失败或为模拟模式，将不使用知识图谱功能")
-                self.grag_memory = None
+                return
+
+            config = {
+                "enabled": True,
+                "neo4j_uri": neo4j_uri,
+                "neo4j_user": neo4j_user,
+                "neo4j_password": neo4j_password,
+            }
+            self.grag_memory = GRAGMemoryManager.get_instance(config)
+            self.logger.info(f"[Neo4j] GRAG 知识图谱已连接: {neo4j_uri}")
+
+            # 注入到 MemoryNet，使决策中枢能访问
+            if self.memory_net:
+                self.memory_net.grag_memory = self.grag_memory
+                self.logger.info("[Neo4j] GRAG 已注入 MemoryNet")
 
         except Exception as e:
-            self.logger.warning(f"Neo4j知识图谱初始化失败: {e}，将不使用知识图谱功能")
+            self.logger.warning(f"[Neo4j] 知识图谱初始化失败: {e}")
             self.grag_memory = None
-            self.neo4j_client = None
 
     async def process_input_async(self, user_input: str, user_id: str = "default") -> str:
         """

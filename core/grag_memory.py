@@ -29,7 +29,7 @@ DEFAULT_CONFIG = {
     "auto_extract": True,
     "context_length": 20,
     "similarity_threshold": 0.7,
-    "neo4j_uri": "bolt://localhost:7687",
+    "neo4j_uri": "bolt://localhost:17687",
     "neo4j_user": "neo4j",
     "neo4j_password": "",
     "embedding_model": "text-embedding-3-small",
