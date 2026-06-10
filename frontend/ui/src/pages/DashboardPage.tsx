@@ -69,7 +69,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
             </p>
             <div className="flex items-center gap-3 text-[10px] text-text-dim mt-2">
               <span>运行 <span className="text-aether">{fmt(uptime)}</span></span>
-              <span>版本 <span className="text-resonance-bright">v7.0</span></span>
+              <span>版本 <span className="text-resonance-bright">v8.0</span></span>
               <span>形态 <span className="text-starlight">{personality?.current_form || '绯雪态'}</span></span>
             </div>
           </div>

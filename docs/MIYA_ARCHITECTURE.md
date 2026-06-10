@@ -1,6 +1,6 @@
 # 弥娅系统架构
 
-弥娅 v7.0 采用**分层架构 + 蛛网子网**设计，各层之间通过 M-Link 消息总线通信。
+弥娅 v8.0 采用**分层架构 + 蛛网子网**设计，各层之间通过 M-Link 消息总线通信。
 
 ---
 
@@ -143,7 +143,7 @@ DecisionHub (3860 行)
 | `model_pool_manager.py` | 多模型池管理 |
 | `prompt_manager.py` | 提示词管理 |
 | `miya_core.py` | MIYACore 统一核心 |
-| `miya_daemon.py` | MiyaDaemon 守护进程 (v7.0) |
+| `miya_daemon.py` | MiyaDaemon 守护进程 (v8.0) |
 | `miya_system.py` | MIYASystem 管理器 |
 | `autonomy_with_personality.py` | 自主人格引擎 |
 | `event_system.py` | 事件总线 |
@@ -247,8 +247,8 @@ from config  import Settings
 
 | 组件 | 版本 | 位置 |
 |------|------|------|
-| 对外版本 | v7.0 | README / start.bat |
+| 对外版本 | v8.0 | README / start.bat |
 | MIYACore | v6.0.0 | `core/miya_core.py` |
-| MiyaDaemon | v7.0.0 | `core/miya_daemon.py` |
+| MiyaDaemon | v8.0.0 | `core/miya_daemon.py` |
 | 记忆核心 | V3.1 | `memory/core.py` |
 | Web 服务 | v2.0.0 | `webnet/web_main.py` |

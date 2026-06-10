@@ -30,6 +30,7 @@ from .unified_platform import (
     PlatformRegistry,
     get_registry,
 )
+from .version import VERSION
 
 logger = logging.getLogger("Miya.Daemon")
 
@@ -49,7 +50,7 @@ class MiyaDaemon:
          └── Management API (可选)
     """
 
-    VERSION = "8.0.0"
+    VERSION = VERSION
 
     def __init__(self, auto_register: bool = True):
         self._started = False
@@ -147,6 +148,8 @@ class MiyaDaemon:
         # 2. 启动平台 (内含 miya_core 注入)
         await self._init_platforms(platform_ids)
 
+        await self._scheduler_lifecycle("start")
+
         # 3. 注册信号处理
         self._setup_signal_handlers()
 
@@ -214,6 +217,8 @@ class MiyaDaemon:
         if self._miya:
             await self._save_state()
 
+        await self._scheduler_lifecycle("stop")
+
         # 停止所有平台
         await self._registry.shutdown()
 
@@ -265,6 +270,21 @@ class MiyaDaemon:
                     await conv_hist.close()
         except Exception as e:
             logger.warning(f"Miya 核心关闭异常: {e}")
+
+    async def _scheduler_lifecycle(self, action: str) -> None:
+        """启动或停止定时任务调度器（统一生命周期入口）"""
+        try:
+            from hub.scheduler import get_global_scheduler
+
+            scheduler = get_global_scheduler()
+            if action == "start":
+                await scheduler.start()
+                logger.info("✅ 定时任务调度器已启动")
+            else:
+                await scheduler.stop()
+                logger.info("定时任务调度器已停止")
+        except Exception as e:
+            logger.warning(f"⚠️ 定时任务调度器{action}失败: {e}")
 
     # ==================== 信号处理 ====================
 

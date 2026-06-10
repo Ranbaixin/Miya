@@ -78,7 +78,7 @@ const SystemOverviewPage: React.FC<Props> = ({ metrics }) => {
       >
         <div className="flex items-center gap-4">
           <span className="text-sm font-display text-aether">◆ MIYA Ops Center</span>
-          <span className="text-[10px] text-text-dim">v7.0</span>
+          <span className="text-[10px] text-text-dim">v8.0</span>
         </div>
         <div className="flex items-center gap-4 text-[10px]">
           <span className="flex items-center gap-1.5">

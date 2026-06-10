@@ -24,7 +24,6 @@ import {
   setWindowPosition,
 } from './modules/window'
 import {
-  createLive2dWindow,
   getLive2dWindow,
   toggleLive2dVisibility,
   setLive2dAlwaysOnTop,
@@ -219,7 +218,7 @@ app.whenReady().then(async () => {
   const win = createWindow()
 
   // Create standalone Live2D window (透明无边框独立窗口)
-  createLive2dWindow()
+  // createLive2dWindow()
 
   // 透明无边框窗口在 Windows 上 unmaximize 后系统不可靠地还原尺寸，手动保存/还原
   let preMaximizeBounds: Electron.Rectangle | null = null
@@ -553,3 +552,4 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
+

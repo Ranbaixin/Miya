@@ -16,7 +16,7 @@ interface TerminalLine {
 
 const TerminalPage: React.FC = () => {
   const [lines, setLines] = useState<TerminalLine[]>([
-    { id: 0, type: 'system', content: '◆ MIYA 弥娅 · 运维终端 v7.0', timestamp: new Date().toLocaleTimeString() },
+    { id: 0, type: 'system', content: '◆ MIYA 弥娅 · 运维终端 v8.0', timestamp: new Date().toLocaleTimeString() },
     { id: 1, type: 'system', content: '  输入命令或自然语言与弥娅核心交互', timestamp: '' },
     { id: 2, type: 'system', content: '  示例: "查看系统状态" · "列出所有平台" · "查询记忆统计"', timestamp: '' },
   ]);

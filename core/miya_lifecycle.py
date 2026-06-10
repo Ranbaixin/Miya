@@ -8,13 +8,15 @@ import logging
 from asyncio import Queue
 from typing import Any, Dict, Optional
 
+from core.version import VERSION
+
 logger = logging.getLogger("Miya.CoreLifecycle")
 
 
 class MiyaCoreLifecycle:
     """弥娅核心生命周期管理 - 融合 AstrBot 设计模式"""
 
-    VERSION = "8.0.0"
+    VERSION = VERSION
 
     def __init__(self):
         self._initialized = False

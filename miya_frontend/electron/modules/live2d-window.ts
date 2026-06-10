@@ -159,3 +159,5 @@ export function broadcastLive2dCommand(channel: string, ...args: unknown[]): voi
     // Window destroyed between check and send — ignore
   }
 }
+
+

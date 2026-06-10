@@ -8,6 +8,7 @@ import asyncio
 from typing import Optional
 
 from core.log_broker import LogBroker, get_logger
+from core.version import VERSION
 
 logger = get_logger("Miya.InitialLoader")
 
@@ -15,7 +16,7 @@ logger = get_logger("Miya.InitialLoader")
 class MiyaInitialLoader:
     """弥娅初始化加载器 - 初始化并启动所有核心组件和 Dashboard"""
 
-    VERSION = "8.0.0"
+    VERSION = VERSION
 
     def __init__(self, log_broker: LogBroker):
         self.log_broker = log_broker

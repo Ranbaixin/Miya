@@ -1,41 +1,41 @@
 # ============================================================
-# 弥娅 MIYA - QQ 机器人统一配置
-# 版本: 3.0.0
-# 说明: 整合所有 QQ 相关配置到一个文件
+# 寮ュ▍ MIYA - QQ 鏈哄櫒浜虹粺涓€閰嶇疆
+# 鐗堟湰: 3.0.0
+# 璇存槑: 鏁村悎鎵€鏈?QQ 鐩稿叧閰嶇疆鍒颁竴涓枃浠?
 # ============================================================
 
 qq:
-  # ===== 基础连接配置 =====
+  # ===== 鍩虹杩炴帴閰嶇疆 =====
   connection:
-    ws_url: "ws://localhost:6700"        # OneBot WebSocket 地址
-    token: ""                             # 访问令牌（可选）
-    bot_qq: 3681817929                              # 机器人 QQ 号
-    superadmin_qq: 1523878699                      # 超级管理员 QQ 号
-    reconnect_interval: 5.0               # 重连间隔（秒）
-    ping_interval: 20                     # 心跳间隔（秒）
-    ping_timeout: 30                      # 心跳超时（秒）
-    max_message_size: 104857600           # 最大消息大小（100MB）
+    ws_url: "ws://localhost:3001"        # OneBot WebSocket 鍦板潃
+    token: ""                             # 璁块棶浠ょ墝锛堝彲閫夛級
+    bot_qq: 1153409562                              # 鏈哄櫒浜?QQ 鍙?
+    superadmin_qq: 869135903                      # 瓒呯骇绠＄悊鍛?QQ 鍙?
+    reconnect_interval: 5.0               # 閲嶈繛闂撮殧锛堢锛?
+    ping_interval: 20                     # 蹇冭烦闂撮殧锛堢锛?
+    ping_timeout: 30                      # 蹇冭烦瓒呮椂锛堢锛?
+    max_message_size: 104857600           # 鏈€澶ф秷鎭ぇ灏忥紙100MB锛?
 
-  # ===== 访问控制 =====
+  # ===== 璁块棶鎺у埗 =====
   access_control:
-    enabled: false                        # 是否启用访问控制
-    group_whitelist: []                   # 群白名单（空表示允许所有群）
-    group_blacklist: []                   # 群黑名单
-    user_whitelist: []                    # 用户白名单（空表示允许所有用户）
-    user_blacklist: []                    # 用户黑名单
+    enabled: false                        # 鏄惁鍚敤璁块棶鎺у埗
+    group_whitelist: []                   # 缇ょ櫧鍚嶅崟锛堢┖琛ㄧず鍏佽鎵€鏈夌兢锛?
+    group_blacklist: []                   # 缇ら粦鍚嶅崟
+    user_whitelist: []                    # 鐢ㄦ埛鐧藉悕鍗曪紙绌鸿〃绀哄厑璁告墍鏈夌敤鎴凤級
+    user_blacklist: []                    # 鐢ㄦ埛榛戝悕鍗?
 
-  # ===== 多媒体处理 =====
+  # ===== 澶氬獟浣撳鐞?=====
   multimedia:
-    # 图片处理
+    # 鍥剧墖澶勭悊
     image:
       max_size: 10485760                  # 10MB
       allowed_formats: [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"]
       auto_resize: true
       max_width: 1920
       max_height: 1080
-      quality: 85                         # JPEG 质量（0-100）
+      quality: 85                         # JPEG 璐ㄩ噺锛?-100锛?
 
-    # 文件处理
+    # 鏂囦欢澶勭悊
     file:
       max_size: 52428800                  # 50MB
       allowed_types:
@@ -67,143 +67,143 @@ qq:
         - sh
         - log
 
-    # 语音处理
+    # 璇煶澶勭悊
     voice:
-      enabled: false                      # 是否启用语音消息处理
-      stt_enabled: false                  # 语音转文字（需要额外 API）
+      enabled: false                      # 鏄惁鍚敤璇煶娑堟伅澶勭悊
+      stt_enabled: false                  # 璇煶杞枃瀛楋紙闇€瑕侀澶?API锛?
 
-    # 上传设置
+    # 涓婁紶璁剧疆
     upload:
-      temp_dir: "./temp/uploads"          # 临时上传目录
-      cleanup_hours: 24                   # 清理时间（小时）
-      keep_original: false                # 是否保留原始文件
+      temp_dir: "./temp/uploads"          # 涓存椂涓婁紶鐩綍
+      cleanup_hours: 24                   # 娓呯悊鏃堕棿锛堝皬鏃讹級
+      keep_original: false                # 鏄惁淇濈暀鍘熷鏂囦欢
 
-  # ===== 图片识别配置 =====
+  # ===== 鍥剧墖璇嗗埆閰嶇疆 =====
   image_recognition:
-    # OCR 设置（已禁用，仅使用视觉模型）
+    # OCR 璁剧疆锛堝凡绂佺敤锛屼粎浣跨敤瑙嗚妯″瀷锛?
     ocr:
       enabled: false
       engine: "none"
       languages: []
       confidence_threshold: 0.0
 
-    # AI 图片分析（使用 Kimi K2.6 原生多模态模型）
+    # AI 鍥剧墖鍒嗘瀽锛堜娇鐢?Kimi K2.6 鍘熺敓澶氭ā鎬佹ā鍨嬶級
     ai_analysis:
       enabled: true
       model: "zhipu_glm_46v_flash"
-      timeout: 30                         # 最大分析时间（秒）
-      cost_threshold: 0.0                 # 成本阈值（免费模型）
+      timeout: 30                         # 鏈€澶у垎鏋愭椂闂达紙绉掞級
+      cost_threshold: 0.0                 # 鎴愭湰闃堝€硷紙鍏嶈垂妯″瀷锛?
       provider: ""                        # baidu, tencent, openai
       api_key: ""
       api_secret: ""
 
-    # 安全检测
+    # 瀹夊叏妫€娴?
     safety:
       enabled: true
       nsfw_detection: true
-      max_skin_ratio: 0.3                 # 最大肤色比例
+      max_skin_ratio: 0.3                 # 鏈€澶ц偆鑹叉瘮渚?
 
-    # 缓存设置
+    # 缂撳瓨璁剧疆
     cache:
       enabled: true
       dir: "./temp/image_cache"
       max_size: 1073741824                # 1GB
       expire_hours: 24
 
-  # ===== 消息解析配置 =====
+  # ===== 娑堟伅瑙ｆ瀽閰嶇疆 =====
   message_parsing:
-    enable_reply_parsing: true            # 是否启用引用消息解析
-    enable_file_parsing: true             # 是否启用文件消息解析
-    enable_media_detection: true          # 是否启用多媒体检测
-    show_placeholder_in_text: true        # 是否在文本中显示引用/文件占位符
+    enable_reply_parsing: true            # 鏄惁鍚敤寮曠敤娑堟伅瑙ｆ瀽
+    enable_file_parsing: true             # 鏄惁鍚敤鏂囦欢娑堟伅瑙ｆ瀽
+    enable_media_detection: true          # 鏄惁鍚敤澶氬獟浣撴娴?
+    show_placeholder_in_text: true        # 鏄惁鍦ㄦ枃鏈腑鏄剧ず寮曠敤/鏂囦欢鍗犱綅绗?
 
-  # ===== 合并转发配置 =====
+  # ===== 鍚堝苟杞彂閰嶇疆 =====
   forward:
-    enable_parsing: true                  # 是否启用合并转发解析
-    max_expand_depth: 3                   # 最大展开层数
+    enable_parsing: true                  # 鏄惁鍚敤鍚堝苟杞彂瑙ｆ瀽
+    max_expand_depth: 3                   # 鏈€澶у睍寮€灞傛暟
 
-  # ===== 功能开关 =====
+  # ===== 鍔熻兘寮€鍏?=====
   features:
-    poke_reply: true                      # 戳一戳回复
-    emoji_request: true                   # 表情包请求
-    welcome_new_member: false             # 欢迎新成员
-    scheduled_tasks: true                 # 定时任务
-    passive_chat: true                    # 被动聊天（关键词触发）
-    active_chat: true                     # 主动聊天
+    poke_reply: true                      # 鎴充竴鎴冲洖澶?
+    emoji_request: true                   # 琛ㄦ儏鍖呰姹?
+    welcome_new_member: false             # 娆㈣繋鏂版垚鍛?
+    scheduled_tasks: true                 # 瀹氭椂浠诲姟
+    passive_chat: true                    # 琚姩鑱婂ぉ锛堝叧閿瘝瑙﹀彂锛?
+    active_chat: true                     # 涓诲姩鑱婂ぉ
 
-  # ===== 命令配置 =====
+  # ===== 鍛戒护閰嶇疆 =====
   commands:
-    prefix: "/"                           # 命令前缀
-    # 注意：命令关键词已移至 text_config.json 的 command_keywords
-    # 注意：错误消息已移至 text_config.json 的 error_messages
+    prefix: "/"                           # 鍛戒护鍓嶇紑
+    # 娉ㄦ剰锛氬懡浠ゅ叧閿瘝宸茬Щ鑷?text_config.json 鐨?command_keywords
+    # 娉ㄦ剰锛氶敊璇秷鎭凡绉昏嚦 text_config.json 鐨?error_messages
 
-  # ===== 任务调度 =====
+  # ===== 浠诲姟璋冨害 =====
   task_scheduler:
     enabled: true
     database:
-      path: "./data/tasks.db"             # SQLite 数据库路径
+      path: "./data/tasks.db"             # SQLite 鏁版嵁搴撹矾寰?
       backup_dir: "./data/backups"
-      backup_interval: 86400              # 备份间隔（秒）
+      backup_interval: 86400              # 澶囦唤闂撮殧锛堢锛?
     execution:
-      max_concurrent: 5                   # 最大并发任务数
-      timeout: 300                        # 任务超时时间（秒）
-      retry_delay_base: 60                # 重试基础延迟（秒）
-      max_retry_delay: 3600               # 最大重试延迟（秒）
+      max_concurrent: 5                   # 鏈€澶у苟鍙戜换鍔℃暟
+      timeout: 300                        # 浠诲姟瓒呮椂鏃堕棿锛堢锛?
+      retry_delay_base: 60                # 閲嶈瘯鍩虹寤惰繜锛堢锛?
+      max_retry_delay: 3600               # 鏈€澶ч噸璇曞欢杩燂紙绉掞級
     monitoring:
       log_level: "INFO"
-      keep_history_days: 30               # 保留历史天数
-      alert_on_failure: true              # 失败时告警
+      keep_history_days: 30               # 淇濈暀鍘嗗彶澶╂暟
+      alert_on_failure: true              # 澶辫触鏃跺憡璀?
     statistics:
       collect_stats: true
-      stats_interval: 3600                # 统计收集间隔（秒）
+      stats_interval: 3600                # 缁熻鏀堕泦闂撮殧锛堢锛?
 
-  # ===== 消息汇总窗口期配置 =====
-  # 用于群聊中消息密集时，收集一段时间内的消息再统一回复
+  # ===== 娑堟伅姹囨€荤獥鍙ｆ湡閰嶇疆 =====
+  # 鐢ㄤ簬缇よ亰涓秷鎭瘑闆嗘椂锛屾敹闆嗕竴娈垫椂闂村唴鐨勬秷鎭啀缁熶竴鍥炲
   message_batching:
-    enabled: true                         # 是否启用消息汇总窗口
-    window_seconds: 5                     # 窗口期时长（秒），收到新消息会重置计时
-    max_window_seconds: 10                # 最大窗口期（防止无限等待）
-    max_messages: 15                      # 窗口期内最大消息数量，超过则立即处理
-    only_group: false                     # 是否仅对群聊生效（false时私聊也参与消息汇总）
-    cooldown_seconds: 3                   # 两条消息间隔小于此时长才触发窗口期
-    status_message: ""                    # 窗口期内的状态提示（留空则不发送）
+    enabled: true                         # 鏄惁鍚敤娑堟伅姹囨€荤獥鍙?
+    window_seconds: 5                     # 绐楀彛鏈熸椂闀匡紙绉掞級锛屾敹鍒版柊娑堟伅浼氶噸缃鏃?
+    max_window_seconds: 10                # 鏈€澶х獥鍙ｆ湡锛堥槻姝㈡棤闄愮瓑寰咃級
+    max_messages: 15                      # 绐楀彛鏈熷唴鏈€澶ф秷鎭暟閲忥紝瓒呰繃鍒欑珛鍗冲鐞?
+    only_group: false                     # 鏄惁浠呭缇よ亰鐢熸晥锛坒alse鏃剁鑱婁篃鍙備笌娑堟伅姹囨€伙級
+    cooldown_seconds: 3                   # 涓ゆ潯娑堟伅闂撮殧灏忎簬姝ゆ椂闀挎墠瑙﹀彂绐楀彛鏈?
+    status_message: ""                    # 绐楀彛鏈熷唴鐨勭姸鎬佹彁绀猴紙鐣欑┖鍒欎笉鍙戦€侊級
 
-  # ===== 消息队列配置 =====
-  # 6车道优先级队列：superadmin/群超级管理员/私聊/群@/群普通/后台
+  # ===== 娑堟伅闃熷垪閰嶇疆 =====
+  # 6杞﹂亾浼樺厛绾ч槦鍒楋細superadmin/缇よ秴绾х鐞嗗憳/绉佽亰/缇/缇ゆ櫘閫?鍚庡彴
   message_queue:
-    enabled: true                         # 是否启用消息队列
-    default_interval: 1.0                # 默认发车间隔（秒），越小越快响应
-    # 各模型独立发车间隔（可选）
+    enabled: true                         # 鏄惁鍚敤娑堟伅闃熷垪
+    default_interval: 1.0                # 榛樿鍙戣溅闂撮殧锛堢锛夛紝瓒婂皬瓒婂揩鍝嶅簲
+    # 鍚勬ā鍨嬬嫭绔嬪彂杞﹂棿闅旓紙鍙€夛級
     model_intervals:
       default: 1.0
-      # deepseek_v3: 0.5                  # deepseek模型可以设置更快
-      # glm_4: 1.0                        # glm模型按默认
+      # deepseek_v3: 0.5                  # deepseek妯″瀷鍙互璁剧疆鏇村揩
+      # glm_4: 1.0                        # glm妯″瀷鎸夐粯璁?
 
-  # ===== 性能优化 =====
+  # ===== 鎬ц兘浼樺寲 =====
   performance:
     cache:
-      message_history: 100                # 消息历史缓存条数
-      user_info: 1000                     # 用户信息缓存数
-      group_info: 100                     # 群信息缓存数
+      message_history: 100                # 娑堟伅鍘嗗彶缂撳瓨鏉℃暟
+      user_info: 1000                     # 鐢ㄦ埛淇℃伅缂撳瓨鏁?
+      group_info: 100                     # 缇や俊鎭紦瀛樻暟
     thread_pool:
-      max_workers: 10                     # 最大工作线程数
-      thread_timeout: 30                  # 线程超时时间（秒）
+      max_workers: 10                     # 鏈€澶у伐浣滅嚎绋嬫暟
+      thread_timeout: 30                  # 绾跨▼瓒呮椂鏃堕棿锛堢锛?
     memory:
-      max_image_cache: 1073741824         # 图片缓存最大内存（1GB）
-      cleanup_interval: 3600              # 内存清理间隔（秒）
+      max_image_cache: 1073741824         # 鍥剧墖缂撳瓨鏈€澶у唴瀛橈紙1GB锛?
+      cleanup_interval: 3600              # 鍐呭瓨娓呯悊闂撮殧锛堢锛?
 
-  # ===== 日志配置 =====
+  # ===== 鏃ュ織閰嶇疆 =====
   logging:
     level: "INFO"
     file: "./logs/qq.log"
     max_size: 10485760                    # 10MB
     backup_count: 5
     format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    log_message_detail: false             # 是否记录消息详情
-    debug: false                          # 是否记录调试信息
-    retention_days: 7                     # 日志保留天数
+    log_message_detail: false             # 鏄惁璁板綍娑堟伅璇︽儏
+    debug: false                          # 鏄惁璁板綍璋冭瘯淇℃伅
+    retention_days: 7                     # 鏃ュ織淇濈暀澶╂暟
 
-    # 组件日志级别
+    # 缁勪欢鏃ュ織绾у埆
     components:
       client: "INFO"
       message_handler: "INFO"
@@ -212,17 +212,17 @@ qq:
       active_chat: "INFO"
       task_scheduler: "INFO"
 
-  # ===== 调试设置 =====
+  # ===== 璋冭瘯璁剧疆 =====
   debug:
     enabled: false
-    log_raw_messages: false               # 记录原始消息
-    log_api_calls: false                  # 记录 API 调用
-    log_file_operations: false            # 记录文件操作
+    log_raw_messages: false               # 璁板綍鍘熷娑堟伅
+    log_api_calls: false                  # 璁板綍 API 璋冪敤
+    log_file_operations: false            # 璁板綍鏂囦欢鎿嶄綔
     test_mode: false
-    mock_apis: false                      # 模拟 API 调用
-    simulate_errors: false                # 模拟错误
+    mock_apis: false                      # 妯℃嫙 API 璋冪敤
+    simulate_errors: false                # 妯℃嫙閿欒
 
-# ===== 工具配置 =====
+# ===== 宸ュ叿閰嶇疆 =====
 tools:
   qq_image:
     enabled: true
@@ -240,13 +240,13 @@ tools:
 
   qq_emoji:
     enabled: true
-    standard_emojis: true                 # 启用标准表情
-    custom_emojis: true                   # 启用自定义表情
-    emoji_dir: "./data/emoji"             # 表情包目录
+    standard_emojis: true                 # 鍚敤鏍囧噯琛ㄦ儏
+    custom_emojis: true                   # 鍚敤鑷畾涔夎〃鎯?
+    emoji_dir: "./data/emoji"             # 琛ㄦ儏鍖呯洰褰?
 
   qq_file_reader:
     enabled: true
-    max_preview_length: 2000              # 最大预览长度
+    max_preview_length: 2000              # 鏈€澶ч瑙堥暱搴?
     auto_detect_encoding: true
     supported_formats:
       - ".txt"
@@ -263,14 +263,14 @@ tools:
       - ".ts"
       - ".java"
     ocr:
-      enabled: false                      # 禁用 OCR
-      timeout: 0                          # OCR 超时时间（秒）
-      languages: []                       # 不支持任何语言
+      enabled: false                      # 绂佺敤 OCR
+      timeout: 0                          # OCR 瓒呮椂鏃堕棿锛堢锛?
+      languages: []                       # 涓嶆敮鎸佷换浣曡瑷€
 
   qq_image_analyzer:
     enabled: true
-    ocr_engine: "none"                    # 不使用 OCR 引擎
-    vision_engine: "zhipu_glm_46v_flash"  # 使用智谱视觉模型
+    ocr_engine: "none"                    # 涓嶄娇鐢?OCR 寮曟搸
+    vision_engine: "zhipu_glm_46v_flash"  # 浣跨敤鏅鸿氨瑙嗚妯″瀷
     detail_level: "detailed"              # detailed, basic
     nsfw_check: false
     ai_description:
@@ -282,67 +282,67 @@ tools:
     enabled: true
     allow_setup: true
     allow_trigger_now: true
-    max_scheduled_tasks: 100              # 最大预定任务数
+    max_scheduled_tasks: 100              # 鏈€澶ч瀹氫换鍔℃暟
     schedule_formats:
-      - "HH:MM"                           # 每天固定时间
-      - "YYYY-MM-DD HH:MM"               # 具体日期时间
-      - "daily HH:MM"                     # 每天
-      - "weekly DAY HH:MM"               # 每周
-      - "in N minutes/hours/days"        # 相对时间
+      - "HH:MM"                           # 姣忓ぉ鍥哄畾鏃堕棿
+      - "YYYY-MM-DD HH:MM"               # 鍏蜂綋鏃ユ湡鏃堕棿
+      - "daily HH:MM"                     # 姣忓ぉ
+      - "weekly DAY HH:MM"               # 姣忓懆
+      - "in N minutes/hours/days"        # 鐩稿鏃堕棿
 
   task_scheduler_enhanced:
     enabled: true
     db_path: "./data/tasks.db"
-    auto_start: true                      # 自动启动
-    auto_recover: true                    # 自动恢复任务
-    max_retries: 3                        # 最大重试次数
-    retry_backoff: "exponential"          # 重试退避策略
+    auto_start: true                      # 鑷姩鍚姩
+    auto_recover: true                    # 鑷姩鎭㈠浠诲姟
+    max_retries: 3                        # 鏈€澶ч噸璇曟鏁?
+    retry_backoff: "exponential"          # 閲嶈瘯閫€閬跨瓥鐣?
     alerts:
       enabled: true
-      failure_threshold: 5                # 失败阈值
-      alert_interval: 3600                # 告警间隔（秒）
+      failure_threshold: 5                # 澶辫触闃堝€?
+      alert_interval: 3600                # 鍛婅闂撮殧锛堢锛?
 
-# ===== 插件配置 =====
+# ===== 鎻掍欢閰嶇疆 =====
 plugins:
   ocr:
     paddleocr:
-      enabled: false                      # 禁用 PaddleOCR
+      enabled: false                      # 绂佺敤 PaddleOCR
       use_gpu: false
-      lang: "none"                        # 不使用任何语言
+      lang: "none"                        # 涓嶄娇鐢ㄤ换浣曡瑷€
     tesseract:
-      enabled: false                      # 禁用 Tesseract
+      enabled: false                      # 绂佺敤 Tesseract
       data_path: ""
       languages: []
 
   image_processing:
     pillow:
       enabled: true
-      max_image_pixels: 89478485          # 最大像素数
+      max_image_pixels: 89478485          # 鏈€澶у儚绱犳暟
     opencv:
-      enabled: false                      # 需要额外安装
+      enabled: false                      # 闇€瑕侀澶栧畨瑁?
 
   file_processing:
     chardet:
-      enabled: true                       # 编码检测
+      enabled: true                       # 缂栫爜妫€娴?
     pypdf2:
-      enabled: true                       # PDF 处理
+      enabled: true                       # PDF 澶勭悊
     python_docx:
-      enabled: true                       # Word 文档处理
+      enabled: true                       # Word 鏂囨。澶勭悊
 
-# ===== 兼容性配置 =====
+# ===== 鍏煎鎬ч厤缃?=====
 compatibility:
   onebot:
-    implementations:                      # 支持的 OneBot 实现
+    implementations:                      # 鏀寔鐨?OneBot 瀹炵幇
       - "go-cqhttp"
       - "mirai"
       - "nonebot"
       - "custom"
-    check_apis: true                      # API 兼容性检查
-    fallback_methods: true                # 启用备选方法
+    check_apis: true                      # API 鍏煎鎬ф鏌?
+    fallback_methods: true                # 鍚敤澶囬€夋柟娉?
     message_formats:
-      support_array: true                 # 支持数组格式
-      support_string: true                # 支持字符串格式
-      auto_detect: true                   # 自动检测
+      support_array: true                 # 鏀寔鏁扮粍鏍煎紡
+      support_string: true                # 鏀寔瀛楃涓叉牸寮?
+      auto_detect: true                   # 鑷姩妫€娴?
   legacy:
-    old_qq_py: false                      # 兼容旧的 qq.py
-    import_aliases: true                  # 导入别名
+    old_qq_py: false                      # 鍏煎鏃х殑 qq.py
+    import_aliases: true                  # 瀵煎叆鍒悕

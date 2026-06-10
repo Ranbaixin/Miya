@@ -39,7 +39,7 @@ const Header: React.FC<HeaderProps> = ({
         </div>
         <div className="flex flex-col leading-tight">
           <span className="text-xs font-bold text-text-primary tracking-wider">MIYA · 弥娅</span>
-          <span className="text-[9px] text-text-dim">深蓝星渊 v7.0</span>
+          <span className="text-[9px] text-text-dim">深蓝星渊 v8.0</span>
         </div>
       </div>
 

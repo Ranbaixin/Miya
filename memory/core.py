@@ -930,9 +930,9 @@ class MiyaMemoryCore:
             logger.debug(f"[MiyaMemoryCore] SQLite 后端初始化失败（不影响运行）: {e}")
 
         # 初始化真实 Embedding 客户端（绕过配置，直接使用模型池）
-        await self._init_embedding_client_from_model_config()
+        await self._init_embedding_client_from_model_config(lazy_load)
 
-    async def _init_embedding_client_from_model_config(self) -> None:
+    async def _init_embedding_client_from_model_config(self, lazy_load: bool = True) -> None:
         """从 multi_model_config.json 初始化 Embedding 客户端
 
         提取为独立方法，消除 primary/fallback 路径的重复代码。

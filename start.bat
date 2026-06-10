@@ -4,11 +4,13 @@ title MIYA v8.0
 
 :: ============================================================
 ::  MIYA v8.0 - Launch Center
-::  
+::
 ::  start.bat           Show menu
 ::  start.bat 1|2|3|4   Direct launch
 ::  start.bat a         Launch all
 :: ============================================================
+
+set "DAEMON_CMD=set PYTHONIOENCODING=utf-8 && chcp 65001 >nul && python -X utf8 run/daemon.py --api-port 9800"
 
 :: CLI direct
 if /i "%1"=="1" goto :terminal
@@ -94,7 +96,7 @@ if errorlevel 1 (
 echo Starting MIYA Daemon (API on port 9800)...
 echo Press Ctrl+C to stop.
 echo.
-python run/daemon.py --api-port 9800
+%DAEMON_CMD%
 echo.
 echo [OK] Daemon stopped
 goto :restart
@@ -177,7 +179,7 @@ echo.
 
 :: Daemon (background)
 echo [1/4] Starting Daemon (background)...
-start "MIYA Daemon" /B cmd /c "python run/daemon.py --api-port 9800"
+start "MIYA Daemon" /B cmd /c "%DAEMON_CMD%"
 timeout /t 3 >nul
 echo [OK] Daemon started
 

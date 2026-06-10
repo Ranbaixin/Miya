@@ -95,6 +95,7 @@ from config import Settings
 from core import Arbitrator, Entropy, Ethics, Identity, Personality, PromptManager
 from core.autonomy_with_personality import get_autonomy_with_personality
 from core.constants import Encoding
+from core.version import VERSION
 from core.system_detector import get_system_detector
 from hub import Decision, DecisionHub, Emotion, MemoryEmotion, MemoryEngine, Scheduler
 from hub.platform_adapters import get_adapter
@@ -836,7 +837,7 @@ def main():
         # 显示系统状态
         print("=" * 50)
         print("【弥娅系统】")
-        print("  版本: v7.0.0")
+        print(f"  版本: v{VERSION}")
         print("  已启动")
         print("=" * 50)
 

@@ -7,12 +7,12 @@
     "佳": {
       "name": "佳",
       "ids": {
-        "qq": ["1523878699"],
-        "qqofficial": ["1523878699", "7C22343989F081B759F6DADC99148E17"],
-        "aiocqhttp": ["1523878699"],
-        "terminal": ["1523878699"],
-        "desktop": ["1523878699"],
-        "webchat": ["1523878699"],
+        "qq": ["869135903"],
+        "qqofficial": ["869135903", "7C22343989F081B759F6DADC99148E17"],
+        "aiocqhttp": ["869135903"],
+        "terminal": ["869135903"],
+        "desktop": ["869135903"],
+        "webchat": ["869135903"],
         "telegram": [],
         "discord": [],
         "lark": ["452c3ccc"]
@@ -149,7 +149,7 @@
       "created_at": "2026-03-11T00:00:00"
     },
     {
-      "user_id": "1523878699",
+      "user_id": "869135903",
       "username": "佳",
       "platform": "qq",
       "permission_groups": ["Admin", "Developer"],
@@ -157,7 +157,7 @@
       "created_at": "2026-03-15T10:00:00"
     },
     {
-      "user_id": "qq_1523878699",
+      "user_id": "qq_869135903",
       "username": "佳",
       "platform": "qq",
       "permission_groups": ["Admin", "Developer"],
@@ -165,7 +165,7 @@
       "created_at": "2026-03-15T10:00:00"
     },
     {
-      "user_id": "terminal_1523878699",
+      "user_id": "terminal_869135903",
       "username": "佳",
       "platform": "terminal",
       "permission_groups": ["Admin", "Developer"],
@@ -176,7 +176,7 @@
       "user_id": "desktop_user",
       "username": "佳",
       "platform": "desktop",
-      "linked_to": "1523878699",
+      "linked_to": "869135903",
       "permission_groups": ["Admin", "Developer"],
       "description": "桌面端用户 - 关联到QQ的佳",
       "created_at": "2026-04-23T14:00:00"
@@ -256,26 +256,26 @@
   "special_rules": {
     "admin_whitelist": [
       "terminal_default",
-      "1523878699",
-      "qq_1523878699",
-      "terminal_1523878699",
-      "qqofficial_1523878699",
-      "aiocqhttp_1523878699",
+      "869135903",
+      "qq_869135903",
+      "terminal_869135903",
+      "qqofficial_869135903",
+      "aiocqhttp_869135903",
       "lark_452c3ccc",
       "desktop_user",
-      "webchat_1523878699"
+      "webchat_869135903"
     ],
     "super_admin_whitelist": [
       "terminal_default",
-      "1523878699",
-      "qq_1523878699",
-      "terminal_1523878699",
-      "qqofficial_1523878699",
+      "869135903",
+      "qq_869135903",
+      "terminal_869135903",
+      "qqofficial_869135903",
       "qqofficial_7C22343989F081B759F6DADC99148E17",
-      "aiocqhttp_1523878699",
+      "aiocqhttp_869135903",
       "lark_452c3ccc",
       "desktop_user",
-      "webchat_1523878699"
+      "webchat_869135903"
     ]
   },
 
@@ -309,9 +309,9 @@
     "whitelist_mode": false,
     "user_whitelist": [
       "terminal_default",
-      "1523878699",
-      "qq_1523878699",
-      "terminal_1523878699"
+      "869135903",
+      "qq_869135903",
+      "terminal_869135903"
     ]
   }
 }

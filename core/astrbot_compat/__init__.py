@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 # 版本信息
-VERSION = "8.0.0"
+from core.version import VERSION  # noqa: F401 (re-export for compatibility)
 
 # 日志系统 - 使用 loguru 作为后端
 try:

@@ -429,7 +429,7 @@ proactive_chat:
       terminal: 0.9
       webchat: 0.8
       aiocqhttp_private: 1.0
-      aiocqhttp_group: 0.35
+      aiocqhttp_group: 0.8
       qqofficial_private: 0.9
       qqofficial_group: 0.3
       lark: 0.25
@@ -440,7 +440,7 @@ proactive_chat:
       inactive_threshold: 300     # 5分钟无消息视为不活跃
       active_message_window: 120   # 2分钟内的消息数判定活跃度
       inactive_multiplier: 0.8     # 不活跃群提权
-      active_multiplier: 0.2      # 活跃群降权
+      active_multiplier: 0.5      # 活跃群降权
       recent_at_boost: 0.6         # 最近被@过的群大幅提权
 
     # 混合策略

@@ -222,7 +222,7 @@ const LogViewerPage: React.FC = () => {
       {/* 底部 */}
       <div className="h-6 bg-void-panel/90 border-t border-border-glass flex items-center justify-between px-3 text-[9px] text-text-dim shrink-0">
         <span>{paused ? '⏸ 已暂停' : '● 收集中'} | {filteredLogs.length} 条显示</span>
-        <span>MIYA Abyssal Star · v7.0 Log Monitor</span>
+        <span>MIYA Abyssal Star · v8.0 Log Monitor</span>
       </div>
     </div>
   );

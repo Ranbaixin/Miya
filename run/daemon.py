@@ -1,5 +1,5 @@
 """
-弥娅系统 v7.0 - 统一守护进程入口
+弥娅系统 v8.0 - 统一守护进程入口
 
 启动方式:
   python run/daemon.py                  # 启动守护进程 + API
@@ -11,7 +11,7 @@
   MIYA_API_PORT=9800   API 端口 (默认 9800)
   MIYA_API_HOST=0.0.0.0  API 监听地址
 
-这是弥娅系统自 v7.0 起的唯一启动入口。
+这是弥娅系统自 v8.0 起的唯一启动入口。
 守护进程启动后会：
   1. 初始化弥娅核心（人格、记忆、决策引擎）
   2. 自动连接所有启用的平台
@@ -31,18 +31,22 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
-os.environ["MIYA_DAEMON_MODE"] = "1"  # v7.0: 标记 daemon 模式，避免重复日志 handler
+os.environ["MIYA_DAEMON_MODE"] = "1"  # v8.0: 标记 daemon 模式，避免重复日志 handler
 
 
 def setup_logging():
+    from datetime import datetime
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     logging.basicConfig(
         level=logging.INFO,
         format="[%(name)s] %(levelname)s: %(message)s",
         datefmt="%H:%M:%S",
         handlers=[
             logging.StreamHandler(),
+            logging.FileHandler(f"logs/miya_{datetime.now().strftime('%Y-%m-%d')}.log", encoding="utf-8"),
         ],
-        force=True,  # v7.0: 清除其他模块添加的重复 handler
+        force=True,  # v8.0: 清除其他模块添加的重复 handler
     )
     # 抑制启动时过于啰嗦的日志
     for noisy in [
@@ -83,7 +87,7 @@ async def run_daemon(
     print("""
 +==============================================================+
 |                                                              |
-|        * 弥娅 (MIYA) v7.0 - 统一守护进程 *                  |
+|        * 弥娅 (MIYA) v8.0 - 统一守护进程 *                  |
 |                                                              |
 |        所有平台已就绪 · 热插拔 · 自动重连                    |
 |                                                              |
@@ -105,7 +109,7 @@ async def run_daemon(
 
         # 将 API 广播链接到 daemon 的平台事件
         daemon.registry.on_broadcast(api.broadcast_event)
-        # v7.0: 注册 webhook 平台路由
+        # v8.0: 注册 webhook 平台路由
         api.register_webhook_platforms()
 
         print(f"""
@@ -159,7 +163,7 @@ def _print_platform_status(daemon):
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description="弥娅系统 v7.0 统一守护进程")
+    parser = argparse.ArgumentParser(description="弥娅系统 v8.0 统一守护进程")
     parser.add_argument("--no-api", action="store_true", help="不启动管理 API")
     parser.add_argument(
         "--api-port",

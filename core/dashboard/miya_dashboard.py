@@ -12,6 +12,8 @@ import logging
 import os
 from typing import Optional
 
+from core.version import VERSION
+
 logger = logging.getLogger("Miya.Dashboard")
 
 
@@ -28,7 +30,7 @@ except ImportError:
 class MiyaDashboard:
     """弥娅 Dashboard - WebUI 管理界面"""
 
-    VERSION = "8.0.0"
+    VERSION = VERSION
 
     def __init__(self, core_lifecycle, shutdown_event, webui_dir: str = None):
         from core.miya_config import get_miya_config

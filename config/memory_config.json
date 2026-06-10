@@ -30,7 +30,7 @@
       "similarity_threshold": 0.7
     },
     "knowledge": {
-      "enabled": false
+      "enabled": true
     }
   },
 

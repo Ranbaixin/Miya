@@ -198,3 +198,11 @@ data/diting_state.json
 data/tts_audio/
 data/conversation_context_state.json
 data/last_form.json
+
+# ── Ranxin 分支：保护未跟踪的敏感/冗余文件 ──
+config/multi_model_config.json.deepseek
+config/multi_model_config.json.siliconflow
+switch_model_config.bat
+AGENTS.md
+.codex/
+data/neo4j/

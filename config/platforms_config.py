@@ -57,7 +57,7 @@ def _env(key: str, default: str = "") -> str:
 # 文档: https://bot.q.qq.com/wiki/develop/api/
 
 QQ_OFFICIAL_CONFIG = {
-    "enabled": True,
+    "enabled": False,
     "appid": _env("QQ_APPID"),
     "secret": _env("QQ_SECRET"),
     "bot_qq": _env("QQ_BOT_QQ"),

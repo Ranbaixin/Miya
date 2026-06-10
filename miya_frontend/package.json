@@ -46,7 +46,7 @@
     "@vitejs/plugin-vue": "^6.0.1",
     "@vue/tsconfig": "^0.8.1",
     "cross-env": "^10.1.0",
-    "electron": "^40.2.1",
+    "electron": "^40.10.2",
     "electron-builder": "^26.7.0",
     "typescript": "~5.9.3",
     "unocss": "^66.6.0",
