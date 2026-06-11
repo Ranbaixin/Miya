@@ -7,7 +7,7 @@ import logging
 import os
 import shutil
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -57,7 +57,7 @@ class ArtStorage:
             "prompt": prompt[:200],
             "width": 0,
             "height": 0,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(datetime.UTC).isoformat(),
             "metadata": metadata or {},
         }
 
