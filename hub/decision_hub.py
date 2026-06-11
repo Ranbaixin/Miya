@@ -1218,6 +1218,9 @@ class DecisionHub:
             if proactive_result and proactive_result.should_respond:
                 # 主动聊天已发送消息，不需要额外发送表情包
                 pass
+            elif "画好了" in response or "发过去了" in response or "画出了" in response:
+                # 响应中已包含画图/图片发送，跳过表情包避免干扰
+                pass
             else:
                 # 尝试根据回复内容发送智能表情包
                 asyncio.create_task(self._handle_smart_emoji(response, perception))

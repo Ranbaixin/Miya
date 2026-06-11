@@ -76,6 +76,7 @@ SUBNET_CATEGORIES = {
         "wenchang_dijun",
         "send_poke",
         "react_emoji",
+        "qq_image",
     ],
     "MCPNet": [
         "mcp_openclaw_send_message",
@@ -92,6 +93,9 @@ SUBNET_CATEGORIES = {
         "mcp_filesystem_write_file",
         "mcp_filesystem_list_files",
         "mcp_filesystem_search_files",
+        "mcp_art_service_generate_image",
+        "mcp_art_service_list_providers",
+        "mcp_art_service_get_gallery",
     ],
 }
 
@@ -135,9 +139,7 @@ class ToolSubnetRouter:
     def _init_subnets(self):
         """初始化子网分类"""
         for subnet_name, tool_names in SUBNET_CATEGORIES.items():
-            self.subnets[subnet_name] = SubnetInfo(
-                name=subnet_name, tool_count=len(tool_names)
-            )
+            self.subnets[subnet_name] = SubnetInfo(name=subnet_name, tool_count=len(tool_names))
         logger.info(f"子网初始化完成: {self.subnets}")
 
     def get_subnet_for_tool(self, tool_name: str) -> Optional[str]:
@@ -147,9 +149,7 @@ class ToolSubnetRouter:
                 return subnet_name
         return None
 
-    async def execute_tool(
-        self, tool_name: str, args: Dict[str, Any], context: ToolContext
-    ) -> str:
+    async def execute_tool(self, tool_name: str, args: Dict[str, Any], context: ToolContext) -> str:
         """执行工具（自动路由到对应子网）
 
         Args:
@@ -184,9 +184,7 @@ class ToolSubnetRouter:
 
         except Exception as e:
             subnet_info.failed += 1
-            logger.error(
-                f"子网 {subnet_name} 执行工具 {tool_name} 失败: {e}", exc_info=True
-            )
+            logger.error(f"子网 {subnet_name} 执行工具 {tool_name} 失败: {e}", exc_info=True)
             return f"❌ 工具执行失败: {str(e)}"
 
     def get_all_tools_by_subnet(self) -> Dict[str, List[Dict[str, Any]]]:

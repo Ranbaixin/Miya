@@ -50,6 +50,9 @@ class PlatformToolsManager:
         "mcp_filesystem_write_file",
         "mcp_filesystem_list_files",
         "mcp_filesystem_search_files",
+        "mcp_art_service_generate_image",
+        "mcp_art_service_list_providers",
+        "mcp_art_service_get_gallery",
     ]
 
     # 平台特定工具映射
@@ -511,6 +514,7 @@ class PlatformToolsManager:
         "qq_like",
         "send_poke",
         "react_emoji",
+        "qq_image",
         "get_member_list",
         "get_member_info",
         "find_member",

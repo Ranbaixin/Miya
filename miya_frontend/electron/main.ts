@@ -32,6 +32,12 @@ import {
   setLive2dWindowScale,
   broadcastLive2dCommand,
 } from './modules/live2d-window'
+import {
+  createArtboardWindow,
+  getArtboardWindow,
+  toggleArtboardWindow,
+  closeArtboardWindow,
+} from './modules/artboard-window'
 
 // ES module __dirname polyfill
 const __filename = fileURLToPath(import.meta.url)
@@ -424,6 +430,17 @@ app.whenReady().then(async () => {
     app.setLoginItemSettings({ openAtLogin: enabled })
   })
   ipcMain.handle('backend:getLogs', () => getBackendLogs())
+
+  // ── Artboard 独立窗口 ──
+  ipcMain.handle('artboard:open', () => {
+    createArtboardWindow()
+  })
+  ipcMain.handle('artboard:close', () => {
+    closeArtboardWindow()
+  })
+  ipcMain.handle('artboard:toggle', () => {
+    toggleArtboardWindow()
+  })
 
   // ── Live2D 独立窗口 ──
   ipcMain.on('live2d:emotion', (_event, emotion: string) => {

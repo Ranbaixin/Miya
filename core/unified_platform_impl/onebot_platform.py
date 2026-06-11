@@ -1123,13 +1123,14 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         if not self._ws or not self._connected:
             return False
         try:
+            segments = self.message_to_segments(message)
             await self._ws.send_str(
                 json.dumps(
                     {
                         "action": "send_group_msg",
                         "params": {
                             "group_id": group_id,
-                            "message": self._build_structured_message(message),
+                            "message": segments,
                         },
                     }
                 )
@@ -1146,13 +1147,14 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             return False
         try:
             message = self.resolve_at_mentions(message)
+            segments = self.message_to_segments(message)
             await self._ws.send_str(
                 json.dumps(
                     {
                         "action": "send_private_msg",
                         "params": {
                             "user_id": user_id,
-                            "message": [{"type": "text", "data": {"text": message}}],
+                            "message": segments,
                         },
                     }
                 )
@@ -1229,6 +1231,36 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         if last_end < len(text):
             segments.append({"type": "text", "data": {"text": text[last_end:]}})
         return segments or [{"type": "text", "data": {"text": text}}]
+
+    @staticmethod
+    def message_to_segments(message: str) -> list:
+        """将包含 CQ 码的字符串解析为 OneBot 消息段数组"""
+        import re
+
+        CQ_PATTERN = re.compile(r"\[CQ:([a-zA-Z0-9_-]+),?([^\]]*)\]")
+        segments: list = []
+        last_pos = 0
+
+        for match in CQ_PATTERN.finditer(message):
+            text_part = message[last_pos : match.start()]
+            if text_part:
+                segments.append({"type": "text", "data": {"text": text_part}})
+            cq_type = match.group(1)
+            cq_args_str = match.group(2)
+            data: dict = {}
+            if cq_args_str:
+                for arg_pair in cq_args_str.split(","):
+                    if "=" in arg_pair:
+                        k, v = arg_pair.split("=", 1)
+                        data[k.strip()] = v.strip()
+            segments.append({"type": cq_type, "data": data})
+            last_pos = match.end()
+
+        remaining_text = message[last_pos:]
+        if remaining_text:
+            segments.append({"type": "text", "data": {"text": remaining_text}})
+
+        return segments or [{"type": "text", "data": {"text": message}}]
 
     async def resolve_at_names(self, group_id: int, at_list: list) -> dict:
         """解析 @列表中的 QQ 号 → 显示名映射（card > nickname > QQ号）"""
@@ -1379,45 +1411,63 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
     async def send_group_image(self, group_id: int, image_path: str, caption: str = ""):
         """发送群图片消息"""
-        file_id = await self.upload_image(image_path)
-        if not file_id:
+        import os as _os
+
+        if not _os.path.exists(image_path):
+            logger.warning(f"[{self.platform_id}] 图片文件不存在: {image_path}")
             return None
-        cq = self.cq_image(file_id)
-        msg = f"{caption}\n{cq}" if caption else cq
-        if self._ws and self._connected:
-            await self._ws.send_str(
-                json.dumps(
-                    {
-                        "action": "send_group_msg",
-                        "params": {
-                            "group_id": group_id,
-                            "message": [{"type": "text", "data": {"text": msg}}],
-                        },
-                    }
-                )
+        if not self._ws or not self._connected:
+            return None
+
+        file_uri = _os.path.abspath(image_path).replace("\\", "/")
+        segments = []
+        if caption:
+            segments.append({"type": "text", "data": {"text": caption}})
+        segments.append({"type": "image", "data": {"file": f"file:///{file_uri}"}})
+
+        await self._ws.send_str(
+            json.dumps(
+                {
+                    "action": "send_group_msg",
+                    "params": {"group_id": group_id, "message": segments},
+                }
             )
-            return {"status": "ok"}
+        )
+        logger.debug(f"[{self.platform_id}] 群图片已发送: {file_uri}")
+        return {"status": "ok"}
 
     async def send_private_image(self, user_id: int, image_path: str, caption: str = ""):
         """发送私聊图片消息"""
-        file_id = await self.upload_image(image_path)
-        if not file_id:
+        import os as _os
+        from pathlib import Path as _Path
+
+        if not _os.path.exists(image_path):
+            logger.warning(f"[{self.platform_id}] 图片文件不存在: {image_path}")
             return None
-        cq = self.cq_image(file_id)
-        msg = f"{caption}\n{cq}" if caption else cq
-        if self._ws and self._connected:
-            await self._ws.send_str(
-                json.dumps(
-                    {
-                        "action": "send_private_msg",
-                        "params": {
-                            "user_id": user_id,
-                            "message": [{"type": "text", "data": {"text": msg}}],
-                        },
-                    }
-                )
+        if not self._ws or not self._connected:
+            return None
+
+        file_uri = _Path(image_path).resolve().as_uri()
+        segments = []
+        if caption:
+            segments.append({"type": "text", "data": {"text": caption}})
+        segments.append({"type": "image", "data": {"file": file_uri}})
+
+        await self._ws.send_str(
+            json.dumps(
+                {
+                    "action": "send_msg",
+                    "params": {
+                        "message_type": "private",
+                        "user_id": user_id,
+                        "message": segments,
+                    },
+                }
             )
-            return {"status": "ok"}
+        )
+        logger.info(f"[{self.platform_id}] 私聊图片已发送给 {user_id}: {file_uri}")
+        return {"status": "ok"}
+        return None
 
     async def send_group_file(self, group_id: int, file_path: str, caption: str = ""):
         """发送群文件消息"""

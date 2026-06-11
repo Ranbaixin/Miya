@@ -150,9 +150,8 @@ class WebAPI:
             from .blogs import BlogRoutes
             from .chat import ChatRoutes
             from .desktop import DesktopRoutes
+            from .art import ArtRoutes
             from .security import SecurityRoutes
-
-            # 终端路由已迁移至 Open-ClaudeCode
             from .system import SystemRoutes
             from .tools import ToolRoutes
             # 跨终端路由已迁移至 Open-ClaudeCode
@@ -168,6 +167,7 @@ class WebAPI:
             self.desktop_routes = DesktopRoutes(self.web_net, self.decision_hub)
             self.tools_routes = ToolRoutes(self.web_net, self.decision_hub)
             self.security_routes = SecurityRoutes(self.web_net)
+            self.art_routes = ArtRoutes(self.web_net, self.decision_hub)
 
             # TTS 语音合成路由
             from .tts_routes import TTSRoutes
@@ -188,6 +188,7 @@ class WebAPI:
             self.security_routes = None
             self.cross_terminal_routes = None
             self.tts_routes = None
+            self.art_routes = None
 
     def _setup_routes(self):
         """设置 API 路由"""
@@ -216,6 +217,9 @@ class WebAPI:
 
         if self.security_routes and self.security_routes.get_router():
             self.router.include_router(self.security_routes.get_router())
+
+        if self.art_routes and self.art_routes.get_router():
+            self.router.include_router(self.art_routes.get_router())
 
         if self.cross_terminal_routes and self.cross_terminal_routes.get_router():
             self.router.include_router(self.cross_terminal_routes.get_router())

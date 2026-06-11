@@ -45,6 +45,8 @@ const cards = [
   { id: 'floating',  label: '铃音守护', desc: '轻量陪伴 · 悬浮球',   icon: 'floating',  angle:  30, radius: 1, varName: '--miya-comp-panel-card-8', fallback: '#4da6ff', emoji: '◈' },
   // ═══ 右下 ═══
   { id: 'security',  label: '安全中心', desc: '扫描 · 渗透 · 分析',   path: '/security',  angle: -45, radius: 1, varName: '--miya-comp-panel-card-9', fallback: '#ff5555', emoji: '⬡' },
+  // ═══ 右下 ═══
+  { id: 'artboard',  label: '弥娅画板', desc: 'AI 绘画 · 创作展示',   path: '/artboard',  angle: 60, radius: 2, varName: '--miya-comp-panel-card-10', fallback: '#f59e0b', emoji: '⬗' },
 ]
 
 // ─── Mouse tracking ──────────────────────────────────────────────────
@@ -89,6 +91,8 @@ const wingLines = computed(() => {
   lines.push({ x1: 0, y1: 0, x2: pos[7].x, y2: pos[7].y, cls: 'wing-root' })
   // Security center card
   if (pos.length > 8) lines.push({ x1: 0, y1: 0, x2: pos[8].x, y2: pos[8].y, cls: 'wing-root' })
+  // Artboard card
+  if (pos.length > 9) lines.push({ x1: 0, y1: 0, x2: pos[9].x, y2: pos[9].y, cls: 'wing-root' })
   return lines
 })
 

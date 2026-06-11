@@ -144,6 +144,13 @@ const electronAPI = {
 
   // Platform info
   platform: detectPlatform(),
+
+  // Artboard window
+  artboard: {
+    open: () => ipcRenderer.invoke('artboard:open'),
+    close: () => ipcRenderer.invoke('artboard:close'),
+    toggle: () => ipcRenderer.invoke('artboard:toggle'),
+  },
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)
