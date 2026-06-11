@@ -302,10 +302,18 @@ class DiTingListener:
             else:
                 self._user_streaks[group_id][user_id] = 0
 
-        # 每 5 条消息自动持久化
+        # 每 5 条消息自动持久化（线程池写入避免阻塞事件循环）
         self._save_counter = getattr(self, "_save_counter", 0) + 1
         if self._save_counter % 5 == 0:
-            self.save()
+            import asyncio as _asyncio
+            try:
+                loop = _asyncio.get_event_loop()
+                if loop.is_running():
+                    loop.run_in_executor(None, self.save)
+                else:
+                    self.save()
+            except RuntimeError:
+                self.save()
 
     def _update_topic_thread(self, group_id: str, snippet: MessageSnippet):
         """更新话题线程"""

@@ -15,13 +15,14 @@ class MessageQueue:
     """异步消息队列"""
 
     def __init__(self, max_size: int = 1000):
-        self._queue: deque = deque(maxlen=max_size)
+        self._queue: deque = deque()  # 不用 maxlen（会导致静默丢弃）
+        self._max_size = max_size
         self._lock = asyncio.Lock()
         self._stats = {"enqueued": 0, "dequeued": 0, "dropped": 0}
 
     async def enqueue(self, message: Any) -> bool:
         async with self._lock:
-            if len(self._queue) >= self._queue.maxlen:
+            if len(self._queue) >= self._max_size:
                 self._stats["dropped"] += 1
                 return False
             self._queue.append(message)

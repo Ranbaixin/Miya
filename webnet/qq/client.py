@@ -532,8 +532,9 @@ class QQOneBotClient:
         except Exception as e:
             logger.exception(f"处理消息出错: {type(e).__name__}: {e}")
 
-    async def run_with_reconnect(self, reconnect_interval: float = 5.0) -> None:
-        """带自动重连运行"""
+    async def run_with_reconnect(self, reconnect_interval: float = 5.0, max_retries: int = 30) -> None:
+        """带自动重连运行（指数退避 + 抖动 + 重连上限）"""
+        import random
         self._should_stop = False
         reconnect_count = 0
 
@@ -542,7 +543,7 @@ class QQOneBotClient:
                 if reconnect_count > 0:
                     logger.info(f"[QQ] 尝试第 {reconnect_count} 次重连...")
                 await self.connect()
-                reconnect_count = 0
+                reconnect_count = 0  # 成功连接后重置计数
                 await self.run()
             except websockets.ConnectionClosed:
                 logger.warning("[QQ] 连接断开")
@@ -553,8 +554,14 @@ class QQOneBotClient:
                 break
 
             reconnect_count += 1
-            logger.info(f"{reconnect_interval}秒后重连...")
-            await asyncio.sleep(reconnect_interval)
+            if reconnect_count > max_retries:
+                logger.error(f"[QQ] 已达最大重连次数 {max_retries}，停止重连")
+                break
+            # 指数退避 + 随机抖动
+            delay = min(reconnect_interval * (2 ** (reconnect_count - 1)), 300.0)
+            delay *= 0.5 + random.random()
+            logger.info(f"[QQ] {delay:.1f}秒后第 {reconnect_count}/{max_retries} 次重连...")
+            await asyncio.sleep(delay)
 
     def stop(self) -> None:
         """停止运行"""

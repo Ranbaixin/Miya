@@ -47,7 +47,9 @@ class Scheduler:
     """任务调度器"""
 
     def __init__(self, tool_registry=None, onebot_client=None):
+        import threading
         self.task_queue = []
+        self._queue_lock = threading.Lock()  # 跨线程安全锁
         self.running_tasks = {}
         self.completed_tasks = {}
         self.task_history = []
@@ -103,17 +105,19 @@ class Scheduler:
         while self._running:
             try:
                 # 检查是否有待执行的任务
-                if self.task_queue:
-                    now = datetime.now()
-                    # 查看队首任务（不弹出）
-                    next_task = self.task_queue[0]
+                with self._queue_lock:
+                    has_tasks = bool(self.task_queue)
+                    if has_tasks:
+                        now = datetime.now()
+                        next_task = self.task_queue[0]  # peek under lock
+                if has_tasks:
                     print(
                         f"[SCHEDULER] Queue has {len(self.task_queue)} tasks, next: {next_task.execute_at}",
                         file=sys.stderr,
                     )
                     if next_task.execute_at <= now:
-                        # 任务时间到了，执行
-                        heapq.heappop(self.task_queue)
+                        with self._queue_lock:
+                            heapq.heappop(self.task_queue)
                         logger.info(f"执行定时任务: {next_task.task_id}, 类型: {next_task.task_type}")
                         print(
                             f"[SCHEDULER] Executing task {next_task.task_id}",
@@ -237,16 +241,17 @@ class Scheduler:
 
     def schedule(self, task: Task) -> None:
         """添加任务到调度队列"""
-        heapq.heappush(self.task_queue, task)
+        with self._queue_lock:
+            heapq.heappush(self.task_queue, task)
         task.scheduled_at = datetime.now()
         logger.info(f"任务已添加到调度队列: {task.task_id}, 执行时间: {task.execute_at}")
 
     def get_next_task(self) -> Optional[Task]:
         """获取下一个待执行任务"""
-        if not self.task_queue:
-            return None
-
-        task = heapq.heappop(self.task_queue)
+        with self._queue_lock:
+            if not self.task_queue:
+                return None
+            task = heapq.heappop(self.task_queue)
         task.status = "running"
         self.running_tasks[task.task_id] = task
         return task

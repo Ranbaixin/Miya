@@ -48,12 +48,14 @@ class TrustTransmit:
             # 信任传播：当前信任 * 边信任
             current_trust *= edge_trust
 
-            # 记录传播
+            # 记录传播（限制历史长度防止内存泄漏）
             self.propagation_history.append({
                 'path': path[:i+2],
                 'trust': current_trust,
                 'timestamp': datetime.now()
             })
+            if len(self.propagation_history) > 1000:
+                self.propagation_history = self.propagation_history[-500:]
 
         return current_trust
 
