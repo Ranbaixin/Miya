@@ -93,7 +93,9 @@ class ConfigEncryption:
         self._key_store: Dict[str, bytes] = {}
 
         if not CRYPTO_AVAILABLE:
-            raise RuntimeError("加密功能需要cryptography库")
+            logger.warning("[配置加密] cryptography 未安装，加密功能已禁用")
+            self._enabled = False
+            return
 
         # 加载主密钥
         self._load_master_key()

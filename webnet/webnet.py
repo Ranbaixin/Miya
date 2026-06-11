@@ -137,7 +137,9 @@ class AuthManager:
         if cursor.fetchone()[0] == 0:
             # 创建默认管理员
             import hashlib
-            password_hash = hashlib.sha256(b"admin123").hexdigest()
+            import os
+            admin_pwd = os.getenv("MIYA_WEBUI_ADMIN_PASSWORD", "admin123")
+            password_hash = hashlib.sha256(admin_pwd.encode()).hexdigest()
 
             cursor.execute("""
                 INSERT INTO users (username, email, password_hash, level, trust_score)
@@ -602,7 +604,7 @@ class WebNet:
             "sub": row[1],
             "level": row[4],
             "exp": datetime.utcnow().timestamp() + 86400  # 24小时
-        }, "miya_secret_key", algorithm="HS256")
+        }, os.getenv("MIYA_JWT_SECRET", "miya_secret_key"), algorithm="HS256")
 
         logger.info(f"[WebNet] 登录成功: username={username}, user_id={row[0]}, level={row[4]}")
 
@@ -631,7 +633,7 @@ class WebNet:
             return None
 
         try:
-            payload = jwt.decode(token, "miya_secret_key", algorithms=["HS256"])
+            payload = jwt.decode(token, os.getenv("MIYA_JWT_SECRET", "miya_secret_key"), algorithms=["HS256"])
             return payload
         except jwt.ExpiredSignatureError:
             return None

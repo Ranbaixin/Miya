@@ -88,9 +88,11 @@ def get_phase_description(
 
     now = datetime.now()
     is_today = True
-    if last_active_time is not None and last_active_time > 0:
-        last_date = datetime.fromtimestamp(last_active_time)
-        is_today = last_date.date() == now.date()
+    if last_active_time is not None and 0 < last_active_time < 9e18:  # 排除 NaN/Inf
+        import math
+        if math.isfinite(last_active_time):
+            last_date = datetime.fromtimestamp(last_active_time)
+            is_today = last_date.date() == now.date()
 
     default_desc = labels.get("dormant", "新对话")
 

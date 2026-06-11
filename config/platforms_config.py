@@ -142,10 +142,8 @@ DINGDING_CONFIG = {
     "enabled": False,
     "app_key": _env("DINGTALK_APP_KEY"),
     "app_secret": _env("DINGTALK_APP_SECRET"),
-    "app_secret": "",  # 应用 App Secret
-    # 可选: 机器人 Webhook
-    # "webhook": "",
-    # "secret": "",
+    "webhook": "",
+    "secret": "",
 }
 
 # ==================== 企业微信 ====================

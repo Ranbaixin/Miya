@@ -18,8 +18,10 @@ from memory.undefined_memory import UndefinedMemoryAdapter, get_undefined_memory
 
 logger = logging.getLogger(__name__)
 
-# 加载环境变量
-load_dotenv("config/.env")
+# 加载环境变量（相对于项目根目录）
+from pathlib import Path as _Path
+_project_root = _Path(__file__).parent.parent
+load_dotenv(_project_root / "config" / ".env")
 
 
 class MemorySystemInitializer:

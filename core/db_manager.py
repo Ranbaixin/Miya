@@ -81,8 +81,8 @@ class DatabaseManager:
     def _create_tables(self):
         """创建表"""
         cursor = self._conn.cursor() if self._use_sqlite3 else self._db.cursor()
-
-        cursor.execute("""
+        try:
+            cursor.execute("""
             CREATE TABLE IF NOT EXISTS sessions (
                 session_id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
@@ -113,6 +113,9 @@ class DatabaseManager:
                 updated_at TEXT NOT NULL
             )
         """)
+
+        finally:
+            cursor.close()
 
         if self._use_sqlite3:
             self._conn.commit()

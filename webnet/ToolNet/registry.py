@@ -247,8 +247,8 @@ class ToolRegistry:
             }
 
         except Exception as e:
-            self.logger.warning(f"[权限检查异常] {e}，允许执行")
-            return {"allowed": True, "required_permission": None, "error": str(e)}
+            self.logger.error(f"[权限检查异常] {e}，拒绝执行（安全优先）")
+            return {"allowed": False, "required_permission": None, "error": f"权限检查失败: {e}"}
 
     def _detect_platform_from_context(self, context: ToolContext) -> str:
         """从上下文检测平台类型"""

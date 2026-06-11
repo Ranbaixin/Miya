@@ -71,6 +71,7 @@ class CronTask:
     args: tuple = field(default_factory=tuple)
     kwargs: Dict = field(default_factory=dict)
 
+    status: TaskStatus = TaskStatus.PENDING
     enabled: bool = True
     max_retries: int = 3
     timeout: int = 300  # 超时秒数
