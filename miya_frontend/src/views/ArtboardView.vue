@@ -2,9 +2,9 @@
 import { ref, onMounted } from 'vue'
 import API from '@/api/art'
 import type { ArtProviderInfo, ArtImageEntry, ArtGenerateResult } from '@/types/art'
-import PromptPanel from './PromptPanel.vue'
-import GallerySidebar from './GallerySidebar.vue'
-import DoodleCanvas from './DoodleCanvas.vue'
+import PromptPanel from '@/components/artboard/PromptPanel.vue'
+import GallerySidebar from '@/components/artboard/GallerySidebar.vue'
+import DoodleCanvas from '@/components/artboard/DoodleCanvas.vue'
 
 const isInArtboardWindow = ref(false)
 const showDoodle = ref(false)
