@@ -266,36 +266,33 @@ class Miya:
         return logger
 
     def _init_neo4j(self):
-        """初始化 Neo4j 客户端"""
+        """初始化 Neo4j 连接（健康检查）"""
         import os
 
         from dotenv import load_dotenv
 
         load_dotenv(Path(__file__).parent.parent / "config" / ".env")
 
-        neo4j_uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+        neo4j_uri = os.getenv("NEO4J_URI", "bolt://localhost:17687")
         neo4j_user = os.getenv("NEO4J_USER", "neo4j")
         neo4j_password = os.getenv("NEO4J_PASSWORD")
-        neo4j_database = os.getenv("NEO4J_DATABASE", "neo4j")
 
         self.logger.info(f"  [数据库] Neo4j 配置: {neo4j_uri} (用户: {neo4j_user})")
 
-        if neo4j_password:
-            neo4j = Neo4jClient(
-                uri=neo4j_uri,
-                user=neo4j_user,
-                password=neo4j_password,
-                database=neo4j_database,
-            )
-            if neo4j.is_mock_mode():
-                self.logger.warning("  [数据库] Neo4j 连接失败，使用模拟模式")
-            else:
-                self.logger.info("  [数据库] Neo4j 连接成功")
-        else:
-            self.logger.warning("  [数据库] 未配置 Neo4j 密码，使用模拟模式")
-            neo4j = None
+        if not neo4j_password:
+            self.logger.warning("  [数据库] 未配置 Neo4j 密码，跳过")
+            return None
 
-        return neo4j
+        try:
+            from neo4j import GraphDatabase
+
+            driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
+            driver.verify_connectivity()
+            self.logger.info("  [数据库] Neo4j 连接成功")
+            return driver
+        except Exception as e:
+            self.logger.warning(f"  [数据库] Neo4j 连接失败: {e}")
+            return None
 
     def _init_terminal_tool(self):
         """终端功能已由 Open-ClaudeCode 提供"""
@@ -643,7 +640,7 @@ class Miya:
     def _init_neo4j_system(self):
         """初始化Neo4j知识图谱系统 — 将 GRAG 记忆管理器注入 MemoryNet"""
         try:
-            from core.grag_memory import DEFAULT_CONFIG, initialize_grag
+            from core.grag_memory import DEFAULT_CONFIG, GRAGMemoryManager
 
             neo4j_uri = os.getenv("NEO4J_URI", DEFAULT_CONFIG["neo4j_uri"])
             neo4j_user = os.getenv("NEO4J_USER", DEFAULT_CONFIG["neo4j_user"])
