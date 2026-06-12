@@ -107,58 +107,58 @@
   "routing_strategy": {
     "simple_chat": {
       "primary": "deepseek_v4_flash_official",
-      "secondary": "qwen_72b",
-      "fallback": "qwen_7b"
+      "secondary": "deepseek_v4_flash_official",
+      "fallback": "deepseek_v4_flash_official"
     },
     "complex_reasoning": {
       "primary": "deepseek_v4_flash_official",
-      "secondary": "qwen_72b",
+      "secondary": "deepseek_v4_flash_official",
       "third": "deepseek_v4_flash_official",
-      "fallback": "qwen_72b"
+      "fallback": "deepseek_v4_flash_official"
     },
     "code_analysis": {
       "primary": "deepseek_v4_flash_official",
-      "secondary": "qwen_72b",
-      "fallback": "qwen_72b"
+      "secondary": "deepseek_v4_flash_official",
+      "fallback": "deepseek_v4_flash_official"
     },
     "code_generation": {
       "primary": "deepseek_v4_flash_official",
-      "secondary": "qwen_72b",
-      "fallback": "gemma_2_9b"
+      "secondary": "deepseek_v4_flash_official",
+      "fallback": "deepseek_v4_flash_official"
     },
     "tool_calling": {
       "primary": "deepseek_v4_flash_official",
-      "secondary": "qwen_72b",
+      "secondary": "deepseek_v4_flash_official",
       "fallback": "deepseek_v4_flash_official"
     },
     "creative_writing": {
       "primary": "deepseek_v4_flash_official",
-      "secondary": "qwen_72b",
+      "secondary": "deepseek_v4_flash_official",
       "fallback": "deepseek_v4_flash_official"
     },
     "chinese_understanding": {
       "primary": "deepseek_v4_flash_official",
-      "secondary": "qwen_72b",
+      "secondary": "deepseek_v4_flash_official",
       "fallback": "deepseek_v4_flash_official"
     },
     "summarization": {
-      "primary": "llama_3_1_8b",
-      "secondary": "qwen_7b",
+      "primary": "deepseek_v4_flash_official",
+      "secondary": "deepseek_v4_flash_official",
       "fallback": "deepseek_v4_flash_official"
     },
     "image_description": {
-      "primary": "zhipu_glm_46v_flash",
-      "secondary": "siliconflow_qwen_vl",
-      "fallback": "simple_analysis"
+      "primary": "deepseek_vision",
+      "secondary": "deepseek_vision",
+      "fallback": "deepseek_v4_flash_official"
     },
     "agent_mode": {
-      "primary": "claude_sonnet",
-      "secondary": "claude_haiku",
-      "fallback": "qwen_72b"
+      "primary": "deepseek_v4_flash_official",
+      "secondary": "deepseek_v4_flash_official",
+      "fallback": "deepseek_v4_flash_official"
     },
     "computer_use": {
-      "primary": "claude_sonnet",
-      "secondary": "claude_haiku",
+      "primary": "deepseek_v4_flash_official",
+      "secondary": "deepseek_v4_flash_official",
       "fallback": "deepseek_v4_flash_official"
     }
   },
