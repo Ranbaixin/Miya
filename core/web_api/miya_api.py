@@ -1163,14 +1163,6 @@ class MiyaAPI:
                             "model": "deepseek-v4-flash",
                             "enabled": True,
                         },
-                        {
-                            "id": "qwen_72b",
-                            "name": "Qwen 72B",
-                            "provider_type": "chat_completion",
-                            "provider_source_id": "siliconflow",
-                            "model": "Qwen/Qwen2.5-72B-Instruct",
-                            "enabled": True,
-                        },
                     ],
                     "provider_sources": [
                         {

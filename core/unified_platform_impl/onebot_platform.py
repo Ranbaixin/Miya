@@ -431,31 +431,6 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         except Exception:
             pass
         return None
-        echo = f"miya_{action}_{id(params)}"
-        future: asyncio.Future = asyncio.get_event_loop().create_future()
-        self._pending_echoes[echo] = future
-        try:
-            await self._ws.send_str(
-                json.dumps(
-                    {
-                        "action": action,
-                        "params": params,
-                        "echo": echo,
-                    }
-                )
-            )
-            result = await asyncio.wait_for(future, timeout=5.0)
-            if not result or result.get("status") != "ok":
-                logger.warning(f"[{self.platform_id}] API 失败: {action}, response={result}")
-                self._pending_echoes.pop(echo, None)
-                return None
-            return result.get("data")
-        except asyncio.TimeoutError:
-            self._pending_echoes.pop(echo, None)
-            return None
-        except Exception:
-            self._pending_echoes.pop(echo, None)
-            return None
 
     async def _handle_chat_message(self, data: Dict):
         """处理聊天消息 (v2 — 完整功能迁移自 qq_main.py)"""

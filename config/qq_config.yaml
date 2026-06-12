@@ -90,7 +90,7 @@ qq:
     # AI 鍥剧墖鍒嗘瀽锛堜娇鐢?Kimi K2.6 鍘熺敓澶氭ā鎬佹ā鍨嬶級
     ai_analysis:
       enabled: true
-      model: "zhipu_glm_46v_flash"
+      model: "deepseek_vision"
       timeout: 30                         # 鏈€澶у垎鏋愭椂闂达紙绉掞級
       cost_threshold: 0.0                 # 鎴愭湰闃堝€硷紙鍏嶈垂妯″瀷锛?
       provider: ""                        # baidu, tencent, openai
@@ -270,7 +270,7 @@ tools:
   qq_image_analyzer:
     enabled: true
     ocr_engine: "none"                    # 涓嶄娇鐢?OCR 寮曟搸
-    vision_engine: "zhipu_glm_46v_flash"  # 浣跨敤鏅鸿氨瑙嗚妯″瀷
+    vision_engine: "deepseek_vision"  # 浣跨敤鏅鸿氨瑙嗚妯″瀷
     detail_level: "detailed"              # detailed, basic
     nsfw_check: false
     ai_description:
