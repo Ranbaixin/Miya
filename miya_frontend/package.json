@@ -84,13 +84,9 @@
       }
     ],
     "win": {
-      "target": "nsis",
+      "target": "zip",
       "icon": "build/icon.ico",
       "signAndEditExecutable": false
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
     }
   }
 }

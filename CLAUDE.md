@@ -78,4 +78,4 @@
 - 构建流水线：详见 `docs/DEVELOP_GUIDE.md` 末尾的「构建与发布流水线」章节
 - PyInstaller 配置：`Miya.spec`
 - Electron 打包配置：`miya_frontend/package.json` (electron-builder)
-- 关键修复记录：unittest 排除、CWD 路径、ws 依赖、junction 改真实目录
+- 关键修复记录：unittest 排除、CWD 路径、ws 依赖、config/data 目录联结（单一数据源）

@@ -468,15 +468,16 @@ python build_release.py --clean --desktop
 | ToolNet 初始化失败 `No module named 'unittest'` | PyInstaller excludes 了 `unittest`，但 `pyparsing.testing` 需要它 | `Miya.spec` excludes 移除 `unittest`，保留 `test` |
 | `config/permissions.json` 找不到 | CWD 设为 `resources/backend/`，但配置文件在 `_internal/config/` | `backend.ts` 将 spawn CWD 设为 `resources/backend/_internal/` |
 | Claude Code Engine `ws` 缺失 | Rollup 打包的外部依赖未跟随 | 复制 `claude-code-engine/node_modules/ws` 到 `resources/claude-code-engine/dist/node_modules/` |
-| 独立版的 config/ 是 junction，复制后失效 | Windows mklink /J 使用绝对路径 | `build_release.py` 改用 `shutil.copytree` 创建真实目录副本 |
-| NSIS 安装包失败 | 2.3GB 的 7z 文件 mmap 失败 | 改用 `electron-builder --win portable` |
+| 独立版 config/data 冗余副本 | 外层与 `_internal/` 下的 config/data 是两份独立副本，用户编辑外层不生效 | `build_release.py` 将 `_internal/config`, `_internal/data`, `_internal/logs` 替换为目录联结（junction）→ `../config` 等，实现单一数据源 |
+| NSIS / portable 打包失败 | 7z 文件过大 (5.9GB+)，NSIS makensis mmap 失败 | 改用 `electron-builder --win zip`，产出自解压 ZIP |
 | DeepSeek API 401 认证失败 | `.env` 中密钥为占位符（安全设计） | 发布前替换 `_internal/config/.env` 中的 `DEEPSEEK_API_KEY` |
 
 ### 分发
 
 ```bash
 # 独立后端 — 压缩 release/Miya/ 为 ZIP/7z
-# 接收者解压后编辑 _internal/config/.env 即可运行
+# 注意：目录联结（junction）无法被打包进 ZIP，若需分发 ZIP 请使用 --portable-zip 回退到复制模式
+# 接收者解压后编辑 config/.env 即可运行
 
 # 桌面应用 — 直接分发 miya_frontend/release/Miya 1.0.0.exe
 # 接收者双击运行，首次启动后在 _internal/config/.env 填入 API key
