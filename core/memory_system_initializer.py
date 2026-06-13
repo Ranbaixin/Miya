@@ -98,9 +98,9 @@ class MemorySystemInitializer:
             logger.info(
                 f"  • 手动记忆: {self.data_dir / 'memory' / 'undefined_memory.json'}"
             )
-            logger.info("  • Redis: 已禁用")
-            logger.info("  • Milvus: 已禁用")
-            logger.info("  • Neo4j: 已禁用")
+            logger.info("  • Redis: 已禁用（SQLite 替代）")
+            logger.info("  • Milvus: 已禁用（SQLite 替代）")
+            logger.info("  • Neo4j: 由 GRAG 知识图谱系统独立管理")
 
             return True
 
