@@ -1479,14 +1479,24 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             result = await self._call_onebot_api("get_image", {"file": file_id})
             if isinstance(result, dict):
                 b64 = result.get("file") or result.get("data")
+                # 尝试 base64 数据
                 if b64:
                     try:
                         raw = _base64.b64decode(b64)
-                        if len(raw) > 1024:  # 至少 1KB 才算是有效图片
-                            logger.debug(f"[{self.platform_id}] OneBot get_image 成功: {len(raw) / 1024:.1f}KB")
+                        if len(raw) > 1024:
+                            logger.debug(f"[{self.platform_id}] OneBot get_image(base64) 成功: {len(raw)/1024:.1f}KB")
                             return raw
-                    except Exception as e:
-                        logger.debug(f"[{self.platform_id}] base64 解码失败: {e}")
+                    except Exception:
+                        pass
+                # 尝试作为文件路径读取（部分 OneBot 实现返回本地路径）
+                if isinstance(result, dict):
+                    file_path = result.get("file") or result.get("path") or result.get("data") or ""
+                    if file_path and not file_path.startswith("/9j/"):  # 排除 base64 数据被误判
+                        from pathlib import Path as _Path
+                        p = _Path(file_path)
+                        if p.exists() and p.stat().st_size > 1024:
+                            logger.debug(f"[{self.platform_id}] OneBot get_image(file) 成功: {file_path}")
+                            return p.read_bytes()
 
         # 方案2: 直接 HTTP 下载 url（QQ 内部 url 可能过期或需要特定 header）
         if url:
