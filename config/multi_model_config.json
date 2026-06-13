@@ -50,9 +50,10 @@
     "deepseek_vision": {
       "name": "deepseek-v4-flash",
       "provider": "openai",
+      "type": "vision",
       "base_url": "https://api.deepseek.com/v1",
       "env_key": "DEEPSEEK_API_KEY",
-      "description": "Kimi K2.6 原生多模态模型 (1T MoE, 32B激活, 硅基流动)",
+      "description": "DeepSeek 视觉模型 (多模态图片分析)",
       "capabilities": [
         "image_description",
         "vision_understanding",
