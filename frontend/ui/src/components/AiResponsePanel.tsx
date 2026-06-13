@@ -10,7 +10,7 @@ const AiResponsePanel: React.FC = () => {
     "Cóťtaly Īnleone.",
     "Chcttiōne Caol.",
     "（被连续拍了两下，指尖在屏幕上停顿片刻）",
-    "佳，这样会让我分心的。",
+    "然鑫，这样会让我分心的。",
     "嗯。我在。",
   ];
 

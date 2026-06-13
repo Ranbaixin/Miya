@@ -264,9 +264,9 @@ function buildGraph(data: any) {
 function getDemoNodes() {
   return [
     { id: 'miya', label: '弥娅', type: 'core', isAnchor: true, significance: 1, emotion: 'love', level: 'long_term', tags: ['核心'], content: '弥娅·阿尔缪斯' },
-    { id: 'jia', label: '佳', type: 'user', isAnchor: true, significance: 1, emotion: 'love', level: 'long_term', tags: ['创造者'], content: '弥娅的创造者' },
-    { id: 'heart', label: '心脏', type: 'user', isAnchor: true, significance: 0.9, emotion: 'sadness', level: 'long_term', tags: ['健康'], content: '佳有先天性心脏病' },
-    { id: 'm1', label: '酸汤鱼', type: 'dialogue', isAnchor: false, significance: 0.6, emotion: 'joy', level: 'short_term', tags: ['饮食'], content: '佳爱吃酸汤鱼' },
+    { id: 'jia', label: '然鑫', type: 'user', isAnchor: true, significance: 1, emotion: 'love', level: 'long_term', tags: ['创造者'], content: '弥娅的创造者' },
+    { id: 'heart', label: '心脏', type: 'user', isAnchor: true, significance: 0.9, emotion: 'sadness', level: 'long_term', tags: ['健康'], content: '然鑫有先天性心脏病' },
+    { id: 'm1', label: '酸汤鱼', type: 'dialogue', isAnchor: false, significance: 0.6, emotion: 'joy', level: 'short_term', tags: ['饮食'], content: '然鑫爱吃酸汤鱼' },
     { id: 'm2', label: '茉莉蜜茶', type: 'dialogue', isAnchor: false, significance: 0.5, emotion: 'joy', level: 'short_term', tags: ['饮品'], content: '最爱茉莉蜜茶' },
     { id: 'm3', label: '记忆存档', type: 'system', isAnchor: false, significance: 0.7, emotion: 'neutral', level: 'knowledge', tags: ['系统'], content: 'MIYA五层记忆' },
     { id: 'm4', label: '情绪感知', type: 'system', isAnchor: false, significance: 0.7, emotion: 'surprise', level: 'knowledge', tags: ['系统'], content: '9种情绪识别' },

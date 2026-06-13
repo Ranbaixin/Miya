@@ -18,7 +18,7 @@ interface GroupData {
 }
 
 const defaultFriends: FriendData[] = [
-  { id: '1523878699', nickname: '佳', remark: '亲爱的', status: 'online' },
+  { id: '1523878699', nickname: '然鑫', remark: '亲爱的', status: 'online' },
   { id: '123456789', nickname: '咕', remark: '咕咕', status: 'online' },
   { id: '987654321', nickname: '林', remark: '林', status: 'offline' },
   { id: '456789123', nickname: '测试小号', remark: '测试', status: 'online' },

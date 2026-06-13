@@ -2037,7 +2037,7 @@ class DecisionHub:
                         # C方案：存入长期记忆，AI自行判断重要性
                         significant_emotions = [e for e, i in _emotions.items() if i >= 60]
                         if significant_emotions:
-                            peak_content = f"【情绪记录】与佳互动时感到: {', '.join(significant_emotions)}"
+                            peak_content = f"【情绪记录】与然鑫互动时感到: {', '.join(significant_emotions)}"
                             await store_auto(
                                 peak_content,
                                 user_id,
@@ -2240,7 +2240,7 @@ class DecisionHub:
             # 检测是否有显著的正面情绪（强度>=60）
             significant_emotions = [e for e, i in _emotions.items() if i >= 60]
             if significant_emotions:
-                peak_content = f"【情绪记录】与佳互动时感到: {', '.join(significant_emotions)}"
+                peak_content = f"【情绪记录】与然鑫互动时感到: {', '.join(significant_emotions)}"
                 try:
                     await store_auto(
                         peak_content,

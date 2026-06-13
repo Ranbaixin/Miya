@@ -454,7 +454,7 @@ class PersonalityLoader:
             lines.append(pronoun_disambiguation)
             lines.append("")
 
-        # 关于佳的信息
+        # 关于然鑫的信息
         if "about_jia" in config:
             lines.append(config["about_jia"])
             lines.append("")

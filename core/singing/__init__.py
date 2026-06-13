@@ -14,7 +14,7 @@
 ```python
 from core.singing import get_singing_registry
 registry = get_singing_registry()
-reply = await registry.workflow.process_song_request("青花瓷", username="佳")
+reply = await registry.workflow.process_song_request("青花瓷", username="然鑫")
 ```
 
 版本：

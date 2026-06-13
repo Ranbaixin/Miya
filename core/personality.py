@@ -33,7 +33,7 @@ class Personality:
             self._use_yaml = True
             self._current_config = self._loader.load("_default")
 
-            self.titles = self._current_config.get("titles", {"default": ["佳"]})
+            self.titles = self._current_config.get("titles", {"default": ["然鑫"]})
             self.quotes = self._current_config.get("quotes", {"being": "我在。"})
             self._load_core_config()
         except Exception as e:
@@ -41,7 +41,7 @@ class Personality:
 
             logging.getLogger(__name__).warning(f"[Personality] YAML加载失败: {e}")
             self._use_yaml = False
-            self.titles = {"default": ["佳"]}
+            self.titles = {"default": ["然鑫"]}
             self.quotes = {"being": "我在。"}
 
         self.vectors = self._default_vectors.copy()

@@ -43,7 +43,7 @@ class LifeBook:
 
         perspective_names = self._config.get("perspective_name", {})
         self._lover_name = perspective_names.get("lover", "弥娅")
-        self._user_name = perspective_names.get("user", "佳")
+        self._user_name = perspective_names.get("user", "然鑫")
 
     def _load_config(self) -> Dict:
         """从 text_config.json 加载配置（统一缓存）"""

@@ -26,7 +26,7 @@ function generateMockLog(): LogEntry {
   const levels: LogEntry['level'][] = ['INFO', 'INFO', 'INFO', 'WARN', 'ERROR'];
 
   const messages: Record<string, string[]> = {
-    MLink: ['QQ消息 -> group | 1523878699(佳)', '群: 1092980378(索多玛)', '连接成功！'],
+    MLink: ['QQ消息 -> group | 1523878699(然鑫)', '群: 1092980378(索多玛)', '连接成功！'],
     MemNet: ['[记忆] 写入短期记忆完成', '[记忆] 检索到 3 条相关记忆'],
     Hub: ['[决策中枢] 选择响应策略', '[消息队列] 已启动模型处理'],
     Soul: ['♥ 情绪分析 温暖(85%)', '✦ 内心独白更新完成'],

@@ -303,7 +303,7 @@ class MemoryEnhancer:
         entities = set()
 
         # 人称提取
-        persons = ["我", "你", "他", "她", "我们", "你们", "他们", "佳", "弥娅"]
+        persons = ["我", "你", "他", "她", "我们", "你们", "他们", "然鑫", "弥娅"]
         for p in persons:
             if p in text:
                 entities.add(p)

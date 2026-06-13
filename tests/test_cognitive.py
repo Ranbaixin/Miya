@@ -18,7 +18,7 @@ async def test_jobqueue_enqueue_dequeue(job_queue):
     job_id = await job_queue.enqueue(
         {
             "job_id": "test-001",
-            "text": "佳喜欢咖啡",
+            "text": "然鑫喜欢咖啡",
             "group_id": 123,
             "user_id": 456,
         }
@@ -29,7 +29,7 @@ async def test_jobqueue_enqueue_dequeue(job_queue):
 
     job = await job_queue.dequeue()
     assert job is not None
-    assert job["text"] == "佳喜欢咖啡"
+    assert job["text"] == "然鑫喜欢咖啡"
     assert job["group_id"] == 123
 
     assert await job_queue.pending_count() == 0
@@ -88,13 +88,13 @@ async def test_profile_storage_write_read(profile_storage):
     await profile_storage.write_profile(
         entity_type="user",
         entity_id=456,
-        profile_data={"display_name": "佳", "tags": ["coffee", "coding"]},
-        body="# 佳的用户侧写\n\n佳喜欢喝咖啡和编程。",
+        profile_data={"display_name": "然鑫", "tags": ["coffee", "coding"]},
+        body="# 然鑫的用户侧写\n\n然鑫喜欢喝咖啡和编程。",
     )
 
     profile = await profile_storage.read_profile("user", 456)
     assert profile is not None
-    assert profile["display_name"] == "佳"
+    assert profile["display_name"] == "然鑫"
     assert "coffee" in profile["tags"]
     assert "咖啡" in profile["_body"]
 
@@ -128,7 +128,7 @@ async def test_profile_storage_delete(profile_storage):
 async def test_cognitive_service_record_observation(cognitive_service):
     """测试记录观察"""
     job_id = await cognitive_service.record_observation(
-        text="佳今天心情很好",
+        text="然鑫今天心情很好",
         group_id=123,
         user_id=456,
         source_type="chat",
@@ -142,7 +142,7 @@ async def test_cognitive_service_add_event(cognitive_service):
     """测试直接添加向量事件"""
     await cognitive_service.add_event_directly(
         event_id="evt-001",
-        text="佳向弥娅道了早安",
+        text="然鑫向弥娅道了早安",
         metadata={
             "group_id": "123",
             "user_id": "456",
@@ -161,7 +161,7 @@ async def test_cognitive_service_build_context(cognitive_service):
     # 添加一个事件
     await cognitive_service.add_event_directly(
         event_id="ctx-001",
-        text="佳在群里分享了关于 docker 的文章",
+        text="然鑫在群里分享了关于 docker 的文章",
         metadata={
             "group_id": "123",
             "user_id": "456",
@@ -184,8 +184,8 @@ async def test_cognitive_service_update_profile(cognitive_service):
     await cognitive_service.update_profile(
         entity_type="user",
         entity_id=456,
-        profile_data={"display_name": "佳", "emoji": "☕"},
-        body="佳喜欢喝咖啡和编程。",
+        profile_data={"display_name": "然鑫", "emoji": "☕"},
+        body="然鑫喜欢喝咖啡和编程。",
     )
 
     profiles = await cognitive_service.search_profiles(query="咖啡", top_k=3)

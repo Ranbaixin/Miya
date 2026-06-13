@@ -42,7 +42,7 @@
 - `run/main.py`: 不再禁用 Neo4j，改为从 `.env` 读取配置创建 GRAGMemoryManager
 - `hub/memory_manager.py`: `store_assistant_response()` 末尾接入 Neo4j 存储
 - 五元组 prompt 改为英文 key + 解析器兼容中文 key
-- **已验证**: "我叫佳，喜欢看电影" → 3 条五元组成功存入 Neo4j
+- **已验证**: "我叫然鑫，喜欢看电影" → 3 条五元组成功存入 Neo4j
 
 #### 🔒 安全加固 (Commit 6)
 - `core/tools_astrbot/__init__.py`: `shell=True` → `shlex.split()` + `shell=False`，危险命令拦截

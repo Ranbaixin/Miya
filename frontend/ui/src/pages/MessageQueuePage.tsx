@@ -94,7 +94,7 @@ const MessageQueuePage: React.FC = () => {
   useEffect(() => {
     if (!connected) {
       const mocks: PipelineEvent[] = [
-        { id: '1', timestamp: new Date().toISOString(), stage: 'receive', user: '佳', message: '帮我看看今天的天气', group: '私聊' },
+        { id: '1', timestamp: new Date().toISOString(), stage: 'receive', user: '然鑫', message: '帮我看看今天的天气', group: '私聊' },
         { id: '2', timestamp: new Date().toISOString(), stage: 'perceive', duration_ms: 120, detail: '意图识别: 信息查询', model: 'perceive' },
         { id: '3', timestamp: new Date().toISOString(), stage: 'cognitive', duration_ms: 85, detail: '认知处理', model: 'deepseek-v4-flash' },
         { id: '4', timestamp: new Date().toISOString(), stage: 'soul', duration_ms: 45, detail: '情感分析: 积极', model: 'emotion' },

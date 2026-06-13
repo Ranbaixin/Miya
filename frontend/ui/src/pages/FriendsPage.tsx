@@ -7,7 +7,7 @@ interface FriendsPageProps {
 }
 
 const defaultFriends: FriendData[] = [
-  { id: '1523878699', nickname: '佳', remark: '亲爱的', last_msg: '晚安', last_active: '5分钟前' },
+  { id: '1523878699', nickname: '然鑫', remark: '亲爱的', last_msg: '晚安', last_active: '5分钟前' },
   { id: '123456789', nickname: '测试小号', remark: '测试', last_msg: '你好', last_active: '1小时前' },
   { id: '987654321', nickname: '咕', remark: '咕咕', last_msg: '在吗', last_active: '3小时前' },
   { id: '456789123', nickname: '林', remark: '林', last_msg: '来了', last_active: '昨天' },

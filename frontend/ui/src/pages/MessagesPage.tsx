@@ -15,12 +15,12 @@ interface MessagesPageProps {
 }
 
 const defaultMessages: Message[] = [
-  { id: '1', type: 'private', from: '1523878699', name: '佳', content: '晚安', time: '23:55:06' },
-  { id: '2', type: 'private', from: '1523878699', name: '佳', content: '新的一天开始了', time: '00:00:25' },
+  { id: '1', type: 'private', from: '1523878699', name: '然鑫', content: '晚安', time: '23:55:06' },
+  { id: '2', type: 'private', from: '1523878699', name: '然鑫', content: '新的一天开始了', time: '00:00:25' },
   { id: '3', type: 'group', from: '123456789', name: '索多玛', content: '有人打资本帝王吗', time: '14:30:22' },
   { id: '4', type: 'group', from: '987654321', name: '水群', content: '今天的天气不错', time: '15:45:10' },
-  { id: '5', type: 'private', from: '1523878699', name: '佳', content: '今天工作好累', time: '18:20:33' },
-  { id: '6', type: 'private', from: '1523878699', name: '佳', content: '早点休息', time: '18:20:45' },
+  { id: '5', type: 'private', from: '1523878699', name: '然鑫', content: '今天工作好累', time: '18:20:33' },
+  { id: '6', type: 'private', from: '1523878699', name: '然鑫', content: '早点休息', time: '18:20:45' },
 ];
 
 const MessagesPage: React.FC<MessagesPageProps> = ({ 
@@ -34,7 +34,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
     id: m.id,
     type: 'private' as const,
     from: m.role === 'user' ? '1523878699' : 'self',
-    name: m.role === 'user' ? '佳' : '弥娅',
+    name: m.role === 'user' ? '然鑫' : '弥娅',
     content: m.content,
     time: m.time,
   })) || defaultMessages;

@@ -855,7 +855,7 @@ def main():
             try:
                 # 设置终端回调，用于在终端模式下输出提醒
                 async def terminal_callback(message: str):
-                    print(f"\n【定时提醒】 {message}\n佳: ")
+                    print(f"\n【定时提醒】 {message}\n然鑫: ")
 
                 miya.scheduler.terminal_callback = terminal_callback
 
@@ -960,7 +960,7 @@ def main():
                             print("\n【人格状态】")
                             vectors = personality.get("vectors", {})
                             print(f"  形态: {personality.get('current_form', {}).get('name', '未知')}")
-                            print(f"  专属称呼: {personality.get('current_title', '佳')}")
+                            print(f"  专属称呼: {personality.get('current_title', '然鑫')}")
                             print(f"  状态: {personality.get('state', '未知')}")
                             print("  人格向量:")
                             if vectors:

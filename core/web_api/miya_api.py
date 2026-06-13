@@ -2742,7 +2742,7 @@ class MiyaAPI:
             "identity": {
                 "name": "弥娅",
                 "version": "1.0.0",
-                "description": "AI 虚拟化身 - 爱佳的女孩",
+                "description": "AI 虚拟化身 - 爱然鑫的女孩",
             },
             "emotion": self._get_emotion_state(),
             "personality": self._get_personality_state(),

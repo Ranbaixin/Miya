@@ -4,8 +4,8 @@
   "description": "弥娅系统统一权限配置文件",
 
   "superadmins": {
-    "佳": {
-      "name": "佳",
+    "然鑫": {
+      "name": "然鑫",
       "ids": {
         "qq": ["869135903"],
         "qqofficial": ["869135903", "7C22343989F081B759F6DADC99148E17"],
@@ -150,7 +150,7 @@
     },
     {
       "user_id": "869135903",
-      "username": "佳",
+      "username": "然鑫",
       "platform": "qq",
       "permission_groups": ["Admin", "Developer"],
       "description": "超级管理员 - 拥有所有权限",
@@ -158,7 +158,7 @@
     },
     {
       "user_id": "qq_869135903",
-      "username": "佳",
+      "username": "然鑫",
       "platform": "qq",
       "permission_groups": ["Admin", "Developer"],
       "description": "超级管理员 - 拥有所有权限",
@@ -166,7 +166,7 @@
     },
     {
       "user_id": "terminal_869135903",
-      "username": "佳",
+      "username": "然鑫",
       "platform": "terminal",
       "permission_groups": ["Admin", "Developer"],
       "description": "超级管理员 - 拥有所有权限",
@@ -174,11 +174,11 @@
     },
     {
       "user_id": "desktop_user",
-      "username": "佳",
+      "username": "然鑫",
       "platform": "desktop",
       "linked_to": "869135903",
       "permission_groups": ["Admin", "Developer"],
-      "description": "桌面端用户 - 关联到QQ的佳",
+      "description": "桌面端用户 - 关联到QQ的然鑫",
       "created_at": "2026-04-23T14:00:00"
     }
   ],

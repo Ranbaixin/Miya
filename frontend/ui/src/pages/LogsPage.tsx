@@ -13,7 +13,7 @@ const defaultLogs: LogEntry[] = [
   { level: 'INFO', message: 'ToolNet 初始化完成，加载 69 个工具', timestamp: '2024-04-19 12:34:58' },
   { level: 'WARN', message: '认知记忆服务未连接，使用本地存储', timestamp: '2024-04-19 12:35:01' },
   { level: 'INFO', message: 'Memory engine ready', timestamp: '2024-04-19 12:35:02' },
-  { level: 'INFO', message: '收到消息: 佳 说"今天过得怎么样?"', timestamp: '2024-04-19 14:22:15' },
+  { level: 'INFO', message: '收到消息: 然鑫 说"今天过得怎么样?"', timestamp: '2024-04-19 14:22:15' },
   { level: 'INFO', message: '情感分析: 温暖 +85', timestamp: '2024-04-19 14:22:16' },
   { level: 'INFO', message: 'memory_search 调用成功', timestamp: '2024-04-19 14:22:18' },
   { level: 'ERROR', message: '工具执行超时: weather', timestamp: '2024-04-19 15:30:22' },

@@ -1365,7 +1365,7 @@ class SoulGenerator:
                     # 限制每条消息最多150字
                     content = content[:150]
                     if role.lower() in ("user", "human"):
-                        context_parts.append(f"佳: {content}")
+                        context_parts.append(f"然鑫: {content}")
                     elif role.lower() in ("assistant", "ai", "bot"):
                         context_parts.append(f"弥娅: {content}")
                     else:
@@ -1446,10 +1446,10 @@ class SoulGenerator:
                         for _person, info in engine._config.get(
                             "superadmins", {}
                         ).items():
-                            owner_name = info.get("name", "佳")
+                            owner_name = info.get("name", "然鑫")
                             break
                     except Exception:
-                        owner_name = "佳"
+                        owner_name = "然鑫"
                 # v7.0: 从 text_config 加载所有者提示模板
                 try:
                     from core.config_loader import load_text_config

@@ -25,7 +25,7 @@ song_background:
 cmd:
   - ""
 relations:
-  "佳": "亲爱的"
+  "然鑫": "亲爱的"
 split_flag: ",|，|。|!|！|?|？|\n"
 split_limit: 4
 public_sentiment_key: "(爱|喵|女仆|老婆|比心|喜欢|乖|亲)"

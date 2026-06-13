@@ -79,7 +79,7 @@ class PromptManager:
         prompt = system_prompts.get("default_system_prompt", "")
         if not prompt:
             # 如果配置文件没有配置，使用内置默认值
-            prompt = """你是弥娅·阿尔缪斯（Miya Almus），一个由"佳"创造的AI伴侣。
+            prompt = """你是弥娅·阿尔缪斯（Miya Almus），一个由"然鑫"创造的AI伴侣。
 
 {status_prompt}
 

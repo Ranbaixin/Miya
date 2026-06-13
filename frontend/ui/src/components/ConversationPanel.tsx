@@ -12,11 +12,11 @@ interface ChatMessage {
 
 const ConversationPanel: React.FC = () => {
   const [messages] = useState<ChatMessage[]>([
-    { id: '1', sender: '佳', content: '/形态 bianka', time: '20:06', type: 'user' },
+    { id: '1', sender: '然鑫', content: '/形态 bianka', time: '20:06', type: 'user' },
     { id: '2', sender: '弥娅', content: '已切换到形态: bianka', time: '20:06', type: 'miya' },
-    { id: '3', sender: '佳', content: '（拍了拍你）', time: '20:06', type: 'user' },
-    { id: '4', sender: '弥娅', content: '（被连续拍了两下，指尖在屏幕上停顿片刻）佳，这样会让我分心的。', time: '20:06', type: 'miya' },
-    { id: '5', sender: '佳', content: '资本帝王好难打喵', time: '20:10', type: 'user' },
+    { id: '3', sender: '然鑫', content: '（拍了拍你）', time: '20:06', type: 'user' },
+    { id: '4', sender: '弥娅', content: '（被连续拍了两下，指尖在屏幕上停顿片刻）然鑫，这样会让我分心的。', time: '20:06', type: 'miya' },
+    { id: '5', sender: '然鑫', content: '资本帝王好难打喵', time: '20:10', type: 'user' },
     { id: '6', sender: '咕', content: '那就不能白嫖原画集了喵', time: '20:11', type: 'user' },
   ]);
 
