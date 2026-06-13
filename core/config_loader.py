@@ -23,7 +23,8 @@ PROJECT_ROOT = Path(__file__).parent.parent
 CONFIG_DIR = PROJECT_ROOT / "config"
 
 # 加载 .env
-load_dotenv(CONFIG_DIR / ".env")
+if not os.environ.get("_MIYA_DOTENV_LOADED"):
+    load_dotenv(CONFIG_DIR / ".env")
 
 
 # ==================== 配置加载器 ====================
@@ -70,12 +71,8 @@ class ConfigLoader:
                 "SILICONFLOW_API_BASE",
                 os.getenv("SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1"),
             ),
-            "deepseek_base_url": os.getenv(
-                "DEEPSEEK_API_BASE", "https://api.deepseek.com/v1"
-            ),
-            "zhipu_base_url": os.getenv(
-                "ZHIPU_API_BASE", "https://open.bigmodel.cn/api/paas/v4"
-            ),
+            "deepseek_base_url": os.getenv("DEEPSEEK_API_BASE", "https://api.deepseek.com/v1"),
+            "zhipu_base_url": os.getenv("ZHIPU_API_BASE", "https://open.bigmodel.cn/api/paas/v4"),
             "dashscope_base_url": os.getenv(
                 "DASHSCOPE_API_BASE",
                 "https://dashscope.aliyuncs.com/compatible-mode/v1",

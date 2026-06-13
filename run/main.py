@@ -90,6 +90,12 @@ def chinese_input(prompt: str) -> str:
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+# 单次加载 .env（后续模块的 load_dotenv 会被跳过）
+from dotenv import load_dotenv as _load_dotenv
+
+_load_dotenv(project_root / "config" / ".env")
+os.environ["_MIYA_DOTENV_LOADED"] = "1"
+
 # 使用统一的端口检测工具
 from config import Settings
 from core import Arbitrator, Entropy, Ethics, Identity, Personality, PromptManager
@@ -448,14 +454,13 @@ class Miya:
                 self.logger.error(f"[记忆] 统一记忆系统初始化失败: {e}")
 
     def _init_ai_client(self):
-        """初始化AI客户端 - 所有模型从 multi_model_config.json 加载"""
+        """初始化AI客户端 - 模型配置从 multi_model_config.json 加载，客户端延迟创建"""
         import os
 
         from dotenv import load_dotenv
 
         load_dotenv(Path(__file__).parent.parent / "config" / ".env")
 
-        # 尝试初始化多模型管理器
         try:
             from core.model_pool_manager import get_model_pool
 
@@ -463,26 +468,24 @@ class Miya:
             model_configs = pool.get_model_configs_for_manager()
 
             if model_configs:
-                model_clients = {}
+                self.model_pool = pool
+                self._model_client_configs: dict = {}
+                self._model_clients: dict = {}
+                self._model_api_keys: dict = {}
+
                 from core.ai_client import AIClientFactory
 
                 for model_key, model_config in model_configs.items():
                     try:
-                        # 处理 provider 可能是字符串或枚举的情况
                         provider_value = model_config.provider
                         if hasattr(provider_value, "value"):
                             provider_value = provider_value.value
 
-                        # 从环境变量获取 API key
                         api_key = ""
                         if model_config.env_key:
                             api_key = os.getenv(model_config.env_key, "")
-
-                        # 尝试从 model_config 的 api_key 属性获取（嵌入在 JSON 中的密钥）
                         if not api_key and hasattr(model_config, "api_key"):
                             api_key = model_config.api_key or ""
-
-                        # 如果没有 api_key，尝试从常见的环境变量获取
                         if not api_key:
                             provider_env_map = {
                                 "deepseek": "DEEPSEEK_API_KEY",
@@ -495,26 +498,24 @@ class Miya:
                             if env_key:
                                 api_key = os.getenv(env_key, "")
 
-                        client = AIClientFactory.create_client(
-                            provider=provider_value,
-                            api_key=api_key,
-                            model=model_config.name,
-                            base_url=model_config.base_url,
-                            temperature=float(os.getenv("AI_TEMPERATURE", "0.7")),
-                            max_tokens=int(os.getenv("AI_MAX_TOKENS", "2000")),
-                        )
-
-                        if client and hasattr(client, "client") and client.client is not None:
-                            model_clients[model_key] = client
-                            self.logger.info(f"  [多模型] {model_key}: {model_config.name} ({model_config.base_url})")
+                        self._model_client_configs[model_key] = {
+                            "provider": provider_value,
+                            "api_key": api_key,
+                            "model": model_config.name,
+                            "base_url": model_config.base_url,
+                            "temperature": float(os.getenv("AI_TEMPERATURE", "0.7")),
+                            "max_tokens": int(os.getenv("AI_MAX_TOKENS", "2000")),
+                        }
+                        self._model_api_keys[model_key] = api_key
+                        self.logger.info(f"  [多模型] {model_key}: {model_config.name} ({model_config.base_url})")
                     except Exception as e:
-                        self.logger.warning(f"  [多模型] {model_key} 初始化失败: {e}")
+                        self.logger.warning(f"  [多模型] {model_key} 配置解析失败: {e}")
 
-                if model_clients:
-                    self.model_pool = pool
-                    self.logger.info(f"模型池初始化成功，已加载 {len(model_clients)} 个模型")
+                self.logger.info(f"模型池初始化成功，已注册 {len(self._model_client_configs)} 个模型")
 
-                    default_client = next(iter(model_clients.values()), None)
+                default_key = next(iter(self._model_client_configs.keys()), None)
+                if default_key:
+                    default_client = self._get_or_create_model_client(default_key)
                     if default_client:
                         self.logger.info(f"默认模型: {default_client.model}")
                         return default_client
@@ -522,6 +523,42 @@ class Miya:
         except Exception as e:
             self.logger.warning(f"多模型管理器初始化失败: {e}")
             return None
+
+    def _get_or_create_model_client(self, model_key: str):
+        """延迟创建模型客户端（首次使用时创建）"""
+        if model_key in self._model_clients:
+            return self._model_clients[model_key]
+
+        config = self._model_client_configs.get(model_key)
+        if not config:
+            return None
+
+        try:
+            from core.ai_client import AIClientFactory
+
+            client = AIClientFactory.create_client(
+                provider=config["provider"],
+                api_key=config["api_key"],
+                model=config["model"],
+                base_url=config["base_url"],
+                temperature=config["temperature"],
+                max_tokens=config["max_tokens"],
+            )
+
+            if client and hasattr(client, "client") and client.client is not None:
+                self._model_clients[model_key] = client
+                return client
+        except Exception as e:
+            self.logger.warning(f"  [多模型] {model_key} 延迟创建失败: {e}")
+        return None
+
+    def get_model_client(self, model_key: str = None):
+        """获取模型客户端（优先从已缓存获取，否则延迟创建）"""
+        if model_key and model_key in self._model_clients:
+            return self._model_clients[model_key]
+        if model_key and hasattr(self, "_model_client_configs") and model_key in self._model_client_configs:
+            return self._get_or_create_model_client(model_key)
+        return getattr(self, "ai_client", None)
 
     def _init_vector_system(self):
         """初始化向量系统"""
@@ -626,38 +663,39 @@ class Miya:
                             except Exception as e:
                                 self.logger.warning(f"[Miya] 吟美插件加载失败: {e}")
 
+                            # 通知主线程服务器即将启动
+                            server_ready.set()
                             uvicorn.run(
                                 app,
                                 host="0.0.0.0",
                                 port=current_api_port,
                                 log_level="warning",
                             )
-                            # uvicorn.run 会阻塞，所以下面的代码不会执行
-                            # 但为了类型安全，返回 True
                             return True
+                        server_ready.set()
                         return False
                     except OSError as e:
-                        if e.errno == 10048 and attempt < max_retries - 1:  # 地址已在用
+                        if e.errno == 10048 and attempt < max_retries - 1:
                             self.logger.warning(f"端口 {current_api_port} 绑定失败，尝试下一个端口...")
-                            # 更新端口并重新检查
                             from utils.port_utils import find_available_port
 
                             current_api_port = find_available_port(current_api_port + 1, host="0.0.0.0")
                             self.logger.info(f"端口切换到 {current_api_port}，前端将自动检测该端口")
                         else:
                             self.logger.error(f"无法启动服务器: {e}")
+                            server_ready.set()
                             raise
                     except Exception as e:
                         self.logger.error(f"启动服务器时发生意外错误: {e}")
+                        server_ready.set()
                         raise
+                server_ready.set()
                 return False
 
+            server_ready = threading.Event()
             server_thread = threading.Thread(target=run_server, args=(api_port,), daemon=False)
             server_thread.start()
-
-            import time
-
-            time.sleep(2)
+            server_ready.wait(timeout=5)
 
             self.logger.info(f"Web API 服务器已在后台启动 (http://0.0.0.0:{api_port})")
         except Exception as e:

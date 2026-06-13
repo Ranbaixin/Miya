@@ -1,16 +1,8 @@
 from __future__ import annotations
 
-_MEM_F_CFG = {}
-try:
-    import yaml
-    from pathlib import Path
+from core.miya_config_cache import get_config_section as _get_cfg_section
 
-    p = Path(__file__).resolve().parent.parent.parent / "config" / "miya_config.yaml"
-    with open(p, "r", encoding="utf-8") as f_cfg:
-        raw = yaml.safe_load(f_cfg) or {}
-    _MEM_F_CFG = raw.get("memory_fusion", {})
-except Exception:
-    pass
+_MEM_F_CFG = _get_cfg_section("memory_fusion")
 
 _MF_LABELS = _MEM_F_CFG.get("labels", {})
 _MF_TRUNC = _MEM_F_CFG.get("truncation", {})

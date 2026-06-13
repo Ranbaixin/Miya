@@ -672,6 +672,7 @@ class ProcessPool:
         self.results = {}
         self.pool_lock = threading.Lock()
         self.active_tasks = {}
+        self._workers_initialized = False
         self.performance_metrics = {
             "tasks_completed": 0,
             "tasks_failed": 0,
@@ -680,15 +681,19 @@ class ProcessPool:
             "memory_usage": 0.0,
         }
 
-        # Initialize minimum workers
-        self._scale_up(self.min_workers)
-
-        # Start monitoring thread
+        # Start monitoring thread (lightweight, no workers yet)
         self.monitor_thread = threading.Thread(target=self._monitor_performance, daemon=True)
         self.monitor_thread.start()
 
+    def _ensure_workers(self):
+        """Lazy-initialize worker threads on first task submission"""
+        if not self._workers_initialized:
+            self._workers_initialized = True
+            self._scale_up(self.min_workers)
+
     def submit_task(self, task_id: str, func, *args, **kwargs) -> str:
         """Submit a task to the process pool"""
+        self._ensure_workers()  # Lazy init on first use
         task = {
             "id": task_id,
             "func": func,
@@ -1385,10 +1390,55 @@ class PerformanceDashboard:
             }
 
 
-# Global instances
-tech_detector = TechnologyDetector()
-rate_limiter = RateLimitDetector()
-failure_recovery = FailureRecoverySystem()
-performance_monitor = PerformanceMonitor()
-parameter_optimizer = ParameterOptimizer()
-enhanced_process_manager = EnhancedProcessManager()
+# Global instances (lazy-init for faster module load — uses module-level __getattr__)
+_tech_detector = None
+_rate_limiter = None
+_failure_recovery = None
+_performance_monitor = None
+_parameter_optimizer = None
+_enhanced_process_manager = None
+
+
+def get_enhanced_process_manager():
+    global _enhanced_process_manager
+    if _enhanced_process_manager is None:
+        _enhanced_process_manager = EnhancedProcessManager()
+    return _enhanced_process_manager
+
+
+def __getattr__(name):
+    _globals = {
+        "tech_detector": lambda: (
+            _globals["_tech_detector"]
+            if _globals["_tech_detector"]
+            else globals().__setitem__("_tech_detector", TechnologyDetector()) or globals()["_tech_detector"]
+        ),
+    }
+    if name == "tech_detector":
+        global _tech_detector
+        if _tech_detector is None:
+            _tech_detector = TechnologyDetector()
+        return _tech_detector
+    if name == "rate_limiter":
+        global _rate_limiter
+        if _rate_limiter is None:
+            _rate_limiter = RateLimitDetector()
+        return _rate_limiter
+    if name == "failure_recovery":
+        global _failure_recovery
+        if _failure_recovery is None:
+            _failure_recovery = FailureRecoverySystem()
+        return _failure_recovery
+    if name == "performance_monitor":
+        global _performance_monitor
+        if _performance_monitor is None:
+            _performance_monitor = PerformanceMonitor()
+        return _performance_monitor
+    if name == "parameter_optimizer":
+        global _parameter_optimizer
+        if _parameter_optimizer is None:
+            _parameter_optimizer = ParameterOptimizer()
+        return _parameter_optimizer
+    if name == "enhanced_process_manager":
+        return get_enhanced_process_manager()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

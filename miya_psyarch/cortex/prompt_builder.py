@@ -9,13 +9,13 @@ from pathlib import Path
 
 import yaml
 
+from core.miya_config_cache import get_miya_config as _get_miya_config
+from pathlib import Path
 
-# ── 加载配置 ──
+# ── 加载配置 ── 使用全局缓存（避免重复读取）
 
 _CONFIG_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "miya_config.yaml"
-
-with open(_CONFIG_PATH, "r", encoding="utf-8") as _f:
-    _CFG = yaml.safe_load(_f) or {}
+_CFG = _get_miya_config()
 
 
 def _level_label(value: float, levels: list[dict]) -> str:

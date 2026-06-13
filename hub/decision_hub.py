@@ -314,14 +314,24 @@ class DecisionHub:
 
         logger.info("决策层 Hub 初始化完成（门面模式：感知/情绪/记忆/响应处理器 + 辅助模块）")
 
-        # 9. 安全服务（防注入）
-        self._init_security()
+        # 9. 安全服务 / 10. 注入检测 / 11. 协作引擎 — 后台延迟初始化
+        self._deferred_init_complete = False
+        self._start_deferred_init()
 
-        # 11. 模型协作引擎（复用 ModelPool，添加智能协作能力）
-        self._init_collaboration_engine()
+    def _start_deferred_init(self):
+        """后台线程初始化非关键子系统（安全、协作引擎、主动聊天）"""
+        import threading
+
+        def _deferred():
+            self._init_security()
+            self._init_collaboration_engine()
+            self._init_proactive_chat()
+            self._deferred_init_complete = True
+
+        threading.Thread(target=_deferred, daemon=True, name="Miya-Init-BG").start()
 
     def _init_security(self):
-        """初始化安全服务"""
+        """初始化安全服务（后台线程调用）"""
         try:
             from core.security_service import SecurityService
 
@@ -341,7 +351,8 @@ class DecisionHub:
             logger.warning(f"[决策层] AI注入检测器初始化失败: {e}")
             self.ai_injection_detector = None
 
-        # 12. 主动聊天系统 v2.0
+    def _init_proactive_chat(self):
+        """初始化主动聊天系统 v2.0（后台线程调用）"""
         try:
             from core.proactive_chat import get_proactive_chat_system
 
@@ -350,7 +361,6 @@ class DecisionHub:
             self.proactive_chat.set_personality(self.personality)
             self.proactive_chat.set_prompt_manager(self.prompt_manager)
 
-            # 注入 Screen-Aware Proactive（屏幕感知主动聊天）
             try:
                 from pathlib import Path
 
@@ -380,7 +390,6 @@ class DecisionHub:
             except Exception as e:
                 logger.debug(f"[决策层] Screen-Aware 注入跳过: {e}")
 
-            # 注册深度记忆检索提供者（认知引擎 + 对话历史）
             async def _rich_context_provider(target_id: int) -> str:
                 """为主动聊天构建完整的记忆上下文"""
                 try:
@@ -392,7 +401,6 @@ class DecisionHub:
                     session_id = f"aiocqhttp_{target_str}"
                     now = datetime.now()
 
-                    # 1. 认知记忆检索（智能语义搜索）— 使用有效查询
                     try:
                         ce = get_cognitive_engine()
                         cog_text = await ce.build_context(
@@ -406,7 +414,6 @@ class DecisionHub:
                     except Exception:
                         pass
 
-                    # 2. 对话历史 — 只保留最近 4 小时的消息，避免旧消息污染
                     try:
                         conv = await self.conversation_context_manager.get_conversation_context(
                             session_id, current_input=""
@@ -468,7 +475,6 @@ class DecisionHub:
 
                 sent = False
 
-                # 1. 尝试通过 PlatformRegistry 分发（支持所有平台）
                 if self.platform_registry and platform and platform != "terminal":
                     inst = self.platform_registry.get(platform)
                     if inst and hasattr(inst, "is_online") and inst.is_online:
@@ -477,18 +483,15 @@ class DecisionHub:
                         elif hasattr(inst, "send_private_message"):
                             sent = await inst.send_private_message(target_id, message)
 
-                # 2. 回退到 OneBot（兼容）
                 if not sent and self.onebot_client:
                     if chat_type == "group":
                         sent = await self.onebot_client.send_group_message(target_id, message)
                     else:
                         sent = await self.onebot_client.send_private_message(target_id, message)
 
-                # 3. 最终回退：打印到控制台
                 if not sent:
                     logger.info(f"[主动聊天] 无法发送到 {platform}: {message}")
 
-                # 记入统一记忆系统（长时记忆，不含工作记忆避免反馈污染）
                 try:
                     perception = {
                         "platform": platform or "terminal",

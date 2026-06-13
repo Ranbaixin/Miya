@@ -43,10 +43,10 @@ from miya_psyarch.sensors.miya_text_sensor import patch_text_sensor
 
 logger = logging.getLogger("miya_psyarch.engine")
 
-# 加载引擎配置
-_CFG_PATH = Path(__file__).resolve().parent.parent / "config" / "miya_config.yaml"
-with open(_CFG_PATH, "r", encoding="utf-8") as _f:
-    _ENGINE_CFG = (yaml.safe_load(_f) or {}).get("engine", {})
+# 加载引擎配置 — 使用全局缓存（避免重复读取同一 YAML 文件）
+from core.miya_config_cache import get_config_section, get_miya_config
+
+_ENGINE_CFG = get_config_section("engine")
 
 _TICK_HISTORY_MAX = _ENGINE_CFG.get("tick_history_max", 1000)
 _TICK_HISTORY_KEEP = _ENGINE_CFG.get("tick_history_keep", 500)
@@ -54,7 +54,7 @@ _FOCUS_SLICE = _ENGINE_CFG.get("focus_slice", 5)
 _STATE_TOP_SLICE = _ENGINE_CFG.get("state_top_slice", 8)
 _PROACTIVE = _ENGINE_CFG.get("proactive", {})
 
-_FULL_CFG = yaml.safe_load(_CFG_PATH.read_text(encoding="utf-8")) or {}
+_FULL_CFG = get_miya_config()
 # 情绪→NT 映射 fallback（当 YAML 不可用时）
 _FALLBACK_EMOTION_NT_MAP: dict[str, dict[str, float]] = {
     "love": {"OXY": 0.14, "DA": 0.10},
@@ -68,7 +68,7 @@ _FALLBACK_EMOTION_NT_MAP: dict[str, dict[str, float]] = {
     "contentment": {"SER": 0.12},
 }
 
-_SP_CFG = (yaml.safe_load(_CFG_PATH.read_text(encoding="utf-8")) or {}).get("state_pool", {})
+_SP_CFG = get_config_section("state_pool")
 _MIYA_FAMILY_PREFIX = _SP_CFG.get("miya_family_prefix", "miya_")
 _MIYA_LABEL_PREFIX = _SP_CFG.get("miya_label_prefix", "miya::")
 
@@ -146,12 +146,7 @@ class MiyaEngine:
         """应用弥娅专属的认知感受增益 + 降低 CFS→NT 注入强度"""
         if self._runtime is None:
             return
-        cfg = {}
-        _p = _CFG_PATH  # 使用统一的配置路径
-        if _p.exists():
-            import yaml
-
-            cfg = (yaml.safe_load(_p.read_text(encoding="utf-8")) or {}).get("cognitive_feeling_gains", {})
+        cfg = _FULL_CFG.get("cognitive_feeling_gains", {})
         ch = self._runtime.cognitive_feelings
         for key in ("surprise", "coherence", "dissonance", "correctness", "grasp", "expectation", "pressure"):
             attr = f"{key}_gain"

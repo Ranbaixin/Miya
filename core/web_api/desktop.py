@@ -12,8 +12,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import psutil
-
 from core.text_loader import get_permission
 
 logger = logging.getLogger(__name__)
@@ -112,9 +110,7 @@ class DesktopRoutes:
                 try:
                     base_path.relative_to(project_path)
                 except ValueError:
-                    raise HTTPException(
-                        status_code=403, detail="访问被拒绝：路径超出项目范围"
-                    )
+                    raise HTTPException(status_code=403, detail="访问被拒绝：路径超出项目范围")
 
                 files = list(base_path.rglob("*")) if recursive else list(base_path.iterdir())
 
@@ -127,9 +123,7 @@ class DesktopRoutes:
                                 "path": str(f),
                                 "is_dir": f.is_dir(),
                                 "size": f.stat().st_size if f.is_file() else 0,
-                                "modified": datetime.fromtimestamp(
-                                    f.stat().st_mtime
-                                ).isoformat(),
+                                "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
                             }
                         )
 
@@ -155,9 +149,7 @@ class DesktopRoutes:
                 try:
                     file_path.relative_to(project_path)
                 except ValueError:
-                    raise HTTPException(
-                        status_code=403, detail="访问被拒绝：路径超出项目范围"
-                    )
+                    raise HTTPException(status_code=403, detail="访问被拒绝：路径超出项目范围")
 
                 if not file_path.is_file():
                     raise HTTPException(status_code=404, detail="文件不存在")
@@ -192,9 +184,7 @@ class DesktopRoutes:
                 try:
                     file_path.relative_to(project_path)
                 except ValueError:
-                    raise HTTPException(
-                        status_code=403, detail="访问被拒绝：路径超出项目范围"
-                    )
+                    raise HTTPException(status_code=403, detail="访问被拒绝：路径超出项目范围")
 
                 # 创建父目录
                 file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -224,9 +214,7 @@ class DesktopRoutes:
                 try:
                     file_path.relative_to(project_path)
                 except ValueError:
-                    raise HTTPException(
-                        status_code=403, detail="访问被拒绝：路径超出项目范围"
-                    )
+                    raise HTTPException(status_code=403, detail="访问被拒绝：路径超出项目范围")
 
                 if not file_path.exists():
                     raise HTTPException(status_code=404, detail="文件不存在")
@@ -248,6 +236,8 @@ class DesktopRoutes:
         @self.router.get("/system/info")
         async def get_system_info():
             """获取系统信息"""
+            import psutil as _psutil
+
             try:
                 return {
                     "success": True,
@@ -259,24 +249,24 @@ class DesktopRoutes:
                         "python_version": platform.python_version(),
                     },
                     "cpu": {
-                        "count": psutil.cpu_count(),
-                        "percent": psutil.cpu_percent(interval=1),
+                        "count": _psutil.cpu_count(),
+                        "percent": _psutil.cpu_percent(interval=1),
                     },
                     "memory": {
-                        "total": psutil.virtual_memory().total,
-                        "available": psutil.virtual_memory().available,
-                        "percent": psutil.virtual_memory().percent,
+                        "total": _psutil.virtual_memory().total,
+                        "available": _psutil.virtual_memory().available,
+                        "percent": _psutil.virtual_memory().percent,
                     },
                     "disk": {
-                        "total": psutil.disk_usage("/").total
+                        "total": _psutil.disk_usage("/").total
                         if platform.system() != "Windows"
-                        else psutil.disk_usage("C:\\").total,
-                        "used": psutil.disk_usage("/").used
+                        else _psutil.disk_usage("C:\\").total,
+                        "used": _psutil.disk_usage("/").used
                         if platform.system() != "Windows"
-                        else psutil.disk_usage("C:\\").used,
-                        "free": psutil.disk_usage("/").free
+                        else _psutil.disk_usage("C:\\").used,
+                        "free": _psutil.disk_usage("/").free
                         if platform.system() != "Windows"
-                        else psutil.disk_usage("C:\\").free,
+                        else _psutil.disk_usage("C:\\").free,
                     },
                 }
             except Exception as e:
@@ -286,11 +276,11 @@ class DesktopRoutes:
         @self.router.get("/processes")
         async def list_processes():
             """列出运行中的进程"""
+            import psutil as _psutil
+
             try:
                 processes = []
-                for proc in psutil.process_iter(
-                    ["pid", "name", "username", "cpu_percent", "memory_percent"]
-                ):
+                for proc in _psutil.process_iter(["pid", "name", "username", "cpu_percent", "memory_percent"]):
                     with contextlib.suppress(builtins.BaseException):
                         processes.append(
                             {
@@ -316,19 +306,19 @@ class DesktopRoutes:
         @self.router.post("/processes/kill")
         async def kill_process(pid: int):
             """终止进程"""
+            import psutil as _psutil
+
             try:
-                proc = psutil.Process(pid)
+                proc = _psutil.Process(pid)
                 proc.terminate()
 
                 return {"success": True, "pid": pid, "message": f"进程 {pid} 已终止"}
-            except psutil.NoSuchProcess:
+            except _psutil.NoSuchProcess:
                 raise HTTPException(status_code=404, detail="进程不存在")
-            except psutil.AccessDenied:
+            except _psutil.AccessDenied:
                 raise HTTPException(
                     status_code=403,
-                    detail=get_permission(
-                        "tool_permissions.process_kill_denied", "权限不足"
-                    ),
+                    detail=get_permission("tool_permissions.process_kill_denied", "权限不足"),
                 )
             except Exception as e:
                 logger.error(f"[DesktopRoutes] 终止进程失败: {e}", exc_info=True)
@@ -338,10 +328,7 @@ class DesktopRoutes:
         async def get_available_tools():
             """获取可用工具列表（MCP/Skill）"""
             try:
-                if (
-                    hasattr(self.decision_hub, "tool_subnet")
-                    and self.decision_hub.tool_subnet
-                ):
+                if hasattr(self.decision_hub, "tool_subnet") and self.decision_hub.tool_subnet:
                     # 使用 get_tools_schema 获取工具信息
                     tools_schema = self.decision_hub.tool_subnet.get_tools_schema()
 
@@ -350,13 +337,9 @@ class DesktopRoutes:
                         tool_list.append(
                             {
                                 "name": tool_schema.get("function", {}).get("name", ""),
-                                "description": tool_schema.get("function", {}).get(
-                                    "description", ""
-                                ),
+                                "description": tool_schema.get("function", {}).get("description", ""),
                                 "category": tool_schema.get("category", "general"),
-                                "parameters": tool_schema.get("function", {}).get(
-                                    "parameters", {}
-                                ),
+                                "parameters": tool_schema.get("function", {}).get("parameters", {}),
                             }
                         )
 

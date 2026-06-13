@@ -25,7 +25,8 @@ logger = logging.getLogger("model_pool_manager")
 PROJECT_ROOT = Path(__file__).parent.parent
 CONFIG_DIR = PROJECT_ROOT / "config"
 
-load_dotenv(CONFIG_DIR / ".env")
+if not os.environ.get("_MIYA_DOTENV_LOADED"):
+    load_dotenv(CONFIG_DIR / ".env")
 
 
 # ==================== 枚举定义 ====================
@@ -238,9 +239,7 @@ class ModelPoolManager:
         except Exception as e:
             logger.debug(f"[ModelPoolManager] 任务分类加载失败: {e}")
 
-        logger.info(
-            f"[ModelPoolManager] 加载完成: {len(self._models)} 模型, {len(self._routes)} 路由"
-        )
+        logger.info(f"[ModelPoolManager] 加载完成: {len(self._models)} 模型, {len(self._routes)} 路由")
 
     def _set_default_config(self):
         pass
@@ -333,20 +332,14 @@ class ModelPoolManager:
         if priority == "cost":
             return base * (1.0 / (model.cost_input + model.cost_output + 0.0001) / 100)
         elif priority == "speed":
-            return base * (
-                {"fast": 1.0, "medium": 0.6, "slow": 0.3}.get(model.latency, 0.5)
-            )
+            return base * ({"fast": 1.0, "medium": 0.6, "slow": 0.3}.get(model.latency, 0.5))
         elif priority == "quality":
-            return base * (
-                {"excellent": 1.0, "good": 0.7, "fair": 0.4}.get(model.quality, 0.5)
-            )
+            return base * ({"excellent": 1.0, "good": 0.7, "fair": 0.4}.get(model.quality, 0.5))
         return base
 
     # ==================== AI 客户端 ====================
 
-    def create_ai_client(
-        self, model_id: str = None, task_type: str = None, endpoint: str = "qq"
-    ):
+    def create_ai_client(self, model_id: str = None, task_type: str = None, endpoint: str = "qq"):
         try:
             model_config = None
             if model_id:
@@ -390,9 +383,7 @@ class ModelPoolManager:
         if any(kw in input_lower for kw in tc.get("code_keywords", [])):
             return (
                 TaskType.CODE_GENERATION
-                if any(
-                    kw in input_lower for kw in tc.get("code_generation_triggers", [])
-                )
+                if any(kw in input_lower for kw in tc.get("code_generation_triggers", []))
                 else TaskType.CODE_ANALYSIS
             )
         if any(kw in input_lower for kw in tc.get("complex_reasoning", [])):
@@ -420,9 +411,7 @@ class ModelPoolManager:
         stats["output_tokens"] += output_tokens
         model = self._models.get(model_key)
         if model:
-            stats["cost"] += (
-                input_tokens * model.cost_input + output_tokens * model.cost_output
-            ) / 1000
+            stats["cost"] += (input_tokens * model.cost_input + output_tokens * model.cost_output) / 1000
 
     def get_usage_stats(self) -> Dict:
         return self._usage_stats
@@ -480,9 +469,7 @@ def select_model(task_type: str = "simple_chat") -> Optional[Model]:
     return get_model_pool().select_model(task_type)
 
 
-def select_model_for_task(
-    task_type: str, endpoint: str = None, priority: str = "balanced"
-) -> Optional[Model]:
+def select_model_for_task(task_type: str, endpoint: str = None, priority: str = "balanced") -> Optional[Model]:
     return get_model_pool().select_model_for_task(task_type, endpoint, priority)
 
 
@@ -494,9 +481,7 @@ def get_api_key(model_id: str) -> str:
     return get_model_pool().get_api_key(model_id)
 
 
-def get_qq_model(
-    model_type: str = "simple_chat", priority: str = "balanced"
-) -> Optional[Model]:
+def get_qq_model(model_type: str = "simple_chat", priority: str = "balanced") -> Optional[Model]:
     return select_model_for_task(model_type, "qq", priority)
 
 

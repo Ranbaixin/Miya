@@ -39,7 +39,8 @@ from pathlib import Path
 try:
     from dotenv import load_dotenv
 
-    load_dotenv(Path(__file__).parent / ".env")
+    if not os.environ.get("_MIYA_DOTENV_LOADED"):
+        load_dotenv(Path(__file__).parent / ".env")
 except ImportError:
     pass
 
@@ -379,11 +380,7 @@ ALL_PLATFORMS = {
 
 def get_enabled_platforms():
     """获取所有启用的平台"""
-    return {
-        platform_id: config
-        for platform_id, config in ALL_PLATFORMS.items()
-        if config.get("enabled", False)
-    }
+    return {platform_id: config for platform_id, config in ALL_PLATFORMS.items() if config.get("enabled", False)}
 
 
 def get_platform_config(platform_id: str):

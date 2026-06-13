@@ -19,7 +19,10 @@ from memory.undefined_memory import UndefinedMemoryAdapter, get_undefined_memory
 logger = logging.getLogger(__name__)
 
 # 加载环境变量
-load_dotenv("config/.env")
+import os as _os
+
+if not _os.environ.get("_MIYA_DOTENV_LOADED"):
+    load_dotenv("config/.env")
 
 
 class MemorySystemInitializer:

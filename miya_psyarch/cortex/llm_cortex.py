@@ -19,11 +19,11 @@ from typing import Any
 
 import yaml
 
+from core.miya_config_cache import get_miya_config as _get_miya_config
+
 logger = logging.getLogger("miya_psyarch.cortex")
 
-_CFG_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "miya_config.yaml"
-with open(_CFG_PATH, "r", encoding="utf-8") as _f:
-    _CFG = yaml.safe_load(_f) or {}
+_CFG = _get_miya_config()
 
 _FALLBACKS = _CFG.get("fallbacks", {})
 _FALLBACK_BOREDOM_THRESHOLD = _CFG.get("fallback_thresholds", {}).get("boredom", 0.7)

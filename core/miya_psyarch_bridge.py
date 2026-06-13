@@ -18,17 +18,10 @@ from typing import Any, Callable
 
 logger = logging.getLogger("miya.psyarch_bridge")
 
-# 加载 miya_config.yaml
-try:
-    import yaml
-    from pathlib import Path
+# 加载 miya_config.yaml — 使用全局缓存
+from core.miya_config_cache import get_miya_config as _get_cfg
 
-    _BRIDGE_CFG = {}
-    _CFG_P = Path(__file__).resolve().parent.parent / "config" / "miya_config.yaml"
-    if _CFG_P.exists():
-        _BRIDGE_CFG = yaml.safe_load(_CFG_P.read_text(encoding="utf-8")) or {}
-except Exception:
-    _BRIDGE_CFG = {}
+_BRIDGE_CFG = _get_cfg()
 
 _FALLBACK_FEELING_LABELS = {
     "love_warmth": "爱意",
