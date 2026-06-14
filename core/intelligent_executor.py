@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 class IntelligentExecutor:
     """智能命令执行器"""
     
-    def __init__(self, session_id: str = None):
+    def __init__(self, session_id: str = None, **kwargs):
         self.session_id = session_id or f"exec_{int(time.time())}"
         self.working_directory = os.getcwd()
         self.execution_mode = ExecutionMode.DIRECT

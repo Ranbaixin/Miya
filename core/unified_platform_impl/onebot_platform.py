@@ -235,7 +235,11 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
                                 async for msg in ws:
                                     if msg.type == aiohttp.WSMsgType.TEXT:
-                                        data = json.loads(msg.data)
+                                        try:
+                                            data = json.loads(msg.data)
+                                        except json.JSONDecodeError:
+                                            logger.warning(f"[{self.platform_id}] JSON解析失败: {msg.data[:100]}...")
+                                            continue
                                         # 处理 echo 响应
                                         echo = data.get("echo")
                                         if echo and echo in self._pending_echoes:

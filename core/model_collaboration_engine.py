@@ -981,7 +981,7 @@ class ModelCollaborationEngine:
 
         # 清理可能残留的思考过程
         if "<think>" in final_response:
-            parts = final_response.split("")
+            parts = final_response.split("</think>")
             final_response = parts[-1].strip()
 
         final_response = self._clean_thinking_content(final_response)
@@ -1340,7 +1340,7 @@ class ModelCollaborationEngine:
 
         # 移除明显的 thinking 块
         patterns = [
-            r"<think>[\s\S]*?",  # OpenAI格式
+            r"<think>[\s\S]*?</think>",  # OpenAI格式
             r"\[think\][\s\S]*?\[/think\]",  # 其他格式
         ]
 

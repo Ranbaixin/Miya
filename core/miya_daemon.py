@@ -295,8 +295,8 @@ class MiyaDaemon:
             try:
                 asyncio.get_event_loop().add_signal_handler(sig, lambda: asyncio.create_task(self.stop()))
             except NotImplementedError:
-                # Windows 不支持 add_signal_handler，使用传统方式
-                signal.signal(sig, lambda s, f: asyncio.create_task(self.stop()))
+                # Windows: 直接设置 shutdown_event 而非 asyncio.create_task
+                signal.signal(sig, lambda s, f: self._shutdown_event.set())
 
     # ==================== 事件处理 ====================
 

@@ -132,6 +132,9 @@ class SQLiteBackend(MemoryBackend):
         if self._conn is None:
             self._conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
             self._conn.row_factory = sqlite3.Row
+            # 强制 WAL 模式 + 忙等超时，防并发写锁
+            self._conn.execute("PRAGMA journal_mode=WAL")
+            self._conn.execute("PRAGMA busy_timeout=5000")
             self._apply_pragma()
         return self._conn
 

@@ -447,7 +447,7 @@ class WebNet:
 
         # 添加更新时间
         updates.append("updated_at = ?")
-        params.append(datetime.datetime.now().isoformat())
+        params.append(datetime.now().isoformat())
 
         # 添加slug参数
         params.append(slug)

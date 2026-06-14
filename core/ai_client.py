@@ -459,9 +459,7 @@ class BaseAIClient:
         Returns:
             归一化后的策略
         """
-        if tool_choice == "required":
-            return "auto"
-        if not isinstance(tool_choice, dict) and tool_choice not in ("auto", "none"):
+        if not isinstance(tool_choice, dict) and tool_choice not in ("auto", "none", "required"):
             return "auto"
         return tool_choice
 

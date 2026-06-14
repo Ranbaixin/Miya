@@ -230,21 +230,24 @@ class LifeBook:
 
         content_md += "\n"
 
-        if together_file.exists():
-            existing = together_file.read_text(encoding="utf-8")
-            if f"# {date_key} 我们的日记" not in existing:
-                content = f"# {date_key} 我们的日记\n\n> 这一天，我们共同度过。\n\n{content_md}"
+        if not hasattr(self, '_diary_locks'):
+            self._diary_locks = {}
+        lock = self._diary_locks.setdefault(str(together_file), asyncio.Lock())
+
+        async with lock:
+            if together_file.exists():
+                existing = together_file.read_text(encoding="utf-8")
+                if f"# {date_key} 我们的日记" not in existing:
+                    together_file.write_text(
+                        f"# {date_key} 我们的日记\n\n> 这一天，我们共同度过。\n\n{content_md}",
+                        encoding="utf-8")
+                else:
+                    with open(together_file, "a", encoding="utf-8") as f:
+                        f.write(content_md)  # 追加模式，避免 O(n²) 全量读写
             else:
-                content = existing + content_md
-        else:
-            content = f"""# {date_key} 我们的日记
-
-> 这一天，我们共同度过。
-
-{content_md}
-"""
-
-        together_file.write_text(content, encoding="utf-8")
+                together_file.write_text(
+                    f"# {date_key} 我们的日记\n\n> 这一天，我们共同度过。\n\n{content_md}",
+                    encoding="utf-8")
 
     async def record_user_fact(self, fact: str, category: str = "other"):
         """记录关于user的重要事实"""
