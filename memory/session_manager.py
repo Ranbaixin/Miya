@@ -120,8 +120,13 @@ class SessionManager:
         return list(self._active_sessions.values())
 
 
+_sessions_singleton: Optional[SessionManager] = None
+
 def get_session_manager() -> SessionManager:
-    return SessionManager()
+    global _sessions_singleton
+    if _sessions_singleton is None:
+        _sessions_singleton = SessionManager()
+    return _sessions_singleton
 
 
 def init_session_manager() -> SessionManager:

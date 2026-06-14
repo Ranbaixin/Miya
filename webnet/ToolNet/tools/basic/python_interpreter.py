@@ -46,7 +46,7 @@ class PythonInterpreter(BaseTool):
             执行结果或错误信息
         """
         code = args.get("code", "")
-        args.get("timeout", 30)
+        timeout = args.get("timeout", 30)  # 注：exec模式下超时需 signal.alarm 实现
 
         if not code.strip():
             return "代码不能为空"
