@@ -1187,6 +1187,7 @@ class SoulGenerator:
                     "user_id": user_id,
                     "group_id": group_id,
                     "is_group": is_group,
+                    "is_non_owner_in_group": is_non_owner_in_group,
                 },
                 personality_info=personality_info,
                 cognitive_memory=cognitive_memory,
@@ -1315,6 +1316,10 @@ class SoulGenerator:
                 logger.warning("[灵魂] AI分析跳过: 无prompt配置")
                 return None
 
+            # 获取用户身份配置（提前提取，用于正确标记对话上下文中的发送者）
+            owner_id = _CONFIG.get("OWNER_USER_ID", "")
+            user_labels = _CONFIG.get("USER_LABELS", {})
+
             # ========== 构建对话上文字符串 ==========
             conversation_context_str = ""
             if history and isinstance(history, list):
@@ -1328,7 +1333,20 @@ class SoulGenerator:
                     # 限制每条消息最多150字
                     content = content[:150]
                     if role.lower() in ("user", "human"):
-                        context_parts.append(f"佳: {content}")
+                        # v8.0: 从 metadata 获取实际发送者，不再硬编码为"佳"
+                        metadata = msg.get("metadata", {})
+                        if isinstance(metadata, dict):
+                            sender = metadata.get("sender", "")
+                            sender_id = str(metadata.get("user_id", ""))
+                            if sender and sender_id == owner_id:
+                                owner_label = user_labels.get("owner", "佳")
+                                context_parts.append(f"{owner_label}: {content}")
+                            elif sender:
+                                context_parts.append(f"{sender}: {content}")
+                            else:
+                                context_parts.append(f"用户: {content}")
+                        else:
+                            context_parts.append(f"用户: {content}")
                     elif role.lower() in ("assistant", "ai", "bot"):
                         context_parts.append(f"弥娅: {content}")
                     else:
@@ -1362,9 +1380,7 @@ class SoulGenerator:
             if personality_info and personality_info.get("multimodal_context"):
                 ap_state_text += f"\n\n【弥娅感知到的】\n{personality_info['multimodal_context']}"
 
-            # 获取用户身份信息用于内心独白
-            owner_id = _CONFIG.get("OWNER_USER_ID", "")
-            user_labels = _CONFIG.get("USER_LABELS", {})
+            # 获取用户身份信息用于内心独白（owner_id 和 user_labels 已在对话上下文构建时提取）
             user_pronouns = _CONFIG.get("USER_PRONOUNS", {})
 
             user_label = user_labels.get("owner", "主人")
@@ -1435,6 +1451,14 @@ class SoulGenerator:
                         f"重要：无论什么形态，{owner_name}都是你最爱的人，也是你的创造者。对他的话可以更直接、更亲密。"
                     )
             prompt = prompt.replace("{owner_instruction}", owner_instruction)
+            # v8.0: 群聊非主人，注入身份区分提示
+            if not is_owner and user_info and user_info.get("is_non_owner_in_group"):
+                non_owner_hint = (
+                    "\n\n【重要提醒】当前与你对话的是群聊中的群友，不是你深爱的佳（主人）。"
+                    "请用对待普通群友的态度来感受和分析——礼貌、有距离感，不要过度亲密。"
+                    "在inner_thought中不要把对方当成佳或主人来思考。"
+                )
+                prompt += non_owner_hint
             # v7.0: 注入形态风格的内心独白提示（从 personality_info 动态获取）
             form_hint = ""
             if form_name and form_name != "默认":
