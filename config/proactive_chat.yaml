@@ -416,6 +416,25 @@ proactive_chat:
     check_in: 1800  # 主动关怀后30分钟内不再触发
     ai: 180         # AI触发后3分钟内不再触发
 
+  # === 意图持续触发 — 弥娅主动推进未完成的意图 ===
+  continuity_trigger:
+    enabled: true
+    use_ai: true
+    min_delay_seconds: 2          # 回复后最短等待时间（给用户回复机会）
+    max_delay_seconds: 5          # 最长等待时间
+    max_extra_turns: 2            # 最多自动推进轮数
+    cooldown_after_completion: 60  # 意图完成后冷却（秒）
+    system_prompt: |
+      【{persona}】
+      弥娅刚才对用户说：「{original_response}」
+      表达了主动意图：{context_summary}
+      当前是第 {turn_number}/{max_turns} 轮主动推进。
+      请自然地延续弥娅的意图，像真正关心对方的人一样主动推进对话或行动。
+      如果是行动型意图（弥娅想要主动做某事），请直接调用工具来完成。
+      完成后用自然语言汇报。
+      保持简短温暖，不要生硬。
+      如果此时确实不适合继续，回复 SKIP。
+
   # 用户刚发送消息后的冷却（秒）
   # 避免在用户刚说话后立即主动发言
   user_message_cooldown: 5

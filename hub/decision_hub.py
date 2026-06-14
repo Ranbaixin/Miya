@@ -503,7 +503,37 @@ class DecisionHub:
                     logger.debug(f"[主动聊天] 记忆存储失败: {e}")
 
             self.proactive_chat.set_send_callback(_proactive_send_callback)
-            logger.info("[决策层] 主动聊天系统 v2.0 已初始化")
+
+            # 【意图持续】注入工具调用能力
+            if self.tool_subnet:
+                self.proactive_chat.set_tool_registry(self.tool_subnet.get_tools_schema)
+
+            def _proactive_tool_ctx(target_id: int) -> dict:
+                ctx = self.proactive_chat._context_cache.get(target_id)
+                platform = ctx.platform if ctx else "terminal"
+                user_id = str(target_id)
+                group_id = "0"
+                if ctx and ctx.chat_type == "group":
+                    group_id = str(target_id)
+                    user_id = "0"
+                return {
+                    "platform": platform,
+                    "user_id": user_id,
+                    "group_id": group_id,
+                    "message_type": ctx.chat_type if ctx else "private",
+                    "onebot_client": self.onebot_client,
+                    "send_like_callback": getattr(self.onebot_client, "send_like", None)
+                    if self.onebot_client
+                    else None,
+                    "memory_engine": self.memory_engine,
+                    "emotion": self.emotion,
+                    "personality": self.personality,
+                    "scheduler": self.scheduler,
+                }
+
+            self.proactive_chat.set_proactive_tool_context(_proactive_tool_ctx)
+
+            logger.info("[决策层] 主动聊天系统 v2.0 已初始化（含意图持续机制）")
         except Exception as e:
             logger.warning(f"[决策层] 主动聊天系统初始化失败: {e}")
             self.proactive_chat = None
@@ -619,11 +649,18 @@ class DecisionHub:
                 context.last_miya_reply = main_response
 
             self.proactive_chat.update_context(target_id, context, platform)
-            self.proactive_chat.record_message(target_id, chat_type, user_message, platform)
+            await self.proactive_chat.record_message(target_id, chat_type, user_message, platform)
 
             # 记录弥娅刚回复了，防止主动聊天紧跟正常回复重复发送
             if main_response:
                 self.proactive_chat.record_miya_reply(target_id)
+
+            # 【意图持续】检测主回复中的主动意图
+            if main_response:
+                try:
+                    await self.proactive_chat.detect_and_register_intent(target_id, chat_type, platform, main_response)
+                except Exception as e:
+                    logger.warning(f"[决策层] 意图检测失败: {e}")
 
             # 检查是否需要主动发言
             result: Optional[ProactiveResult] = await self.proactive_chat.check_and_respond(
@@ -957,6 +994,8 @@ class DecisionHub:
         target_id = group_id if group_id and group_id != 0 else user_id
         if target_id and self.proactive_chat:
             self.proactive_chat.record_miya_reply(target_id)
+            # 【意图持续】用户新消息清除之前的 pending intent
+            self.proactive_chat.clear_intent(target_id)
 
         try:
             if group_id and group_id != 0:

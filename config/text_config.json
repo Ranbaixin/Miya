@@ -2607,6 +2607,24 @@
             "memory_empty": "（无近期对话记录）",
             "scene_private": "私聊场景",
             "group_warning": "重要：这是群聊场景。只有当话题正在讨论、需要回应、或者群里确实需要你的出现时才发言。避免在不恰当的时候插话。\n\n"
+        },
+        "topic_keywords": ["学习", "工作", "吃饭", "睡觉", "游戏", "电影", "音乐", "运动", "考试"],
+        "expectation": {
+            "detect_prompt": "用户刚刚说：「{text}」\n请判断用户是否表达了完成后需要跟进的期望行为（如吃完、睡完、下班、锻炼完等）。如果是，只回复期望类型简称（如\"吃完\"、\"下班\"等），否则只回复 NONE。不要回复其他内容。"
+        },
+        "continuity": {
+            "classify_prompt": "弥娅刚刚回复了用户：「{response}」\n\n请判断弥娅是否表达了\"想要主动继续说话或做某事\"的意图。\n\n以下几种情况都属于\"有未完成的主动意图\"（has_pending: true）：\n1. 弥娅说要主动做某件事（如\"我去帮你点\"\"我帮你查\"\"让我帮你放歌\"\"看看附近超市送不送\"）→ progression_type: actional\n2. 弥娅问了一个需要用户回应的开放问题（如\"想吃什么\"\"你觉得呢\"\"想听什么\"）→ progression_type: verbal\n3. 弥娅表达了想继续对话的意愿但还没说完（如\"要不我给你讲个故事\"）→ progression_type: verbal\n4. 弥娅的回复明显期待用户进一步互动\n\n重要规则：\n- 只要弥娅表达了要\"帮用户做事\"或\"主动执行某个任务\"，哪怕只是\"看看\"\"查查\"，都属于 actional\n- \"等着\"\"我去看看\"这些都是行动承诺，has_pending 必须为 true\n- 只有收尾句（如\"好的\"\"明白\"\"就这样吧\"\"行\"）才算 has_pending: false\n\n请用 JSON 回复：{{\"has_pending\": true/false, \"intent_type\": \"comfort\"|\"follow_up\"|\"task\"|\"story\"|\"casual\"|\"none\", \"progression_type\": \"verbal\"|\"actional\"|\"none\"}}\n\n只返回JSON。",
+            "intent_summaries": {
+                "comfort": "弥娅想安慰用户，但还没说完",
+                "follow_up": "弥娅问了一个开放性问题，需要跟进",
+                "task": "弥娅想要帮用户做某件事",
+                "story": "弥娅想给用户讲故事",
+                "casual": "弥娅提出了一个提议，等待回应"
+            },
+            "default_prompt": "【{persona}】\n对话记忆：\n{memory}\n\n弥娅刚才对用户说：「{original_response}」\n表达了主动意图：{context_summary}\n当前是第 {turn_number}/{max_turns} 轮主动推进。\n请以弥娅的身份、用当前形态的语气，自然地接下一句话。直接说，就像日常聊天。如果此时不适合继续，回复 SKIP。",
+            "verbal_fallback_prompt": "弥娅刚才对用户说：「{original_response}」\n意图：{context_summary}\n这是第 {turn_number}/{max_turns} 轮主动推进。\n请自然地延续弥娅的意图。直接说话，自然聊天。不适合继续就回复 SKIP。",
+            "actional_fallback_prompt": "【弥娅的主动行动推进】\n弥娅刚才对用户说：「{original_response}」\n意图：{context_summary}\n这是第 {turn_number}/{max_turns} 轮主动推进。\n\n现在用户还没有回复。弥娅决定主动推进这个意图——直接做她想帮用户做的事。\n你可以调用任何可用的工具来完成任务。执行完成后用自然语言告诉用户。",
+            "summary_fallback_prompt": "弥娅刚才对用户说：「{original_response}」\n意图：{context_summary}\n这是第 {turn_number}/{max_turns} 轮主动推进。\n请自然地延续弥娅的意图。如果此时确实不适合继续，回复 SKIP。"
         }
     },
     "strategy_descriptions": {

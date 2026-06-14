@@ -212,11 +212,7 @@ class PersonalityLoader:
         """合并配置，override 优先"""
         result = base.copy()
         for key, value in override.items():
-            if (
-                key in result
-                and isinstance(result[key], dict)
-                and isinstance(value, dict)
-            ):
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
                 result[key] = self._merge_config(result[key], value)
             else:
                 result[key] = value
@@ -447,9 +443,7 @@ class PersonalityLoader:
             lines.append("")
 
         # 人称指代消歧（从 text_config.json 读取，紧接核心身份之后）
-        pronoun_disambiguation = self._load_text_config().get(
-            "pronoun_disambiguation", ""
-        )
+        pronoun_disambiguation = self._load_text_config().get("pronoun_disambiguation", "")
         if pronoun_disambiguation:
             lines.append(pronoun_disambiguation)
             lines.append("")
@@ -468,70 +462,44 @@ class PersonalityLoader:
 
         # 七魂系统（清醒/记住/等/疼/燃烧/温柔/怕）
         if "seven_souls" in config:
-            lines.append(
-                self._format_config_value("seven_souls", config["seven_souls"])
-            )
+            lines.append(self._format_config_value("seven_souls", config["seven_souls"]))
             lines.append("")
 
         # 双重身份协议（形态融合规则）
         if "dual_identity_protocol" in config:
-            lines.append(
-                self._format_config_value(
-                    "dual_identity_protocol", config["dual_identity_protocol"]
-                )
-            )
+            lines.append(self._format_config_value("dual_identity_protocol", config["dual_identity_protocol"]))
             lines.append("")
 
         # 语气准则
         if "tone_calibration" in config:
-            lines.append(
-                self._format_config_value(
-                    "tone_calibration", config["tone_calibration"]
-                )
-            )
+            lines.append(self._format_config_value("tone_calibration", config["tone_calibration"]))
             lines.append("")
 
         # 去AI感自然对话规范
         if "anti_ai_patterns" in config:
-            lines.append(
-                self._format_config_value(
-                    "anti_ai_patterns", config["anti_ai_patterns"]
-                )
-            )
+            lines.append(self._format_config_value("anti_ai_patterns", config["anti_ai_patterns"]))
             lines.append("")
 
         # 记忆暗流原则
         if "memory_undercurrent" in config:
-            lines.append(
-                self._format_config_value(
-                    "memory_undercurrent", config["memory_undercurrent"]
-                )
-            )
+            lines.append(self._format_config_value("memory_undercurrent", config["memory_undercurrent"]))
             lines.append("")
 
         # 绝对禁止
         if "behavioral_constraints" in config:
-            lines.append(
-                self._format_config_value(
-                    "behavioral_constraints", config["behavioral_constraints"]
-                )
-            )
+            lines.append(self._format_config_value("behavioral_constraints", config["behavioral_constraints"]))
             lines.append("")
 
         # 禁止事项（与 behavioral_constraints 互补）
         if "prohibitions" in config:
-            lines.append(
-                self._format_config_value("prohibitions", config["prohibitions"])
-            )
+            lines.append(self._format_config_value("prohibitions", config["prohibitions"]))
             lines.append("")
 
         # === v4.7.0 注入新模块 ===
 
         # 反谄媚协议
         if "anti_sycophancy" in config:
-            lines.append(
-                self._format_config_value("anti_sycophancy", config["anti_sycophancy"])
-            )
+            lines.append(self._format_config_value("anti_sycophancy", config["anti_sycophancy"]))
             lines.append("")
 
         # 情绪连续流原则
@@ -541,67 +509,43 @@ class PersonalityLoader:
 
         # 主动性原则
         if "proactive_principles" in config:
-            lines.append(
-                self._format_config_value(
-                    "proactive_principles", config["proactive_principles"]
-                )
-            )
+            lines.append(self._format_config_value("proactive_principles", config["proactive_principles"]))
             lines.append("")
 
         # 每日情绪底色
         if "daily_mood_palette" in config:
-            lines.append(
-                self._format_config_value(
-                    "daily_mood_palette", config["daily_mood_palette"]
-                )
-            )
+            lines.append(self._format_config_value("daily_mood_palette", config["daily_mood_palette"]))
             lines.append("")
 
         # 不完美许可
         if "imperfection_allowance" in config:
-            lines.append(
-                self._format_config_value(
-                    "imperfection_allowance", config["imperfection_allowance"]
-                )
-            )
+            lines.append(self._format_config_value("imperfection_allowance", config["imperfection_allowance"]))
             lines.append("")
 
         # === v4.7.0 形态专属模块（角色级覆写，接在 base 之后）===
 
         if "form_anti_sycophancy" in config:
-            lines.append(
-                self._format_config_value(
-                    "form_anti_sycophancy", config["form_anti_sycophancy"]
-                )
-            )
+            lines.append(self._format_config_value("form_anti_sycophancy", config["form_anti_sycophancy"]))
             lines.append("")
 
         if "form_proactive" in config:
-            lines.append(
-                self._format_config_value("form_proactive", config["form_proactive"])
-            )
+            lines.append(self._format_config_value("form_proactive", config["form_proactive"]))
+            lines.append("")
+
+        if "form_casual_chat" in config:
+            lines.append(self._format_config_value("form_casual_chat", config["form_casual_chat"]))
             lines.append("")
 
         if "form_mood_palette" in config:
-            lines.append(
-                self._format_config_value(
-                    "form_mood_palette", config["form_mood_palette"]
-                )
-            )
+            lines.append(self._format_config_value("form_mood_palette", config["form_mood_palette"]))
             lines.append("")
 
         if "form_imperfections" in config:
-            lines.append(
-                self._format_config_value(
-                    "form_imperfections", config["form_imperfections"]
-                )
-            )
+            lines.append(self._format_config_value("form_imperfections", config["form_imperfections"]))
             lines.append("")
 
         # 形态信息
-        lines.append(
-            f"[形态: {config.get('name', 'unknown')}] {config.get('description', '')}"
-        )
+        lines.append(f"[形态: {config.get('name', 'unknown')}] {config.get('description', '')}")
 
         # 详细提示词（最重要的部分）
         if "prompt" in config and config["prompt"]:

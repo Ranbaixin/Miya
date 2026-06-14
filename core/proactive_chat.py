@@ -18,7 +18,7 @@ import hashlib
 import logging
 import random
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Optional
 
 from core.ai_client import AIMessage
@@ -279,6 +279,27 @@ class ProactiveResult:
     context: Optional[ChatContext] = None
 
 
+@dataclass
+class IntentState:
+    """弥娅未完成的主动意图"""
+
+    intent_id: str
+    target_id: int
+    chat_type: str
+    platform: str
+    intent_type: str
+    progression_type: str
+    context_summary: str
+    max_extra_turns: int
+    turns_taken: int = 0
+    started_at: datetime = field(default_factory=datetime.now)
+    last_continuation: datetime = field(default_factory=datetime.now)
+    continuation_history: list = field(default_factory=list)
+    original_response: str = ""
+    paused: bool = False
+    _task: Optional[Any] = None
+
+
 class ProactiveChatSystem:
     """弥娅主动聊天系统 v2.1"""
 
@@ -397,6 +418,22 @@ class ProactiveChatSystem:
         self._screen_aware: Optional[Any] = None
         self._last_screen_intent: Optional[Any] = None
 
+        # === 意图持续机制 ===
+        self._pending_intents: dict[int, IntentState] = {}
+        self._intent_id_counter: int = 0
+        self._continuity_config = self._config.get("continuity_trigger", {})
+        self._continuity_enabled = self._continuity_config.get("enabled", True)
+        self._continuity_min_delay = self._continuity_config.get("min_delay_seconds", 2)
+        self._continuity_max_delay = self._continuity_config.get("max_delay_seconds", 5)
+        self._continuity_max_turns = self._continuity_config.get("max_extra_turns", 2)
+
+        # 工具调用能力（行动型意图推进）
+        self._tool_registry: Optional[callable] = None
+        self._proactive_tool_context_provider: Optional[callable] = None
+
+        # 从 text_config.json 缓存文本配置
+        self._cache_text_configs()
+
     def set_screen_aware(self, screen_aware) -> None:
         """注入 ScreenAwareProactive 实例，由 DecisionHub 调用"""
         self._screen_aware = screen_aware
@@ -492,6 +529,10 @@ class ProactiveChatSystem:
                 parts.append(f"核心心魂：{dominant}")
             if core and core_info:
                 parts.append(f"{core_info.get('name', '')}显照·{core_info.get('description', '')}")
+
+            form_casual = form_info.get("form_casual_chat", "")
+            if form_casual:
+                parts.append(f"闲聊模式：{form_casual}")
 
             return " | ".join(parts)
         except Exception:
@@ -846,6 +887,8 @@ class ProactiveChatSystem:
             return self._ai_config.get("enabled", False)
         elif trigger_type == "screen_aware":
             return self._screen_aware_config.get("enabled", True) and self._screen_aware is not None
+        elif trigger_type == "continuity":
+            return self._continuity_enabled
         return False
 
     def update_context(self, target_id: int, context: ChatContext, platform: str = "terminal"):
@@ -853,7 +896,7 @@ class ProactiveChatSystem:
         self._context_cache[target_id] = context
         self._user_last_interaction[target_id] = datetime.now()
 
-    def record_message(
+    async def record_message(
         self,
         target_id: int,
         chat_type: str,
@@ -895,7 +938,7 @@ class ProactiveChatSystem:
                 ctx.recent_topics = (ctx.recent_topics + keywords)[-5:]
 
         # 检测期望行为（用户说要做什么）
-        expectation = self._detect_expectation(content)
+        expectation = await self._detect_expectation(content)
         if expectation:
             ctx.user_expectation = expectation
             self._last_expectation[target_id] = expectation
@@ -912,39 +955,27 @@ class ProactiveChatSystem:
             self._daily_count[target_id] = {"date": now.date(), "count": 0}
 
     def _extract_keywords(self, text: str) -> list:
-        """提取话题关键词"""
-        keyword_list = [
-            "学习",
-            "工作",
-            "吃饭",
-            "睡觉",
-            "游戏",
-            "电影",
-            "音乐",
-            "运动",
-            "考试",
-        ]
-        return [kw for kw in keyword_list if kw in text]
+        return [kw for kw in self._topic_keywords if kw in text]
 
-    def _detect_expectation(self, text: str) -> Optional[str]:
-        """检测用户的期望行为（说完某事后需要跟进）"""
-        expectation_patterns = {
-            "吃完": ["吃完", "吃好了", "吃饱", "吃饭"],
-            "睡完": ["睡完", "睡醒了", "起床了", "醒来"],
-            "锻炼完": ["锻炼完", "运动完", "健身完"],
-            "看完": ["看完", "看完啦", "看完了"],
-            "看完医生": ["看完医生", "看完病", "检查完"],
-            "下班": ["下班", "下班了", "下班啦"],
-            "放学": ["放学", "放学了", "下课"],
-            "回来": ["回来", "回到家", "回来了"],
-            "泡面好了": ["泡面好了", "泡面好了"],
-        }
-
-        for expectation, patterns in expectation_patterns.items():
-            for pattern in patterns:
-                if pattern in text:
-                    return expectation
-        return None
+    async def _detect_expectation(self, text: str) -> Optional[str]:
+        """AI 判断用户消息中的期望行为（吃完、睡完、下班等）"""
+        if not self.ai_client or not text:
+            return None
+        prompt = self._expectation_detect_prompt
+        if not prompt:
+            return None
+        try:
+            prompt = prompt.format(text=text)
+            response = await self.ai_client.chat(
+                messages=[AIMessage(role="user", content=prompt)],
+                tools=[],
+                tool_choice="none",
+            )
+            result = str(response).strip() if response else ""
+            return result if result and result.upper() != "NONE" else None
+        except Exception as e:
+            logger.debug(f"[主动聊天] 期望行为检测失败: {e}")
+            return None
 
     def _detect_emotion(self, text: str) -> Optional[str]:
         """检测用户情绪"""
@@ -1607,6 +1638,288 @@ class ProactiveChatSystem:
             logger.warning(f"[主动聊天] AI触发失败: {e}")
 
         return None
+
+    # ============================================================
+    # 意图持续机制
+    # ============================================================
+
+    def _cache_text_configs(self) -> None:
+        try:
+            import json
+            from pathlib import Path
+
+            config_path = Path(__file__).parent.parent / "config" / "text_config.json"
+            with open(config_path, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            pc = cfg.get("proactive_chat", {})
+
+            self._topic_keywords = pc.get("topic_keywords", [])
+            expectation_cfg = pc.get("expectation", {})
+            self._expectation_detect_prompt = expectation_cfg.get("detect_prompt", "")
+            continuity = pc.get("continuity", {})
+            self._intent_summaries = continuity.get("intent_summaries", {})
+            self._continuity_default_prompt = continuity.get("default_prompt", "")
+            self._continuity_classify_prompt = continuity.get("classify_prompt", "")
+            self._verbal_fallback_prompt = continuity.get("verbal_fallback_prompt", "")
+            self._actional_fallback_prompt = continuity.get("actional_fallback_prompt", "")
+        except Exception as e:
+            logger.debug(f"[主动聊天] text_config 缓存失败: {e}")
+            self._topic_keywords = []
+            self._expectation_detect_prompt = ""
+            self._intent_summaries = {}
+            self._continuity_default_prompt = ""
+            self._continuity_classify_prompt = ""
+            self._verbal_fallback_prompt = ""
+            self._actional_fallback_prompt = ""
+
+    def set_tool_registry(self, registry_callback: callable) -> None:
+        self._tool_registry = registry_callback
+        logger.info("[主动聊天] ToolRegistry 已注入")
+
+    def set_proactive_tool_context(self, context_provider: callable) -> None:
+        self._proactive_tool_context_provider = context_provider
+
+    async def _detect_pending_intent(self, response: str) -> Optional[dict]:
+        if not response or len(response.strip()) < 2:
+            return None
+        return await self._ai_classify_intent(response)
+
+    async def _ai_classify_intent(self, response: str) -> Optional[dict]:
+        if not self.ai_client:
+            return None
+        prompt_template = self._continuity_classify_prompt
+        if not prompt_template:
+            logger.info("[意图检测] classify_prompt 为空，跳过")
+            return None
+        try:
+            prompt = prompt_template.format(response=response)
+            response_text = await self.ai_client.chat(
+                messages=[AIMessage(role="user", content=prompt)],
+                tools=[],
+                tool_choice="none",
+            )
+            if not response_text:
+                return None
+            import json
+
+            text = str(response_text).strip()
+            if text.startswith("```"):
+                text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+            result = json.loads(text)
+            if result.get("has_pending"):
+                return {
+                    "intent_type": result.get("intent_type", "casual"),
+                    "progression_type": result.get("progression_type", "verbal"),
+                }
+        except Exception as e:
+            logger.debug(f"[意图检测] AI 分类失败: {e}")
+        return None
+
+    async def detect_and_register_intent(
+        self, target_id: int, chat_type: str, platform: str, miya_response: str
+    ) -> bool:
+        if not self._continuity_enabled or not miya_response:
+            logger.info(f"[意图持续] 跳过: enabled={self._continuity_enabled} resp_len={len(miya_response or '')}")
+            return False
+        if target_id in self._pending_intents:
+            logger.info(f"[意图持续] 跳过: 已有 pending intent target={target_id}")
+            return False
+        logger.info(f"[意图持续] 开始检测 intent target={target_id} resp={miya_response[:40]}...")
+        intent_info = await self._detect_pending_intent(miya_response)
+        if not intent_info:
+            logger.info(f"[意图持续] AI 判断无 pending intent: target={target_id}")
+            return False
+        context_summary = self._build_intent_summary(intent_info["intent_type"], miya_response)
+        self._intent_id_counter += 1
+        intent = IntentState(
+            intent_id=f"continuity_{self._intent_id_counter}",
+            target_id=target_id,
+            chat_type=chat_type,
+            platform=platform,
+            intent_type=intent_info["intent_type"],
+            progression_type=intent_info["progression_type"],
+            context_summary=context_summary,
+            max_extra_turns=self._continuity_max_turns,
+            original_response=miya_response,
+        )
+        self._pending_intents[target_id] = intent
+        logger.info(
+            f"[意图持续] 注册: {intent.intent_type}/{intent.progression_type} "
+            f'target={target_id} max_turns={intent.max_extra_turns} resp="{miya_response[:30]}..."'
+        )
+        intent._task = asyncio.create_task(self._run_continuity_loop(intent))
+        logger.info(f"[意图持续] 定时器已启动: {intent.intent_id}")
+        return True
+
+    async def _run_continuity_loop(self, intent: IntentState) -> None:
+        try:
+            while intent.turns_taken < intent.max_extra_turns:
+                delay = random.uniform(self._continuity_min_delay, self._continuity_max_delay)
+                await asyncio.sleep(delay)
+                if intent.paused:
+                    continue
+                if intent.turns_taken >= intent.max_extra_turns:
+                    break
+                if self._is_in_quiet_hours():
+                    continue
+                message = await self._execute_continuation(intent)
+                if not message:
+                    logger.info(f"[意图持续] AI返回SKIP: {intent.intent_id}")
+                    break
+                intent.turns_taken += 1
+                intent.last_continuation = datetime.now()
+                intent.continuation_history.append(message)
+                if self._send_callback:
+                    try:
+                        await self._send_callback(message, intent.target_id, intent.chat_type, intent.platform)
+                        logger.info(
+                            f"[意图持续] [{intent.intent_type}/{intent.progression_type}] "
+                            f"推进 #{intent.turns_taken}: {message[:50]}"
+                        )
+                    except Exception as e:
+                        logger.error(f"[意图持续] 发送回调失败: {e}")
+                        break
+                else:
+                    logger.warning(f"[意图持续] 无发送回调: {message[:50]}")
+            logger.info(
+                f"[意图持续] 循环结束: {intent.intent_id} "
+                f"({intent.intent_type}/{intent.progression_type}, {intent.turns_taken}/{intent.max_extra_turns} 轮)"
+            )
+        except asyncio.CancelledError:
+            logger.info(f"[意图持续] 循环已取消: {intent.intent_id}")
+        finally:
+            if intent.target_id in self._pending_intents:
+                self._pending_intents.pop(intent.target_id, None)
+
+    async def _execute_continuation(self, intent: IntentState) -> Optional[str]:
+        if intent.progression_type == "actional":
+            return await self._execute_actional_continuation(intent)
+        else:
+            return await self._execute_verbal_continuation(intent)
+
+    async def _execute_verbal_continuation(self, intent: IntentState) -> Optional[str]:
+        if not self.ai_client:
+            return None
+        prompt_template = self._continuity_config.get("system_prompt", self._default_continuity_prompt())
+        persona = self._build_persona_context()
+        meta = self._build_memory_context(intent.target_id)
+        rich = await self._build_rich_context(intent.target_id)
+        memory = f"{rich}\n{meta}".strip() if rich else meta
+        ctx = {
+            "persona": persona,
+            "memory": memory,
+            "original_response": intent.original_response,
+            "context_summary": intent.context_summary,
+            "intent_type": intent.intent_type,
+            "turn_number": intent.turns_taken + 1,
+            "max_turns": intent.max_extra_turns,
+        }
+        try:
+            prompt = prompt_template.format(**ctx)
+        except (KeyError, ValueError):
+            prompt = self._verbal_fallback_prompt.format(**ctx) if self._verbal_fallback_prompt else ""
+        final_prompt = prompt
+        if not final_prompt:
+            return None
+        if memory:
+            final_prompt = f"【当前对话】\n{memory}\n\n{prompt}"
+        if intent.continuation_history:
+            history_text = "\n".join(f"- 弥娅: {h[:60]}" for h in intent.continuation_history)
+            final_prompt += f"\n\n【已发送的持续推进消息】\n{history_text}\n（不要重复）"
+        try:
+            response = await self.ai_client.chat(
+                messages=[AIMessage(role="user", content=final_prompt)],
+                tools=[],
+                tool_choice="none",
+            )
+            message = str(response).strip() if response else ""
+            if message.upper() == "SKIP" or not message:
+                return None
+            return message
+        except Exception as e:
+            logger.warning(f"[意图持续] 语言推进失败: {e}")
+            return None
+
+    async def _execute_actional_continuation(self, intent: IntentState) -> Optional[str]:
+        if not self.ai_client:
+            return None
+        meta = self._build_memory_context(intent.target_id)
+        rich = await self._build_rich_context(intent.target_id)
+        memory = f"{rich}\n{meta}".strip() if rich else meta
+        fallback = self._actional_fallback_prompt
+        if not fallback:
+            return None
+        fallback = fallback.format(
+            original_response=intent.original_response,
+            context_summary=intent.context_summary,
+            turn_number=intent.turns_taken + 1,
+            max_turns=intent.max_extra_turns,
+        )
+        parts = [fallback]
+        if intent.continuation_history:
+            parts.append("")
+            parts.append("【已发送的持续推进消息】")
+            for h in intent.continuation_history:
+                parts.append(f"- 弥娅: {h[:60]}")
+            parts.append("（不要重复）")
+        final_prompt = "\n".join(parts)
+        if memory:
+            final_prompt = f"【当前对话】\n{memory}\n\n{final_prompt}"
+        if self._proactive_tool_context_provider:
+            try:
+                ctx = self._proactive_tool_context_provider(intent.target_id)
+                if ctx:
+                    self.ai_client.set_tool_context(ctx)
+            except Exception as e:
+                logger.debug(f"[意图持续] 工具上下文设置失败: {e}")
+        if self._tool_registry:
+            self.ai_client.set_tool_registry(self._tool_registry)
+        try:
+            response = await self.ai_client.chat(
+                messages=[AIMessage(role="user", content=final_prompt)],
+                tools=None,
+                tool_choice="auto",
+            )
+            message = str(response).strip() if response else ""
+            self.ai_client.set_tool_registry(lambda: [])
+            self.ai_client.set_tool_context({})
+            if message.upper() == "SKIP" or not message:
+                return None
+            return message
+        except Exception as e:
+            logger.warning(f"[意图持续] 行动推进失败: {e}")
+            try:
+                self.ai_client.set_tool_registry(lambda: [])
+                self.ai_client.set_tool_context({})
+            except Exception:
+                pass
+            return None
+
+    def _build_intent_summary(self, intent_type: str, response: str) -> str:
+        base = self._intent_summaries.get(intent_type, intent_type) if self._intent_summaries else intent_type
+        return f"{base}（回复: {response[:50]}）"
+
+    def _default_continuity_prompt(self) -> str:
+        return self._continuity_default_prompt or ""
+
+    def pause_intent(self, target_id: int) -> None:
+        intent = self._pending_intents.get(target_id)
+        if intent:
+            intent.paused = True
+            logger.info(f"[意图持续] 暂停: {intent.intent_id}")
+
+    def resume_intent(self, target_id: int) -> None:
+        intent = self._pending_intents.get(target_id)
+        if intent:
+            intent.paused = False
+            logger.info(f"[意图持续] 恢复: {intent.intent_id}")
+
+    def clear_intent(self, target_id: int) -> None:
+        if target_id in self._pending_intents:
+            intent = self._pending_intents.pop(target_id)
+            if intent._task and not intent._task.done():
+                intent._task.cancel()
+            logger.info(f"[意图持续] 清除: {intent.intent_id}")
 
     async def _check_screen_aware_trigger(self, target_id: int, context: ChatContext) -> Optional[ProactiveResult]:
         """屏幕感知触发 — 让弥娅的 AI 自己判断是否开口
