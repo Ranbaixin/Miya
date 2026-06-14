@@ -311,7 +311,8 @@ class MessageMixin:
                         pass
 
                 # ── AP 离线兜底：LLM 不可用时，白箱认知引擎自主回应 ──
-                if not response and content:
+                # 群聊消息已由决策层处理跳过逻辑，离线兜底仅用于私聊
+                if not response and content and message_type != "group":
                     try:
                         from core.miya_psyarch_bridge import get_psyarch_bridge
 

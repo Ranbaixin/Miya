@@ -364,9 +364,7 @@ class BaseAIClient:
                 msg_dict["tool_call_id"] = msg.tool_call_id
             # 支持 DeepSeek V4 thinking mode
             reasoning = getattr(msg, "reasoning_content", None)
-            if msg.tool_calls:
-                msg_dict["reasoning_content"] = reasoning if reasoning else ""
-            elif reasoning:
+            if reasoning:
                 msg_dict["reasoning_content"] = reasoning
             openai_messages.append(msg_dict)
         return openai_messages
@@ -638,11 +636,11 @@ class OpenAIClient(BaseAIClient):
                     )
 
         iteration = 0
+        rebuild_count = 0
         current_messages = messages.copy()
 
         while iteration < max_iterations:
             try:
-                # 转换为OpenAI格式（使用公共方法）
                 openai_messages = self._convert_messages_to_openai_format(current_messages)
 
                 # 构建请求参数
@@ -918,6 +916,10 @@ class OpenAIClient(BaseAIClient):
 
                 # 工具调用格式错误时清理消息并重试
                 if "tool" in err_str.lower() and ("400" in err_str or "invalid" in err_str.lower()):
+                    rebuild_count += 1
+                    iteration += 1
+                    if rebuild_count > 3:
+                        return "抱歉亲爱的，工具调用反复出错，请稍后再试~"
                     logger.warning(f"[AIClient] 工具调用格式错误，重建干净消息后重试 | 原始错误: {err_str[:200]}")
                     # 重建消息：只保留 system / user / assistant(无 tool_calls) 消息
                     # 丢弃所有 tool 消息和有 tool_calls 的 assistant 消息
