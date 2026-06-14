@@ -13,17 +13,13 @@ async def handler(args: Dict[str, Any], context: Dict[str, Any]) -> str:
     target = args.get("target", ".")
     action = args.get("action", "scan")
 
-    from core.terminal_ultra import get_terminal_ultra
-
-    terminal = get_terminal_ultra()
-
     if action == "scan":
-        return await _scan_security(terminal, target)
+        return await _scan_security(target)
     else:
         return f"未知动作: {action}"
 
 
-async def _scan_security(terminal, target: str) -> str:
+async def _scan_security(target: str) -> str:
     """扫描安全问题"""
     path = Path(target)
     if not path.exists():
@@ -55,9 +51,7 @@ async def _scan_security(terminal, target: str) -> str:
                 content = file.read_text(encoding="utf-8", errors="ignore")
                 for pattern, issue_type in patterns:
                     if re.search(pattern, content, re.IGNORECASE):
-                        issues.append(
-                            {"file": str(file), "type": issue_type, "pattern": pattern}
-                        )
+                        issues.append({"file": str(file), "type": issue_type, "pattern": pattern})
             except:
                 pass
 

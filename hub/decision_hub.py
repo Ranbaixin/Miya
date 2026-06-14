@@ -246,9 +246,8 @@ class DecisionHub:
         self.conversation_context_max_count = 1
         self.conversation_context_max_tokens = 2000
 
-        # 终端工具（保留用于 ! 前缀命令）
-        self.terminal_tool = None
-        self._init_terminal_tool()
+        # 终端执行能力由 CCE (Claude Code Engine) 提供
+        # CCE 作为弥娅的"手"/肢体工具，守护进程通过 MCP/子进程调用 CCE
 
         # 高级编排器（懒加载）
         self._advanced_orchestrator: Any | None = None
@@ -272,7 +271,6 @@ class DecisionHub:
 
         # 1. 感知处理器
         self.perception_handler = PerceptionHandler(
-            terminal_tool=self.terminal_tool,
             auth_subnet=self.auth_subnet,
             onebot_client=self.onebot_client,
         )
@@ -772,15 +770,6 @@ class DecisionHub:
             logger.warning(f"[决策层] 会话管理器初始化失败: {e}")
             return None
 
-    def _init_terminal_tool(self) -> None:
-        """
-        初始化终端工具（保留用于 ! 前缀命令）
-
-        终端功能已由 Open-ClaudeCode 提供，此处保留空实现以兼容旧代码
-        """
-        self.terminal_tool = None
-        logger.info("[决策层] 终端功能由 Open-ClaudeCode 提供")
-
     def _init_soul_generator(self) -> None:
         """
         初始化灵魂发生器 (Soul Generator)
@@ -1159,16 +1148,8 @@ class DecisionHub:
                 logger.info(f"[决策层] 群聊消息无关键词且非活跃对话，跳过: {content[:30]}")
                 return None
 
-        # 1. 检查终端命令（委托给感知处理器）
-        # 跳过检查标记：用于非终端模式（如QQ、Web）
-        if not perception.get("skip_terminal_command", False):
-            try:
-                terminal_result = await self.perception_handler.check_terminal_command(perception)
-                if terminal_result:
-                    return terminal_result
-            except AttributeError:
-                # PerceptionHandler 没有 check_terminal_command 方法，跳过检查
-                pass
+        # 终端命令处理已由 CCE 接管（CCE = 弥娅的"手"/肢体工具）
+        # 守护进程不再需要单独处理终端命令检测
 
         # 检查是否是拍一拍
         if "拍了拍你" in content:
@@ -1348,53 +1329,11 @@ class DecisionHub:
         #     from webnet.ToolNet.tools.terminal.terminal_command import TerminalCommandTool
         #     ... (已禁用单命令检测逻辑)
 
-        # 【新增】使用 MiyaAgentV3 处理复杂的终端任务（带安全检查和防重复调用）
-        # 使用类属性来跟踪调用状态，防止递归
-        # 注意: V3 仅在 terminal 平台使用，其他平台走普通 AI 流程
-        v3_executed = False
-        if platform == "terminal" and self.ai_client and not getattr(self, "_in_v3_execution", False):
-            think_keywords = [
-                "打开",
-                "运行",
-                "执行",
-                "创建",
-                "删除",
-                "查看",
-                "启动",
-                "安装",
-                "卸载",
-                "配置",
-                "帮我",
-                "请",
-                "能不能",
-            ]
-            use_v3 = any(kw in content for kw in think_keywords)
+        # CCE 作为执行引擎（手/肢体），终端任务由 CCE 的内置工具和 Agent 系统处理
+        # 守护进程（大脑/灵魂）通过 MCP 协议与 CCE 双向通信
 
-            if use_v3:
-                try:
-                    # 设置防重复调用标志
-                    self._in_v3_execution = True
-
-                    # 延迟导入避免启动时问题
-                    from core.miya_agent_v3 import create_agent_v3
-
-                    # 创建 V3 代理实例（限制步数防止长时间运行）
-                    agent_v3 = create_agent_v3(max_steps=2)
-                    logger.info("[决策层] 使用 V3 代理处理终端任务")
-                    result = await agent_v3.run(content, self.ai_client)
-
-                    # 清除标志
-                    self._in_v3_execution = False
-                    v3_executed = True
-                    return result
-                except Exception as e:
-                    # 清除标志
-                    self._in_v3_execution = False
-                    logger.warning(f"V3代理失败: {e}，回退到普通模式")
-                    # 静默回退，不影响正常流程
-
-        # 【新增】Agent 调度 - 根据用户输入智能选择 Agent（所有平台）
-        if not v3_executed and self.ai_client and not getattr(self, "_in_agent_execution", False):
+        # Agent 调度 - 根据用户输入智能选择 Agent（所有平台）
+        if self.ai_client and not getattr(self, "_in_agent_execution", False):
             # 【格式塔意识】Agent 工具不再单独调度，融入统一工具池
             # 通过工具调用自动判断是否需要 Agent 工具
 

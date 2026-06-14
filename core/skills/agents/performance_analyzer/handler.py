@@ -13,17 +13,13 @@ async def handler(args: Dict[str, Any], context: Dict[str, Any]) -> str:
     target = args.get("target", ".")
     action = args.get("action", "analyze")
 
-    from core.terminal_ultra import get_terminal_ultra
-
-    terminal = get_terminal_ultra()
-
     if action == "analyze":
-        return await _analyze_performance(terminal, target)
+        return await _analyze_performance(target)
     else:
         return f"未知动作: {action}"
 
 
-async def _analyze_performance(terminal, target: str) -> str:
+async def _analyze_performance(target: str) -> str:
     """分析性能问题"""
     path = Path(target)
     if not path.exists():

@@ -53,7 +53,6 @@ class MiyaOrchestrator:
         self.perception = PerceptionService(
             perception_handler=deps.get("perception_handler"),
             auth_subnet=deps.get("auth_subnet"),
-            terminal_tool=deps.get("terminal_tool"),
             soul_generator=deps.get("soul_generator"),
         )
 

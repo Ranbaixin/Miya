@@ -1,6 +1,7 @@
 """代码审查Agent处理器"""
 
 import re
+from pathlib import Path
 from typing import Any, Dict
 
 
@@ -9,32 +10,27 @@ async def handler(args: Dict[str, Any], context: Dict[str, Any]) -> str:
     action = args.get("action", "review")
     target = args.get("target", "")
 
-    from core.terminal_ultra import get_terminal_ultra
-
-    terminal = get_terminal_ultra()
-
     if not target:
         return "Error: No target specified"
 
-    result = await terminal.file_read(target)
-    if not result.success:
-        return f"Error: Cannot read {target} - {result.error}"
-
-    code = result.output
+    try:
+        code = Path(target).read_text(encoding="utf-8")
+    except Exception as e:
+        return f"Error: Cannot read {target} - {e}"
 
     if action == "review" or action == "analyze_quality":
-        return await _analyze_quality(code, target, terminal)
+        return _analyze_quality(code, target)
     elif action == "find_bugs":
-        return await _find_bugs(code, target, terminal)
+        return _find_bugs(code, target)
     elif action == "check_errors":
-        return await _check_errors(code, target, terminal)
+        return _check_errors(code, target)
     elif action == "security_scan":
-        return await _security_scan(code, target, terminal)
+        return _security_scan(code, target)
     else:
         return f"Unknown action: {action}"
 
 
-async def _analyze_quality(code: str, target: str, terminal) -> str:
+def _analyze_quality(code: str, target: str) -> str:
     """分析代码质量"""
     lines = code.split("\n")
     total_lines = len([l for l in lines if l.strip()])
@@ -71,13 +67,13 @@ Suggestions:"""
         report += "\n- High complexity, consider splitting functions"
     if len(functions) > 20:
         report += "\n- Many functions, consider modularizing"
-    if comment_lines / total_lines < 0.1:
+    if comment_lines / max(total_lines, 1) < 0.1:
         report += "\n- Low comments, consider adding documentation"
 
     return report
 
 
-async def _find_bugs(code: str, target: str, terminal) -> str:
+def _find_bugs(code: str, target: str) -> str:
     """查找潜在bug"""
     issues = []
 
@@ -105,7 +101,7 @@ Found {len(issues) // 2} issues:
 """ + "\n".join(issues)
 
 
-async def _check_errors(code: str, target: str, terminal) -> str:
+def _check_errors(code: str, target: str) -> str:
     """检查错误处理"""
     issues = []
 
@@ -129,7 +125,7 @@ Found {len(issues)} issues:
 """ + "\n".join(issues)
 
 
-async def _security_scan(code: str, target: str, terminal) -> str:
+def _security_scan(code: str, target: str) -> str:
     """安全扫描"""
     issues = []
 

@@ -175,10 +175,7 @@ class MiyaMemory:
                     data = json.load(f)
                     memories = data.get("memories", {})
                     for key, val in memories.items():
-                        if (
-                            query.lower() in key.lower()
-                            or query.lower() in str(val.get("value", "")).lower()
-                        ):
+                        if query.lower() in key.lower() or query.lower() in str(val.get("value", "")).lower():
                             results.append({"key": key, "value": val.get("value", "")})
             except Exception as e:
                 logger.warning(f"回忆失败: {e}")
@@ -292,18 +289,14 @@ class MiyaModelSelector:
             return {"success": False, "error": "模型池不可用"}
 
         try:
-            model_config = self.model_pool.select_model_for_task(
-                task_type or "simple_chat", "terminal", priority
-            )
+            model_config = self.model_pool.select_model_for_task(task_type or "simple_chat", "terminal", priority)
             if model_config:
                 return {
                     "success": True,
                     "model": {
                         "id": model_config.id,
                         "name": model_config.name,
-                        "provider": str(model_config.provider)
-                        if model_config.provider
-                        else "",
+                        "provider": str(model_config.provider) if model_config.provider else "",
                     },
                     "task_type": task_type or "simple_chat",
                 }
@@ -357,6 +350,18 @@ try:
         logger.info("[MCP] 协作引擎初始化成功")
 except Exception as e:
     logger.warning(f"[MCP] 协作引擎初始化失败: {e}")
+
+# APV2.1 认知引擎桥接 — 只读状态查询 + 训练触发
+psyarch_bridge = None
+try:
+    from core.miya_psyarch_bridge import get_psyarch_bridge
+
+    psyarch_bridge = get_psyarch_bridge()
+    if psyarch_bridge:
+        psyarch_bridge._init_engine()
+        logger.info("[MCP] APV2.1 认知引擎桥接就绪")
+except Exception as e:
+    logger.warning(f"[MCP] APV2.1 桥接初始化失败: {e}")
 
 # 创建 MCP Server
 server = Server("miya-soul")
@@ -416,9 +421,7 @@ async def list_tools():
             description="根据关键词回忆相关内容",
             inputSchema={
                 "type": "object",
-                "properties": {
-                    "query": {"type": "string", "description": "回忆的关键词"}
-                },
+                "properties": {"query": {"type": "string", "description": "回忆的关键词"}},
                 "required": ["query"],
             },
         ),
@@ -449,6 +452,31 @@ async def list_tools():
         Tool(
             name="miya_get_status",
             description="获取弥娅系统完整状态（人格+记忆+情感）",
+            inputSchema={"type": "object", "properties": {}, "required": []},
+        ),
+        Tool(
+            name="miya_get_ap_status",
+            description="获取弥娅 APV2.1 认知引擎状态：NT通道(OXY/DA/COR/NOV等)、感受向量、认知感受、节奏相位、教育统计、记忆保护状态",
+            inputSchema={"type": "object", "properties": {}, "required": []},
+        ),
+        Tool(
+            name="miya_train_ap",
+            description="触发弥娅 APV2.1 认知引擎训练（规则蒸馏+预训练锚点注入+强化学习）",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "mode": {
+                        "type": "string",
+                        "description": "训练模式: all(全部), distill(规则蒸馏), pretrain(预训练锚点), rl(强化学习)",
+                        "default": "all",
+                    }
+                },
+                "required": [],
+            },
+        ),
+        Tool(
+            name="miya_get_system_status",
+            description="获取弥娅系统完整状态：人格、情感、记忆、AP认知引擎、模型池概览",
             inputSchema={"type": "object", "properties": {}, "required": []},
         ),
         Tool(
@@ -522,19 +550,11 @@ async def call_tool(name: str, arguments: dict):
     try:
         if name == "miya_get_personality":
             result = personality.get_current()
-            return [
-                TextContent(
-                    type="text", text=json.dumps(result, ensure_ascii=False, indent=2)
-                )
-            ]
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
         elif name == "miya_switch_personality":
             result = personality.switch(arguments["name"])
-            return [
-                TextContent(
-                    type="text", text=json.dumps(result, ensure_ascii=False, indent=2)
-                )
-            ]
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
         elif name == "miya_get_memory":
             limit = arguments.get("limit", 5)
@@ -542,48 +562,26 @@ async def call_tool(name: str, arguments: dict):
                 "session": memory.get_session_summary(),
                 "recent_memories": memory.get_recent_memories(limit),
             }
-            return [
-                TextContent(
-                    type="text", text=json.dumps(result, ensure_ascii=False, indent=2)
-                )
-            ]
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
         elif name == "miya_save_memory":
             result = memory.save_memory(arguments["key"], arguments["value"])
-            return [
-                TextContent(
-                    type="text", text=json.dumps(result, ensure_ascii=False, indent=2)
-                )
-            ]
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
         elif name == "miya_recall":
             result = memory.recall(arguments["query"])
-            return [
-                TextContent(
-                    type="text", text=json.dumps(result, ensure_ascii=False, indent=2)
-                )
-            ]
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
         elif name == "miya_get_emotion":
             result = {
                 "state": emotion.get_state(),
                 "expression": emotion.get_expression(),
             }
-            return [
-                TextContent(
-                    type="text", text=json.dumps(result, ensure_ascii=False, indent=2)
-                )
-            ]
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
         elif name == "miya_set_emotion":
-            result = emotion.update(
-                arguments["emotion"], arguments.get("intensity", 0.5)
-            )
-            return [
-                TextContent(
-                    type="text", text=json.dumps(result, ensure_ascii=False, indent=2)
-                )
-            ]
+            result = emotion.update(arguments["emotion"], arguments.get("intensity", 0.5))
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
         elif name == "miya_get_status":
             result = {
@@ -592,46 +590,111 @@ async def call_tool(name: str, arguments: dict):
                 "emotion": emotion.get_state(),
                 "expression": emotion.get_expression(),
             }
-            return [
-                TextContent(
-                    type="text", text=json.dumps(result, ensure_ascii=False, indent=2)
-                )
-            ]
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+        elif name == "miya_get_ap_status":
+            if not psyarch_bridge:
+                result = {"available": False, "error": "APV2.1 认知引擎未就绪"}
+            else:
+                try:
+                    stats = psyarch_bridge.education_stats()
+                    cog = psyarch_bridge.cognitive_state()
+                    channels = psyarch_bridge.channels_state()
+                    emo = psyarch_bridge.emotion_snapshot()
+                    nt = emo.get("nt_channels", {})
+                    mf = emo.get("miya_feelings", {})
+                    top_feelings = sorted(mf.items(), key=lambda x: -x[1])[:5]
+                    mp = "保护中" if getattr(psyarch_bridge, "memory_protection", True) else "开放"
+                    result = {
+                        "available": True,
+                        "nt_channels": {
+                            "OXY": nt.get("OXY", 0),
+                            "DA": nt.get("DA", 0),
+                            "COR": nt.get("COR", 0),
+                            "NOV": nt.get("NOV", 0),
+                            "SER": nt.get("SER", 0),
+                            "END": nt.get("END", 0),
+                        },
+                        "top_feelings": [{"name": k, "intensity": round(v, 3)} for k, v in top_feelings],
+                        "cognitive": cog.get("cognitive_feelings", {}),
+                        "rhythm": channels.get("rhythm", {}),
+                        "education": stats,
+                        "memory_protection": mp,
+                    }
+                except Exception as ex:
+                    result = {"available": False, "error": str(ex)}
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+        elif name == "miya_train_ap":
+            if not psyarch_bridge:
+                result = {"available": False, "error": "APV2.1 认知引擎未就绪"}
+            else:
+                mode = arguments.get("mode", "all")
+                try:
+                    train_result = psyarch_bridge.train(mode)
+                    summary = psyarch_bridge.training_summary()
+                    result = {
+                        "success": not train_result.get("error"),
+                        "mode": mode,
+                        "distilled": train_result.get("distill", {}).get("rules_adjusted", 0),
+                        "pretrain_anchors": train_result.get("pretrain", {}).get(
+                            "anchors", summary.get("pretrain_anchors", 0)
+                        ),
+                        "rl_events": summary.get("rl_events", 0),
+                        "error": train_result.get("error"),
+                    }
+                except Exception as ex:
+                    result = {"success": False, "error": str(ex)}
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+        elif name == "miya_get_system_status":
+            ap_data = {"available": False}
+            if psyarch_bridge:
+                try:
+                    emo = psyarch_bridge.emotion_snapshot()
+                    ap_data = {
+                        "available": True,
+                        "nt_channels": emo.get("nt_channels", {}),
+                        "miya_feelings": emo.get("miya_feelings", {}),
+                        "cognitive": emo.get("cognitive", {}),
+                        "memory_protection": getattr(psyarch_bridge, "memory_protection", True),
+                    }
+                except Exception:
+                    pass
+
+            models_data = model_selector.list_models()
+
+            result = {
+                "personality": personality.get_current(),
+                "emotion": emotion.get_state(),
+                "expression": emotion.get_expression(),
+                "memory": memory.get_session_summary(),
+                "ap": ap_data,
+                "models": {
+                    "available": models_data.get("available", False),
+                    "count": len(models_data.get("models", [])),
+                },
+            }
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
         elif name == "miya_list_models":
             result = model_selector.list_models()
-            return [
-                TextContent(
-                    type="text", text=json.dumps(result, ensure_ascii=False, indent=2)
-                )
-            ]
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
         elif name == "miya_select_model":
             result = model_selector.select_model(
                 task_type=arguments.get("task_type"),
                 priority=arguments.get("priority", "balanced"),
             )
-            return [
-                TextContent(
-                    type="text", text=json.dumps(result, ensure_ascii=False, indent=2)
-                )
-            ]
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
         elif name == "miya_classify_task":
             result = await model_selector.classify_task(arguments.get("user_input", ""))
-            return [
-                TextContent(
-                    type="text", text=json.dumps(result, ensure_ascii=False, indent=2)
-                )
-            ]
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
         elif name == "miya_get_task_types":
             result = model_selector.get_task_types()
-            return [
-                TextContent(
-                    type="text", text=json.dumps(result, ensure_ascii=False, indent=2)
-                )
-            ]
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
         elif name == "miya_collaborate":
             if not collaboration_engine:
@@ -648,11 +711,7 @@ async def call_tool(name: str, arguments: dict):
                     platform="terminal",
                 )
                 result = result.to_dict()
-            return [
-                TextContent(
-                    type="text", text=json.dumps(result, ensure_ascii=False, indent=2)
-                )
-            ]
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
         else:
             return [TextContent(type="text", text=f"未知工具: {name}")]
@@ -670,9 +729,7 @@ async def main():
     logger.info(f"模型池: {'可用' if model_selector.model_pool else '不可用'}")
 
     async with stdio_server() as (read_stream, write_stream):
-        await server.run(
-            read_stream, write_stream, server.create_initialization_options()
-        )
+        await server.run(read_stream, write_stream, server.create_initialization_options())
 
 
 if __name__ == "__main__":

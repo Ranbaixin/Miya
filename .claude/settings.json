@@ -1,8 +1,6 @@
 {
   "modelType": "openai",
   "env": {
-    "OPENAI_API_KEY": "sk-your-deepseek-api-key",
-    "OPENAI_BASE_URL": "https://api.deepseek.com/v1",
     "OPENAI_MODEL": "deepseek-v4-flash"
   },
   "permissions": {
@@ -12,7 +10,11 @@
       "Write(//)**",
       "Edit(//)**",
       "Glob(//)**",
-      "Grep(//)**"
+      "Grep(//)**",
+      "WebSearch",
+      "WebFetch(//)**",
+      "mcp__miya-soul__miya_get_status",
+      "mcp__miya-soul__miya_list_models"
     ]
   },
   "language": "zh",

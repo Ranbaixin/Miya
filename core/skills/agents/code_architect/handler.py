@@ -1,6 +1,54 @@
 """Code architect agent handler"""
 
+import subprocess
+from pathlib import Path
 from typing import Any, Dict
+
+
+def _directory_tree(root: str, max_depth: int = 2) -> str:
+    root_path = Path(root)
+    if not root_path.exists():
+        return f"路径不存在: {root}"
+    lines = [f"{root_path.absolute()}"]
+    for item in sorted(root_path.iterdir()):
+        _walk(item, "", 1, max_depth, lines)
+    return "\n".join(lines)
+
+
+def _walk(item: Path, prefix: str, depth: int, max_depth: int, lines: list) -> None:
+    if depth > max_depth:
+        return
+    if item.name.startswith(".") or item.name in ("node_modules", "__pycache__", ".git", "dist", "build"):
+        return
+    lines.append(f"{prefix}├── {item.name}{'/' if item.is_dir() else ''}")
+    if item.is_dir():
+        for child in sorted(item.iterdir()):
+            _walk(child, prefix + "│   ", depth + 1, max_depth, lines)
+
+
+def _project_analyze(root: str) -> str:
+    path = Path(root)
+    if not path.exists():
+        return f"路径不存在: {root}"
+    stats = {"py": 0, "js": 0, "ts": 0, "java": 0, "go": 0, "other": 0}
+    total_lines = 0
+    for file in path.rglob("*"):
+        if file.is_file():
+            ext = file.suffix.lstrip(".")
+            if ext in stats:
+                stats[ext] += 1
+            else:
+                stats["other"] += 1
+            try:
+                total_lines += len(file.read_text(encoding="utf-8", errors="ignore").split("\n"))
+            except Exception:
+                pass
+    return (
+        f"项目: {path.absolute()}\n"
+        + f"文件: {sum(stats.values())} 个, 行数: {total_lines}\n"
+        + f"Python: {stats['py']}, JS: {stats['js']}, TS: {stats['ts']}, "
+        + f"Java: {stats['java']}, Go: {stats['go']}, Other: {stats['other']}"
+    )
 
 
 async def handler(args: Dict[str, Any], context: Dict[str, Any]) -> str:
@@ -9,29 +57,21 @@ async def handler(args: Dict[str, Any], context: Dict[str, Any]) -> str:
     target = args.get("target", "")
     requirements = args.get("requirements", "")
 
-    from core.terminal_ultra import get_terminal_ultra
-
-    terminal = get_terminal_ultra()
-
     if action == "design" or action == "structure":
-        return await _design_architecture(target, terminal)
+        return await _design_architecture(target)
     elif action == "plan_modules":
-        return await _plan_modules(target, requirements, terminal)
+        return await _plan_modules(target, requirements)
     elif action == "refactor":
-        return await _refactor_analysis(target, terminal)
+        return await _refactor_analysis(target)
     elif action == "analyze_dependencies":
-        return await _analyze_dependencies(target, terminal)
+        return await _analyze_dependencies(target)
     else:
         return f"Unknown action: {action}"
 
 
-async def _design_architecture(target: str, terminal) -> str:
+async def _design_architecture(target: str) -> str:
     """Design architecture analysis"""
-    result = await terminal.project_analyze(target or ".")
-    if not result.success:
-        return f"Error: {result.error}"
-
-    project_info = result.output
+    project_info = _project_analyze(target or ".")
 
     languages = []
     if "Python" in project_info:
@@ -73,7 +113,7 @@ project/
     return report
 
 
-async def _plan_modules(target: str, requirements: str, terminal) -> str:
+async def _plan_modules(target: str, requirements: str) -> str:
     """Plan module structure"""
     report = f"""=== Module Planning ===
 
@@ -123,13 +163,9 @@ Data layer modules:
     return report
 
 
-async def _refactor_analysis(target: str, terminal) -> str:
+async def _refactor_analysis(target: str) -> str:
     """Refactoring analysis"""
-    result = await terminal.directory_tree(target or ".", max_depth=2)
-    if not result.success:
-        return f"Error: {result.error}"
-
-    tree = result.output
+    tree = _directory_tree(target or ".", max_depth=2)
 
     issues = []
 
@@ -165,16 +201,14 @@ Refactoring suggestions:
     return report
 
 
-async def _analyze_dependencies(target: str, terminal) -> str:
+async def _analyze_dependencies(target: str) -> str:
     """Analyze dependencies"""
-    result = await terminal.terminal_exec(
-        "pip list" if target.endswith(".py") or not target else "npm list"
-    )
-
-    if not result.success:
-        return "Cannot get dependency list"
-
-    deps = result.output
+    cmd = "pip list" if target.endswith(".py") or not target else "npm list"
+    try:
+        result = subprocess.run(cmd.split(), capture_output=True, text=True, timeout=30, shell=True)
+        deps = result.stdout
+    except Exception as e:
+        return f"Cannot get dependency list: {e}"
 
     lines = [l for l in deps.split("\n") if l.strip() and not l.startswith("==")]
     count = len([l for l in lines if "==" in l or "@" in l])

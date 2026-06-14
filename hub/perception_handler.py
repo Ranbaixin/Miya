@@ -26,7 +26,6 @@ class PerceptionHandler:
 
     def __init__(
         self,
-        terminal_tool: Optional[Any] = None,
         auth_subnet: Optional[Any] = None,
         onebot_client: Optional[Any] = None,
     ):
@@ -34,11 +33,9 @@ class PerceptionHandler:
         初始化感知处理器
 
         Args:
-            terminal_tool: 终端工具实例
             auth_subnet: 权限子网
             onebot_client: OneBot客户端
         """
-        self.terminal_tool = terminal_tool
         self.auth_subnet = auth_subnet
         self.onebot_client = onebot_client
 
@@ -132,10 +129,6 @@ class PerceptionHandler:
         """
         priority = 5  # 默认优先级
 
-        # 终端工具优先
-        if self.terminal_tool and self._is_terminal_command(perception):
-            priority = 8
-
         # 情感类/选择类工具优先
         if self._is_emotion_or_choice_tool(perception):
             priority = 7
@@ -145,20 +138,6 @@ class PerceptionHandler:
             priority = 6
 
         return priority
-
-    def _is_terminal_command(self, perception: Dict) -> bool:
-        """
-        判断是否是终端命令
-
-        Args:
-            perception: 感知数据
-
-        Returns:
-            是否是终端命令
-        """
-        content = perception.get("content", "")
-        terminal_prefixes = ["/", "$", "#", ">"]
-        return any(content.startswith(prefix) for prefix in terminal_prefixes)
 
     def _is_emotion_or_choice_tool(self, perception: Dict) -> bool:
         """
@@ -187,44 +166,6 @@ class PerceptionHandler:
         tool_name = perception.get("tool_name", "")
         blocking_tools = ["block", "pause", "wait", "confirm", "approve"]
         return any(tool in tool_name.lower() for tool in blocking_tools)
-
-    async def process_terminal_tool(self, perception: Dict) -> Optional[str]:
-        """
-        处理终端工具
-
-        Args:
-            perception: 感知数据
-
-        Returns:
-            处理结果
-        """
-        if not self.terminal_tool:
-            return None
-
-        try:
-            content = perception.get("content", "")
-            if not content:
-                return None
-
-            # 提取命令
-            command = content[1:].strip() if content.startswith("/") else content.strip()
-
-            # 执行终端命令
-            from webnet.ToolNet.base import ToolContext
-
-            context = ToolContext(
-                user_id=perception.get("user_id"),
-                group_id=perception.get("group_id"),
-                message_type=perception.get("message_type"),
-                onebot_client=self.onebot_client,
-            )
-
-            result = await self.terminal_tool.execute(command, context)
-            return result
-
-        except Exception as e:
-            logger.error(f"[感知处理器] 终端工具处理失败: {e}", exc_info=True)
-            return f"❌ 终端工具执行失败: {str(e)}"
 
     async def enhance_perception(self, perception: Dict) -> Dict:
         """
@@ -270,7 +211,6 @@ class PerceptionHandler:
         return {
             "name": "PerceptionHandler",
             "version": "1.0.0",
-            "has_terminal_tool": self.terminal_tool is not None,
             "has_auth_subnet": self.auth_subnet is not None,
             "has_onebot_client": self.onebot_client is not None,
         }

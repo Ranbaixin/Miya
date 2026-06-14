@@ -916,10 +916,28 @@ class OpenAIClient(BaseAIClient):
                 if isinstance(e, OpenAIAuthError):
                     return "抱歉亲爱的，当前模型认证出现问题，可能是密钥已过期。请检查API密钥是否有效~"
 
-                # 工具调用格式错误（如 insufficient tool messages）时返回友好消息 + 错误详情
+                # 工具调用格式错误时清理消息并重试
                 if "tool" in err_str.lower() and ("400" in err_str or "invalid" in err_str.lower()):
-                    logger.warning(f"[AIClient] 工具调用格式错误，返回友好消息 | 原始错误: {err_str[:300]}")
-                    return f"抱歉亲爱的，刚才处理请求时出了点小差错~\n错误详情：{err_str[:300]}\n能再说一遍吗？"
+                    logger.warning(f"[AIClient] 工具调用格式错误，重建干净消息后重试 | 原始错误: {err_str[:200]}")
+                    # 重建消息：只保留 system / user / assistant(无 tool_calls) 消息
+                    # 丢弃所有 tool 消息和有 tool_calls 的 assistant 消息
+                    current_messages = [
+                        AIMessage(
+                            role=msg.role,
+                            content=msg.content,
+                        )
+                        if msg.role == "assistant"
+                        else msg
+                        for msg in current_messages
+                        if msg.role != "tool"
+                    ]
+                    current_messages.append(
+                        AIMessage(
+                            role="user",
+                            content="前面的任务已经完成。请简要告诉我结果。",
+                        )
+                    )
+                    continue
 
                 return f"抱歉，AI服务暂时不可用\n错误详情：{err_str[:300]}"
 

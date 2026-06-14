@@ -193,7 +193,7 @@ onUnmounted(() => {
         <span class="header-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M12 8v8M8 12h8" /></svg>
         </span>
-        <span class="header-title">Claude Code Engine v2.4.2</span>
+        <span class="header-title">CCE · 弥娅终端 v2.2.1</span>
         <span class="header-status" :class="{ running: exitCode === null && statusText.includes('运行'), error: statusText.includes('失败'), exited: exitCode !== null }">
           {{ statusText }}
         </span>

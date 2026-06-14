@@ -221,8 +221,10 @@ class Miya:
         # 初始化平台适配器
         self.terminal_adapter = get_adapter("terminal")
 
-        # 【终端】Open-ClaudeCode 提供终端能力
-        self.logger.info("[终端] 终端功能由 Open-ClaudeCode 提供")
+        # CCE 作为弥娅的"手"/肢体工具 —— 守护进程可调用 CCE 执行任务
+        self.cce_cli_path: Path | None = None
+        self.cce_node_exe: str = "node"
+        self._init_cce_executor()
 
         # 【自主能力】初始化带人设的自主能力
         self.autonomy_with_personality = get_autonomy_with_personality(
@@ -326,10 +328,6 @@ class Miya:
 
         return neo4j
 
-    def _init_terminal_tool(self):
-        """终端功能已由 Open-ClaudeCode 提供"""
-        return None
-
     def _init_tool_subnet(self):
         """
         初始化 ToolNet 子网（符合 MIYA 蛛网式分布式架构）
@@ -353,6 +351,107 @@ class Miya:
         except Exception as e:
             self.logger.warning(f"ToolNet 子网初始化失败: {e}", exc_info=True)
             self.tool_subnet = None
+
+    def _init_cce_executor(self):
+        """初始化 CCE 执行器 — 守护进程（大脑）调用 CCE（手）的桥梁"""
+        import platform
+        import shutil
+
+        cce_dir = project_root / "claude-code-engine"
+        cli_candidates = [
+            cce_dir / "dist" / "cli-node.js",
+            cce_dir / "cli-node.js",
+        ]
+        for candidate in cli_candidates:
+            if candidate.exists():
+                self.cce_cli_path = candidate
+                break
+
+        node_candidates: list[str] = []
+        if platform.system() == "Windows":
+            node_candidates = [
+                shutil.which("node") or "",
+                str(
+                    Path.home() / "AppData" / "Roaming" / "fnm" / "node-versions" / "v22" / "installation" / "node.exe"
+                ),
+                "C:\\Program Files\\nodejs\\node.exe",
+            ]
+        else:
+            node_candidates = [
+                shutil.which("node") or "",
+                "/usr/local/bin/node",
+                "/usr/bin/node",
+            ]
+
+        for candidate in node_candidates:
+            if candidate and Path(candidate).exists():
+                self.cce_node_exe = candidate
+                break
+
+        if self.cce_cli_path:
+            self.logger.info(f"[CCE] 执行器就绪: {self.cce_node_exe} {self.cce_cli_path.name}")
+        else:
+            self.logger.warning("[CCE] 未找到 cli-node.js，守护进程无法调用 CCE")
+
+    def call_cce(self, task: str, timeout: int = 120) -> dict:
+        """
+        守护进程调用 CCE 执行任务（同步，阻塞等待结果）
+
+        Args:
+            task: 自然语言任务描述，如 "在 data/ 目录下创建 test.txt"
+            timeout: 超时秒数
+
+        Returns:
+            {"success": bool, "output": str, "error": str}
+        """
+        import platform
+        import subprocess
+
+        if not self.cce_cli_path or not self.cce_cli_path.exists():
+            return {"success": False, "output": "", "error": "CCE CLI 未就绪"}
+
+        dotenv_path = project_root / "config" / ".env"
+        env_vars: dict[str, str] = {}
+        if dotenv_path.exists():
+            for line in dotenv_path.read_text(encoding="utf-8").split("\n"):
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, _, value = line.partition("=")
+                    env_vars[key.strip()] = value.strip()
+
+        env = {
+            **{k: v for k, v in os.environ.items()},
+            "CLAUDE_CODE_USE_OPENAI": "1",
+            "OPENAI_API_KEY": env_vars.get("DEEPSEEK_API_KEY", ""),
+            "OPENAI_BASE_URL": env_vars.get("DEEPSEEK_API_BASE", "https://api.deepseek.com/v1"),
+            "OPENAI_MODEL": env_vars.get("DEEPSEEK_MODEL", "deepseek-v4-flash"),
+        }
+
+        try:
+            if platform.system() == "Windows":
+                creationflags = subprocess.CREATE_NO_WINDOW
+            else:
+                creationflags = 0
+
+            proc = subprocess.run(
+                [self.cce_node_exe, str(self.cce_cli_path), "-p", "--permission-mode", "bypassPermissions", task],
+                cwd=str(project_root),
+                env=env,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=timeout,
+                creationflags=creationflags,
+            )
+            return {
+                "success": proc.returncode == 0,
+                "output": proc.stdout,
+                "error": proc.stderr,
+            }
+        except subprocess.TimeoutExpired:
+            return {"success": False, "output": "", "error": f"CCE 执行超时 ({timeout}s)"}
+        except Exception as e:
+            return {"success": False, "output": "", "error": str(e)}
 
     def _init_web_net(self):
         """初始化 WebNet 子网"""
@@ -737,20 +836,7 @@ class Miya:
         """
         # self.logger.info(f"用户输入: {user_input}")  # 注释掉，避免终端输出冗余日志
 
-        # 【框架一致性】检查是否是带前缀的终端命令
-        if self.decision_hub and self.decision_hub.terminal_tool:
-            # 只处理带前缀的直接命令（! 或 >>）
-            # 自然语言由 AI 理解，AI 决定是否调用终端工具
-            if user_input.startswith(("!", ">>")):
-                # 去掉前缀，提取实际命令
-                prefix = "!" if user_input.startswith("!") else ">>"
-                command = user_input[len(prefix) :].strip()
-
-                # 执行命令
-                result = self.decision_hub.terminal_tool.execute(command)
-                formatted_result = self.decision_hub.terminal_tool.format_result(result)
-                self.logger.info(f"终端工具响应: {formatted_result[:100]}")
-                return formatted_result
+        # CCE 作为终端执行引擎（手/肢体），通过内置 Bash 工具处理所有终端命令
 
         # APV2.1 状态查询 (AP 心跳始终在后台运行)
         if user_input.strip().lower() in ("/ap", "/psyarch", "/认知"):

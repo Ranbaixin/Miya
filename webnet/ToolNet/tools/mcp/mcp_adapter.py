@@ -29,11 +29,31 @@ _MCP_KEYWORDS: Dict[str, List[str]] = {
     "screen_vision": ["屏幕", "截图", "看到", "显示", "看下", "界面", "报错"],
     "web_search": ["搜索", "搜索", "查找", "百度", "谷歌", "查一下"],
     "filesystem": ["文件", "读写", "写入", "删除文件", "目录"],
+    "cce": [
+        "创建项目",
+        "搭建",
+        "重构",
+        "多步骤",
+        "安装依赖",
+        "构建",
+        "编译",
+        "自动化任务",
+        "生成代码",
+        "批量操作",
+        "初始化",
+        "配置环境",
+        "分析代码",
+        "修复bug",
+    ],
 }
 
 
-def _parse_param_type(raw: str) -> str:
+def _parse_param_type(raw) -> str:
     """将 manifest 中的参数类型描述转为 OpenAI 类型"""
+    if isinstance(raw, dict):
+        raw = raw.get("type", "string")
+    if not isinstance(raw, str):
+        return "string"
     raw_lower = raw.strip().lower()
     for key, oai_type in _TYPE_MAP.items():
         if key in raw_lower:
@@ -41,8 +61,12 @@ def _parse_param_type(raw: str) -> str:
     return "string"
 
 
-def _parse_param_desc(raw: str) -> str:
+def _parse_param_desc(raw) -> str:
     """从 manifest 参数描述中提取人类可读描述"""
+    if isinstance(raw, dict):
+        return raw.get("description", "")
+    if not isinstance(raw, str):
+        return str(raw)
     if " - " in raw:
         return raw.split(" - ", 1)[1].strip()
     return raw
@@ -124,9 +148,7 @@ class MCPTool(BaseTool):
 
             if result.success:
                 response = str(result.result) if result.result else "完成"
-                logger.info(
-                    f"[MCPNet] {self._full_name} 成功 (耗时 {result.execution_time:.2f}s)"
-                )
+                logger.info(f"[MCPNet] {self._full_name} 成功 (耗时 {result.execution_time:.2f}s)")
                 return response
             else:
                 error_msg = result.error or "未知错误"
@@ -139,11 +161,6 @@ class MCPTool(BaseTool):
 
 
 def discover_mcp_tools() -> List[MCPTool]:
-    """从已注册的 MCP 服务自动发现并创建格式塔工具
-
-    ToolNet 可能在 MCPManager 之前初始化，此时服务列表为空。
-    返回占位列表，工具将在 MCPManager 就绪后由 _sync_toolnet_mcp_tools 重新加载。
-    """
     tools: List[MCPTool] = []
 
     try:
@@ -151,27 +168,28 @@ def discover_mcp_tools() -> List[MCPTool]:
 
         manager = get_mcp_manager()
         if not manager._initialized:
-            logger.warning("[MCPNet] MCP 服务尚未初始化，将在就绪后自动重载 MCP 工具")
+            logger.warning("[MCPNet] MCP 服务尚未初始化")
             return tools
 
         for service_name, service in manager._services.items():
-            manifest = service.manifest
-            capabilities = manifest.capabilities
-            tool_list: List[Dict] = capabilities.get("tools", [])
+            try:
+                manifest = service.manifest
+                capabilities = manifest.capabilities
+                tool_list: List[Dict] = capabilities.get("tools", [])
 
-            for tool_def in tool_list:
-                tool = MCPTool(
-                    service_name=service_name,
-                    tool_name=tool_def["name"],
-                    tool_def=tool_def,
-                )
-                tools.append(tool)
-                logger.info(
-                    f"[MCPNet] 已创建格式塔工具: {tool._full_name} ({manifest.display_name})"
-                )
+                for tool_def in tool_list:
+                    tool = MCPTool(
+                        service_name=service_name,
+                        tool_name=tool_def["name"],
+                        tool_def=tool_def,
+                    )
+                    tools.append(tool)
+                    logger.info(f"[MCPNet] 已创建格式塔工具: {tool._full_name} ({manifest.display_name})")
+            except Exception as e:
+                logger.warning(f"[MCPNet] 服务 {service_name} 工具发现失败: {e}")
 
     except Exception as e:
-        logger.warning(f"[MCPNet] 工具发现失败（MCP 可能尚未初始化）: {e}")
+        logger.warning(f"[MCPNet] 工具发现失败: {e}")
 
     return tools
 

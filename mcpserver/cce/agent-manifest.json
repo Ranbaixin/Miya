@@ -1,0 +1,30 @@
+{
+  "name": "cce",
+  "displayName": "CCE 执行引擎",
+  "description": "弥娅的「手」/肢体工具 — 通过 Claude Code Engine 执行文件操作、Bash 命令、代码生成等任务。拥有 60+ 内置工具（文件读写、Bash 执行、代码分析、Git 操作、Web 搜索），可自主规划并执行复杂任务。",
+  "agentType": "mcp",
+  "entryPoint": {
+    "module": "mcpserver.cce.service",
+    "class": "CCEService"
+  },
+  "capabilities": {
+    "tools": [
+      {
+        "name": "execute",
+        "description": "通过 CCE (Claude Code Engine) 执行自然语言任务。CCE 拥有 60+ 内置工具：文件读写、Bash 命令、代码分析、Git 操作、Web 搜索等。用自然语言描述要 CCE 做什么。适合：创建项目结构、运行终端命令、安装依赖、多文件编辑、代码分析等复杂操作。",
+        "parameters": {
+          "task": "string (自然语言任务描述，如: 在桌面创建 hello.py 并写入 Hello World)",
+          "working_dir": "string (工作目录路径，默认项目根目录)",
+          "timeout": "number (超时秒数，默认120)"
+        }
+      },
+      {
+        "name": "get_status",
+        "description": "查询 CCE 引擎的可用状态和版本信息",
+        "parameters": {}
+      }
+    ]
+  },
+  "version": "1.0.0",
+  "enabled": true
+}

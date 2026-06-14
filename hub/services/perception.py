@@ -21,12 +21,10 @@ class PerceptionService:
         self,
         perception_handler=None,
         auth_subnet: Any = None,
-        terminal_tool: Any = None,
         soul_generator: Any = None,
     ):
         self.perception_handler = perception_handler
         self.auth_subnet = auth_subnet
-        self.terminal_tool = terminal_tool
         self.soul_generator = soul_generator
 
     async def process(self, request: ProcessRequest, state: ProcessState) -> ProcessState:
@@ -49,19 +47,15 @@ class PerceptionService:
 
         if content.startswith("!"):
             state.is_system_command = True
-            logger.info(f"[感知] 检测到终端命令: {content}")
             return state
 
         if content.startswith(">>"):
             state.is_system_command = True
-            logger.info(f"[感知] 检测到代码执行: {content}")
             return state
 
         quick_cmd_map = {
-            "/状态": ("当前系统状态", True),
-            "/形态": ("可切换的形态列表", True),
-            "/说话": ("弥娅在这里", True),
-            "/存在": ("弥娅的认知状态", True),
+            "~状态": "弥娅系统状态可通过 MCP 工具 miya_get_system_status 查询",
+            "~认知": "APV2.1 认知引擎状态可通过 MCP 工具 miya_get_ap_status 查询",
         }
 
         for cmd, (response, is_quick) in quick_cmd_map.items():

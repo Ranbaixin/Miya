@@ -53,6 +53,9 @@ class PlatformToolsManager:
         "mcp_art_service_generate_image",
         "mcp_art_service_list_providers",
         "mcp_art_service_get_gallery",
+        # CCE 执行引擎 — 弥娅的「手」(Claude Code Engine)
+        "mcp_cce_execute",
+        "mcp_cce_get_status",
     ]
 
     # 平台特定工具映射
@@ -345,6 +348,9 @@ class PlatformToolsManager:
             "python_interpreter",
         ],
         "terminal": [
+            # CCE 执行引擎 — 弥娅的「手」
+            "mcp_cce_execute",
+            "mcp_cce_get_status",
             # 核心终端工具
             "terminal_command",
             "terminal_exec",
