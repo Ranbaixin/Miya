@@ -552,7 +552,6 @@ class Historian:
                 if priority >= 0.7 or source_val == "manual":
                     # 升级为长期记忆
                     mem.level = MemoryLevel.LONG_TERM
-                    # 使用正确的 update 方法调用
                     await self.memory_core.update(
                         str(mem.id),
                         content=mem.content,
@@ -560,6 +559,7 @@ class Historian:
                         priority=mem.priority,
                         is_pinned=mem.is_pinned,
                         is_archived=mem.is_archived,
+                        level=MemoryLevel.LONG_TERM,
                     )
                     # 更新缓存中的记忆
                     mem.updated_at = datetime.now().isoformat()

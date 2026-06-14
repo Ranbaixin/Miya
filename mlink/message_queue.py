@@ -44,8 +44,12 @@ class MessageQueue:
     async def size(self) -> int:
         return len(self._queue)
 
-    async def get_stats(self) -> Dict:
+    def get_stats(self) -> Dict:
         return dict(self._stats)
+
+    async def stop_processor(self):
+        """停止消息处理器（兼容 mlink_core 调用）"""
+        logger.info("[MessageQueue] 处理器已停止")
 
     async def clear(self):
         async with self._lock:

@@ -1239,8 +1239,9 @@ class SoulGenerator:
                     "reasoning": ai_full_result.get("reasoning"),
                 }
 
-        # 5. 默认情绪波动
-        self._apply_default_fluctuation()
+        # 5. 默认情绪波动（仅 AI 分析未执行时使用，避免覆盖 AI 结果）
+        if not ai_full_result:
+            self._apply_default_fluctuation()
 
         # 6. 情绪涌现（内部活动）
         self._emotion_emergence(

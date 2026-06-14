@@ -78,3 +78,17 @@ class FlowMonitor:
     async def clear(self):
         self._trace_log.clear()
         self._flow_stats.clear()
+
+    async def export_metrics(self) -> Dict:
+        """导出所有流量指标（兼容 mlink_core 调用）"""
+        return {"traces": len(self._trace_log), "flows": dict(self._flow_stats)}
+
+    async def update_node_stats(self, node_id: str, stats: Dict) -> None:
+        """更新节点统计（兼容 mlink_core 调用）"""
+        self._flow_stats.setdefault(node_id, {}).update(stats)
+
+    async def get_summary(self) -> str:
+        """获取流量摘要（兼容 mlink_core 调用）"""
+        total = sum(s.get("count", 0) for s in self._flow_stats.values())
+        errors = sum(s.get("errors", 0) for s in self._flow_stats.values())
+        return f"Flows: {len(self._flow_stats)}, Messages: {total}, Errors: {errors}"

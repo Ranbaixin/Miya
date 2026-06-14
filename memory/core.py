@@ -1743,6 +1743,7 @@ class MiyaMemoryCore:
         priority: Optional[float] = None,
         is_pinned: Optional[bool] = None,
         is_archived: Optional[bool] = None,
+        level: Optional[MemoryLevel] = None,
     ) -> bool:
         """更新记忆"""
         memory = await self.get_by_id(memory_id)
@@ -1753,7 +1754,6 @@ class MiyaMemoryCore:
         if content is not None:
             memory.content = content
         if tags is not None:
-            # 更新标签索引
             for old_tag in memory.tags:
                 self._tag_index[old_tag].discard(memory_id)
             memory.tags = tags
@@ -1765,6 +1765,8 @@ class MiyaMemoryCore:
             memory.is_pinned = is_pinned
         if is_archived is not None:
             memory.is_archived = is_archived
+        if level is not None:
+            memory.level = level
 
         memory.updated_at = datetime.now().isoformat()
 
@@ -2258,6 +2260,7 @@ class MiyaMemoryCore:
 # ==================== 全局单例 ====================
 
 _global_core: Optional[MiyaMemoryCore] = None
+_global_core_lock = asyncio.Lock()
 
 
 async def get_memory_core(
@@ -2267,7 +2270,13 @@ async def get_memory_core(
     """获取全局核心实例 - 从 multi_model_config.json 自动加载 embedding 配置"""
     global _global_core
 
-    if _global_core is None:
+    if _global_core is not None:
+        return _global_core
+
+    async with _global_core_lock:
+        if _global_core is not None:
+            return _global_core
+
         # 自动加载 embedding 客户端
         if embedding_client is None:
             try:
