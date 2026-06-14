@@ -63,16 +63,8 @@ echo   MIYA Terminal
 echo ================================================================================
 echo.
 
-if not exist "claude-code-engine\dist\cli-node.js" (
-    echo [ERROR] Claude Code Engine not found
-    echo Run: cd claude-code-engine ^&^& bun run build:miya
-    pause
-    goto :menu
-)
-
 echo Starting MIYA Terminal...
-start "MIYA Terminal" wt node claude-code-engine\dist\cli-node.js
-timeout /t 2 >nul
+set PYTHONIOENCODING=utf-8 && chcp 65001 >nul && python -X utf8 run/main.py
 echo.
 echo [OK] Terminal session ended
 goto :restart
