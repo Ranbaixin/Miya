@@ -219,14 +219,16 @@ app.whenReady().then(async () => {
   // Create main window
   const win = createWindow()
 
-  // Create standalone Live2D window (延迟加载，避免阻塞主窗口启动)
-  if (!process.env.MIYA_NO_LIVE2D) {
+  // ── Live2D 角色窗口（已禁用） ──
+  // 禁用原因:
+  //   1. 模型缺少 physics3.json / exp3.json 等可选文件, 404 刷屏
+  //   2. yinmei 轮询 API 持续报错占用资源
+  //   3. 无边框窗口无法简单关闭, 干扰使用
+  //   4. 非核心功能, 待模型文件补全 + 关闭 UI 完善后再启用
+  // 启用方式: 删除下方 if (false) 或设环境变量 MIYA_NO_LIVE2D=1 的反向
+  if (false && !process.env.MIYA_NO_LIVE2D) {
     setTimeout(() => {
-      try {
-        createLive2dWindow()
-      } catch (e) {
-        console.error('[Live2D] 窗口创建失败:', e)
-      }
+      try { createLive2dWindow() } catch (e) { console.error('[Live2D] 创建失败:', e) }
     }, 2000)
   }
 
