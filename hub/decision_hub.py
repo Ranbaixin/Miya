@@ -1225,7 +1225,7 @@ class DecisionHub:
         elif not isinstance(content, str):
             content = str(content) if content else ""
 
-        content.lower().strip()
+        content = content.lower().strip()
 
         # AI 自主判断是否调用电脑控制工具 — 无需硬编码关键词
 
