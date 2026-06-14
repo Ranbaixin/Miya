@@ -89,6 +89,7 @@ class ComputerTools:
     @staticmethod
     async def execute_shell(command: str, timeout: int = 30) -> str:
         """执行Shell命令（安全加固：危险命令拦截 + shell=False 优先）"""
+        import os
         import shlex
 
         # 危险命令拦截

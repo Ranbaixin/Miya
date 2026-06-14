@@ -81,12 +81,12 @@ class MiyaCoreLifecycle:
         try:
             from core.platform.manager import PlatformManager as AstrPlatformMgr
 
-            self.platform_manager = AstrPlatformMgr
+            self.platform_manager = AstrPlatformMgr()
             logger.info("  ✅ 平台管理器 (18 平台)")
         except Exception:
             from core.miya.adapters import get_adapter_manager
 
-            self.platform_manager = get_adapter_manager
+            self.platform_manager = get_adapter_manager()
             logger.info("  ⚠ 平台 (使用 Miya 适配器)")
 
         # AI 提供商

@@ -36,9 +36,9 @@ class PermissionCore:
         # 如果使用统一配置，则初始化统一权限管理器
         if use_unified_config:
             try:
-                from .unified_permission_manager import UnifiedPermissionManager
+                from core.unified_permission import get_permission_engine
 
-                self._unified_manager = UnifiedPermissionManager()
+                self._unified_manager = get_permission_engine()
                 logger.info("使用统一权限配置文件模式")
             except Exception as e:
                 logger.warning(f"加载统一权限管理器失败: {e}，回退到传统模式")
