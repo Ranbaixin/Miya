@@ -115,10 +115,7 @@ class CCEService:
         }
 
         try:
-            if platform.system() == "Windows":
-                creationflags = subprocess.CREATE_NO_WINDOW
-            else:
-                creationflags = 0
+            creationflags = subprocess.CREATE_NO_WINDOW if platform.system() == "Windows" else 0
 
             logger.info(f"[CCE] 执行任务: {task[:80]}...")
             proc = subprocess.run(

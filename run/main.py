@@ -428,10 +428,7 @@ class Miya:
         }
 
         try:
-            if platform.system() == "Windows":
-                creationflags = subprocess.CREATE_NO_WINDOW
-            else:
-                creationflags = 0
+            creationflags = subprocess.CREATE_NO_WINDOW if platform.system() == "Windows" else 0
 
             proc = subprocess.run(
                 [self.cce_node_exe, str(self.cce_cli_path), "-p", "--permission-mode", "bypassPermissions", task],
