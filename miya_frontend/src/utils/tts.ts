@@ -105,9 +105,9 @@ export function speak(text: string): Promise<void> {
     headers,
     signal,
     body: JSON.stringify({
-      model: isLoggedIn ? 'default' : 'tts-1',
+      model: (typeof isLoggedIn !== 'undefined' && isLoggedIn) ? 'default' : 'tts-1',
       input: cleanText,
-      voice: isLoggedIn ? 'Cherry' : 'zh-CN-XiaoyiNeural',
+      voice: (typeof isLoggedIn !== 'undefined' && isLoggedIn) ? 'Cherry' : 'zh-CN-XiaoyiNeural',
       speed: 1.0,
       response_format: 'mp3',
     }),

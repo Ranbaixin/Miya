@@ -184,6 +184,48 @@ export class CoreApiClient extends ApiClient {
   async openclawHistory(sessionKey: string, limit: number = 20): Promise<any> {
     return this.mcpCall('openclaw', 'get_history', { session_key: sessionKey, limit })
   }
+
+  // ── 会话（别名） ──
+  async getSessions(): Promise<SessionInfo[]> { return this.listSessions() }
+
+  // ── 文件 ──
+  async parseDocument(file: File): Promise<any> {
+    const fd = new FormData(); fd.append('file', file)
+    return this.instance.post('/api/desktop/files/parse', fd)
+  }
+  async uploadDocument(file: File): Promise<any> {
+    const fd = new FormData(); fd.append('file', file)
+    return this.instance.post('/api/desktop/files/upload', fd)
+  }
+
+  // ── 音频 ──
+  async transcribeAudio(blob: Blob, _opts?: any): Promise<any> {
+    const fd = new FormData(); fd.append('audio', blob, 'recording.webm')
+    return this.instance.post('/api/audio/transcribe', fd)
+  }
+
+  // ── 系统信息 ──
+  async systemInfo(): Promise<any> { return this.instance.get('/api/status') }
+  async getToolStatus(): Promise<any> { return this.instance.get('/api/tools/list') }
+  async getOpenclawTasks(): Promise<any> { return this.openclawHistory('default') }
+
+  // ── Agent 健康检查 ──
+  async agentServerHealth(): Promise<any> { return this.health() }
+  async agentServerFullHealth(): Promise<any> { return this.instance.get('/api/status') }
+  async agentServerOpenclawHealth(): Promise<any> { return this.openclawStatus() }
+
+  // ── 遥测 ──
+  async getTelemetryStatus(): Promise<any> { return this.instance.get('/api/telemetry/status') }
+  async flushTelemetry(): Promise<any> { return this.instance.post('/api/telemetry/flush') }
+
+  // ── 系统 Prompt ──
+  async getSystemPrompt(): Promise<any> { return this.instance.get('/api/config/system_prompt') }
+  async setSystemPrompt(content: string): Promise<any> {
+    return this.instance.post('/api/config/system_prompt', { content })
+  }
+  async setSystemConfig(payload: Record<string, any>): Promise<any> {
+    return this.instance.post('/api/config/set', payload)
+  }
 }
 
-export default new CoreApiClient(8000)
+export default new CoreApiClient(9800)

@@ -144,7 +144,7 @@ function notifyLive2dReady(): void {
 let _yinmeiPollTimer: ReturnType<typeof setInterval> | null = null
 
 function startYinmeiPolling(): void {
-  const apiPort = (window as any).__MIYA_API_PORT__ || 8000
+  const apiPort = (window as any).__MIYA_API_PORT__ || 9800
   const pollUrl = `http://127.0.0.1:${apiPort}/api/yinmei/live2d/commands`
 
   _yinmeiPollTimer = setInterval(async () => {

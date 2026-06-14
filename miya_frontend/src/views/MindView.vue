@@ -287,7 +287,7 @@ async function loadData() {
     ]
     for (const af of anchorFiles) {
       try {
-        const res = await fetch(`http://localhost:8000/api/desktop/files/read?path=${encodeURIComponent(af.path)}`).then(r => r.json())
+        const res = await fetch(`http://localhost:9800/api/desktop/files/read?path=${encodeURIComponent(af.path)}`).then(r => r.json())
         if (res?.lines) {
           const arr = JSON.parse(res.lines.join(''))
           for (const item of (Array.isArray(arr) ? arr : [arr])) {
@@ -306,14 +306,14 @@ async function loadData() {
     let loaded = 0
     for (const d of dirs) {
       try {
-        const listRes = await fetch(`http://localhost:8000/api/desktop/files/list?path=${encodeURIComponent(d.dir)}`).then(r => r.json())
+        const listRes = await fetch(`http://localhost:9800/api/desktop/files/list?path=${encodeURIComponent(d.dir)}`).then(r => r.json())
         const files = (listRes?.files || []).filter((f: any) => f.name.endsWith('.json'))
         const shuffled = files.sort(() => Math.random() - 0.5).slice(0, d.limit)
         // 并发批量加载 (10个一组)
         for (let batch = 0; batch < shuffled.length; batch += 10) {
           const batchFiles = shuffled.slice(batch, batch + 10)
           const results = await Promise.allSettled(batchFiles.map(f =>
-            fetch(`http://localhost:8000/api/desktop/files/read?path=${encodeURIComponent(`${d.dir}/${f.name}`)}`).then(r => r.json())
+            fetch(`http://localhost:9800/api/desktop/files/read?path=${encodeURIComponent(`${d.dir}/${f.name}`)}`).then(r => r.json())
           ))
           for (const r of results) {
             if (r.status !== 'fulfilled' || !r.value?.lines) continue
@@ -352,7 +352,7 @@ async function search() {
     ]
     for (const path of scanFiles) {
       try {
-        const res = await fetch(`http://localhost:8000/api/desktop/files/read?path=${encodeURIComponent(path)}`).then(r => r.json())
+        const res = await fetch(`http://localhost:9800/api/desktop/files/read?path=${encodeURIComponent(path)}`).then(r => r.json())
         if (res?.lines) {
           const arr = JSON.parse(res.lines.join(''))
           for (const item of (Array.isArray(arr) ? arr : [arr])) {
@@ -365,10 +365,10 @@ async function search() {
     }
     // scan long_term
     try {
-      const listRes = await fetch('http://localhost:8000/api/desktop/files/list?path=data/memory/long_term').then(r => r.json())
+      const listRes = await fetch('http://localhost:9800/api/desktop/files/list?path=data/memory/long_term').then(r => r.json())
       for (const f of (listRes?.files || []).slice(0, 30)) {
         try {
-          const readRes = await fetch(`http://localhost:8000/api/desktop/files/read?path=${encodeURIComponent(`data/memory/long_term/${f.name}`)}`).then(r => r.json())
+          const readRes = await fetch(`http://localhost:9800/api/desktop/files/read?path=${encodeURIComponent(`data/memory/long_term/${f.name}`)}`).then(r => r.json())
           if (readRes?.lines) {
             const item = JSON.parse(readRes.lines.join(''))
             if (JSON.stringify(item).toLowerCase().includes(q)) {

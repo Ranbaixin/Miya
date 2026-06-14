@@ -18,7 +18,9 @@ const { isElectron, isMaximized, isMac, minimize, maximize, close } = useElectro
         <svg width="6" height="6" viewBox="0 0 6 6"><path d="M0 1.5V6h4.5M6 4.5V0H1.5" stroke="currentColor" stroke-width="1.2" fill="none" /></svg>
       </button>
     </div>
-    <div class="drag-region" />
+    <div class="drag-region">
+      <span class="version-label">MIYA v8.0 · 深蓝星渊</span>
+    </div>
     <!-- Windows/Linux: controls on right -->
     <div v-if="!isMac" class="window-controls">
       <button class="control-btn" title="最小化" @click="minimize">
@@ -52,6 +54,17 @@ const { isElectron, isMaximized, isMac, minimize, maximize, close } = useElectro
   flex: 1;
   height: 100%;
   -webkit-app-region: drag;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.version-label {
+  font-size: 10px;
+  color: rgba(180, 200, 255, 0.35);
+  letter-spacing: 1px;
+  pointer-events: none;
+  user-select: none;
 }
 
 /* ── Mac traffic-light buttons ── */

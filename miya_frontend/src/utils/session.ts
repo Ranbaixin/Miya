@@ -340,7 +340,7 @@ async function backfillSoulDataForSession() {
   if (!lastAi || (lastAi as any).soulData?.emotions?.length) return
 
   try {
-    const res = await fetch('http://localhost:8000/api/soul/current')
+    const res = await fetch('http://localhost:9800/api/soul/current')
     const soul = await res.json()
     if (soul && ((soul.emotions && (Array.isArray(soul.emotions) ? soul.emotions.length : Object.keys(soul.emotions).length)) || soul.inner_thought || soul.thinking)) {
       const existing = (lastAi as any).soulData || {}

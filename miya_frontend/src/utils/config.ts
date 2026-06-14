@@ -249,7 +249,7 @@ let connectRetries = 0
 const MAX_RETRIES = 5
 
 function connectBackend() {
-  fetch('http://localhost:8000/health')
+  fetch('http://localhost:9800/health')
     .then(r => r.json())
     .then((res) => {
       if (res.status === 'healthy') {
