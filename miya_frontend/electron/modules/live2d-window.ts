@@ -160,4 +160,9 @@ export function broadcastLive2dCommand(channel: string, ...args: unknown[]): voi
   }
 }
 
-
+export function closeLive2dWindow(): void {
+  if (live2dWindow && !live2dWindow.isDestroyed()) {
+    live2dWindow.close()
+    live2dWindow = null
+  }
+}

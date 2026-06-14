@@ -24,6 +24,7 @@ import {
   setWindowPosition,
 } from './modules/window'
 import {
+  closeLive2dWindow,
   createLive2dWindow,
   getLive2dWindow,
   toggleLive2dVisibility,
@@ -466,6 +467,9 @@ app.whenReady().then(async () => {
   })
   ipcMain.on('live2d:windowScale', (_event, scale: number) => {
     setLive2dWindowScale(scale)
+  })
+  ipcMain.on('live2d:close', () => {
+    closeLive2dWindow()
   })
 
   // ── Terminal (Claude Code Engine) ──
