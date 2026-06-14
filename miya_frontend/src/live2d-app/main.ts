@@ -142,6 +142,9 @@ function notifyLive2dReady(): void {
 }
 
 let _yinmeiPollTimer: ReturnType<typeof setInterval> | null = null
+let _yinmeiFailCount = 0
+const YINMEI_MAX_FAILS = 20
+const YINMEI_INTERVAL = 5000  // 每 5 秒轮询一次
 
 function startYinmeiPolling(): void {
   const apiPort = (window as any).__MIYA_API_PORT__ || 9800
@@ -150,7 +153,16 @@ function startYinmeiPolling(): void {
   _yinmeiPollTimer = setInterval(async () => {
     try {
       const resp = await fetch(pollUrl)
-      if (!resp.ok) return
+      if (!resp.ok) {
+        _yinmeiFailCount++
+        if (_yinmeiFailCount >= YINMEI_MAX_FAILS && _yinmeiPollTimer) {
+          clearInterval(_yinmeiPollTimer)
+          _yinmeiPollTimer = null
+          console.log('[Live2D] Yinmei polling stopped after', _yinmeiFailCount, 'failures')
+        }
+        return
+      }
+      _yinmeiFailCount = 0  // 成功后重置
       const data = await resp.json()
       const cmds = data.commands || []
       if (cmds.length === 0) return
@@ -160,23 +172,22 @@ function startYinmeiPolling(): void {
 
       for (const cmd of cmds) {
         switch (cmd.type) {
-          case 'emotion':
-            ctrl.setEmotion(cmd.value)
-            break
-          case 'state':
-            ctrl.setState(cmd.value)
-            break
-          case 'mouth':
-            ctrl.setMouth(cmd.value)
-            break
-          case 'action':
-            ctrl.triggerAction(cmd.value)
-            break
+          case 'emotion': ctrl.setEmotion(cmd.value); break
+          case 'state': ctrl.setState(cmd.value); break
+          case 'mouth': ctrl.setMouth(cmd.value); break
+          case 'action': ctrl.triggerAction(cmd.value); break
         }
       }
     }
-    catch { /* API not ready yet */ }
-  }, 500)
+    catch {
+      _yinmeiFailCount++
+      if (_yinmeiFailCount >= YINMEI_MAX_FAILS && _yinmeiPollTimer) {
+        clearInterval(_yinmeiPollTimer)
+        _yinmeiPollTimer = null
+        console.log('[Live2D] Yinmei polling stopped (backend unreachable)')
+      }
+    }
+  }, YINMEI_INTERVAL)
 
   console.log('[Live2D App] Yinmei polling started:', pollUrl)
 }

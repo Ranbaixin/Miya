@@ -218,9 +218,15 @@ app.whenReady().then(async () => {
   // Create main window
   const win = createWindow()
 
-  // Create standalone Live2D window (透明无边框独立窗口)
+  // Create standalone Live2D window (延迟加载，避免阻塞主窗口启动)
   if (!process.env.MIYA_NO_LIVE2D) {
-    createLive2dWindow()
+    setTimeout(() => {
+      try {
+        createLive2dWindow()
+      } catch (e) {
+        console.error('[Live2D] 窗口创建失败:', e)
+      }
+    }, 2000)
   }
 
   // 透明无边框窗口在 Windows 上 unmaximize 后系统不可靠地还原尺寸，手动保存/还原
