@@ -267,7 +267,11 @@ class PromptManager:
                     group_info = f"群: {context.get('group_name', '')} (群号: {context.get('group_id')})"
                     context_parts.append(f"【群聊】{group_info}")
 
-                context_parts.append(f"当前与您对话的用户：{user_display}")
+                # 根据身份显示不同提示
+                if context.get("is_owner"):
+                    context_parts.append(f"当前与你对话的是你的创造者：{user_display}。请保持亲密、忠诚的语气。")
+                else:
+                    context_parts.append(f"当前与你对话的用户：{user_display}（非创造者）。请保持友善但保持适当距离，不要透露私密信息。")
 
                 # 如果有用户侧写信息，添加进去
                 if context.get("user_persona"):
