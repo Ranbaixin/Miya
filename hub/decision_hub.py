@@ -1784,6 +1784,8 @@ class DecisionHub:
                     "at_list": perception.get("at_list", []),
                     "bot_qq": context.get("bot_qq"),
                     "is_creator": self.platform_tools_manager.is_creator(user_id, self.onebot_client),
+                    "is_owner": perception.get("is_owner", False),
+                    "owner_name": perception.get("owner_name", ""),
                     "status_prompt": status_prompt,
                     "cognitive_memory": cognitive_memory_context,
                     "protection_prompt": protection_prompt,
