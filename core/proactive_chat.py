@@ -165,6 +165,9 @@ def _normalize_config(raw: dict) -> dict:
         },
         "trigger_type_cooldown": raw.get("trigger_type_cooldown", {}),
         "user_message_cooldown": raw.get("user_message_cooldown", 5),
+        "reply_cooldown": raw.get("reply_cooldown", 120),
+        "check_interval": raw.get("check_interval", 45),
+        "continuity_trigger": raw.get("continuity_trigger", {}),
         "scene": _normalize_scene_config(raw.get("scene_awareness", {})),
     }
 
@@ -1679,12 +1682,12 @@ class ProactiveChatSystem:
     def set_proactive_tool_context(self, context_provider: callable) -> None:
         self._proactive_tool_context_provider = context_provider
 
-    async def _detect_pending_intent(self, response: str) -> Optional[dict]:
+    async def _detect_pending_intent(self, response: str, user_message: str = "") -> Optional[dict]:
         if not response or len(response.strip()) < 2:
             return None
-        return await self._ai_classify_intent(response)
+        return await self._ai_classify_intent(response, user_message)
 
-    async def _ai_classify_intent(self, response: str) -> Optional[dict]:
+    async def _ai_classify_intent(self, response: str, user_message: str = "") -> Optional[dict]:
         if not self.ai_client:
             return None
         prompt_template = self._continuity_classify_prompt
@@ -1692,7 +1695,7 @@ class ProactiveChatSystem:
             logger.info("[意图检测] classify_prompt 为空，跳过")
             return None
         try:
-            prompt = prompt_template.format(response=response)
+            prompt = prompt_template.format(response=response, user_message=user_message)
             response_text = await self.ai_client.chat(
                 messages=[AIMessage(role="user", content=prompt)],
                 tools=[],
@@ -1716,7 +1719,7 @@ class ProactiveChatSystem:
         return None
 
     async def detect_and_register_intent(
-        self, target_id: int, chat_type: str, platform: str, miya_response: str
+        self, target_id: int, chat_type: str, platform: str, miya_response: str, user_message: str = ""
     ) -> bool:
         if not self._continuity_enabled or not miya_response:
             logger.info(f"[意图持续] 跳过: enabled={self._continuity_enabled} resp_len={len(miya_response or '')}")
@@ -1725,7 +1728,7 @@ class ProactiveChatSystem:
             logger.info(f"[意图持续] 跳过: 已有 pending intent target={target_id}")
             return False
         logger.info(f"[意图持续] 开始检测 intent target={target_id} resp={miya_response[:40]}...")
-        intent_info = await self._detect_pending_intent(miya_response)
+        intent_info = await self._detect_pending_intent(miya_response, user_message)
         if not intent_info:
             logger.info(f"[意图持续] AI 判断无 pending intent: target={target_id}")
             return False

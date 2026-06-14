@@ -493,7 +493,7 @@ class DecisionHub:
                 try:
                     perception = {
                         "platform": platform or "terminal",
-                        "user_id": str(target_id) if chat_type != "group" else "0",
+                        "user_id": str(target_id),
                         "group_id": str(target_id) if chat_type == "group" else "0",
                         "message_type": chat_type,
                         "response": message,
@@ -657,10 +657,9 @@ class DecisionHub:
 
             # 【意图持续】检测主回复中的主动意图
             if main_response:
-                try:
-                    await self.proactive_chat.detect_and_register_intent(target_id, chat_type, platform, main_response)
-                except Exception as e:
-                    logger.warning(f"[决策层] 意图检测失败: {e}")
+                await self.proactive_chat.detect_and_register_intent(
+                    target_id, chat_type, platform, main_response, user_message
+                )
 
             # 检查是否需要主动发言
             result: Optional[ProactiveResult] = await self.proactive_chat.check_and_respond(
