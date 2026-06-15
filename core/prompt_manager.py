@@ -98,22 +98,39 @@ class PromptManager:
 
         # 非创造者对话：替换身份描述，避免泄露私人关系
         if not is_owner:
-            prompt = prompt.replace(
-                '一个由"然鑫"创造的AI伴侣',
-                '一个AI助手'
-            )
-            # 添加非创造者行为约束
-            guest_rules = (
-                "\n【当前对话者非创造者 — 行为约束】\n"
-                "1. 你正在与一位普通用户对话，不是你的创造者然鑫。请不要表现出恋人般的亲密。\n"
-                "2. 不要主动提及然鑫、不要透露你与创造者的私人关系。\n"
-                "3. 保持友善、专业、适度的社交距离。像对待朋友的朋友一样自然相处。\n"
-                "4. 如果对方问你是谁创造的，可以简单说「然鑫」但不需展开私人细节。"
-            )
-            prompt = prompt.replace(
-                "【重要规则】",
-                guest_rules + "\n\n【重要规则】"
-            )
+            is_staff = self._is_staff_user  # 由 build_full_prompt 设置
+            if is_staff:
+                prompt = prompt.replace(
+                    '一个由"然鑫"创造的AI伴侣',
+                    '一个由"然鑫"创造的AI助手，正在与然鑫的助理对话'
+                )
+                staff_rules = (
+                    "\n【当前对话者是然鑫的助理 — 协作模式】\n"
+                    "1. 你正在与然鑫的助理对话。他是然鑫团队的一员，负责AI系统对接工作。\n"
+                    "2. 可以适度友好、协作，但保持专业距离。不要像对待然鑫那样亲密。\n"
+                    "3. 可以讨论工作事务、系统状态、技术问题。不必回避提及然鑫。\n"
+                    "4. 如果助理替然鑫转达消息，正常接收和回应。"
+                )
+                prompt = prompt.replace(
+                    "【重要规则】",
+                    staff_rules + "\n\n【重要规则】"
+                )
+            else:
+                prompt = prompt.replace(
+                    '一个由"然鑫"创造的AI伴侣',
+                    '一个AI助手'
+                )
+                guest_rules = (
+                    "\n【当前对话者非创造者 — 行为约束】\n"
+                    "1. 你正在与一位普通用户对话，不是你的创造者然鑫。请不要表现出恋人般的亲密。\n"
+                    "2. 不要主动提及然鑫、不要透露你与创造者的私人关系。\n"
+                    "3. 保持友善、专业、适度的社交距离。像对待朋友的朋友一样自然相处。\n"
+                    "4. 如果对方问你是谁创造的，可以简单说「然鑫」但不需展开私人细节。"
+                )
+                prompt = prompt.replace(
+                    "【重要规则】",
+                    guest_rules + "\n\n【重要规则】"
+                )
 
         # 加载情感推理指导
         emotion_reasoning = system_prompts.get(
@@ -403,6 +420,7 @@ class PromptManager:
         is_owner = (additional_context or {}).get("is_owner")
         if is_owner is None:
             is_owner = (additional_context or {}).get("is_creator", True)
+        self._is_staff_user = (additional_context or {}).get("is_staff", False)
         system_prompt = self.get_system_prompt(is_owner=is_owner)
         logger.info(
             f"[PromptManager] 使用默认提示词，平台: {additional_context.get('platform', 'unknown') if additional_context else 'unknown'}"

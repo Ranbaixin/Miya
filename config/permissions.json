@@ -17,10 +17,32 @@
         "discord": [],
         "lark": ["452c3ccc"]
       }
+    },
+    "3141293329": {
+      "name": "然鑫的助理",
+      "role": "staff",
+      "description": "然鑫的AI对接助理，负责与弥娅系统对接",
+      "ids": {
+        "qq": ["3141293329"],
+        "aiocqhttp": ["3141293329"],
+        "terminal": ["3141293329"],
+        "webchat": ["3141293329"]
+      }
     }
   },
 
   "permission_groups": {
+    "Staff": {
+      "name": "助理权限组",
+      "description": "然鑫的助理团队，拥有管理级权限但不包括系统配置",
+      "permissions": [
+        "tool.*",
+        "memory.*",
+        "chat.*",
+        "system.status",
+        "system.monitor"
+      ]
+    },
     "Default": {
       "name": "默认权限组",
       "description": "所有用户默认拥有的基本权限",
@@ -254,6 +276,13 @@
   },
 
   "special_rules": {
+    "staff_whitelist": [
+      "terminal_default",
+      "3141293329",
+      "qq_3141293329",
+      "aiocqhttp_3141293329",
+      "webchat_3141293329"
+    ],
     "admin_whitelist": [
       "terminal_default",
       "869135903",

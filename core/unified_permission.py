@@ -216,6 +216,16 @@ class UnifiedPermissionEngine:
         """跨平台超管检查 — 简化调用"""
         return self.is_superadmin(raw_user_id, platform=platform)
 
+    def is_staff(self, user_id: str, platform: str = "") -> bool:
+        """检查用户是否是助理/团队成员"""
+        whitelist = self._config.get("special_rules", {}).get("staff_whitelist", [])
+        if not whitelist:
+            return False
+        uid = str(user_id)
+        platform_prefix = f"{platform}_" if platform else ""
+        candidates = {uid, f"{platform_prefix}{uid}"}
+        return bool(candidates & set(str(x) for x in whitelist))
+
     def set_superadmin(self, user_id: str, platform: str = "", username: str = ""):
         """设置超级管理员（持久化到配置文件）"""
         self._reload()

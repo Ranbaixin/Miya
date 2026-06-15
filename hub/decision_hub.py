@@ -1787,6 +1787,7 @@ class DecisionHub:
                     "bot_qq": context.get("bot_qq"),
                     "is_creator": self.platform_tools_manager.is_creator(user_id, self.onebot_client),
                     "is_owner": perception.get("is_owner", False),
+                    "is_staff": perception.get("is_staff", False),
                     "owner_name": perception.get("owner_name", ""),
                     "status_prompt": status_prompt,
                     "cognitive_memory": cognitive_memory_context,

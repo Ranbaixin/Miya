@@ -264,6 +264,9 @@ class MessageMixin:
                         # 关键：统一 user_id 为规范ID，确保记忆存储在同一桶内
                         perception_data["user_id"] = canonical_id
                         break
+                elif engine.is_staff(str(user_id), platform=self.platform_id):
+                    perception_data["is_staff"] = True
+                    logger.info(f"[身份] {user_name}({user_id}) → 助理")
                 else:
                     logger.info(f"[身份] {user_name}({user_id}) → 普通用户")
             except Exception:
