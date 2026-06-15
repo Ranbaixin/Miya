@@ -241,11 +241,9 @@ class MessageMixin:
                 from core.unified_permission import get_permission_engine
 
                 engine = get_permission_engine()
-            if engine.is_superadmin(str(user_id), platform=self.platform_id):
-                perception_data["is_owner"] = True
-                logger.info(f"[身份] {user_name}({user_id}) → 创造者")
-            else:
-                logger.info(f"[身份] {user_name}({user_id}) → 普通用户")
+                if engine.is_superadmin(str(user_id), platform=self.platform_id):
+                    perception_data["is_owner"] = True
+                    logger.info(f"[身份] {user_name}({user_id}) → 创造者")
                     # 从 superadmins 配置中获取名字和规范ID
                     for _person, info in engine._config.get("superadmins", {}).items():
                         perception_data["owner_name"] = info.get("name", "")
@@ -266,6 +264,8 @@ class MessageMixin:
                         # 关键：统一 user_id 为规范ID，确保记忆存储在同一桶内
                         perception_data["user_id"] = canonical_id
                         break
+                else:
+                    logger.info(f"[身份] {user_name}({user_id}) → 普通用户")
             except Exception:
                 pass
 
