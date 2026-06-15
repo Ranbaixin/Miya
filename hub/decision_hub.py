@@ -538,6 +538,21 @@ class DecisionHub:
             logger.warning(f"[决策层] 主动聊天系统初始化失败: {e}")
             self.proactive_chat = None
 
+    async def _check_injection_technical(self, perception: dict, content: str) -> tuple[str | None, str | None]:
+        """仅执行技术性注入检查（同步/快速），AI 检测移至并行阶段"""
+        if self.security_service:
+            try:
+                platform = perception.get("source", "")
+                if platform in ["qq", "web"]:
+                    user_id = str(perception.get("user_id", perception.get("user_id", "unknown")))
+                    result = self.security_service.check(content, user_id)
+                    if result.level.value in ["dangerous", "blocked"]:
+                        logger.warning(f"[决策层-防注入] 技术性注入: level={result.level}, reason={result.reason}")
+                        return get_text("security.ai_injection_detection.fallback_response"), None
+            except Exception as e:
+                logger.warning(f"[决策层-防注入] 技术检测失败: {e}")
+        return None, None
+
     async def _check_injection(self, perception: dict, content: str) -> tuple[str | None, str | None]:
         """
         检查注入攻击
@@ -586,6 +601,28 @@ class DecisionHub:
                 logger.warning(f"[决策层-AI防注入] 检测失败: {e}")
 
         return None, None
+
+    async def _check_ai_injection_parallel(self, content: str, platform: str) -> Optional[str]:
+        """AI 注入检测 — 在并行阶段执行"""
+        if not self.ai_injection_detector:
+            return None
+        try:
+            if not self.ai_injection_detector.is_enabled():
+                return None
+            if platform not in ["qq", "web"]:
+                return None
+            is_injection, reason = await asyncio.wait_for(self.ai_injection_detector.detect(content), timeout=3.0)
+            if is_injection:
+                logger.warning(f"[决策层-AI防注入] 并行检测到角色扮演诱导: {reason}")
+                if self.ai_injection_detector.should_block():
+                    return self.ai_injection_detector.get_fallback_response()
+                else:
+                    return self.ai_injection_detector.get_protection_prompt()
+        except asyncio.TimeoutError:
+            logger.debug("[决策层-AI防注入] 并行检测超时，跳过")
+        except Exception as e:
+            logger.warning(f"[决策层-AI防注入] 并行检测失败: {e}")
+        return None
 
     def _init_knowledge_graph(self):
         """初始化知识图谱管理器"""
@@ -1126,8 +1163,8 @@ class DecisionHub:
             logger.warning(f"[决策层] ========== 快捷命令拦截成功 ========== {content[:20]} -> {quick_response[:50]}")
             return quick_response
 
-        # 【安全检查】防注入检测
-        injection_result, protection_prompt = await self._check_injection(perception, content)
+        # 【安全检查】防注入检测（技术性检查同步，AI 检测移至并行阶段）
+        injection_result, protection_prompt = await self._check_injection_technical(perception, content)
         if injection_result:
             logger.warning(f"[决策层] 检测到注入攻击: {injection_result}")
             return injection_result
@@ -1136,6 +1173,9 @@ class DecisionHub:
         if protection_prompt:
             perception["_protection_prompt"] = protection_prompt
             logger.info("[决策层] 已添加防护提示到AI请求")
+
+        # AI 角色扮演诱导检测移至并行阶段，标记待检查
+        perception["_pending_ai_injection_check"] = True
 
         # 【新增】群聊关键词触发检测（不@也能回复）
         group_id = perception.get("group_id", 0)
@@ -1232,19 +1272,10 @@ class DecisionHub:
 
         response = await self._generate_response_cross_platform(content, platform, perception)
 
-        # 7. 主动聊天系统 v2.0 - 检查是否需要主动发言（全平台支持）
+        # 7. 主动聊天系统 v2.0 + 智能表情包（fire-and-forget，不阻塞响应返回）
         if response:
-            proactive_result = await self._handle_proactive_chat(perception, content, response)
-
-            # 【新增】智能表情包发送 - 在主动聊天之后
-            if proactive_result and proactive_result.should_respond:
-                # 主动聊天已发送消息，不需要额外发送表情包
-                pass
-            elif "画好了" in response or "发过去了" in response or "画出了" in response:
-                # 响应中已包含画图/图片发送，跳过表情包避免干扰
-                pass
-            else:
-                # 尝试根据回复内容发送智能表情包
+            asyncio.create_task(self._handle_proactive_chat(perception, content, response), name="proactive")
+            if not ("画好了" in response or "发过去了" in response or "画出了" in response):
                 asyncio.create_task(self._handle_smart_emoji(response, perception))
 
         # 【新增】QQ端状态标签（仅日志，不添加到响应中）
@@ -1265,49 +1296,55 @@ class DecisionHub:
                 self.emotion.set_form(current_form)
             response = self.emotion.influence_response(response)
 
-        # 6. 存储AI回复到记忆（委托给记忆管理器）
+        # 6. 存储AI回复到记忆（fire-and-forget，不阻塞响应返回）
         if response:
             perception["response"] = response
-            await self.memory_manager.store_unified_memory(perception, "assistant")
+            asyncio.create_task(
+                self.memory_manager.store_unified_memory(perception.copy(), "assistant"), name="store_memory"
+            )
 
-            # 【修复】将 AI 回复也添加到工作记忆中
-            try:
-                msg_type = perception.get("message_type", "")
-                group_id = perception.get("group_id")
-                user_id = perception.get("user_id")
+            # 【修复】将 AI 回复也添加到工作记忆中（fire-and-forget）
+            async def _store_working_memory():
+                try:
+                    msg_type = perception.get("message_type", "")
+                    group_id = perception.get("group_id")
+                    user_id = perception.get("user_id")
 
-                from memory.working_memory import get_working_memory
+                    from memory.working_memory import get_working_memory
 
-                wm = get_working_memory()
+                    wm = get_working_memory()
 
-                if msg_type == "group" and group_id:
-                    # 群聊：使用 group_id 作为 key
-                    wm.add_message(
-                        group_id=str(group_id),
-                        sender="弥娅",
-                        content=response[:200],
-                        is_at_bot=False,
-                    )
-                elif msg_type == "private" and user_id:
-                    # 私聊：使用 private_{user_id} 作为 key
-                    private_key = f"private_{str(user_id)}"
-                    wm.add_message(
-                        group_id=private_key,
-                        sender="弥娅",
-                        content=response[:200],
-                        is_at_bot=False,
-                    )
-            except Exception as e:
-                logger.debug(f"[决策层] 工作记忆存储AI回复失败: {e}")
+                    if msg_type == "group" and group_id:
+                        wm.add_message(
+                            group_id=str(group_id),
+                            sender="弥娅",
+                            content=response[:200],
+                            is_at_bot=False,
+                        )
+                    elif msg_type == "private" and user_id:
+                        private_key = f"private_{str(user_id)}"
+                        wm.add_message(
+                            group_id=private_key,
+                            sender="弥娅",
+                            content=response[:200],
+                            is_at_bot=False,
+                        )
+                except Exception as e:
+                    logger.debug(f"[决策层] 工作记忆存储AI回复失败: {e}")
 
-            # 【新增】智能记忆 - 自动提取重要内容记忆
-            try:
-                user_input = perception.get("content", "")
-                historian = get_historian()
-                uid = perception.get("user_id", "unknown")
-                await historian.process_after_response(user_input, response, uid)
-            except Exception as e:
-                logger.debug(f"[决策层] 智能记忆处理失败: {e}")
+            asyncio.create_task(_store_working_memory(), name="store_wm")
+
+            # 【新增】智能记忆 - 自动提取重要内容记忆（fire-and-forget）
+            async def _process_historian():
+                try:
+                    user_input = perception.get("content", "")
+                    historian = get_historian()
+                    uid = perception.get("user_id", "unknown")
+                    await historian.process_after_response(user_input, response, uid)
+                except Exception as e:
+                    logger.debug(f"[决策层] 智能记忆处理失败: {e}")
+
+            asyncio.create_task(_process_historian(), name="historian")
 
         # 7. 情绪衰减
         self.emotion.decay_coloring()
@@ -1592,14 +1629,43 @@ class DecisionHub:
                     logger.warning(f"[谛听-并行] 分析失败: {e}")
                 return None
 
-            # 启动 Phase 1 所有并行任务
+            # 启动 Phase 1 所有并行任务（含 AI 注入检测，从 Phase 0 移入以消除串行等待）
             conv_task = asyncio.create_task(fetch_conversation_context(), name="conv")
             kctx_task = asyncio.create_task(fetch_knowledge_context(), name="kctx")
             persona_task = asyncio.create_task(fetch_user_persona(), name="persona")
             awareness_task = asyncio.create_task(fetch_awareness_text(), name="awareness")
-            search_task = asyncio.create_task(fetch_search_context(), name="search")
+
+            async def fetch_search_with_timeout():
+                try:
+                    return await asyncio.wait_for(fetch_search_context(), timeout=6.0)
+                except asyncio.TimeoutError:
+                    logger.debug("[决策层] 联网搜索超时 (6s)")
+                except Exception:
+                    pass
+                return ""
+
+            async def fetch_diting_with_timeout():
+                try:
+                    return await asyncio.wait_for(fetch_diting_strategy(), timeout=6.0)
+                except asyncio.TimeoutError:
+                    logger.debug("[决策层] 谛听策略分析超时 (6s)")
+                except Exception:
+                    pass
+                return None
+
+            async def fetch_ai_injection_check():
+                if not perception.get("_pending_ai_injection_check"):
+                    return None
+                try:
+                    result = await self._check_ai_injection_parallel(content, perception.get("source", ""))
+                    return result
+                except Exception:
+                    return None
+
+            search_task = asyncio.create_task(fetch_search_with_timeout(), name="search")
             wm_task = asyncio.create_task(fetch_group_chat_context(), name="wm")
-            diting_task = asyncio.create_task(fetch_diting_strategy(), name="diting")
+            diting_task = asyncio.create_task(fetch_diting_with_timeout(), name="diting")
+            injection_task = asyncio.create_task(fetch_ai_injection_check(), name="injection")
 
             # 等待 conversation_context (cognitive 和 soul 都需要它)
             conversation_context = await conv_task
@@ -1681,7 +1747,16 @@ class DecisionHub:
 
             cog_task = asyncio.create_task(fetch_cognitive_memory(), name="cog")
 
-            # 等待其余 Phase 1 任务
+            # Phase 2 提前启动：soul_generator 与 Phase 1 剩余任务并行
+            # 它只需要 conversation_context + cognitive_memory，不需要搜索结果/谛听等
+            async def run_soul_early():
+                cm = await cog_task
+                sr = await run_soul_generator(cognitive_memory=cm)
+                return cm, sr
+
+            soul_task = asyncio.create_task(run_soul_early(), name="soul")
+
+            # 等待其余 Phase 1 任务（同时 cog → soul 在后台运行）
             knowledge_context = await kctx_task
             user_persona_context, group_persona_context = await persona_task
             awareness_text = await awareness_task
@@ -1727,9 +1802,22 @@ class DecisionHub:
             except Exception as e:
                 logger.warning(f"[谛听-并行] 结果处理失败: {e}")
 
-            # 等待 Phase 2 任务
-            cognitive_memory_context = await cog_task
-            soul_result = await run_soul_generator(cognitive_memory=cognitive_memory_context)
+            # 检查 AI 注入并行检测结果
+            try:
+                injection_check_result = await injection_task
+                if injection_check_result:
+                    if self.ai_injection_detector and self.ai_injection_detector.should_block():
+                        logger.warning(f"[决策层-AI防注入] 并行检测阻止响应")
+                        return self.ai_injection_detector.get_fallback_response()
+                    else:
+                        if not perception.get("_protection_prompt"):
+                            perception["_protection_prompt"] = injection_check_result
+                            logger.info("[决策层] 并行AI注入检测已添加防护提示")
+            except Exception:
+                pass
+
+            # 等待 Phase 2 任务（soul 已在后台与 Phase 1 并行运行）
+            cognitive_memory_context, soul_result = await soul_task
 
             # 处理 Soul Generator 结果 (共用于两条路径)
             emotion_context_for_collab = ""
@@ -2029,6 +2117,13 @@ class DecisionHub:
                     task_type = await classify_result
                 else:
                     task_type = classify_result
+
+                # 【加速】纯闲聊精简工具集 — 53→8，大幅降低 prompt 体积
+                if task_type == TaskType.SIMPLE_CHAT and len(tools_schema) > 10:
+                    minimal = self.platform_tools_manager.get_minimal_chat_tools()
+                    if minimal:
+                        tools_schema = minimal
+                        logger.info(f"[决策层-闲聊加速] 精简为 {len(tools_schema)} 个工具")
 
                 # 【谛听覆盖】亲密/分享场景不应被技术关键词误导为 code_analysis
                 diting_intent = context.get("_message_strategy", {}).get("intent", "")

@@ -767,8 +767,8 @@ class OpenAIClient(BaseAIClient):
                 # 执行工具（支持并发执行）
                 import asyncio
 
-                # 强制串行执行以避免消息乱序问题
-                can_concurrent = False  # 禁用并发，避免工具响应乱序
+                # 并发执行多工具调用以降低延迟
+                can_concurrent = True
 
                 if can_concurrent:
                     # 并发执行多个工具调用
@@ -1149,8 +1149,8 @@ class DeepSeekClient(BaseAIClient):
                     )
                 )
 
-                # 执行工具（使用公共方法，强制串行以避免乱序问题）
-                can_concurrent = False
+                # 并发执行多工具调用以降低延迟
+                can_concurrent = True
 
                 # 串行执行逻辑（使用公共方法）
                 if not can_concurrent:

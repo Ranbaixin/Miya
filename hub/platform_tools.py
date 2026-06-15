@@ -513,6 +513,20 @@ class PlatformToolsManager:
         ],
     }
 
+    # 纯闲聊最小工具集 — 降低 prompt 体积，加速简单对话
+    MINIMAL_CHAT_TOOLS = [
+        "send_message",
+        "qq_like",
+        "send_poke",
+        "react_emoji",
+        "get_current_time",
+        "get_user_info",
+        "memory_add",
+        "memory_list",
+        "web_search",
+        "weather_query",
+    ]
+
     # QQ平台扩展工具
     QQ_EXTENDED_TOOLS = [
         "send_message",
@@ -626,6 +640,16 @@ class PlatformToolsManager:
         except Exception as e:
             logger.warning(f"[平台工具] 获取平台工具失败: {e}，使用全部工具")
             return self.tool_subnet.get_tools_schema()
+
+    def get_minimal_chat_tools(self) -> List[Dict]:
+        """返回纯闲聊最小工具集，用于加速简单对话"""
+        try:
+            all_schemas = self.tool_subnet.get_tools_schema()
+            minimal = [s for s in all_schemas if s.get("function", {}).get("name") in self.MINIMAL_CHAT_TOOLS]
+            logger.debug(f"[平台工具] 闲聊精简: {len(minimal)} 个工具")
+            return minimal
+        except Exception:
+            return []
 
     def is_creator(self, user_id: int, onebot_client) -> bool:
         """
