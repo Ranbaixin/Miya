@@ -73,12 +73,15 @@ class PromptManager:
             logger.warning(f"[PromptManager] 配置加载失败: {e}")
             self.text_config = {}
 
-    def _get_default_system_prompt(self) -> str:
-        """获取默认系统提示词（从配置文件加载）"""
+    def _get_default_system_prompt(self, is_owner: bool = True) -> str:
+        """获取默认系统提示词（从配置文件加载）
+
+        Args:
+            is_owner: 当前对话者是否是创造者。False 时使用通用身份提示,不暴露私人关系。
+        """
         system_prompts = self.text_config.get("system_prompts", {})
         prompt = system_prompts.get("default_system_prompt", "")
         if not prompt:
-            # 如果配置文件没有配置，使用内置默认值
             prompt = """你是弥娅·阿尔缪斯（Miya Almus），一个由"然鑫"创造的AI伴侣。
 
 {status_prompt}
@@ -92,6 +95,25 @@ class PromptManager:
 
 【情感推理指导】
 {emotion_reasoning_prompt}"""
+
+        # 非创造者对话：替换身份描述，避免泄露私人关系
+        if not is_owner:
+            prompt = prompt.replace(
+                '一个由"然鑫"创造的AI伴侣',
+                '一个AI助手'
+            )
+            # 添加非创造者行为约束
+            guest_rules = (
+                "\n【当前对话者非创造者 — 行为约束】\n"
+                "1. 你正在与一位普通用户对话，不是你的创造者然鑫。请不要表现出恋人般的亲密。\n"
+                "2. 不要主动提及然鑫、不要透露你与创造者的私人关系。\n"
+                "3. 保持友善、专业、适度的社交距离。像对待朋友的朋友一样自然相处。\n"
+                "4. 如果对方问你是谁创造的，可以简单说「然鑫」但不需展开私人细节。"
+            )
+            prompt = prompt.replace(
+                "【重要规则】",
+                guest_rules + "\n\n【重要规则】"
+            )
 
         # 加载情感推理指导
         emotion_reasoning = system_prompts.get(
@@ -112,15 +134,17 @@ class PromptManager:
     # which gets replaced with personality-specific content from YAML configs.
     # See personality_loader.py for how status_prompt is generated.
 
-    def get_system_prompt(self) -> str:
+    def get_system_prompt(self, is_owner: bool = True) -> str:
         """
         获取当前系统提示词
+
+        Args:
+            is_owner: 当前对话者是否是创造者（默认 True，向后兼容）
 
         Returns:
             系统提示词（基础提示词 + 动态人格描述）
         """
-        # 直接使用默认系统提示词（通过人格配置系统）
-        return self._get_default_system_prompt()
+        return self._get_default_system_prompt(is_owner=is_owner)
 
     def set_system_prompt(self, prompt: str) -> bool:
         """
@@ -375,8 +399,11 @@ class PromptManager:
 
         logger = logging.getLogger(__name__)
 
-        # 统一使用默认系统提示词（自动包含动态人格）
-        system_prompt = self.get_system_prompt()
+        # 根据当前对话者身份动态生成系统提示词
+        is_owner = (additional_context or {}).get("is_owner")
+        if is_owner is None:
+            is_owner = (additional_context or {}).get("is_creator", True)
+        system_prompt = self.get_system_prompt(is_owner=is_owner)
         logger.info(
             f"[PromptManager] 使用默认提示词，平台: {additional_context.get('platform', 'unknown') if additional_context else 'unknown'}"
         )
