@@ -823,7 +823,9 @@ class DecisionHub:
         # 兼容多种来源：source字段或platform字段
         platform = perception.get("source", perception.get("platform", "qq"))
 
-        logger.info(f"[决策层] 收到感知数据: {sender_name} - {content[:50]}")
+        is_owner = perception.get("is_owner", False)
+        owner_label = "【创造者】" if is_owner else "【普通用户】"
+        logger.info(f"[决策层] {owner_label} 收到感知数据: {sender_name} - {content[:50]}")
 
         # 【过滤】跳过内部处理标志消息，防止循环处理
         if content.startswith("[表情包请求已处理]"):
