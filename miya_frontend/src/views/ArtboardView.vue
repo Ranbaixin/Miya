@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import API from '@/api/art'
 import type { ArtProviderInfo, ArtImageEntry, ArtGenerateResult } from '@/types/art'
 import PromptPanel from '@/components/artboard/PromptPanel.vue'
@@ -8,6 +9,7 @@ import DoodleCanvas from '@/components/artboard/DoodleCanvas.vue'
 
 const isInArtboardWindow = ref(false)
 const showDoodle = ref(false)
+const router = useRouter()
 const previewImage = ref<ArtImageEntry | null>(null)
 const selectedImage = ref<ArtImageEntry | null>(null)
 const zoom = ref(1)
@@ -112,6 +114,13 @@ function handleWheel(e: WheelEvent) {
     <!-- Left Panel: Prompt Input -->
     <div class="left-panel w-72 shrink-0 border-r border-gray-800 flex flex-col">
       <div class="p-3 border-b border-gray-800 flex items-center gap-2">
+        <button
+          class="w-6 h-6 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+          title="返回"
+          @click="router.push('/')"
+        >
+          ←
+        </button>
         <div class="w-3 h-3 rounded-full bg-blue-500" />
         <span class="text-sm font-medium">弥娅画板</span>
         <div class="flex-1" />
