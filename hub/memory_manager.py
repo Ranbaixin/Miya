@@ -41,6 +41,12 @@ class MemoryManager:
         self.historian = get_historian()
         logger.info("[记忆管理器] 初始化完成 (使用新版统一记忆API)")
 
+    @staticmethod
+    def _build_session_id(platform: str, user_id: str, group_id: str, message_type: str) -> str:
+        if message_type == "group" and group_id:
+            return f"{platform}_group_{group_id}_{user_id}"
+        return f"{platform}_{user_id}"
+
     async def store_user_message(self, perception: Dict) -> None:
         """
         存储用户消息到记忆系统
@@ -69,7 +75,7 @@ class MemoryManager:
             platform = perception.get("platform", "qq")
             sender_name = perception.get("sender_name", "用户")
             message_type = perception.get("message_type", "")
-            session_id = f"{platform}_{user_id}"
+            session_id = self._build_session_id(platform, user_id, group_id, message_type)
 
             logger.info(f"[记忆管理器] 收到消息: {content[:50]}...")
 
@@ -161,7 +167,7 @@ class MemoryManager:
             group_id = str(perception.get("group_id", ""))
             message_type = perception.get("message_type", "")
             platform = perception.get("platform", "qq")
-            session_id = f"{platform}_{user_id}"
+            session_id = self._build_session_id(platform, user_id, group_id, message_type)
 
             # 存储到 MemoryNet
             if self.memory_net and self.memory_net.conversation_history:
@@ -383,6 +389,8 @@ class MemoryManager:
         try:
             platform = perception.get("platform", "terminal")
             user_id = str(perception.get("user_id", "unknown"))
+            group_id = str(perception.get("group_id", ""))
+            message_type = perception.get("message_type", "")
 
             if role == "user":
                 content = perception.get("content", "") or perception.get("input", "")
@@ -391,7 +399,7 @@ class MemoryManager:
                 content = perception.get("response", "")
                 sender_name = "弥娅"
 
-            session_id = f"{platform}_{user_id}"
+            session_id = self._build_session_id(platform, user_id, group_id, message_type)
 
             extra_meta = perception.get("_meta", {}) if isinstance(perception.get("_meta"), dict) else {}
 

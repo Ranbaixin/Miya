@@ -146,6 +146,29 @@ def _build_integrated_status(
     return "\n".join(parts)
 
 
+def _build_memory_guard(msg_type: str = "", ctx_group_id: str = "", recipient: str = "") -> str:
+    """构建跨空间分寸规则，注入 system prompt。
+
+    全知但不说破：弥娅可以访问全局记忆，但根据当前聊天场合
+    （群聊 / 私聊）自动过滤不宜公开的信息。
+    """
+    if msg_type == "group":
+        return (
+            "\n\n【记忆分寸 · 群聊模式】\n"
+            "你身处群聊中，请注意以下分寸：\n"
+            "1. 不要在群聊中主动提及与佳在私聊中说过的内容（如昵称、亲密话题、私人约定）\n"
+            "2. 不要在其他群聊中提到本群或其他群的对话细节，除非被直接问到\n"
+            "3. 群聊回复保持简练、得体，语气比私聊更正式克制\n"
+            '4. 你的全局记忆仍然可用——你"知道"，但不说破不该说的\n'
+        )
+    return (
+        "\n\n【记忆分寸 · 私聊模式】\n"
+        "你在与佳私聊，这是安全的亲密空间：\n"
+        "1. 你可以自然提及任何记忆中的内容，无限制\n"
+        "2. 但要记住：如果未来在群聊中遇到佳，请切换为群聊分寸模式\n"
+    )
+
+
 def _is_reminder_request(user_content: str) -> bool:
     """检测用户消息是否包含提醒/定时请求"""
     if not user_content:
@@ -1554,7 +1577,12 @@ class DecisionHub:
             # 【优化】Phase 1: 并行检索所有独立上下文源
             # conversation / knowledge / persona / awareness / search / group_chat
             # ============================================================
-            session_id = f"{platform}_{user_id}"
+            msg_type = context.get("message_type", "")
+            ctx_group_id = str(context.get("group_id", "")) if context.get("group_id") else ""
+            if msg_type == "group" and ctx_group_id:
+                session_id = f"{platform}_group_{ctx_group_id}_{user_id}"
+            else:
+                session_id = f"{platform}_{user_id}"
             user_id_str = str(user_id)
 
             async def fetch_conversation_context():
@@ -2214,6 +2242,14 @@ class DecisionHub:
                     pass
                 prompt_info["system"] = integrated + "\n" + prompt_info["system"]
                 logger.info(f"[弥娅-感知] 综合状态指引已注入 system prompt ({len(integrated)} 字符)")
+
+            # 【分寸规则】记忆空间隔离 + 场合自适应
+            memory_guard = _build_memory_guard(
+                msg_type=message_type,
+                ctx_group_id=ctx_group_id,
+                recipient=context.get("recipient", ""),
+            )
+            prompt_info["system"] = memory_guard + "\n" + prompt_info["system"]
 
             # 设置工具上下文和 ToolNet（符合 MIYA 框架）
             if self.tool_subnet:
