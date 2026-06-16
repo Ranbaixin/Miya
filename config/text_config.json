@@ -2679,5 +2679,10 @@
         "help": {
             "all": "◆ 弥娅命令列表\n\n/ap    查看 AP 认知引擎状态\n/train  AP 训练 (蒸馏/预训练)\n/状态  查看系统运行状态\n/帮助  显示此列表"
         }
+    },
+    "identity": {
+        "birth_month": 3,
+        "birth_day": 20,
+        "description": "弥娅的诞生日期，月份和日子。年份使用首次部署的年份。"
     }
 }

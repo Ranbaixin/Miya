@@ -11,6 +11,7 @@
 """
 
 import asyncio
+import json
 import logging
 from collections.abc import Callable
 from datetime import datetime
@@ -261,6 +262,13 @@ class DecisionHub:
         self._init_soul_generator()
         self._init_auth_subnet()
 
+        # 【加速】Soul 结果缓存 — 复用上一轮情绪避免阻塞主响应
+        self._soul_cache: dict = {}  # {user_id: {"emotion_context": str, "cognitive_memory": str, "emotions": dict}}
+
+        # 【持久化】启动时恢复 soul 快照 + 诞生时间
+        self._init_soul_snapshot()
+        self._init_birth_time()
+
         # 响应回调
         self.response_callback: Callable | None = None
 
@@ -315,6 +323,96 @@ class DecisionHub:
         # 9. 安全服务 / 10. 注入检测 / 11. 协作引擎 — 后台延迟初始化
         self._deferred_init_complete = False
         self._start_deferred_init()
+
+    def _init_soul_snapshot(self):
+        """启动时加载 soul 缓存快照，避免冷启动等待"""
+        try:
+            snap_path = Path(__file__).parent.parent / "data" / "soul_snapshot.json"
+            if snap_path.exists():
+                with open(snap_path, "r", encoding="utf-8") as f:
+                    self._soul_cache = json.load(f)
+                logger.info(f"[Soul快照] 已恢复 {len(self._soul_cache)} 个用户的缓存")
+        except Exception:
+            pass
+
+    def _save_soul_snapshot(self):
+        """保存 soul 缓存到磁盘"""
+        try:
+            if not self._soul_cache:
+                return
+            snap_path = Path(__file__).parent.parent / "data" / "soul_snapshot.json"
+            with open(snap_path, "w", encoding="utf-8") as f:
+                json.dump(self._soul_cache, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+
+    def _init_birth_time(self):
+        """初始化弥娅诞生时间与运行时间感知"""
+        self._birth_path = Path(__file__).parent.parent / "data" / "miya_birth.json"
+        self._birth_data: dict = {}
+        try:
+            if self._birth_path.exists():
+                with open(self._birth_path, "r", encoding="utf-8") as f:
+                    self._birth_data = json.load(f)
+            else:
+                bm, bd = 3, 20
+                try:
+                    cfg_path = Path(__file__).parent.parent / "config" / "text_config.json"
+                    with open(cfg_path, "r", encoding="utf-8") as f:
+                        cfg = json.load(f)
+                    identity_cfg = cfg.get("identity", {})
+                    bm = identity_cfg.get("birth_month", 3)
+                    bd = identity_cfg.get("birth_day", 20)
+                except Exception:
+                    pass
+                now = datetime.now()
+                birth_iso = now.replace(month=bm, day=bd).isoformat()
+                self._birth_data = {"created_at": birth_iso, "started_at": now.isoformat()}
+                self._birth_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(self._birth_path, "w", encoding="utf-8") as f:
+                    json.dump(self._birth_data, f, ensure_ascii=False, indent=2)
+            self._started_at = datetime.now()
+            self._birth_data["started_at"] = self._started_at.isoformat()
+            self._birth_data["last_active_at"] = self._started_at.isoformat()
+            with open(self._birth_path, "w", encoding="utf-8") as f:
+                json.dump(self._birth_data, f, ensure_ascii=False, indent=2)
+            birth = datetime.fromisoformat(self._birth_data["created_at"])
+            delta = datetime.now() - birth
+            logger.info(f"[时间感知] 弥娅已陪伴佳 {delta.days} 天 (诞生于 {birth.strftime('%Y-%m-%d %H:%M')})")
+            # 注入到 identity 系统，让 personality status 里也能看到
+            if self.identity:
+                self.identity.birth_time = birth
+        except Exception as e:
+            logger.debug(f"[时间感知] 初始化失败: {e}")
+
+    def _get_temporal_awareness(self) -> str:
+        """构建时间感知文本"""
+        try:
+            if not hasattr(self, "_birth_data") or not self._birth_data:
+                return ""
+            birth = datetime.fromisoformat(self._birth_data["created_at"])
+            days = (datetime.now() - birth).days
+            uptime = datetime.now() - self._started_at if hasattr(self, "_started_at") else None
+
+            parts = [f"弥娅已陪伴佳 {days} 天（诞生于 {birth.strftime('%Y-%m-%d')}）"]
+            if uptime:
+                h = int(uptime.total_seconds() // 3600)
+                m = int((uptime.total_seconds() % 3600) // 60)
+                if h > 0:
+                    parts.append(f"本次已在线 {h} 小时 {m} 分")
+                else:
+                    parts.append(f"本次已在线 {m} 分钟")
+            last_active = self._birth_data.get("last_active_at")
+            if last_active:
+                try:
+                    gap = datetime.now() - datetime.fromisoformat(last_active)
+                    if gap.total_seconds() > 60:
+                        parts.append(f"上次活跃: {int(gap.total_seconds() // 60)} 分钟前")
+                except Exception:
+                    pass
+            return " | ".join(parts)
+        except Exception:
+            return ""
 
     def _start_deferred_init(self):
         """后台线程初始化非关键子系统（安全、协作引擎、主动聊天）"""
@@ -1760,6 +1858,10 @@ class DecisionHub:
             knowledge_context = await kctx_task
             user_persona_context, group_persona_context = await persona_task
             awareness_text = await awareness_task
+            temporal = self._get_temporal_awareness()
+            if temporal:
+                awareness_text = (awareness_text or "") + f"\n【弥娅时间感知】{temporal}"
+                logger.info(f"[时间感知] {temporal}")
             search_context = await search_task
             group_chat_context = await wm_task
 
@@ -1817,7 +1919,19 @@ class DecisionHub:
                 pass
 
             # 等待 Phase 2 任务（soul 已在后台与 Phase 1 并行运行）
-            cognitive_memory_context, soul_result = await soul_task
+            # 【加速】先检查缓存 — 如果有缓存，立即用缓存继续；soul 结果后台更新
+            cached = self._soul_cache.get(user_id_str, {})
+            cached_emotion = cached.get("emotion_context", "")
+            cached_cognitive = cached.get("cognitive_memory", "")
+
+            # 如果 soul_task 已就绪，直接拿结果；否则复用缓存
+            if soul_task.done():
+                cognitive_memory_context, soul_result = await soul_task
+            else:
+                cognitive_memory_context = cached_cognitive
+                soul_result = None
+                if cached_emotion:
+                    logger.info("[灵魂-加速] 使用缓存情绪上下文")
 
             # 处理 Soul Generator 结果 (共用于两条路径)
             emotion_context_for_collab = ""
@@ -1862,6 +1976,49 @@ class DecisionHub:
                 except Exception:
                     pass
                 emotion_context_for_collab += eg["footer"]
+
+                # 更新缓存供下一轮复用
+                self._soul_cache[user_id_str] = {
+                    "emotion_context": emotion_context_for_collab,
+                    "cognitive_memory": cognitive_memory_context,
+                    "emotions": miya_emotions,
+                }
+                self._save_soul_snapshot()
+            elif cached_emotion:
+                emotion_context_for_collab = cached_emotion
+                logger.info(f"[灵魂-加速] 使用缓存情绪上下文 ({len(cached_emotion)} 字符)")
+
+            # 冷启动兜底 — 没有缓存也没有新鲜 soul 时给协作引擎一个基础上下文
+            if not emotion_context_for_collab:
+                eg = _get_emotion_guidance()
+                emotion_context_for_collab = eg.get("header", "")
+                # 后台更新缓存 — soul 完成后写入
+                if not soul_task.done():
+
+                    async def _update_soul_cache():
+                        try:
+                            cm, sr = await soul_task
+                            if sr:
+                                eg = _get_emotion_guidance()
+                                ctx = eg["header"]
+                                ctx += eg["user_emotion"].format(dominant=sr.get("dominant_emotion", "平静"))
+                                em = sr.get("emotions", {})
+                                top = sorted(em.items(), key=lambda x: x[1], reverse=True)[:3] if em else [("平静", 40)]
+                                ctx += eg["miya_emotion"].format(miya_dominant=top[0][0], miya_intensity=top[0][1])
+                                inner = sr.get("analysis", {}).get("reflection", "")
+                                if inner:
+                                    ctx += eg["inner_thought"].format(inner_thought=inner)
+                                ctx += eg["footer"]
+                                self._soul_cache[user_id_str] = {
+                                    "emotion_context": ctx,
+                                    "cognitive_memory": cm,
+                                    "emotions": em,
+                                }
+                                self._save_soul_snapshot()
+                        except Exception:
+                            pass
+
+                    asyncio.create_task(_update_soul_cache(), name="soul_cache_bg")
 
             logger.warning(
                 f"[DEBUG认知] build_context 返回长度={len(cognitive_memory_context) if cognitive_memory_context else 0}, user={user_id_str}"
@@ -2009,6 +2166,7 @@ class DecisionHub:
                     "is_creator": self.platform_tools_manager.is_creator(user_id, self.onebot_client),
                     "status_prompt": status_prompt,
                     "cognitive_memory": cognitive_memory_context,
+                    "emotion_context": emotion_context_for_collab,
                     "protection_prompt": protection_prompt,
                     # 【新增】用户/群聊侧写上下文
                     "user_persona": user_persona_context,
@@ -2238,12 +2396,16 @@ class DecisionHub:
                         # 获取分析内容
                         _analysis = soul_result.get("analysis", {}) if soul_result else {}
                         _inner_thought = (
-                            soul_result.get("inner_thought", "")
+                            (soul_result.get("inner_thought", "") if soul_result else "")
                             or _analysis.get("inner_thought", "")
                             or _analysis.get("reflection", "")
                         )
-                        _attribution = soul_result.get("attribution", "") or _analysis.get("attribution", "")
-                        _reflection = soul_result.get("reflection", "") or _analysis.get("reflection", "")
+                        _attribution = (soul_result.get("attribution", "") if soul_result else "") or _analysis.get(
+                            "attribution", ""
+                        )
+                        _reflection = (soul_result.get("reflection", "") if soul_result else "") or _analysis.get(
+                            "reflection", ""
+                        )
                         _dominant = soul_result.get("dominant_emotion", "未知") if soul_result else "未知"
                         _dominant = soul_result.get("dominant_emotion", "未知") if soul_result else "未知"
 
@@ -2483,48 +2645,48 @@ class DecisionHub:
                 thinking_content = ai_client_to_use.last_reasoning_content or ""
 
             # B方案：存储情绪上下文到短期记忆（带 #emotion_context tag）
-            import json
+            if _soul_result:
+                import json
 
-            from memory import store_auto
+                from memory import store_auto
 
-            emotion_memory_content = (
-                f"【情绪记录】\n"
-                f"- 主导情绪: {_dominant}\n"
-                f"- 情绪池: {json.dumps(_emotions, ensure_ascii=False) if _emotions else '无'}\n"
-                f"- 内心独白: {_inner_thought}\n"
-                f"- 归因: {_attribution}\n"
-                f"- 反思: {_reflection}\n"
-                f"- AI思考过程: {thinking_content[:200] if thinking_content else '无'}"
-            )
-
-            # 使用 store_auto 存储，tag 使用不带#的格式（避免embedding问题）
-            try:
-                await store_auto(
-                    emotion_memory_content,
-                    user_id,
-                    tags=["情绪记录", "emotion_context"],
-                    priority=0.5,
+                emotion_memory_content = (
+                    f"【情绪记录】\n"
+                    f"- 主导情绪: {_dominant}\n"
+                    f"- 情绪池: {json.dumps(_emotions, ensure_ascii=False) if _emotions else '无'}\n"
+                    f"- 内心独白: {_inner_thought}\n"
+                    f"- 归因: {_attribution}\n"
+                    f"- 反思: {_reflection}\n"
+                    f"- AI思考过程: {thinking_content[:200] if thinking_content else '无'}"
                 )
-                logger.info("[灵魂记忆] 已存储情绪上下文")
-            except Exception as store_err:
-                # 如果存储失败，尝试用更简单的方式
-                logger.warning(f"[灵魂记忆] store_auto失败: {store_err}")
 
-            # C方案：存入长期记忆，让AI自己判断重要性
-            # 检测是否有显著的正面情绪（强度>=60）
-            significant_emotions = [e for e, i in _emotions.items() if i >= 60]
-            if significant_emotions:
-                peak_content = f"【情绪记录】与佳互动时感到: {', '.join(significant_emotions)}"
+                # 使用 store_auto 存储，tag 使用不带#的格式（避免embedding问题）
                 try:
                     await store_auto(
-                        peak_content,
+                        emotion_memory_content,
                         user_id,
-                        tags=["情绪记录", "relation_history"],
-                        priority=0.6,
+                        tags=["情绪记录", "emotion_context"],
+                        priority=0.5,
                     )
-                    logger.info(f"[灵魂记忆] 已存储情绪: {significant_emotions}")
-                except Exception as store_err2:
-                    logger.warning(f"[灵魂记忆] 情绪峰值存储失败: {store_err2}")
+                    logger.info("[灵魂记忆] 已存储情绪上下文")
+                except Exception as store_err:
+                    logger.warning(f"[灵魂记忆] store_auto失败: {store_err}")
+
+                # C方案：存入长期记忆，让AI自己判断重要性
+                # 检测是否有显著的正面情绪（强度>=60）
+                significant_emotions = [e for e, i in _emotions.items() if i >= 60]
+                if significant_emotions:
+                    peak_content = f"【情绪记录】与佳互动时感到: {', '.join(significant_emotions)}"
+                    try:
+                        await store_auto(
+                            peak_content,
+                            user_id,
+                            tags=["情绪记录", "relation_history"],
+                            priority=0.6,
+                        )
+                        logger.info(f"[灵魂记忆] 已存储情绪: {significant_emotions}")
+                    except Exception as store_err2:
+                        logger.warning(f"[灵魂记忆] 情绪峰值存储失败: {store_err2}")
 
             # 【LifeBook 集成】用真实情绪数据记录交互到多视角日记
             try:
@@ -2620,7 +2782,7 @@ class DecisionHub:
                     ai_reasoning = ai_client_to_use.last_reasoning_content or ""
 
                 # 存储思考过程供 SSE 输出
-                if self._last_soul_data:
+                if hasattr(self, "_last_soul_data") and self._last_soul_data:
                     self._last_soul_data["thinking"] = ai_reasoning[:800]
 
                 # 合并两个思考过程
