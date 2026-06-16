@@ -286,16 +286,17 @@ class ConversationContextManager:
 
         needs_recall = self.check_needs_recall(current_input)
         is_deep_discussion = self._is_deep_discussion(current_input)
+        base_limit = self.conversation_context_max_count
 
         if needs_recall:
-            max_messages = 50
-            logger.info(f"[对话上下文] 用户正在回忆过去，加载历史对话: {session_id}")
+            max_messages = max(base_limit * 2, 80)
+            logger.info(f"[对话上下文] 用户正在回忆过去，加载{max_messages}条: {session_id}")
         elif is_deep_discussion:
-            max_messages = 30
-            logger.debug(f"[对话上下文] 检测到深度讨论，加载30条: {session_id}")
+            max_messages = max(base_limit * 2, 60)
+            logger.debug(f"[对话上下文] 检测到深度讨论，加载{max_messages}条: {session_id}")
         else:
-            max_messages = 20
-            logger.debug(f"[对话上下文] 正常对话，加载20条: {session_id}")
+            max_messages = base_limit
+            logger.debug(f"[对话上下文] 正常对话，加载{max_messages}条: {session_id}")
 
         context = []
         total_tokens = 0
