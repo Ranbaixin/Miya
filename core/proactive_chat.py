@@ -1808,6 +1808,12 @@ class ProactiveChatSystem:
         meta = self._build_memory_context(intent.target_id)
         rich = await self._build_rich_context(intent.target_id)
         memory = f"{rich}\n{meta}".strip() if rich else meta
+
+        cached_ctx = self._context_cache.get(intent.target_id)
+        user_last_msg = ""
+        if cached_ctx and cached_ctx.recent_topics:
+            user_last_msg = ", ".join(cached_ctx.recent_topics)
+
         ctx = {
             "persona": persona,
             "memory": memory,
@@ -1829,6 +1835,11 @@ class ProactiveChatSystem:
         if intent.continuation_history:
             history_text = "\n".join(f"- 弥娅: {h[:60]}" for h in intent.continuation_history)
             final_prompt += f"\n\n【已发送的持续推进消息】\n{history_text}\n（不要重复）"
+        if user_last_msg:
+            final_prompt += (
+                f"\n\n【提醒】用户当前只是在进行日常闲聊。他最后一句话的话题是：{user_last_msg}。"
+                f"不要带上之前对话的旧情绪。保持日常温柔的语气，不要过度解读用户的意图。"
+            )
         try:
             response = await self.ai_client.chat(
                 messages=[AIMessage(role="user", content=final_prompt)],

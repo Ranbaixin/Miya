@@ -420,8 +420,8 @@ proactive_chat:
   continuity_trigger:
     enabled: true
     use_ai: true
-    min_delay_seconds: 2          # 回复后最短等待时间（给用户回复机会）
-    max_delay_seconds: 5          # 最长等待时间
+    min_delay_seconds: 4          # 回复后最短等待时间（让用户有自然打字的时间窗口）
+    max_delay_seconds: 10         # 最长等待时间（模拟自然停顿后再补一句）
     max_extra_turns: 1            # 最多自动推进轮数（1轮 = 追加一句话，像犹豫后的补刀）
     cooldown_after_completion: 60  # 意图完成后冷却（秒）
     system_prompt: |
@@ -432,8 +432,11 @@ proactive_chat:
       请自然地延续弥娅的意图，像真正关心对方的人一样主动推进对话或行动。
       如果是行动型意图（弥娅想要主动做某事），请直接调用工具来完成。
       完成后用自然语言汇报。
-      保持简短温暖，不要生硬。
-      如果此时确实不适合继续，回复 SKIP。
+      重要规则：
+      - 这是给「{original_response}」追加的补充语，不是一条独立的新消息
+      - 绝对不要重复上面那句话的开头部分
+      - 保持简短温暖，不要生硬。
+      - 如果此时确实不适合继续，回复 SKIP。
 
   # 用户刚发送消息后的冷却（秒）
   # 避免在用户刚说话后立即主动发言
