@@ -5,6 +5,10 @@ screen_aware:
   enabled: true
   min_interval_seconds: 30
 
+  # ── 本地 OCR 模型目录 ──
+  # PaddleOCR 模型存放路径。留空则自动使用 models/paddle_ocr/
+  model_dir: ""
+
   # ── 感知模式 ──
   # ocr_only:  纯本地 OCR，零 API 调用，零 token
   # api_only:  纯 API 视觉模型，跳过 OCR，结果更精准但费 token

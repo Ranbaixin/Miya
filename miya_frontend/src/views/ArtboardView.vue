@@ -55,7 +55,7 @@ async function handleGenerate(params: {
 
     if (res.success && res.images.length > 0) {
       gallery.value.unshift(...res.images)
-      selectImage(res.images[0])
+      selectImage(res.images[0]!)
     } else {
       error.value = res.error || '生成失败'
     }

@@ -117,18 +117,19 @@ function startIPCListener(): void {
   }).live2dIPC
   if (!ipc) return
 
-  ipc.on('live2d:emotion', (emotion: string) => ctrl.setEmotion(emotion))
-  ipc.on('live2d:state', (state: string) => ctrl.setState(state))
-  ipc.on('live2d:mouth', (params: Record<string, number>) => ctrl.setMouth(params))
-  ipc.on('live2d:action', (action: string) => ctrl.triggerAction(action))
-  ipc.on('live2d:tracking', (enabled: boolean) => ctrl.setTracking(enabled))
-  ipc.on('live2d:background', (data: { color: string, alpha: number }) => {
+  ipc.on('live2d:emotion', (emotion: unknown) => ctrl.setEmotion(emotion as string))
+  ipc.on('live2d:state', (state: unknown) => ctrl.setState(state as string))
+  ipc.on('live2d:mouth', (params: unknown) => ctrl.setMouth(params as Record<string, number>))
+  ipc.on('live2d:action', (action: unknown) => ctrl.triggerAction(action as string))
+  ipc.on('live2d:tracking', (enabled: unknown) => ctrl.setTracking(enabled as boolean))
+  ipc.on('live2d:background', (data: unknown) => {
+    const d = data as { color: string; alpha: number }
     if (app && app.renderer) {
-      app.renderer.backgroundColor = parseInt(String(data.color), 16)
-      app.renderer.backgroundAlpha = data.alpha
+      app.renderer.backgroundColor = parseInt(String(d.color), 16)
+      app.renderer.backgroundAlpha = d.alpha
     }
   })
-  ipc.on('live2d:visibilityChanged', (visible: boolean) => {
+  ipc.on('live2d:visibilityChanged', (visible: unknown) => {
     if (visible) {
       startYinmeiPolling()
     } else {

@@ -18,6 +18,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+# 编译前禁止 PaddleX 联网检查，避免 PyInstaller 扫描时触发
+os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
+
 PROJECT_ROOT = Path(__file__).parent
 RELEASE_DIR = PROJECT_ROOT / "release" / "Miya"
 SPEC_FILE = PROJECT_ROOT / "Miya.spec"
@@ -151,18 +154,22 @@ def _create_access_dirs():
 
     编译后结构：
       release/Miya/
-      ├── config/           ← 真实目录（用户可编辑、可查看）
-      ├── data/             ← 真实目录（运行时数据）
-      ├── logs/             ← 真实目录（日志）
+      ├── Miya.exe               主程序
+      ├── 启动弥娅.bat             启动脚本
+      ├── config/                 ← 真实目录（用户可编辑）
+      ├── data/                   ← 真实目录（运行时数据）
+      ├── logs/                   ← 真实目录（日志）
+      ├── models/                 ← 真实目录（本地模型）
       └── _internal/
-          ├── config → ../config  (junction → 外层，单一数据源)
-          ├── data   → ../data    (junction → 外层)
-          └── logs   → ../logs    (junction → 外层)
+          ├── config  → ../config   (junction → 外层)
+          ├── data    → ../data     (junction → 外层)
+          ├── logs    → ../logs     (junction → 外层)
+          └── models  → ../models   (junction → 外层)
 
     注意：目录联结（junction）仅适用于本地构建。若需 zip 分发，请使用
     --portable-zip 参数回退到复制模式。
     """
-    directories = ["config", "data", "logs"]
+    directories = ["config", "data", "logs", "models"]
     for dir_name in directories:
         internal_path = RELEASE_DIR / "_internal" / dir_name
         outer_path = RELEASE_DIR / dir_name
@@ -361,6 +368,39 @@ def verify_release():
         print("[WARN] 部分文件缺失，请检查\n")
 
 
+def _ensure_local_models():
+    """确保 models/ 目录下有 PaddleOCR 模型（从 PaddleX 缓存同步）"""
+    from pathlib import Path as _Path
+
+    paddlex_cache = _Path.home() / ".paddlex" / "official_models"
+    local_models = PROJECT_ROOT / "models" / "paddle_ocr" / "official_models"
+
+    if not paddlex_cache.exists():
+        print(f"  [WARN] PaddleX 缓存不存在: {paddlex_cache}，跳过模型同步")
+        return
+
+    expected_dirs = [
+        "PP-LCNet_x1_0_doc_ori",
+        "PP-LCNet_x1_0_textline_ori",
+        "PP-OCRv5_server_det",
+        "PP-OCRv5_server_rec",
+        "UVDoc",
+    ]
+
+    local_models.mkdir(parents=True, exist_ok=True)
+
+    for d in expected_dirs:
+        src = paddlex_cache / d
+        dst = local_models / d
+        if src.exists() and not dst.exists():
+            print(f"  模型同步: {d} ...")
+            shutil.copytree(src, dst)
+        elif not src.exists():
+            print(f"  [WARN] PaddleX 缓存缺少: {d}")
+
+    print(f"  [OK] 本地模型已就绪: {local_models}\n")
+
+
 def _format_size(size_bytes: int) -> str:
     size = float(size_bytes)
     for unit in ["B", "KB", "MB", "GB"]:
@@ -521,6 +561,8 @@ def main():
         print("\n  跳过编译，使用已有 release/Miya/")
     else:
         print("\n[1/4] 编译...")
+        print("\n  → 同步本地模型...")
+        _ensure_local_models()
         run_pyinstaller()
 
         print("\n[2/4] 组装发布...")

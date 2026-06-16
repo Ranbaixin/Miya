@@ -60,7 +60,7 @@ const live2dControl = {
     currentStateName = state
     stateStartTime = performance.now()
     if (model && actionsData?._states?.[state]) {
-      applyState(model, actionsData._states[state])
+      applyState(model, actionsData._states[state]!)
     }
   },
   setMouth(params: Record<string, number>) {
@@ -139,20 +139,20 @@ function tickStandalone(_dt: number): void {
 
   // 状态 keyframe 推进
   if (actionsData?._states?.[currentStateName]) {
-    advanceStateKeyframes(model, actionsData._states[currentStateName])
+    advanceStateKeyframes(model, actionsData._states[currentStateName]!)
   }
 }
 
 function applyMouthParams(m: Live2DModel, params: Record<string, number>): void {
   for (const [key, val] of Object.entries(params)) {
-    try { m.internalModel.coreModel.setParameterValueById(key, val) } catch {}
+    try { (m.internalModel.coreModel as any).setParameterValueById(key, val) } catch {}
   }
 }
 
 function applyState(m: Live2DModel, cfg: StateConfig): void {
   if (cfg.params) {
     for (const [key, val] of Object.entries(cfg.params)) {
-      try { m.internalModel.coreModel.setParameterValueById(key, val) } catch {}
+      try { (m.internalModel.coreModel as any).setParameterValueById(key, val) } catch {}
     }
   }
 }
@@ -161,7 +161,7 @@ function advanceStateKeyframes(m: Live2DModel, cfg: StateConfig): void {
   if (!cfg.keyframes || cfg.keyframes.length === 0) return
 
   const elapsed = (performance.now() - stateStartTime) / 1000
-  const totalDuration = cfg.keyframes[cfg.keyframes.length - 1].t
+  const totalDuration = cfg.keyframes[cfg.keyframes.length - 1]!.t
 
   let t: number
   if (cfg.loop) {
@@ -171,12 +171,12 @@ function advanceStateKeyframes(m: Live2DModel, cfg: StateConfig): void {
     t = Math.min(elapsed, totalDuration)
   }
 
-  let kfA = cfg.keyframes[0]
-  let kfB = cfg.keyframes[0]
+  let kfA = cfg.keyframes[0]!
+  let kfB = cfg.keyframes[0]!
   for (let i = 0; i < cfg.keyframes.length - 1; i++) {
-    if (t >= cfg.keyframes[i].t && t <= cfg.keyframes[i + 1].t) {
-      kfA = cfg.keyframes[i]
-      kfB = cfg.keyframes[i + 1]
+    if (t >= cfg.keyframes[i]!.t && t <= cfg.keyframes[i + 1]!.t) {
+      kfA = cfg.keyframes[i]!
+      kfB = cfg.keyframes[i + 1]!
       break
     }
   }
@@ -188,7 +188,7 @@ function advanceStateKeyframes(m: Live2DModel, cfg: StateConfig): void {
     const a = kfA.params[key] ?? 0
     const b = kfB.params[key] ?? a
     const val = lerp(a, b, localT)
-    try { m.internalModel.coreModel.setParameterValueById(key, val) } catch {}
+    try { (m.internalModel.coreModel as any).setParameterValueById(key, val) } catch {}
   }
 }
 
@@ -198,16 +198,16 @@ function applySequenceAction(m: Live2DModel, cfg: ActionConfig): void {
 
   const tick = () => {
     elapsed += perFrame / 1000
-    const totalDuration = cfg.keyframes[cfg.keyframes.length - 1].t * cfg.repeat
+    const totalDuration = cfg.keyframes[cfg.keyframes.length - 1]!.t * cfg.repeat
     if (elapsed >= totalDuration) return
 
-    const t = (elapsed % cfg.keyframes[cfg.keyframes.length - 1].t)
-    let kfA = cfg.keyframes[0]
-    let kfB = cfg.keyframes[0]
+    const t = (elapsed % cfg.keyframes[cfg.keyframes.length - 1]!.t)
+    let kfA = cfg.keyframes[0]!
+    let kfB = cfg.keyframes[0]!
     for (let i = 0; i < cfg.keyframes.length - 1; i++) {
-      if (t >= cfg.keyframes[i].t && t <= cfg.keyframes[i + 1].t) {
-        kfA = cfg.keyframes[i]
-        kfB = cfg.keyframes[i + 1]
+      if (t >= cfg.keyframes[i]!.t && t <= cfg.keyframes[i + 1]!.t) {
+        kfA = cfg.keyframes[i]!
+        kfB = cfg.keyframes[i + 1]!
         break
       }
     }
@@ -218,7 +218,7 @@ function applySequenceAction(m: Live2DModel, cfg: ActionConfig): void {
       const a = kfA.params[key] ?? 0
       const b = kfB.params[key] ?? a
       const val = lerp(a, b, localT)
-      try { m.internalModel.coreModel.setParameterValueById(key, val) } catch {}
+      try { (m.internalModel.coreModel as any).setParameterValueById(key, val) } catch {}
     }
     requestAnimationFrame(tick)
   }
@@ -234,9 +234,9 @@ function applyEmotion(m: Live2DModel, emotion: string): void {
     neutral: { ParamMouthOpenY: 0, ParamEyeLOpen: 0.8, ParamEyeROpen: 0.8, ParamBrowLY: 0, ParamBrowRY: 0 },
   }
 
-  const params = emotionParams[emotion] || emotionParams.neutral
+  const params = emotionParams[emotion] || emotionParams.neutral!
   for (const [key, val] of Object.entries(params)) {
-    try { m.internalModel.coreModel.setParameterValueById(key, val) } catch {}
+    try { (m.internalModel.coreModel as any).setParameterValueById(key, val) } catch {}
   }
 }
 

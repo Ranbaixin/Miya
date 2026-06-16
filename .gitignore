@@ -210,3 +210,6 @@ data/diting_state.json
 data/tts_audio/
 data/conversation_context_state.json
 data/last_form.json
+
+# Local models (bundled at build time from PaddleX cache)
+models/

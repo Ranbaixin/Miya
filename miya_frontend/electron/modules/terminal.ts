@@ -13,7 +13,7 @@ function findNodeExe(): string {
         if (existsSync(p)) return p
       }
     } else {
-      const result = execSync('which node || type -p node 2>/dev/null', { timeout: 5000, encoding: 'utf-8', shell: true })
+      const result = execSync('which node || type -p node 2>/dev/null', { timeout: 5000, encoding: 'utf-8', shell: '/bin/sh' })
       const paths = result.trim().split('\n')
       for (const p of paths) {
         if (existsSync(p)) return p

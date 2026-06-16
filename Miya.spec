@@ -140,6 +140,7 @@ hiddenimports.extend([
 datas = [
     ('config', 'config'),
     ('config/.env.example', 'config'),
+    ('models', 'models'),
 ]
 
 # ── 排除列表 ──

@@ -24,8 +24,10 @@ import asyncio
 import hashlib
 import io
 import logging
+import os
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Optional
 
 logger = logging.getLogger("miya_psyarch.screen_aware")
@@ -40,14 +42,8 @@ except ImportError:
 
 _IS_WINDOWS = __import__("platform").system() == "Windows"
 
-try:
-    from paddleocr import PaddleOCR
-
-    _HAS_PADDLEOCR = True
-except ImportError:
-    _HAS_PADDLEOCR = False
-
 _OCR_INIT_WARNED = False
+_OCR_MODEL_DIR: str = ""  # 可在模块导入前通过环境变量 PADDLE_PDX_CACHE_HOME 覆盖
 
 
 # ── 数据模型 ──────────────────────────────────────────────
@@ -110,6 +106,7 @@ class ScreenAwareProactive:
         hash_similarity_threshold: int = 8,  # pHash 汉明距离 < 此值视为相同画面
         # ── 视觉模型开关 ──
         vision_mode: str = "hybrid",  # ocr_only | api_only | hybrid
+        model_dir: str = "",  # 本地 OCR 模型目录，留空自动检测
     ) -> None:
         self.enabled = bool(enabled)
         self.min_interval = max(5.0, float(min_interval_seconds))
@@ -125,6 +122,7 @@ class ScreenAwareProactive:
         self.vision_trigger_light_count = max(1, int(vision_trigger_light_count))
         self.hash_similarity = max(0, int(hash_similarity_threshold))
         self.vision_mode = str(vision_mode) if vision_mode in ("ocr_only", "api_only", "hybrid") else "hybrid"
+        self._model_dir = str(model_dir) if model_dir else ""
 
         self._observations: list[ScreenObservation] = []
         self._last_observe_time: float = 0.0
@@ -395,17 +393,46 @@ class ScreenAwareProactive:
 
     # ── Tier 15: 本地 OCR 识字 ──
 
+    @staticmethod
+    def _has_ocr_models(models_dir: Path) -> bool:
+        """检查目录下是否包含完整的 PaddleOCR 模型"""
+        required = [
+            "PP-LCNet_x1_0_doc_ori",
+            "PP-LCNet_x1_0_textline_ori",
+            "PP-OCRv5_server_det",
+            "PP-OCRv5_server_rec",
+            "UVDoc",
+        ]
+        official = models_dir / "official_models"
+        return all((official / d).exists() for d in required)
+
     def _lazy_init_ocr(self) -> Any:
         if self._ocr_engine is not None:
             return self._ocr_engine
-        if not self._ocr_enabled or not _HAS_PADDLEOCR:
-            self._ocr_enabled = False
+        if not self._ocr_enabled:
             return None
         try:
             global _OCR_INIT_WARNED
-            import os
+
+            _project_models = (
+                Path(self._model_dir)
+                if self._model_dir
+                else (Path(__file__).resolve().parent.parent.parent.parent / "models" / "paddle_ocr")
+            )
+            _system_cache = Path.home() / ".paddlex"
+
+            if self._has_ocr_models(_system_cache):
+                logger.debug("[ScreenAware] 使用系统 PaddleX 缓存模型")
+            elif self._has_ocr_models(_project_models):
+                os.environ.setdefault("PADDLE_PDX_CACHE_HOME", str(_project_models))
+                logger.info(f"[ScreenAware] 系统缓存缺失，回退到项目模型: {_project_models}")
+            else:
+                logger.warning("[ScreenAware] 未找到本地 OCR 模型，可能需联网下载")
 
             os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
+
+            from paddleocr import PaddleOCR
+
             self._ocr_engine = PaddleOCR(lang="ch")
             logger.info("[ScreenAware] PaddleOCR 本地引擎初始化完成")
         except Exception as exc:
@@ -869,7 +896,7 @@ class ScreenAwareProactive:
             "vision_calls_today": self._vision_count_today,
             "vision_quota_remaining": max(0, self.vision_daily_quota - self._vision_count_today),
             "light_count_since_vision": self._light_count_since_vision,
-            "ocr_available": _HAS_PADDLEOCR and self._ocr_enabled,
+            "ocr_available": self._ocr_enabled and self._ocr_engine is not None,
             "current_interval": self._current_interval,
             "tier_distribution": {
                 str(t): sum(1 for o in self._observations[-100:] if o.analysis_tier == t) for t in (0, 1, 15, 2, 3)

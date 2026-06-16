@@ -76,37 +76,58 @@ const cardPositions = computed(() =>
 
 // ─── Constellation ───────────────────────────────────────────────────
 const wingLines = computed(() => {
-  const pos = cardPositions.value
+  const pos = cardPositions.value as { x: number; y: number }[]
   const lines: { x1: number; y1: number; x2: number; y2: number; cls: string }[] = []
   // Left wing: feather chain (0→1→2→3)
-  for (let i = 0; i < 3; i++) lines.push({ x1: pos[i].x, y1: pos[i].y, x2: pos[i + 1].x, y2: pos[i + 1].y, cls: 'wing-feather' })
+  for (let i = 0; i < 3; i++) lines.push({ x1: pos[i]!.x, y1: pos[i]!.y, x2: pos[i + 1]!.x, y2: pos[i + 1]!.y, cls: 'wing-feather' })
   // Right wing: feather chain (4→5→6→7)
-  for (let i = 4; i < 7; i++) lines.push({ x1: pos[i].x, y1: pos[i].y, x2: pos[i + 1].x, y2: pos[i + 1].y, cls: 'wing-feather' })
+  for (let i = 4; i < 7; i++) lines.push({ x1: pos[i]!.x, y1: pos[i]!.y, x2: pos[i + 1]!.x, y2: pos[i + 1]!.y, cls: 'wing-feather' })
   // Each feather to center
-  for (let i = 0; i < cards.length; i++) lines.push({ x1: 0, y1: 0, x2: pos[i].x, y2: pos[i].y, cls: 'feather-to-center' })
+  for (let i = 0; i < cards.length; i++) lines.push({ x1: 0, y1: 0, x2: pos[i]!.x, y2: pos[i]!.y, cls: 'feather-to-center' })
   // Wing root connectors (tip feathers → center with highlight)
-  lines.push({ x1: 0, y1: 0, x2: pos[0].x, y2: pos[0].y, cls: 'wing-root' })
-  lines.push({ x1: 0, y1: 0, x2: pos[3].x, y2: pos[3].y, cls: 'wing-root' })
-  lines.push({ x1: 0, y1: 0, x2: pos[4].x, y2: pos[4].y, cls: 'wing-root' })
-  lines.push({ x1: 0, y1: 0, x2: pos[7].x, y2: pos[7].y, cls: 'wing-root' })
+  lines.push({ x1: 0, y1: 0, x2: pos[0]!.x, y2: pos[0]!.y, cls: 'wing-root' })
+  lines.push({ x1: 0, y1: 0, x2: pos[3]!.x, y2: pos[3]!.y, cls: 'wing-root' })
+  lines.push({ x1: 0, y1: 0, x2: pos[4]!.x, y2: pos[4]!.y, cls: 'wing-root' })
+  lines.push({ x1: 0, y1: 0, x2: pos[7]!.x, y2: pos[7]!.y, cls: 'wing-root' })
   // Security center card
-  if (pos.length > 8) lines.push({ x1: 0, y1: 0, x2: pos[8].x, y2: pos[8].y, cls: 'wing-root' })
+  if (pos.length > 8) lines.push({ x1: 0, y1: 0, x2: pos[8]!.x, y2: pos[8]!.y, cls: 'wing-root' })
   // Artboard card
-  if (pos.length > 9) lines.push({ x1: 0, y1: 0, x2: pos[9].x, y2: pos[9].y, cls: 'wing-root' })
+  if (pos.length > 9) lines.push({ x1: 0, y1: 0, x2: pos[9]!.x, y2: pos[9]!.y, cls: 'wing-root' })
   return lines
+})
+
+const leftWingPoints = computed(() => {
+  const p = cardPositions.value as { x: number; y: number }[]
+  return `0,0 ${p[0]!.x},${p[0]!.y} ${p[1]!.x},${p[1]!.y} ${p[2]!.x},${p[2]!.y} ${p[3]!.x},${p[3]!.y}`
+})
+
+const rightWingPoints = computed(() => {
+  const p = cardPositions.value as { x: number; y: number }[]
+  return `0,0 ${p[4]!.x},${p[4]!.y} ${p[5]!.x},${p[5]!.y} ${p[6]!.x},${p[6]!.y} ${p[7]!.x},${p[7]!.y}`
 })
 
 // ─── Per-card tilt ───────────────────────────────────────────────────
 const TILT = 10
 function cardTilt(idx: number) {
-  const pos = cardPositions.value[idx]
-  if (!pos) return { rx: 0, ry: 0 }
+  const pos = cardPositions.value as { x: number; y: number }[]
+  const p = pos[idx]
+  if (!p) return { rx: 0, ry: 0 }
   return { rx: (mouse.y - 0.5) * -TILT, ry: (mouse.x - 0.5) * TILT }
 }
 function cardTransform(i: number) {
   const t = cardTilt(i)
-  const s = hoveredCard.value === cards[i].id ? SCALE.value * 1.12 : SCALE.value
+  const s = hoveredCard.value === cards[i]!.id ? SCALE.value * 1.12 : SCALE.value
   return `translate(-50%,-50%) perspective(800px) rotateX(${t.rx}deg) rotateY(${t.ry}deg) scale(${s})`
+}
+
+function cardStyleLeft(i: number): string {
+  const p = (cardPositions.value as { x: number; y: number }[])[i]
+  return p ? `calc(50% + ${p.x}px)` : '50%'
+}
+
+function cardStyleTop(i: number): string {
+  const p = (cardPositions.value as { x: number; y: number }[])[i]
+  return p ? `calc(50% + ${p.y}px)` : '50%'
 }
 
 function navigate(card: typeof cards[0]) {
@@ -167,11 +188,11 @@ function enterFloatingMode() {
         </defs>
         <!-- Left wing energy field -->
         <polygon
-          :points="`0,0 ${cardPositions[0].x},${cardPositions[0].y} ${cardPositions[1].x},${cardPositions[1].y} ${cardPositions[2].x},${cardPositions[2].y} ${cardPositions[3].x},${cardPositions[3].y}`"
+          :points="leftWingPoints"
           fill="url(#left-wing-grad)" opacity="0.15" stroke="var(--miya-accent)" stroke-width="0.4" stroke-dasharray="3 5" />
         <!-- Right wing energy field -->
         <polygon
-          :points="`0,0 ${cardPositions[4].x},${cardPositions[4].y} ${cardPositions[5].x},${cardPositions[5].y} ${cardPositions[6].x},${cardPositions[6].y} ${cardPositions[7].x},${cardPositions[7].y}`"
+          :points="rightWingPoints"
           fill="url(#right-wing-grad)" opacity="0.15" stroke="var(--miya-accent)" stroke-width="0.4" stroke-dasharray="3 5" />
         <!-- Lines -->
         <g opacity="0.3">
@@ -195,8 +216,8 @@ function enterFloatingMode() {
         :class="[{ 'is-hovered': hoveredCard === card.id }, `wing-${i < 4 ? 'left' : 'right'}`]"
         :style="{
           '--card-color': `var(${card.varName}, ${card.fallback})`,
-          left: `calc(50% + ${cardPositions[i].x}px)`,
-          top: `calc(50% + ${cardPositions[i].y}px)`,
+          left: cardStyleLeft(i),
+          top: cardStyleTop(i),
           transform: cardTransform(i),
           transition: hoveredCard === card.id
             ? 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s, border-color 0.3s'

@@ -477,6 +477,7 @@ class DecisionHub:
                     vision_daily_quota=cfg.get("vision_daily_quota", 24),
                     vision_trigger_light_count=cfg.get("vision_trigger_light_count", 10),
                     hash_similarity_threshold=cfg.get("hash_similarity_threshold", 8),
+                    model_dir=cfg.get("model_dir", ""),
                 )
                 self.proactive_chat.set_screen_aware(sa)
                 logger.info(

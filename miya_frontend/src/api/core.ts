@@ -44,7 +44,7 @@ export class CoreApiClient extends ApiClient {
   }): Promise<any> {
     return this.instance.post('/api/chat/send', data, {
       transformResponse: [(d: string) => d],  // 跳过 axios JSON 解析
-    }).then((raw: string) => {
+    }).then((raw: any) => {
       try { return JSON.parse(raw) } catch { return raw }
     })
   }
@@ -60,10 +60,14 @@ export class CoreApiClient extends ApiClient {
       timeout: 0,
       headers: { Accept: 'text/event-stream' },
     }).then(res => {
-      const reader = res.data?.getReader?.()
-      return reader
-        ? aiter(decodeStreamChunk(readerToMessageStream(reader)))
-        : aiter<StreamChunk>([])
+      const reader = (res as any).data?.getReader?.()
+      if (!reader) return aiter((async function* () { /* empty */ })())
+      const msgStream = readerToMessageStream(reader)
+      return aiter((async function* () {
+        for await (const data of msgStream) {
+          yield decodeStreamChunk(data)
+        }
+      })())
     })
   }
 
@@ -234,6 +238,115 @@ export class CoreApiClient extends ApiClient {
 
   async onlineSearch(service: string, query: string, limit?: number): Promise<any> {
     return this.instance.get(`/api/security/online?service=${service}&query=${encodeURIComponent(query)}${limit ? `&limit=${limit}` : ''}`)
+  }
+
+  // ── 会话 ──
+  async getSessions(): Promise<{ sessions: any[] }> {
+    const sessions = await this.instance.get('/api/chat/sessions')
+    return { sessions }
+  }
+
+  // ── 画板 ──
+  async getGallery(options: { limit: number }): Promise<{ images: any[] }> {
+    return this.instance.get(`/api/art/gallery?limit=${options.limit}`)
+  }
+
+  async generate(params: {
+    prompt: string; provider: string; negativePrompt: string
+    width: number; height: number; steps: number; cfgScale: number
+    seed: number | null; numImages: number; style: string
+  }): Promise<{ success: boolean; images?: any[]; error?: string }> {
+    return this.instance.post('/api/art/generate', params)
+  }
+
+  async deleteImage(id: string): Promise<void> {
+    return this.instance.post('/api/art/delete', { id })
+  }
+
+  async clearGallery(): Promise<void> {
+    return this.instance.post('/api/art/clear')
+  }
+
+  getImageUrl(filename: string): string {
+    return `${this.endpoint}/api/art/image/${encodeURIComponent(filename)}`
+  }
+
+  async getProviders(): Promise<{ providers: Array<{ name: string; available: boolean }> }> {
+    return this.instance.get('/api/art/providers')
+  }
+
+  // ── 系统提示词 ──
+  async getSystemPrompt(): Promise<{ prompt: string }> {
+    return this.instance.get('/api/system/prompt')
+  }
+
+  async setSystemPrompt(content: string): Promise<void> {
+    return this.instance.post('/api/system/prompt', { prompt: content })
+  }
+
+  async setSystemConfig(payload: Record<string, any>): Promise<void> {
+    return this.instance.post('/api/config/set', payload)
+  }
+
+  // ── 文件 ──
+  async parseDocument(file: File): Promise<{ content: string; truncated?: boolean }> {
+    const form = new FormData()
+    form.append('file', file)
+    return this.instance.post('/api/document/parse', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  }
+
+  async uploadDocument(file: File): Promise<{ filePath?: string }> {
+    const form = new FormData()
+    form.append('file', file)
+    return this.instance.post('/api/document/upload', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  }
+
+  // ── 语音 ──
+  async transcribeAudio(audioBlob: Blob, options: { language: string }): Promise<{ text: string }> {
+    const form = new FormData()
+    form.append('audio', audioBlob, 'recording.wav')
+    form.append('language', options.language)
+    return this.instance.post('/api/audio/transcribe', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  }
+
+  // ── 调试 / 诊断 ──
+  async systemInfo(): Promise<any> {
+    return this.instance.get('/api/system/info')
+  }
+
+  async getToolStatus(): Promise<any> {
+    return this.instance.get('/api/tools/status')
+  }
+
+  async getOpenclawTasks(): Promise<any> {
+    return this.instance.get('/api/openclaw/tasks')
+  }
+
+  async agentServerHealth(): Promise<any> {
+    return this.instance.get('/api/agent/health')
+  }
+
+  async agentServerFullHealth(): Promise<any> {
+    return this.instance.get('/api/agent/full_health')
+  }
+
+  async agentServerOpenclawHealth(): Promise<any> {
+    return this.instance.get('/api/agent/openclaw_health')
+  }
+
+  // ── 遥测 ──
+  async getTelemetryStatus(): Promise<any> {
+    return this.instance.get('/api/telemetry/status')
+  }
+
+  async flushTelemetry(): Promise<{ result: any }> {
+    return this.instance.post('/api/telemetry/flush')
   }
 }
 

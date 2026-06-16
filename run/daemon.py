@@ -34,6 +34,9 @@ PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 os.environ["MIYA_DAEMON_MODE"] = "1"  # v7.0: 标记 daemon 模式，避免重复日志 handler
 
+# 本地 OCR 模型全局配置 — 初始化前设置，避免联网检查
+os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
+
 
 def setup_logging():
     logging.basicConfig(

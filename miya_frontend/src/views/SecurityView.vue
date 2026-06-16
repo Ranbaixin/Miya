@@ -133,7 +133,7 @@ async function fetchToolList() {
     if (data.success && data.categories.length > 0) {
       toolCategoriesList.value = data.categories
       toolList.value = data.tools
-      expandedCats.value = new Set([data.categories[0]])
+      expandedCats.value = new Set([data.categories[0]!])
     }
   } catch {
     // 保持降级数据，无需处理
@@ -252,7 +252,7 @@ async function startScan() {
   currentPhase.value = 0; securityScore.value = 0; securityGrade.value = '?'
 
   const t = target.value.trim()
-  const strat = strategies[strategy.value]
+  const strat = strategies[strategy.value]!
   const scanResults: Record<string, any> = {}
 
   addLog(`目标: ${t}  |  策略: ${strat.name}  |  阶段: ${strat.phases.length}/5`, 'phase')

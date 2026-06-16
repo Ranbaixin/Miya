@@ -96,6 +96,9 @@ from dotenv import load_dotenv as _load_dotenv
 _load_dotenv(project_root / "config" / ".env")
 os.environ["_MIYA_DOTENV_LOADED"] = "1"
 
+# 本地 OCR 模型全局配置 — 初始化前设置，避免联网检查
+os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
+
 # 使用统一的端口检测工具
 from config import Settings
 from core import Arbitrator, Entropy, Ethics, Identity, Personality, PromptManager

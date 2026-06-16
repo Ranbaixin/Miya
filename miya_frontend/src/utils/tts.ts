@@ -2,6 +2,8 @@ import { ref, watch } from 'vue'
 import API from '@/api/core'
 import { proxySetMouth, proxySetState } from '@/utils/live2dProxy'
 
+const isLoggedIn = false
+
 const audio = ref<HTMLAudioElement | null>(null)
 export const isPlaying = ref(false)
 let maxDurationTimer: number | null = null
@@ -34,7 +36,7 @@ function startMouthSync(el: HTMLAudioElement): void {
       if (!mouthAnalyser) return
       mouthAnalyser.getFloatTimeDomainData(dataArray)
       let sum = 0
-      for (let i = 0; i < dataArray.length; i++) sum += Math.abs(dataArray[i])
+      for (let i = 0; i < dataArray.length; i++) sum += Math.abs(dataArray[i] ?? 0)
       const rms = sum / dataArray.length
       // ParamMouthOpenY: Cubism 口型张开参数
       const mouthOpen = Math.min(1, Math.max(0, rms * 5))

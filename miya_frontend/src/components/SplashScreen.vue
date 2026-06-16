@@ -192,7 +192,7 @@ const displayProgress = computed(() => Math.min(100, Math.round(props.progress))
       <!-- 阶段文字 + 百分比 -->
       <div
         class="flex justify-between w-full px-1 text-xs tracking-widest"
-        :style="{ color: `color-mix(in srgb, ${getSplashColor('--miya-comp-splash-progress', '#d4af37')} 70%, transparent)`, fontFamily: \"'Segoe UI', sans-serif\" }"
+        :style='{ color: `color-mix(in srgb, ${getSplashColor("--miya-comp-splash-progress", "#d4af37")} 70%, transparent)`, fontFamily: "Segoe UI, sans-serif" }'
       >
         <span>{{ phase }}</span>
         <span>{{ displayProgress }}%</span>
