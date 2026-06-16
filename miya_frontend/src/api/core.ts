@@ -199,7 +199,7 @@ export class CoreApiClient extends ApiClient {
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const reader = res.body?.getReader()
-    if (!reader) return aiter<StreamChunk>([])
+    if (!reader) return aiter((async function* () { /* empty */ })())
     const msgStream = readerToMessageStream(reader)
     return aiter((async function* () {
       for await (const data of msgStream) {
@@ -242,7 +242,7 @@ export class CoreApiClient extends ApiClient {
 
   // ── 会话 ──
   async getSessions(): Promise<{ sessions: any[] }> {
-    const sessions = await this.instance.get('/api/chat/sessions')
+    const sessions = await this.instance.get('/api/chat/sessions') as any[]
     return { sessions }
   }
 
