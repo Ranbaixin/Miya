@@ -30,23 +30,21 @@ onMounted(async () => {
 
 const { height } = useWindowSize()
 
-// ─── Wing layout — 左翼 4 张 + 右翼 4 张 ──────────────────────────
-// radii: tip 羽尖 / inner 内羽 — staggered for feather look
+// ─── Wing layout — 左翼 5 张 + 右翼 5 张 ──────────────────────────
+// radii: 1 羽尖 / 2 内羽 — 依次排开如翅膀层次
 const cards = [
-  // ═══ 左翼（扇展 150°→210°）═══
-  { id: 'community', label: '娜迦社区', desc: '发帖 · 交友 · 互动', path: '/community', angle: 150, radius: 1, varName: '--miya-comp-panel-card-1', fallback: '#ff77aa', emoji: '✧' },
-  { id: 'screen',    label: '屏幕视觉', desc: '截图 · AI 分析',       path: '/screen',    angle: 167, radius: 2, varName: '--miya-comp-panel-card-2', fallback: '#ff9944', emoji: '⊙' },
-  { id: 'terminal',  label: '终端引擎', desc: 'Claude Code · 代码',   path: '/terminal',  angle: 193, radius: 2, varName: '--miya-comp-panel-card-3', fallback: '#00e88f', emoji: '⬡' },
-  { id: 'openclaw',  label: '电脑控制', desc: 'OpenClaw · AI 操作',   path: '/openclaw',  angle: 210, radius: 1, varName: '--miya-comp-panel-card-4', fallback: '#ff5577', emoji: '⬢' },
-  // ═══ 右翼（扇展 -30°→30°）═══
-  { id: 'chat',      label: '弥娅对话', desc: '决策层 · 感知 · 协作', path: '/chat',      angle: -30, radius: 1, varName: '--miya-comp-panel-card-5', fallback: '#b44dff', emoji: '◆' },
-  { id: 'mind',      label: '记忆星河', desc: '认知引擎 · 记忆网络',  path: '/mind',      angle: -13, radius: 2, varName: '--miya-comp-panel-card-6', fallback: '#00e5ff', emoji: '◇' },
-  { id: 'config',    label: '灵魂调谐', desc: '人格 · 情绪 · 模型池', path: '/config',    angle:  13, radius: 2, varName: '--miya-comp-panel-card-7', fallback: '#d4af37', emoji: '❖' },
-  { id: 'floating',  label: '铃音守护', desc: '轻量陪伴 · 悬浮球',   icon: 'floating',  angle:  30, radius: 1, varName: '--miya-comp-panel-card-8', fallback: '#4da6ff', emoji: '◈' },
-  // ═══ 右下 ═══
-  { id: 'security',  label: '安全中心', desc: '扫描 · 渗透 · 分析',   path: '/security',  angle: -45, radius: 1, varName: '--miya-comp-panel-card-9', fallback: '#ff5555', emoji: '⬡' },
-  // ═══ 右下 ═══
-  { id: 'artboard',  label: '弥娅画板', desc: 'AI 绘画 · 创作展示',   path: '/artboard',  angle: 60, radius: 2, varName: '--miya-comp-panel-card-10', fallback: '#f59e0b', emoji: '⬗' },
+  // ═══ 左翼（135°→220°, 85°展幅）═══
+  { id: 'community', label: '娜迦社区', desc: '发帖 · 交友 · 互动', path: '/community', angle: 135, radius: 1, varName: '--miya-comp-panel-card-1', fallback: '#ff77aa', emoji: '✧' },
+  { id: 'screen',    label: '屏幕视觉', desc: '截图 · AI 分析',       path: '/screen',    angle: 158, radius: 2, varName: '--miya-comp-panel-card-2', fallback: '#ff9944', emoji: '⊙' },
+  { id: 'security',  label: '安全中心', desc: '扫描 · 渗透 · 分析',   path: '/security',  angle: 180, radius: 2, varName: '--miya-comp-panel-card-9', fallback: '#ff5555', emoji: '⬡' },
+  { id: 'terminal',  label: '终端引擎', desc: 'Claude Code · 代码',   path: '/terminal',  angle: 202, radius: 2, varName: '--miya-comp-panel-card-3', fallback: '#00e88f', emoji: '⬡' },
+  { id: 'openclaw',  label: '电脑控制', desc: 'OpenClaw · AI 操作',   path: '/openclaw',  angle: 220, radius: 1, varName: '--miya-comp-panel-card-4', fallback: '#ff5577', emoji: '⬢' },
+  // ═══ 右翼（-40°→40°, 80°展幅）═══
+  { id: 'chat',      label: '弥娅对话', desc: '决策层 · 感知 · 协作', path: '/chat',      angle: -40, radius: 1, varName: '--miya-comp-panel-card-5', fallback: '#b44dff', emoji: '◆' },
+  { id: 'mind',      label: '记忆星河', desc: '认知引擎 · 记忆网络',  path: '/mind',      angle: -22, radius: 2, varName: '--miya-comp-panel-card-6', fallback: '#00e5ff', emoji: '◇' },
+  { id: 'config',    label: '灵魂调谐', desc: '人格 · 情绪 · 模型池', path: '/config',    angle:   0, radius: 2, varName: '--miya-comp-panel-card-7', fallback: '#d4af37', emoji: '❖' },
+  { id: 'floating',  label: '铃音守护', desc: '轻量陪伴 · 悬浮球',   icon: 'floating',  angle:  22, radius: 2, varName: '--miya-comp-panel-card-8', fallback: '#4da6ff', emoji: '◈' },
+  { id: 'artboard',  label: '弥娅画板', desc: 'AI 绘画 · 创作展示',   path: '/artboard',  angle:  40, radius: 1, varName: '--miya-comp-panel-card-10', fallback: '#f59e0b', emoji: '⬗' },
 ]
 
 // ─── Mouse tracking ──────────────────────────────────────────────────
@@ -59,9 +57,9 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
 // ─── Wing geometry ───────────────────────────────────────────────────
 const cardScale = useStorage('miya-panel-card-scale', 1.0)
 // 半径随缩放自适应：卡片越大，轨道越远，减少重叠
-const gapFactor = computed(() => 0.5 + cardScale.value * 0.5) // scale 1.0→1.0, scale 2.0→1.5
-const tipRadius   = computed(() => Math.min(280, height.value * 0.30) * gapFactor.value)
-const innerRadius = computed(() => Math.min(220, height.value * 0.26) * gapFactor.value)
+const gapFactor = computed(() => 0.5 + cardScale.value * 0.6) // scale 1.0→1.1, scale 2.0→1.7
+const tipRadius   = computed(() => Math.min(320, height.value * 0.35) * gapFactor.value)
+const innerRadius = computed(() => Math.min(250, height.value * 0.30) * gapFactor.value)
 const rotationRx  = computed(() => (mouse.y - 0.5) * -5)
 const rotationRy  = computed(() => (mouse.x - 0.5) * 8)
 const SCALE       = computed(() => Math.min(1.08, Math.max(0.72, height.value / 900)) * cardScale.value)
@@ -78,32 +76,28 @@ const cardPositions = computed(() =>
 const wingLines = computed(() => {
   const pos = cardPositions.value as { x: number; y: number }[]
   const lines: { x1: number; y1: number; x2: number; y2: number; cls: string }[] = []
-  // Left wing: feather chain (0→1→2→3)
-  for (let i = 0; i < 3; i++) lines.push({ x1: pos[i]!.x, y1: pos[i]!.y, x2: pos[i + 1]!.x, y2: pos[i + 1]!.y, cls: 'wing-feather' })
-  // Right wing: feather chain (4→5→6→7)
-  for (let i = 4; i < 7; i++) lines.push({ x1: pos[i]!.x, y1: pos[i]!.y, x2: pos[i + 1]!.x, y2: pos[i + 1]!.y, cls: 'wing-feather' })
+  // Left wing: feather chain (0→1→2→3→4)
+  for (let i = 0; i < 4; i++) lines.push({ x1: pos[i]!.x, y1: pos[i]!.y, x2: pos[i + 1]!.x, y2: pos[i + 1]!.y, cls: 'wing-feather' })
+  // Right wing: feather chain (5→6→7→8→9)
+  for (let i = 5; i < 9; i++) lines.push({ x1: pos[i]!.x, y1: pos[i]!.y, x2: pos[i + 1]!.x, y2: pos[i + 1]!.y, cls: 'wing-feather' })
   // Each feather to center
   for (let i = 0; i < cards.length; i++) lines.push({ x1: 0, y1: 0, x2: pos[i]!.x, y2: pos[i]!.y, cls: 'feather-to-center' })
   // Wing root connectors (tip feathers → center with highlight)
   lines.push({ x1: 0, y1: 0, x2: pos[0]!.x, y2: pos[0]!.y, cls: 'wing-root' })
-  lines.push({ x1: 0, y1: 0, x2: pos[3]!.x, y2: pos[3]!.y, cls: 'wing-root' })
   lines.push({ x1: 0, y1: 0, x2: pos[4]!.x, y2: pos[4]!.y, cls: 'wing-root' })
-  lines.push({ x1: 0, y1: 0, x2: pos[7]!.x, y2: pos[7]!.y, cls: 'wing-root' })
-  // Security center card
-  if (pos.length > 8) lines.push({ x1: 0, y1: 0, x2: pos[8]!.x, y2: pos[8]!.y, cls: 'wing-root' })
-  // Artboard card
-  if (pos.length > 9) lines.push({ x1: 0, y1: 0, x2: pos[9]!.x, y2: pos[9]!.y, cls: 'wing-root' })
+  lines.push({ x1: 0, y1: 0, x2: pos[5]!.x, y2: pos[5]!.y, cls: 'wing-root' })
+  lines.push({ x1: 0, y1: 0, x2: pos[9]!.x, y2: pos[9]!.y, cls: 'wing-root' })
   return lines
 })
 
 const leftWingPoints = computed(() => {
   const p = cardPositions.value as { x: number; y: number }[]
-  return `0,0 ${p[0]!.x},${p[0]!.y} ${p[1]!.x},${p[1]!.y} ${p[2]!.x},${p[2]!.y} ${p[3]!.x},${p[3]!.y}`
+  return `0,0 ${p[0]!.x},${p[0]!.y} ${p[1]!.x},${p[1]!.y} ${p[2]!.x},${p[2]!.y} ${p[3]!.x},${p[3]!.y} ${p[4]!.x},${p[4]!.y}`
 })
 
 const rightWingPoints = computed(() => {
   const p = cardPositions.value as { x: number; y: number }[]
-  return `0,0 ${p[4]!.x},${p[4]!.y} ${p[5]!.x},${p[5]!.y} ${p[6]!.x},${p[6]!.y} ${p[7]!.x},${p[7]!.y}`
+  return `0,0 ${p[5]!.x},${p[5]!.y} ${p[6]!.x},${p[6]!.y} ${p[7]!.x},${p[7]!.y} ${p[8]!.x},${p[8]!.y} ${p[9]!.x},${p[9]!.y}`
 })
 
 // ─── Per-card tilt ───────────────────────────────────────────────────

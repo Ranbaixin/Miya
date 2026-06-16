@@ -120,6 +120,8 @@ const COLOR_GROUPS: ColorGroup[] = [
       { key: 'card6', label: '轨道卡 6', cssVar: '--miya-comp-panel-card-6', default: '#00e5ff' },
       { key: 'card7', label: '轨道卡 7', cssVar: '--miya-comp-panel-card-7', default: '#d4af37' },
       { key: 'card8', label: '轨道卡 8', cssVar: '--miya-comp-panel-card-8', default: '#4da6ff' },
+      { key: 'card9', label: '轨道卡 9', cssVar: '--miya-comp-panel-card-9', default: '#ff5555' },
+      { key: 'card10', label: '轨道卡 10', cssVar: '--miya-comp-panel-card-10', default: '#f59e0b' },
     ],
   },
   {
