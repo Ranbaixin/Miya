@@ -96,7 +96,12 @@ class GenerationService:
         if self.personality and hasattr(self.personality, "get_system_prompt"):
             parts.append(self.personality.get_system_prompt())
         else:
-            parts.append("你是弥娅 (MIYA)，一个 AI 虚拟化身。")
+            from core.config_loader import get_text_config_value
+
+            fallback = get_text_config_value(
+                "prompt_templates.generation.fallback_identity", "你是弥娅 (MIYA)，一个 AI 虚拟化身。"
+            )
+            parts.append(fallback)
 
         if self.identity and hasattr(self.identity, "get_prompt"):
             parts.append(self.identity.get_prompt())
@@ -107,12 +112,17 @@ class GenerationService:
         return "\n\n".join(parts)
 
     async def _fallback(self, request: ProcessRequest) -> str:
-        person_names = [
-            "嗯...我在想一些事情",
-            "让我整理一下思绪",
-            "亲爱的，稍等一下哦",
-            "我需要一点时间思考",
-        ]
+        from core.config_loader import get_text_config_value
+
+        person_names = get_text_config_value(
+            "prompt_templates.generation.fallback_replies",
+            [
+                "嗯...我在想一些事情",
+                "让我整理一下思绪",
+                "亲爱的，稍等一下哦",
+                "我需要一点时间思考",
+            ],
+        )
         import random
 
         return random.choice(person_names)

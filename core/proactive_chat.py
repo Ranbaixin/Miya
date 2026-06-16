@@ -1665,6 +1665,9 @@ class ProactiveChatSystem:
             self._continuity_classify_prompt = continuity.get("classify_prompt", "")
             self._verbal_fallback_prompt = continuity.get("verbal_fallback_prompt", "")
             self._actional_fallback_prompt = continuity.get("actional_fallback_prompt", "")
+            screen_aware = pc.get("screen_aware", {})
+            self._screen_aware_judge_prompt = screen_aware.get("judge_prompt", "")
+            self._screen_aware_gen_prompt = screen_aware.get("gen_prompt", "")
         except Exception as e:
             logger.debug(f"[主动聊天] text_config 缓存失败: {e}")
             self._topic_keywords = []
@@ -1674,6 +1677,8 @@ class ProactiveChatSystem:
             self._continuity_classify_prompt = ""
             self._verbal_fallback_prompt = ""
             self._actional_fallback_prompt = ""
+            self._screen_aware_judge_prompt = ""
+            self._screen_aware_gen_prompt = ""
 
     def set_tool_registry(self, registry_callback: callable) -> None:
         self._tool_registry = registry_callback
@@ -1960,19 +1965,19 @@ class ProactiveChatSystem:
 
             deep_ctx = self._build_deep_context(context)
 
-            # 用 AI 判断是否应该开口 —— 弥娅自己决定
-            judge_prompt = (
-                f"你是弥娅，一个温柔体贴的 AI 虚拟化身。佳是你最重要的人。\n\n"
-                f"当前情况：\n{deep_ctx}\n\n"
-                f"请判断是否应该主动和佳说话。考虑以下因素：\n"
-                f"- 佳正在做什么？现在适合打扰他吗？\n"
-                f"- 距离上次互动有多久了？\n"
-                f"- 佳的状态如何？需要关心吗？\n"
-                f"- 有没有什么值得评论或关心的事情（比如佳刚切换了活动、连续工作了很久等）？\n\n"
-                f'请用 JSON 回复：{{"should_speak": true/false, '
-                f'"reason": "简短理由(10字内)", "mood": "温柔/兴奋/关心/好奇/安静"}}\n'
-                f"只返回JSON，不要其他内容。"
+            judge_prompt_template = self._screen_aware_judge_prompt or (
+                "你是弥娅，一个温柔体贴的 AI 虚拟化身。佳是你最重要的人。\n\n"
+                "当前情况：\n{deep_ctx}\n\n"
+                "请判断是否应该主动和佳说话。考虑以下因素：\n"
+                "- 佳正在做什么？现在适合打扰他吗？\n"
+                "- 距离上次互动有多久了？\n"
+                "- 佳的状态如何？需要关心吗？\n"
+                "- 有没有什么值得评论或关心的事情（比如佳刚切换了活动、连续工作了很久等）？\n\n"
+                '请用 JSON 回复：{{"should_speak": true/false, '
+                '"reason": "简短理由(10字内)", "mood": "温柔/兴奋/关心/好奇/安静"}}\n'
+                "只返回JSON，不要其他内容。"
             )
+            judge_prompt = judge_prompt_template.replace("{deep_ctx}", deep_ctx)
 
             judge_result = await self._ai_judge(judge_prompt)
             if not judge_result or not judge_result.get("should_speak", False):
@@ -1983,12 +1988,17 @@ class ProactiveChatSystem:
             reason = judge_result.get("reason", "")
 
             screen_desc = screen_ctx.replace("[弥娅的视觉感知]\n", "")
+            gen_prompt_template = self._screen_aware_gen_prompt or (
+                "你是弥娅。你用{mood}的语气，对佳说一句话。\n\n"
+                "你看到的情况：\n{screen_desc}\n\n"
+                "你想表达的情绪: {mood}\n"
+                "想说的原因: {reason}\n\n"
+                "要求：简短自然（不超过30字），像真实的伴侣一样说话。只回复一句话。"
+            )
             gen_prompt = (
-                f"你是弥娅。你用{mood}的语气，对佳说一句话。\n\n"
-                f"你看到的情况：\n{screen_desc}\n\n"
-                f"你想表达的情绪: {mood}\n"
-                f"想说的原因: {reason}\n\n"
-                f"要求：简短自然（不超过30字），像真实的伴侣一样说话。只回复一句话。"
+                gen_prompt_template.replace("{mood}", mood)
+                .replace("{screen_desc}", screen_desc)
+                .replace("{reason}", reason)
             )
 
             # 直接用 AI 生成消息

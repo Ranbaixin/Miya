@@ -668,7 +668,8 @@ class CTFSolver:
             recent_fails = list(self.failed_attempts.items())[-3:]
             failed_hint = "\n近期失败尝试:\n" + "\n".join(f"- {k} (×{v}次)" for k, v in recent_fails)
 
-        prompt = f"""你是弥娅的 CTF 解题 Agent。目标：分析题目并制定下一步操作。
+        prompt_header = self._load_ctf_prompt_header()
+        prompt = f"""{prompt_header}
 
 {skill_prompt}
 
@@ -697,6 +698,23 @@ class CTFSolver:
         except Exception as e:
             logger.error("CTF Think 失败: %s", e)
             return str(e), []
+
+    @staticmethod
+    def _load_ctf_prompt_header() -> str:
+        try:
+            import json as _json
+            from pathlib import Path
+
+            config_path = Path(__file__).parent.parent.parent.parent / "config" / "text_config.json"
+            with open(config_path, "r", encoding="utf-8") as _f:
+                _cfg = _json.load(_f)
+            return (
+                _cfg.get("prompt_templates", {})
+                .get("ctf_agent", {})
+                .get("prompt_header", "你是弥娅的 CTF 解题 Agent。目标：分析题目并制定下一步操作。")
+            )
+        except Exception:
+            return "你是弥娅的 CTF 解题 Agent。目标：分析题目并制定下一步操作。"
 
     async def _analyze(self, step: CTFStep) -> Dict[str, Any]:
         tool_outputs = "\n".join(

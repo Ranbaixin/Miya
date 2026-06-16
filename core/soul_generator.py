@@ -208,6 +208,22 @@ def _load_config() -> Dict:
 _CONFIG = _load_config()
 
 
+def _load_inner_thought_fallback_role() -> str:
+    try:
+        import json as _json
+
+        config_path = Path(__file__).parent.parent / "config" / "text_config.json"
+        with open(config_path, "r", encoding="utf-8") as _f:
+            _cfg = _json.load(_f)
+        return (
+            _cfg.get("prompt_templates", {})
+            .get("soul_generator", {})
+            .get("inner_thought_fallback_role", "你是弥娅的内心独白系统...")
+        )
+    except Exception:
+        return "你是弥娅的内心独白系统..."
+
+
 class EmotionCategory(Enum):
     """情绪分类 - 完整人类情感图谱（70+情绪类别）"""
 
@@ -1032,7 +1048,7 @@ class SoulGenerator:
 
             # 从配置获取内心独白prompt模板
             prompt_config = _CONFIG.get("INNER_THOUGHT_PROMPT", {})
-            role = prompt_config.get("role", "你是弥娅的内心独白系统...")
+            role = prompt_config.get("role") or _load_inner_thought_fallback_role()
             rules = prompt_config.get("rules", [])
             pronoun_rule = prompt_config.get("pronoun_rule", "")
             emotion_continuity_rule = prompt_config.get("emotion_continuity_rule", "")

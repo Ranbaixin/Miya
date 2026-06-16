@@ -107,9 +107,7 @@ class LifeBook:
         year = now.year
 
         file_org = self._get_config_value("file_organization")
-        summaries_folder = (
-            file_org.get("summaries_folder", "summaries") if file_org else "summaries"
-        )
+        summaries_folder = file_org.get("summaries_folder", "summaries") if file_org else "summaries"
 
         dir_map = {
             "lover": self.lover_dir / summaries_folder,
@@ -120,22 +118,14 @@ class LifeBook:
 
         if period == "week":
             week_num = now.isocalendar()[1]
-            weekly_pattern = (
-                file_org.get("weekly_filename_pattern")
-                if file_org
-                else "W{week:02d}.md"
-            )
+            weekly_pattern = file_org.get("weekly_filename_pattern") if file_org else "W{week:02d}.md"
             file_path = base_dir / f"{year}" / weekly_pattern.format(week=week_num)
         elif period == "month":
             month_str = now.strftime("%m")
-            monthly_pattern = (
-                file_org.get("monthly_filename_pattern") if file_org else "{month}.md"
-            )
+            monthly_pattern = file_org.get("monthly_filename_pattern") if file_org else "{month}.md"
             file_path = base_dir / f"{year}" / monthly_pattern.format(month=month_str)
         elif period == "year":
-            yearly_pattern = (
-                file_org.get("yearly_filename_pattern") if file_org else "{year}.md"
-            )
+            yearly_pattern = file_org.get("yearly_filename_pattern") if file_org else "{year}.md"
             file_path = base_dir / yearly_pattern.format(year=year)
         else:
             file_path = base_dir / f"{year}" / f"{period}.md"
@@ -177,14 +167,10 @@ class LifeBook:
                 "user_count": 0,
                 "lover_count": 0,
             }
-        self._index[date_key]["together_count"] = (
-            self._index[date_key].get("together_count", 0) + 1
-        )
+        self._index[date_key]["together_count"] = self._index[date_key].get("together_count", 0) + 1
         self._save_index()
 
-        logger.debug(
-            f"[LifeBook] 实时记录: user={user_message[:20]}..., lover={lover_response[:20]}..."
-        )
+        logger.debug(f"[LifeBook] 实时记录: user={user_message[:20]}..., lover={lover_response[:20]}...")
 
     async def _extract_and_record_user_facts(self, user_message: str):
         """从用户消息中自动提取并记录重要事实"""
@@ -287,9 +273,7 @@ class LifeBook:
                 "user_count": 0,
                 "lover_count": 0,
             }
-        self._index[date_key]["user_count"] = (
-            self._index[date_key].get("user_count", 0) + 1
-        )
+        self._index[date_key]["user_count"] = self._index[date_key].get("user_count", 0) + 1
         self._save_index()
 
         logger.info(f"[LifeBook] 记录用户事实: {fact[:30]}...")
@@ -330,9 +314,7 @@ class LifeBook:
                 "user_count": 0,
                 "lover_count": 0,
             }
-        self._index[date_key]["lover_count"] = (
-            self._index[date_key].get("lover_count", 0) + 1
-        )
+        self._index[date_key]["lover_count"] = self._index[date_key].get("lover_count", 0) + 1
         self._save_index()
 
         logger.debug(f"[LifeBook] 记录lover思考: {thought[:30]}...")
@@ -362,9 +344,7 @@ class LifeBook:
 
             # 如果文件不存在，先创建
             if not lover_file.exists():
-                year, month = self._get_year_month(
-                    datetime.strptime(date_key, "%Y-%m-%d")
-                )
+                year, month = self._get_year_month(datetime.strptime(date_key, "%Y-%m-%d"))
                 initial_content = f"""# {date_key} 我的日记
 
 > 作为lover，我的思考与感受。
@@ -391,9 +371,7 @@ class LifeBook:
         week_num = now.isocalendar()[1]
 
         start_of_week = now - timedelta(days=now.weekday())
-        dates = [
-            (start_of_week + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)
-        ]
+        dates = [(start_of_week + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)]
 
         contents = []
         for date_key in dates:
@@ -449,9 +427,7 @@ class LifeBook:
                 break
             together_file = self._get_daily_file(date_key, "together")
             if together_file.exists():
-                contents.append(
-                    f"## {date_key}\n{together_file.read_text(encoding='utf-8')[:300]}"
-                )
+                contents.append(f"## {date_key}\n{together_file.read_text(encoding='utf-8')[:300]}")
 
         if not contents:
             logger.info(f"[LifeBook] {year}-{month} 无内容，跳过总结")
@@ -511,9 +487,7 @@ class LifeBook:
             return "（模型不可用）"
 
         try:
-            provider_val = getattr(model_cfg.provider, "value", None) or str(
-                model_cfg.provider
-            )
+            provider_val = getattr(model_cfg.provider, "value", None) or str(model_cfg.provider)
 
             client = AIClientFactory.create_client(
                 provider=provider_val,
@@ -532,10 +506,7 @@ class LifeBook:
 
             template = template.format(content=content, **extra) if extra else template.format(content=content)
 
-            system_prompt = (
-                self._get_config_value("system_prompt")
-                or "你是一个温暖的AI伴侣，请用第一人称写总结。"
-            )
+            system_prompt = self._get_config_value("system_prompt") or _load_lifebook_summary_prompt()
 
             summary = await client.chat_with_system_prompt(
                 system_prompt=system_prompt,
@@ -558,18 +529,14 @@ class LifeBook:
             return daily_file.read_text(encoding="utf-8")
         return None
 
-    def get_period_summary(
-        self, period: str, perspective: str = "lover"
-    ) -> Optional[str]:
+    def get_period_summary(self, period: str, perspective: str = "lover") -> Optional[str]:
         """获取周期总结"""
         period_file = self._get_period_file(period, perspective)
         if period_file.exists():
             return period_file.read_text(encoding="utf-8")
         return None
 
-    def list_entries(
-        self, perspective: str = "lover", year: Optional[int] = None, limit: int = None
-    ) -> List[Dict]:
+    def list_entries(self, perspective: str = "lover", year: Optional[int] = None, limit: int = None) -> List[Dict]:
         """列出日记条目"""
         if limit is None:
             list_limit_config = self._get_config_value("list_limit")
@@ -599,9 +566,7 @@ class LifeBook:
                 if year_dir.is_dir() and year_dir.name.isdigit():
                     for month_dir in sorted(year_dir.iterdir(), reverse=True):
                         if month_dir.is_dir():
-                            md_files = sorted(month_dir.glob("*.md"), reverse=True)[
-                                :limit
-                            ]
+                            md_files = sorted(month_dir.glob("*.md"), reverse=True)[:limit]
                             for f in md_files:
                                 results.append({"date": f.stem, "file": str(f)})
                                 if len(results) >= limit:
@@ -687,6 +652,22 @@ class LifeBook:
 
         logger.info(f"[LifeBook] 会话已追加: {date_key}")
         return date_key
+
+
+def _load_lifebook_summary_prompt() -> str:
+    try:
+        import json as _json
+
+        config_path = Path(__file__).parent.parent / "config" / "text_config.json"
+        with open(config_path, "r", encoding="utf-8") as _f:
+            _cfg = _json.load(_f)
+        return (
+            _cfg.get("prompt_templates", {})
+            .get("lifebook", {})
+            .get("summary_system_prompt", "你是一个温暖的AI伴侣，请用第一人称写总结。")
+        )
+    except Exception:
+        return "你是一个温暖的AI伴侣，请用第一人称写总结。"
 
 
 # 全局单例

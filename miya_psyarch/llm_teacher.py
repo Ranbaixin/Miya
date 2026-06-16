@@ -36,7 +36,34 @@ def _build_teaching_prompt(
     state_str = ", ".join(state_items[:6]) if state_items else "空"
     focus_str = ", ".join(focus[:4]) if focus else "空"
 
-    return f"""你是弥娅(AP白箱认知引擎)的教师。你在教她技能: "{skill_name}"——{skill_desc}。
+    template = _load_teaching_prompt_template()
+    return (
+        template.replace("{skill_name}", skill_name)
+        .replace("{skill_desc}", skill_desc)
+        .replace("{trigger}", trigger)
+        .replace("{demo}", demo)
+        .replace("{round_num}", str(round_num))
+        .replace("{feel_str}", feel_str)
+        .replace("{emo_str}", emo_str)
+        .replace("{state_str}", state_str)
+        .replace("{focus_str}", focus_str)
+        .replace("{bn_score:.0f}", f"{bn_score:.0f}")
+    )
+
+
+def _load_teaching_prompt_template() -> str:
+    try:
+        import json
+        from pathlib import Path
+
+        config_path = Path(__file__).parent.parent / "config" / "text_config.json"
+        with open(config_path, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+        return cfg.get("prompt_templates", {}).get("llm_teacher", {}).get("teaching_prompt", "")
+    except Exception:
+        pass
+    return """你是弥娅(AP白箱认知引擎)的教师。你在教她技能: "{skill_name}"——{skill_desc}。
+
 
 本轮教学:
   用户说了: "{trigger}"

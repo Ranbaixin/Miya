@@ -10,16 +10,43 @@ from typing import Any
 from miya_psyarch.education.intervention import normalize_education_intervention
 
 
-DEFAULT_SYSTEM_PROMPT = """You are an external APV2.1 teacher, not AP's core mind.
+def _get_default_system_prompt() -> str:
+    return """You are an external APV2.1 teacher, not AP's core mind.
 AP is like a very young learner: it only knows what has been demonstrated as building blocks.
 Give soft teaching interventions only: state_items, action_biases with parameters, and feedback.
 Do not directly complete the final task for AP. Encourage reusable process, reread, compare, revise,
 and reasonable new combinations built from taught blocks. Output strict JSON only."""
 
-DEFAULT_POSTHOC_JUDGE_PROMPT = """You are an external APV2.1 post-output judge, not AP's core mind.
+
+def _get_default_posthoc_judge_prompt() -> str:
+    return """You are an external APV2.1 post-output judge, not AP's core mind.
 AP has already committed its draft before you see it. Judge only the committed output.
 Return strict JSON with grade, feedback, and rationale. Do not output action_biases, state_items,
 text_insert params, text_replace params, or any next-answer suggestion."""
+
+
+_HARDCODED_SYSTEM = _get_default_system_prompt()
+_HARDCODED_POSTHOC = _get_default_posthoc_judge_prompt()
+
+
+def _load_education_prompts() -> None:
+    global DEFAULT_SYSTEM_PROMPT, DEFAULT_POSTHOC_JUDGE_PROMPT
+    try:
+        import json
+        from pathlib import Path
+
+        config_path = Path(__file__).parent.parent.parent / "config" / "text_config.json"
+        with open(config_path, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+        prompts = cfg.get("prompt_templates", {}).get("education_llm_teacher", {})
+        DEFAULT_SYSTEM_PROMPT = prompts.get("default_system_prompt", _HARDCODED_SYSTEM)
+        DEFAULT_POSTHOC_JUDGE_PROMPT = prompts.get("default_posthoc_judge_prompt", _HARDCODED_POSTHOC)
+    except Exception:
+        DEFAULT_SYSTEM_PROMPT = _HARDCODED_SYSTEM
+        DEFAULT_POSTHOC_JUDGE_PROMPT = _HARDCODED_POSTHOC
+
+
+_load_education_prompts()
 
 
 @dataclass
@@ -62,7 +89,9 @@ class LLMTeacherClient:
     def __init__(self, config: LLMTeacherConfig | None = None) -> None:
         self.config = config or LLMTeacherConfig.from_env()
 
-    def build_messages(self, *, goal: str, taught_blocks: list[dict], ap_trace_summary: dict, allowed_actions: list[str]) -> list[dict]:
+    def build_messages(
+        self, *, goal: str, taught_blocks: list[dict], ap_trace_summary: dict, allowed_actions: list[str]
+    ) -> list[dict]:
         user_payload = {
             "goal": str(goal or ""),
             "taught_blocks": list(taught_blocks or []),
@@ -203,7 +232,9 @@ class LLMTeacherClient:
         return sanitized
 
     def _sanitize_posthoc_judge(self, parsed: dict) -> dict:
-        forbidden = [key for key in ("action_biases", "state_items", "params", "allowed_actions") if key in dict(parsed or {})]
+        forbidden = [
+            key for key in ("action_biases", "state_items", "params", "allowed_actions") if key in dict(parsed or {})
+        ]
         grade = str((parsed or {}).get("grade", "") or "").strip().lower()
         if grade not in {"exact", "near", "wrong"}:
             grade = "wrong"
@@ -233,7 +264,9 @@ class LLMTeacherClient:
 
     def _chat_completion(self, messages: list[dict]) -> str:
         if not self.config.base_url or not self.config.api_key:
-            raise RuntimeError("LLM teacher is not configured; set APV21_LLM_TEACHER_BASE_URL and APV21_LLM_TEACHER_API_KEY.")
+            raise RuntimeError(
+                "LLM teacher is not configured; set APV21_LLM_TEACHER_BASE_URL and APV21_LLM_TEACHER_API_KEY."
+            )
         base = self.config.base_url.rstrip("/")
         url = f"{base}/v1/chat/completions"
         body = json.dumps(

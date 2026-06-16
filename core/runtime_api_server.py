@@ -117,9 +117,7 @@ class RuntimeAPIServer:
                 import json
                 from pathlib import Path
 
-                config_path = (
-                    Path(__file__).parent.parent / "config" / "multi_model_config.json"
-                )
+                config_path = Path(__file__).parent.parent / "config" / "multi_model_config.json"
                 if config_path.exists():
                     with open(config_path, "r", encoding="utf-8") as f:
                         config = json.load(f)
@@ -133,17 +131,13 @@ class RuntimeAPIServer:
                         if model_id and model_id in models:
                             model_config = models[model_id]
                             try:
-                                cls._global_model_client = (
-                                    AIClientFactory.create_client(
-                                        provider=model_config.get("provider", "openai"),
-                                        api_key=model_config.get("api_key", ""),
-                                        model=model_config.get("name", ""),
-                                        base_url=model_config.get("base_url", None),
-                                    )
+                                cls._global_model_client = AIClientFactory.create_client(
+                                    provider=model_config.get("provider", "openai"),
+                                    api_key=model_config.get("api_key", ""),
+                                    model=model_config.get("name", ""),
+                                    base_url=model_config.get("base_url", None),
                                 )
-                                logger.info(
-                                    f"[Runtime API] AI客户端初始化成功: {model_id}"
-                                )
+                                logger.info(f"[Runtime API] AI客户端初始化成功: {model_id}")
                                 break
                             except Exception as e:
                                 logger.debug(f"尝试模型 {model_id} 失败: {e}")
@@ -221,9 +215,7 @@ class RuntimeAPIServer:
         self._server_task: Optional[asyncio.Task[None]] = None
 
         if not FASTAPI_AVAILABLE:
-            logger.warning(
-                "[Runtime API] FastAPI不可用，请安装: pip install fastapi uvicorn"
-            )
+            logger.warning("[Runtime API] FastAPI不可用，请安装: pip install fastapi uvicorn")
 
     def set_cognitive_service(self, service: Any) -> None:
         """设置认知记忆服务"""
@@ -375,11 +367,7 @@ class RuntimeAPIServer:
         # FIX: allow_origins=['*'] 与 allow_credentials=True 组合在浏览器侧会被拒绝（规范不允许）。
         # 这里提供可配置的允许来源列表；若未配置则默认关闭 credentials 并允许任意来源。
         cors_origins_raw = os.getenv("MIYA_CORS_ALLOW_ORIGINS", "").strip()
-        allow_origins = (
-            [o.strip() for o in cors_origins_raw.split(",") if o.strip()]
-            if cors_origins_raw
-            else ["*"]
-        )
+        allow_origins = [o.strip() for o in cors_origins_raw.split(",") if o.strip()] if cors_origins_raw else ["*"]
         allow_credentials = allow_origins != ["*"]
 
         app.add_middleware(
@@ -625,9 +613,7 @@ class RuntimeAPIServer:
                 return {
                     "status": "success",
                     "personality": {
-                        "system_prompt": system_prompt[:500] + "..."
-                        if len(system_prompt) > 500
-                        else system_prompt,
+                        "system_prompt": system_prompt[:500] + "..." if len(system_prompt) > 500 else system_prompt,
                         "length": len(system_prompt),
                         "loaded": True,
                     },
@@ -644,9 +630,7 @@ class RuntimeAPIServer:
                 import json
                 from pathlib import Path
 
-                config_path = (
-                    Path(__file__).parent.parent / "config" / "multi_model_config.json"
-                )
+                config_path = Path(__file__).parent.parent / "config" / "multi_model_config.json"
 
                 if config_path.exists():
                     with open(config_path, "r", encoding="utf-8") as f:
@@ -711,13 +695,7 @@ class RuntimeAPIServer:
                                 lines = f.readlines()
                                 # 获取最后limit行
                                 recent_lines = lines[-limit:]
-                                logs.extend(
-                                    [
-                                        line.strip()
-                                        for line in recent_lines
-                                        if line.strip()
-                                    ]
-                                )
+                                logs.extend([line.strip() for line in recent_lines if line.strip()])
                                 if len(logs) >= limit:
                                     break
                         except Exception as e:
@@ -756,7 +734,16 @@ class RuntimeAPIServer:
                 memory_engine = RuntimeAPIServer._global_memory_engine
 
                 # 获取人设提示词
-                system_prompt = "你是弥娅，一个智能AI助手。你友善、专业、乐于助人。"
+                system_prompt = ""
+                try:
+                    from core.config_loader import get_text_config_value
+
+                    system_prompt = get_text_config_value(
+                        "prompt_templates.runtime_api.fallback_system_prompt",
+                        "你是弥娅，一个智能AI助手。你友善、专业、乐于助人。",
+                    )
+                except Exception:
+                    system_prompt = "你是弥娅，一个智能AI助手。你友善、专业、乐于助人。"
                 if prompt_manager:
                     try:
                         system_prompt = prompt_manager.get_system_prompt()
@@ -766,9 +753,7 @@ class RuntimeAPIServer:
                 # 添加工具使用说明
                 if tool_subnet:
                     tools_info = []
-                    for tool_name, tool in list(tool_subnet.registry.tools.items())[
-                        :10
-                    ]:
+                    for tool_name, tool in list(tool_subnet.registry.tools.items())[:10]:
                         try:
                             tool_config = tool.config if hasattr(tool, "config") else {}
                             description = tool_config.get("description", "无描述")
@@ -788,9 +773,7 @@ class RuntimeAPIServer:
                 # 添加记忆上下文
                 if memory_engine:
                     try:
-                        memory_context = await memory_engine.get_context(
-                            session_id, limit=5
-                        )
+                        memory_context = await memory_engine.get_context(session_id, limit=5)
                         if memory_context:
                             messages.append(
                                 AIMessage(
@@ -811,27 +794,16 @@ class RuntimeAPIServer:
 
                         for tool_name, tool in tool_subnet.registry.tools.items():
                             try:
-                                tool_config = (
-                                    tool.config if hasattr(tool, "config") else {}
-                                )
-                                tool_display_name = tool_config.get(
-                                    "name", tool_name
-                                ).lower()
+                                tool_config = tool.config if hasattr(tool, "config") else {}
+                                tool_display_name = tool_config.get("name", tool_name).lower()
 
-                                if (
-                                    tool_display_name in message.lower()
-                                    or tool_name.lower() in message.lower()
-                                ):
-                                    logger.info(
-                                        f"[终端聊天] 检测到工具调用: {tool_name}"
-                                    )
+                                if tool_display_name in message.lower() or tool_name.lower() in message.lower():
+                                    logger.info(f"[终端聊天] 检测到工具调用: {tool_name}")
 
                                     context = ToolContext(
                                         memory_engine=memory_engine,
                                         unified_memory=memory_engine,
-                                        user_id=int(session_id)
-                                        if session_id.isdigit()
-                                        else None,
+                                        user_id=int(session_id) if session_id.isdigit() else None,
                                         message_type="web",
                                     )
 
@@ -876,9 +848,7 @@ class RuntimeAPIServer:
                 # 保存对话到记忆系统
                 if memory_engine:
                     try:
-                        await memory_engine.add_conversation(
-                            session_id, message, response_text
-                        )
+                        await memory_engine.add_conversation(session_id, message, response_text)
                     except Exception as e:
                         logger.debug(f"保存对话记忆失败: {e}")
 
@@ -918,9 +888,7 @@ class RuntimeAPIServer:
         actual_port = find_available_port(self.port)
 
         if actual_port != original_port:
-            logger.warning(
-                f"[Runtime API] 默认端口 {original_port} 被占用，自动切换到端口 {actual_port}"
-            )
+            logger.warning(f"[Runtime API] 默认端口 {original_port} 被占用，自动切换到端口 {actual_port}")
             self.port = actual_port
 
         self.app = self._create_app()

@@ -27,12 +27,8 @@ class MessageStrategy:
     """消息策略分析结果"""
 
     should_respond: bool = True  # 是否应该回复
-    response_strategy: str = (
-        "full_reply"  # 响应策略: full_reply/brief_reply/emoji_only/ignore/like_only
-    )
-    message_intent: str = (
-        "chat"  # 意图分类: greeting/chat/question/confession/complaint/share/casual
-    )
+    response_strategy: str = "full_reply"  # 响应策略: full_reply/brief_reply/emoji_only/ignore/like_only
+    message_intent: str = "chat"  # 意图分类: greeting/chat/question/confession/complaint/share/casual
     confidence: float = 0.5  # 判断置信度
     reason: str = ""  # 判断理由
     suggested_reply_style: str = "normal"  # 建议回复风格: normal/casual/serious/playful
@@ -119,9 +115,7 @@ class DiTingListener:
         self._active_conversations: Dict[str, Dict[str, float]] = defaultdict(dict)
 
         # 用户连续发言计数
-        self._user_streaks: Dict[str, Dict[str, int]] = defaultdict(
-            lambda: defaultdict(int)
-        )
+        self._user_streaks: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
 
         self._persist_file = Path("data/diting_state.json")
         self._persist_file.parent.mkdir(parents=True, exist_ok=True)
@@ -155,18 +149,12 @@ class DiTingListener:
                 phase = get_phase(elapsed)
 
                 if phase == SessionPhase.HOT:
-                    snippets = [
-                        MessageSnippet(**s)
-                        for s in snippets_raw
-                        if now - s.get("timestamp", 0) < hot_seconds
-                    ]
+                    snippets = [MessageSnippet(**s) for s in snippets_raw if now - s.get("timestamp", 0) < hot_seconds]
                     if snippets:
                         self._group_snippets[gid] = snippets
                 elif phase == SessionPhase.WARM:
                     snippets = [
-                        MessageSnippet(**s)
-                        for s in snippets_raw[-5:]
-                        if now - s.get("timestamp", 0) < warm_seconds
+                        MessageSnippet(**s) for s in snippets_raw[-5:] if now - s.get("timestamp", 0) < warm_seconds
                     ]
                     if snippets:
                         self._group_snippets[gid] = snippets
@@ -212,10 +200,7 @@ class DiTingListener:
             loaded_groups = len(self._group_snippets)
             loaded_active = sum(len(u) for u in self._active_conversations.values())
             if loaded_groups > 0 or loaded_active > 0:
-                logger.info(
-                    f"[谛听] 从磁盘恢复状态: {loaded_groups} 群, "
-                    f"{loaded_active} 活跃用户"
-                )
+                logger.info(f"[谛听] 从磁盘恢复状态: {loaded_groups} 群, {loaded_active} 活跃用户")
         except Exception as e:
             logger.warning(f"[谛听] 恢复状态失败: {e}")
 
@@ -230,15 +215,9 @@ class DiTingListener:
                     if snippets
                 },
                 "_active_conversations": {
-                    gid: dict(users)
-                    for gid, users in self._active_conversations.items()
-                    if users
+                    gid: dict(users) for gid, users in self._active_conversations.items() if users
                 },
-                "_user_streaks": {
-                    gid: dict(streaks)
-                    for gid, streaks in self._user_streaks.items()
-                    if streaks
-                },
+                "_user_streaks": {gid: dict(streaks) for gid, streaks in self._user_streaks.items() if streaks},
                 "_topic_threads": {
                     gid: [
                         {
@@ -316,10 +295,7 @@ class DiTingListener:
             if not thread.is_active:
                 continue
             # 5分钟内、有相同参与者、内容相关 → 加入同一线程
-            if (
-                time.time() - thread.last_active < 300
-                and snippet.sender_name in thread.participants
-            ):
+            if time.time() - thread.last_active < 300 and snippet.sender_name in thread.participants:
                 thread.add_message(snippet)
                 return
 
@@ -404,15 +380,9 @@ class DiTingListener:
     def get_active_users(self, group_id: str) -> List[str]:
         """获取当前活跃用户列表"""
         cutoff = time.time() - self.active_window
-        return [
-            uid
-            for uid, last_time in self._active_conversations.get(group_id, {}).items()
-            if last_time > cutoff
-        ]
+        return [uid for uid, last_time in self._active_conversations.get(group_id, {}).items() if last_time > cutoff]
 
-    def get_related_threads(
-        self, group_id: str, query: str, max_threads: int = 3
-    ) -> str:
+    def get_related_threads(self, group_id: str, query: str, max_threads: int = 3) -> str:
         """获取与查询相关的话题线程"""
         threads = self._topic_threads.get(group_id, [])
         query_lower = query.lower()
@@ -459,10 +429,7 @@ class DiTingListener:
         keywords = set()
         for s in snippets:
             for word in s.content:
-                if (
-                    len(word) >= 2
-                    and word not in "的了是在我你他她它有和或但而就也都这不"
-                ):
+                if len(word) >= 2 and word not in "的了是在我你他她它有和或但而就也都这不":
                     keywords.add(word)
 
         # 生成摘要
@@ -500,9 +467,7 @@ class DiTingListener:
 
         # 清理过期群消息
         expired_groups = [
-            gid
-            for gid, snippets in self._group_snippets.items()
-            if snippets and snippets[-1].timestamp < cutoff
+            gid for gid, snippets in self._group_snippets.items() if snippets and snippets[-1].timestamp < cutoff
         ]
         for gid in expired_groups:
             del self._group_snippets[gid]
@@ -511,9 +476,7 @@ class DiTingListener:
         # 清理过期活跃对话
         for group_id in list(self._active_conversations.keys()):
             expired_users = [
-                uid
-                for uid, last_time in self._active_conversations[group_id].items()
-                if last_time < cutoff
+                uid for uid, last_time in self._active_conversations[group_id].items() if last_time < cutoff
             ]
             for uid in expired_users:
                 del self._active_conversations[group_id][uid]
@@ -657,9 +620,7 @@ class DiTingListener:
         """加载策略配置 - 合并diteng_strategy_config和text_config的默认值"""
         try:
             # 加载策略配置
-            config_path = (
-                Path(__file__).parent.parent / "config" / "diteng_strategy_config.json"
-            )
+            config_path = Path(__file__).parent.parent / "config" / "diteng_strategy_config.json"
             if config_path.exists():
                 with open(config_path, "r", encoding="utf-8") as f:
                     config = json.load(f)
@@ -675,13 +636,9 @@ class DiTingListener:
 
                     # 合并默认值
                     if "max_responses_per_turn" not in config:
-                        config["max_responses_per_turn"] = strategy_defaults.get(
-                            "max_responses_per_turn", 3
-                        )
+                        config["max_responses_per_turn"] = strategy_defaults.get("max_responses_per_turn", 3)
                     if "default_max_messages" not in config:
-                        config["default_max_messages"] = strategy_defaults.get(
-                            "default_max_messages", 1
-                        )
+                        config["default_max_messages"] = strategy_defaults.get("default_max_messages", 1)
 
             return config
         except Exception:
@@ -706,47 +663,67 @@ class DiTingListener:
         judge_rules = config.get("judge_rules", [])
         max_responses = config.get("max_responses_per_turn", 3)
 
-        # 构建判断规则字符串
         rules_text = "\n".join(f"{i + 1}. {rule}" for i, rule in enumerate(judge_rules))
 
-        prompt = f"""你是弥娅的消息策略分析助手。根据以下信息判断如何响应这条消息。
+        message_type_label = "群聊" if message_type == "group" else "私聊"
+        at_bot_label = "是" if is_at_bot else "否"
+        group_id_label = group_id or "私聊"
+        recent_ctx = recent_context if recent_context else "无"
 
-【消息信息】
-- 内容: {content}
-- 发送者ID: {user_id}
-- 类型: {"群聊" if message_type == "group" else "私聊"}
-- 是否@机器人: {"是" if is_at_bot else "否"}
-- 群ID: {group_id or "私聊"}
+        strategy_json = json.dumps(strategy_options, ensure_ascii=False, indent=2)
+        intent_json = json.dumps(intent_options, ensure_ascii=False, indent=2)
+        style_json = json.dumps(style_options, ensure_ascii=False, indent=2)
 
-【最近上下文】
-{recent_context if recent_context else "无"}
+        header = self._load_strategy_header()
 
-【回复策略选项】
-{json.dumps(strategy_options, ensure_ascii=False, indent=2)}
-
-【意图类型选项】
-{json.dumps(intent_options, ensure_ascii=False, indent=2)}
-
-【回复风格选项】
-{json.dumps(style_options, ensure_ascii=False, indent=2)}
-
-【重要约束】本轮回复最多发 {max_responses} 条消息，超过会刷屏。
-
-请直接返回JSON（不要其他内容）：
-{{
-  "should_respond": true/false,
-  "response_strategy": "策略名",
-  "message_intent": "意图类型",
-  "confidence": 0.0-1.0,
-  "reason": "判断理由",
-  "suggested_reply_style": "风格",
-  "max_messages": 1到{max_responses}之间的数字
-}}
-
-判断规则：
-{rules_text}
-"""
+        prompt = (
+            f"{header}\n\n"
+            f"【消息信息】\n"
+            f"- 内容: {content}\n"
+            f"- 发送者ID: {user_id}\n"
+            f"- 类型: {message_type_label}\n"
+            f"- 是否@机器人: {at_bot_label}\n"
+            f"- 群ID: {group_id_label}\n"
+            f"\n【最近上下文】\n"
+            f"{recent_ctx}\n"
+            f"\n【回复策略选项】\n"
+            f"{strategy_json}\n"
+            f"\n【意图类型选项】\n"
+            f"{intent_json}\n"
+            f"\n【回复风格选项】\n"
+            f"{style_json}\n"
+            f"\n【重要约束】本轮回复最多发 {max_responses} 条消息，超过会刷屏。\n"
+            f"\n请直接返回JSON（不要其他内容）：\n"
+            f"{{\n"
+            f'  "should_respond": true/false,\n'
+            f'  "response_strategy": "策略名",\n'
+            f'  "message_intent": "意图类型",\n'
+            f'  "confidence": 0.0-1.0,\n'
+            f'  "reason": "判断理由",\n'
+            f'  "suggested_reply_style": "风格",\n'
+            f'  "max_messages": 1到{max_responses}之间的数字\n'
+            f"}}\n"
+            f"\n判断规则：\n"
+            f"{rules_text}\n"
+        )
         return prompt
+
+    @staticmethod
+    def _load_strategy_header() -> str:
+        try:
+            import json as _json
+            from pathlib import Path
+
+            config_path = Path(__file__).parent.parent / "config" / "text_config.json"
+            with open(config_path, "r", encoding="utf-8") as _f:
+                _cfg = _json.load(_f)
+            return (
+                _cfg.get("prompt_templates", {})
+                .get("diteng_listener", {})
+                .get("strategy_analysis_header", "你是弥娅的消息策略分析助手。根据以下信息判断如何响应这条消息。")
+            )
+        except Exception:
+            return "你是弥娅的消息策略分析助手。根据以下信息判断如何响应这条消息。"
 
 
 # 全局单例
