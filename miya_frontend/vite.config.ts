@@ -42,6 +42,14 @@ export default defineConfig({
     }),
   ],
   resolve: { alias: { '@': resolve(__dirname, 'src') } },
+  build: {
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        'live2d-app': resolve(__dirname, 'src/live2d-app/index.html'),
+      },
+    },
+  },
   optimizeDeps: {
     include: [
       'primevue/accordion',

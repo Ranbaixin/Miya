@@ -19,12 +19,19 @@ function resolveLive2dUrl(): string {
     return `${devBase}/src/live2d-app/index.html`
   }
 
-  // Production: look in dist/live2d-app first, then src/live2d-app as fallback
-  const distPath = resolve(__dirname, '..', 'dist', 'live2d-app', 'index.html')
+  // Production: Vite multi-page build outputs live2d-app under dist/src/live2d-app/
+  const distPath = resolve(__dirname, '..', 'dist', 'src', 'live2d-app', 'index.html')
   if (fs.existsSync(distPath)) {
     return `file://${distPath}`
   }
 
+  // Fallback: old path (for backwards compatibility)
+  const legacyPath = resolve(__dirname, '..', 'dist', 'live2d-app', 'index.html')
+  if (fs.existsSync(legacyPath)) {
+    return `file://${legacyPath}`
+  }
+
+  // Development fallback: source path
   const srcPath = resolve(__dirname, '..', '..', 'src', 'live2d-app', 'index.html')
   if (fs.existsSync(srcPath)) {
     return `file://${srcPath}`
