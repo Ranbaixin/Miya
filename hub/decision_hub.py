@@ -378,18 +378,19 @@ class DecisionHub:
                 with open(self._birth_path, "r", encoding="utf-8") as f:
                     self._birth_data = json.load(f)
             else:
-                bm, bd = 3, 20
+                by, bm, bd = 2025, 3, 20
                 try:
                     cfg_path = Path(__file__).parent.parent / "config" / "text_config.json"
                     with open(cfg_path, "r", encoding="utf-8") as f:
                         cfg = json.load(f)
                     identity_cfg = cfg.get("identity", {})
+                    by = identity_cfg.get("birth_year", 2025)
                     bm = identity_cfg.get("birth_month", 3)
                     bd = identity_cfg.get("birth_day", 20)
                 except Exception:
                     pass
                 now = datetime.now()
-                birth_iso = now.replace(month=bm, day=bd).isoformat()
+                birth_iso = datetime(by, bm, bd).isoformat()
                 self._birth_data = {"created_at": birth_iso, "started_at": now.isoformat()}
                 self._birth_path.parent.mkdir(parents=True, exist_ok=True)
                 with open(self._birth_path, "w", encoding="utf-8") as f:

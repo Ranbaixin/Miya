@@ -2685,9 +2685,10 @@
         }
     },
     "identity": {
+        "birth_year": 2025,
         "birth_month": 3,
         "birth_day": 20,
-        "description": "弥娅的诞生日期，月份和日子。年份使用首次部署的年份。"
+        "description": "弥娅的诞生日期。"
     },
     "prompt_templates": {
         "description": "所有 LLM prompt 模板集中管理，方便读取和修改",
