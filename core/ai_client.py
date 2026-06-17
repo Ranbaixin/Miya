@@ -773,8 +773,17 @@ class OpenAIClient(BaseAIClient):
                 if can_concurrent:
                     # 并发执行多个工具调用
                     logger.info(f"[AIClient] 并发执行 {len(tool_calls)} 个工具调用")
+
+                    async def _exec_concurrent(tc):
+                        try:
+                            _, r = await self._execute_tool_call(tc, self.tool_context)
+                            return tc, r
+                        except Exception as exc:
+                            logger.error(f"[AIClient] 工具 {tc.function.name} 执行异常: {exc}")
+                            raise
+
                     tool_results_list = await asyncio.gather(
-                        *[execute_single_tool(tc) for tc in tool_calls],
+                        *[_exec_concurrent(tc) for tc in tool_calls],
                         return_exceptions=True,
                     )
 
@@ -1149,8 +1158,8 @@ class DeepSeekClient(BaseAIClient):
                     )
                 )
 
-                # 并发执行多工具调用以降低延迟
-                can_concurrent = True
+                # 串行执行工具调用
+                can_concurrent = False
 
                 # 串行执行逻辑（使用公共方法）
                 if not can_concurrent:

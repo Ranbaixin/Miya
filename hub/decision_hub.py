@@ -2314,15 +2314,22 @@ class DecisionHub:
                 else:
                     task_type = classify_result
 
-                # 【加速】纯闲聊精简工具集 — 53→8，大幅降低 prompt 体积
-                if task_type == TaskType.SIMPLE_CHAT and len(tools_schema) > 10:
+                # 【加速】纯闲聊精简工具集 — 53→10，大幅降低 prompt 体积
+                # 命令/任务类请求 + 谛听超时兜底不砍工具
+                diting_intent = context.get("_message_strategy", {}).get("intent", "")
+                action_intents = {"command", "task", "reminder", "schedule", "alarm"}
+                if (
+                    task_type == TaskType.SIMPLE_CHAT
+                    and len(tools_schema) > 10
+                    and diting_intent not in action_intents
+                    and diting_intent != ""
+                ):
                     minimal = self.platform_tools_manager.get_minimal_chat_tools()
                     if minimal:
                         tools_schema = minimal
                         logger.info(f"[决策层-闲聊加速] 精简为 {len(tools_schema)} 个工具")
 
                 # 【谛听覆盖】亲密/分享场景不应被技术关键词误导为 code_analysis
-                diting_intent = context.get("_message_strategy", {}).get("intent", "")
                 personal_intents = {"share", "chat", "love", "comfort", "tease", "confession"}
                 if diting_intent in personal_intents and task_type != TaskType.SIMPLE_CHAT:
                     logger.info(f"[决策层] 谛听覆盖任务分类: {task_type.value} → simple_chat (intent={diting_intent})")
