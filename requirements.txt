@@ -1,15 +1,12 @@
-# ========================================
-# Miya - 完整生产环境依赖
-# ========================================
-# 说明：这是 Miya 的主依赖入口，指向统一依赖管理系统
+# Miya - Full Production Dependencies
+# Main dependency entry point for Miya
 #
-# 快速安装：
-#   完整安装:    pip install -r requirements.txt
-#   轻量级安装:  pip install -r setup/requirements/lightweight.txt
-#   最小安装:    pip install -r setup/requirements/minimal.txt
-#   开发环境:    pip install -r setup/requirements/dev.txt
+# Quick install:
+#   Full:        pip install -r requirements.txt
+#   Lightweight: pip install -r setup/requirements/lightweight.txt
+#   Minimal:     pip install -r setup/requirements/minimal.txt
+#   Dev:         pip install -r setup/requirements/dev.txt
 #
-# 详细说明：setup/INSTALL.md
-# ========================================
+# See: setup/INSTALL.md
 
 -r setup/requirements/full.txt

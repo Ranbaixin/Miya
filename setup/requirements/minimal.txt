@@ -1,13 +1,10 @@
-# ========================================
-# Miya - 最小依赖 (核心功能)
-# ========================================
-# 说明：最小化依赖，仅包含运行核心功能所需的包
-# 适合快速开发测试场景
-# 安装命令: pip install -r setup/requirements/minimal.txt
-# ========================================
+# Miya - Minimal Install (Core Only)
+# Minimum packages needed for basic core functionality
+# Suitable for quick startup and testing
+# Install: pip install -r setup/requirements/minimal.txt
 
-# ========== 基础核心 ==========
+# Core
 -r ../dependencies/base.txt
 
-# ========== AI 模型 (仅基础) ==========
+# AI Model (minimal)
 openai>=1.3.0,<2.0.0

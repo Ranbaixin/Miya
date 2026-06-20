@@ -1,34 +1,19 @@
-# ========================================
-# Miya - TTS (语音合成) 依赖
-# ========================================
-# 说明：语音合成和音频处理相关依赖
-# 安装命令: pip install -r setup/dependencies/tts.txt
-# ========================================
+# Miya - TTS (Text-to-Speech)
+# Speech synthesis and audio processing
+# Install: pip install -r setup/dependencies/tts.txt
 
-# ========== 语音合成 ==========
+# Text-to-Speech
 edge-tts>=6.1.0,<7.0.0
 funasr-onnx>=0.1.0
 
-# ========== 音频处理 ==========
+# Audio Playback
 simpleaudio>=1.0.4
 pyffmpeg>=2.4.0
 
-# ========== QQ 语音编解码 ==========
+# QQ Voice Codec
 pilk>=0.2.0
-# pysilk 已废弃（空包），由 pilk 替代 SILK 编解码
 
-# ========================================
-# 平台特定安装说明
-# ========================================
-# Windows:
-#   pip install pipwin
-#   pipwin install pyaudio
-#
-# Linux:
-#   sudo apt-get install python3-dev portaudio19-dev
-#   pip install pyaudio
-#
-# macOS:
-#   brew install portaudio
-#   pip install pyaudio
-# ========================================
+# Platform-specific pyaudio installation:
+# Windows: pip install pipwin; pipwin install pyaudio
+# Linux:   sudo apt-get install python3-dev portaudio19-dev; pip install pyaudio
+# macOS:   brew install portaudio; pip install pyaudio

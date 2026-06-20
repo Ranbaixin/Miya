@@ -1,12 +1,9 @@
-# ========================================
-# Miya - 数据可视化依赖
-# ========================================
-# 说明：数据可视化和图表生成
-# 安装命令: pip install -r setup/dependencies/viz.txt
-# ========================================
+# Miya - Data Visualization
+# Plotting and charting
+# Install: pip install -r setup/dependencies/viz.txt
 
-# ========== 图表绘制 ==========
+# Charting
 matplotlib>=3.7.0,<4.0.0
 
-# ========== 交互式图表 (可选) ==========
+# Interactive Charts (optional)
 # plotly>=5.14.0

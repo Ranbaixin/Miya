@@ -72,8 +72,9 @@ def parse_requirements_file(filepath: Path) -> list[str]:
 
 
 def resolve_import(pip_name: str) -> str:
-    if pip_name in PIP_TO_IMPORT:
-        return PIP_TO_IMPORT[pip_name]
+    key = pip_name.lower()
+    if key in PIP_TO_IMPORT:
+        return PIP_TO_IMPORT[key]
     return pip_name.replace("-", "_").lower()
 
 

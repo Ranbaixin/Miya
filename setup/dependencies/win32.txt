@@ -1,10 +1,7 @@
-# ========================================
-# Miya - Windows 平台特定依赖
-# ========================================
-# 说明：仅 Windows 平台需要的可选依赖
-# 安装命令: pip install -r setup/dependencies/win32.txt
-# ========================================
+# Miya - Windows Platform Extras
+# Optional packages for Windows platform
+# Install: pip install -r setup/dependencies/win32.txt
 
-# ========== Windows API ==========
+# Windows API
 comtypes>=1.4.0
 pywinauto>=0.6.8

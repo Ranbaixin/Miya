@@ -1,32 +1,28 @@
-# ========================================
-# Miya - 基础核心依赖
-# ========================================
-# 说明：这是运行 Miya 的最小依赖集合
-# 包含 Web 框架、异步通信、配置管理等核心功能
-# 安装命令: pip install -r setup/dependencies/base.txt
-# ========================================
+# Miya - Core Dependencies
+# Minimum requirements for Miya to run
+# Install: pip install -r setup/dependencies/base.txt
 
-# ========== Web 框架 ==========
+# Web Framework
 fastapi>=0.100.0,<1.0.0
 uvicorn[standard]>=0.22.0,<1.0.0
 pydantic>=2.0.0,<3.0.0
 python-multipart>=0.0.6
 starlette>=0.30.0,<1.0.0
 
-# ========== 异步通信 ==========
+# Async Communication
 aiohttp>=3.8.0,<4.0.0
 aiofiles>=23.0.0
 
-# ========== 配置管理 ==========
+# Configuration
 python-dotenv>=1.0.0
 pyyaml>=6.0
 tomli>=2.0.0
 
-# ========== 安全 / 认证 ==========
+# Security / Auth
 PyJWT>=2.8.0
 cryptography>=41.0.0
 
-# ========== 系统工具 ==========
+# System Utilities
 psutil>=5.9.0
 watchdog>=3.0.0
 requests>=2.31.0
@@ -34,8 +30,8 @@ click>=8.1.0
 packaging>=23.0
 certifi>=2024.0.0
 
-# ========== 基础数据处理 ==========
+# Data Processing
 numpy>=1.24.0,<2.0.0
 
-# ========== 类型提示 ==========
+# Type Hints
 typing-extensions>=4.8.0

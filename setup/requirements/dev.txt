@@ -1,13 +1,10 @@
-# ========================================
-# Miya - 开发环境依赖
-# ========================================
-# 说明：完整依赖 + 开发工具
-# 适合开发者使用，包含测试、代码质量工具等
-# 安装命令: pip install -r setup/requirements/dev.txt
-# ========================================
+# Miya - Development Environment
+# Full production dependencies + dev tools
+# Suitable for development: testing, debugging, documentation
+# Install: pip install -r setup/requirements/dev.txt
 
-# ========== 完整功能 ==========
+# Full Production Deps
 -r full.txt
 
-# ========== 开发工具 ==========
+# Dev Tools
 -r ../dependencies/dev.txt

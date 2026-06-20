@@ -1,39 +1,36 @@
-# ========================================
-# Miya - 完整生产环境依赖
-# ========================================
-# 说明：这是 Miya 的完整依赖清单，包含所有生产环境所需的包
-# 安装命令: pip install -r setup/requirements/full.txt
-# ========================================
+# Miya - Full Production Dependencies
+# This is the complete dependency list for Miya production environment
+# Install: pip install -r setup/requirements/full.txt
 
-# ========== 基础核心 ==========
+# Core
 -r ../dependencies/base.txt
 
-# ========== AI 模型 ==========
+# AI Models
 -r ../dependencies/ai.txt
 
-# ========== 数据库 ==========
+# Database
 -r ../dependencies/database.txt
 
-# ========== 文档处理 ==========
+# Document Processing
 -r ../dependencies/office.txt
 
-# ========== 网络通信 ==========
+# Network & Communication
 -r ../dependencies/network.txt
 
-# ========== TTS (语音合成) ==========
+# TTS (Text-to-Speech)
 -r ../dependencies/tts.txt
 
-# ========== 数据可视化 ==========
+# Data Visualization
 -r ../dependencies/viz.txt
 
-# ========== QQ 扩展功能 ==========
+# QQ Platform Extras
 -r ../dependencies/qq_extras.txt
 
-# ========== 多平台适配器 ==========
+# Multi-Platform Adapters
 -r ../dependencies/platform_adapters.txt
 
-# ========== 可观测性 ==========
+# Observability
 -r ../dependencies/observability.txt
 
-# ========== 任务调度 ==========
+# Task Scheduling
 apscheduler>=3.10.0

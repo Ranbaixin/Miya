@@ -1,34 +1,31 @@
-# ========================================
-# Miya - QQ 扩展功能依赖
-# ========================================
-# 说明：QQ 平台扩展功能所需的依赖（图片处理、OCR、截图等）
-# 安装命令: pip install -r setup/dependencies/qq_extras.txt
-# ========================================
+# Miya - QQ Platform Extras
+# Image processing, file detection, Chinese NLP, logging, automation
+# Install: pip install -r setup/dependencies/qq_extras.txt
 
-# ========== 图片处理 ==========
+# Image Processing
 pillow>=10.0.0
 
-# ========== 文件检测 ==========
+# File Detection
 chardet>=5.1.0
 python-magic>=0.4.27
 
-# ========== 网络与异步 ==========
+# Async Retry
 tenacity>=8.2.0
 
-# ========== 中文处理 ==========
+# Chinese Text Processing
 jieba>=0.42.1
 
-# ========== 日志增强 ==========
+# Enhanced Logging
 loguru>=0.7.0
 
-# ========== 二维码生成 ==========
+# QR Code
 qrcode>=7.4.0
 
-# ========== 浏览器自动化 ==========
+# Browser Automation
 playwright>=1.40.0
 
-# ========== 串口通信 ==========
+# Serial Communication
 pyserial>=3.5
 
-# ========== 文本搜索 ==========
+# Text Search
 python-ripgrep
