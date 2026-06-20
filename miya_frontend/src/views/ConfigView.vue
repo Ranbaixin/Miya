@@ -70,7 +70,7 @@ function resetLive2dSize() {
 
 async function loadConfigFiles() {
   try {
-    const res = await fetch('http://localhost:${Number(import.meta.env.VITE_API_PORT) || 9800}/api/desktop/files/list?path=config').then(r => r.json())
+    const res = await fetch(`http://localhost:${Number(import.meta.env.VITE_API_PORT) || 9800}/api/desktop/files/list?path=config`).then(r => r.json())
     configFiles.value = (res.files || []).filter((f: any) => !f.is_dir && (f.name.endsWith('.json') || f.name.endsWith('.yaml') || f.name.endsWith('.yml')))
   } catch {}
 }
@@ -86,7 +86,7 @@ async function openConfigFile(filePath: string) {
 
 async function saveConfigFile() {
   try {
-    await fetch('http://localhost:${Number(import.meta.env.VITE_API_PORT) || 9800}/api/desktop/files/write', {
+    await fetch(`http://localhost:${Number(import.meta.env.VITE_API_PORT) || 9800}/api/desktop/files/write`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path: editingFile.value, content: editingContent.value }),

@@ -19,6 +19,16 @@ NC='\033[0m'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# check python
+if ! command -v python3 &> /dev/null; then
+    echo -e "${RED}[ERROR] Python 3 not found${NC}"
+    exit 1
+fi
+
+# sync frontend config
+python3 scripts/sync_frontend_config.py
+echo ""
+
 # check bun
 if ! command -v bun &> /dev/null; then
     echo -e "${RED}[ERROR] bun not found. Install: npm install -g bun${NC}"

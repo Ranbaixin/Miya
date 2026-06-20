@@ -365,7 +365,7 @@ async function search() {
     }
     // scan long_term
     try {
-      const listRes = await fetch('http://localhost:${Number(import.meta.env.VITE_API_PORT) || 9800}/api/desktop/files/list?path=data/memory/long_term').then(r => r.json())
+      const listRes = await fetch(`http://localhost:${Number(import.meta.env.VITE_API_PORT) || 9800}/api/desktop/files/list?path=data/memory/long_term`).then(r => r.json())
       for (const f of (listRes?.files || []).slice(0, 30)) {
         try {
           const readRes = await fetch(`http://localhost:${Number(import.meta.env.VITE_API_PORT) || 9800}/api/desktop/files/read?path=${encodeURIComponent(`data/memory/long_term/${f.name}`)}`).then(r => r.json())

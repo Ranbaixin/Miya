@@ -1958,11 +1958,24 @@ class DecisionHub:
             # 如果 soul_task 已就绪，直接拿结果；否则复用缓存
             if soul_task.done():
                 cognitive_memory_context, soul_result = await soul_task
+                # 立即存储到 _last_soul_data 供 API 读取
+                if soul_result and soul_result.get("emotions"):
+                    self._last_soul_data = soul_result
             else:
                 cognitive_memory_context = cached_cognitive
                 soul_result = None
                 if cached_emotion:
                     logger.info("[灵魂-加速] 使用缓存情绪上下文")
+                # 后台等待 soul 完成后更新 _last_soul_data，供 API 读取
+                async def _deferred_soul_update():
+                    try:
+                        _, sr = await soul_task
+                        if sr and sr.get("emotions"):
+                            self._last_soul_data = sr
+                            logger.info("[灵魂-延迟] 已更新 _last_soul_data")
+                    except Exception:
+                        pass
+                asyncio.create_task(_deferred_soul_update())
 
             # 处理 Soul Generator 结果 (共用于两条路径)
             emotion_context_for_collab = ""

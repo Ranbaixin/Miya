@@ -159,6 +159,23 @@ class ManagementAPI:
                 **daemon_status,
             }
 
+        @app.get("/api/soul/current")
+        async def get_current_soul():
+            """获取当前灵魂数据（供桌面端情绪面板）"""
+            try:
+                dh = getattr(getattr(self.daemon, "_miya", None), "decision_hub", None)
+                if dh:
+                    # 优先读取 _last_soul_data (灵魂发生器直接写入)
+                    soul_data = getattr(dh, "_last_soul_data", None)
+                    if soul_data and soul_data.get("emotions"):
+                        return soul_data
+                    soul = getattr(dh, "_last_soul_output", None)
+                    if soul:
+                        return soul
+            except Exception:
+                pass
+            return {}
+
         @app.get("/api/v1/platforms")
         async def list_platforms():
             return {

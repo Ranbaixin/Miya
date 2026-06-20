@@ -356,6 +356,11 @@ class WebAPI:
         @self.router.get("/api/soul/current")
         async def get_current_soul():
             """获取当前消息的灵魂数据"""
+            # 优先读取 _last_soul_data (灵魂发生器直接写入)
+            soul_data = getattr(self.decision_hub, "_last_soul_data", None)
+            if soul_data and soul_data.get("emotions"):
+                return soul_data
+            # 回退到 _last_soul_output (协作引擎写入)
             soul = getattr(self.decision_hub, "_last_soul_output", None)
             return soul or {}
 

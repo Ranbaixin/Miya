@@ -79,6 +79,7 @@ if /i "%1"=="upgrade" (
 )
 
 pip install -q -r requirements.txt
+python scripts\sync_frontend_config.py
 goto :done
 
 :: ==================== uv mode ====================

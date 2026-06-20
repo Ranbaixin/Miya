@@ -12,6 +12,18 @@ title MIYA v8.0 - Build
 ::  build.bat web         Web Ops Center only
 :: ============================================================
 
+:: check python
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] Python not found
+    pause
+    exit /b 1
+)
+
+:: sync frontend config
+python scripts\sync_frontend_config.py
+echo.
+
 :: check bun
 where bun >nul 2>&1
 if errorlevel 1 (
