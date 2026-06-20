@@ -343,8 +343,9 @@ class DecisionHub:
 
         logger.info("决策层 Hub 初始化完成（门面模式：感知/情绪/记忆/响应处理器 + 辅助模块）")
 
-        # 9. 安全服务 / 10. 注入检测 / 11. 协作引擎 — 后台延迟初始化
+        # 9. 安全服务 / 10. 注入检测 / 11. 协作引擎 / 12. 主动聊天 — 后台延迟初始化
         self._deferred_init_complete = False
+        self.proactive_chat = None
         self._start_deferred_init()
 
     def _init_soul_snapshot(self):

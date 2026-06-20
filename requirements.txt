@@ -1,11 +1,10 @@
-# Miya - Full Production Dependencies
-# Main dependency entry point for Miya
+# Miya - All Dependencies (Everything)
+# Main entry point — installs production + dev + platform extras
 #
 # Quick install:
-#   Full:        pip install -r requirements.txt
+#   All:         pip install -r requirements.txt
 #   Lightweight: pip install -r setup/requirements/lightweight.txt
 #   Minimal:     pip install -r setup/requirements/minimal.txt
-#   Dev:         pip install -r setup/requirements/dev.txt
 #
 # See: setup/INSTALL.md
 

@@ -4,20 +4,20 @@ set PYTHONUTF8=1
 title MIYA v8.0 - Install
 
 :: ============================================================
-::  MIYA v8.0 - 依赖安装 (pip / uv 双模式)
-::  
-::  install.bat             完整安装 (pip)
-::  install.bat dev         开发环境 (pip)
-::  install.bat minimal     最小安装 (pip)
-::  install.bat lightweight 轻量级 (pip)
-::  install.bat check       仅检查依赖
-::  install.bat upgrade     升级全部依赖 (pip)
+::  MIYA v8.0 - Dependency Installer (pip / uv dual mode)
 ::
-::  install.bat uv          使用 uv 完整安装
-::  install.bat uv dev      使用 uv 开发环境
-::  install.bat uv minimal  使用 uv 最小安装
-::  install.bat uv lightweight  使用 uv 轻量级
-::  install.bat uv sync     仅同步 uv.lock
+::  install.bat             all deps (pip)
+::  install.bat dev         all + dev tools (pip)
+::  install.bat minimal     minimal (pip)
+::  install.bat lightweight lightweight (pip)
+::  install.bat check       check only
+::  install.bat upgrade     upgrade all (pip)
+::
+::  install.bat uv          full via uv
+::  install.bat uv dev      dev via uv
+::  install.bat uv minimal  minimal via uv
+::  install.bat uv lightweight lightweight via uv
+::  install.bat uv sync     sync uv.lock
 :: ============================================================
 
 :: check python
@@ -41,19 +41,30 @@ echo   MIYA v8.0 - Installing Dependencies (pip)
 echo ================================================================================
 echo.
 
+:: Quick pre-check: skip pip if ALL dependencies already installed
+if "%1"=="" (
+    python setup\scripts\verify_install.py --all >nul 2>&1
+    if not errorlevel 1 (
+        echo [OK] All dependencies already installed, skipping...
+        goto :end
+    )
+    echo [INFO] Missing dependencies detected, installing...
+    echo.
+)
+
 if /i "%1"=="dev" (
-    pip install -r requirements.txt
-    pip install -r setup\dependencies\dev.txt
+    pip install -q -r setup/requirements/full.txt
+    pip install -q -r setup/dependencies/dev.txt
     goto :done
 )
 
 if /i "%1"=="minimal" (
-    pip install -r setup\requirements\minimal.txt
+    pip install -q -r setup\requirements\minimal.txt
     goto :done
 )
 
 if /i "%1"=="lightweight" (
-    pip install -r setup\requirements\lightweight.txt
+    pip install -q -r setup\requirements\lightweight.txt
     goto :done
 )
 
@@ -63,11 +74,11 @@ if /i "%1"=="check" (
 )
 
 if /i "%1"=="upgrade" (
-    pip install -r requirements.txt --upgrade
+    pip install --upgrade -r requirements.txt
     goto :done
 )
 
-pip install -r requirements.txt
+pip install -q -r requirements.txt
 goto :done
 
 :: ==================== uv mode ====================
@@ -117,15 +128,13 @@ uv sync --all-extras
 
 :done
 echo.
-echo ================================================================================
-echo   Verify installation...
-echo ================================================================================
-python setup\scripts\verify_install.py 2>nul || echo [WARN] verify_install.py not found, skipping...
-
-:end
-echo.
 echo Done! Run start.bat to launch MIYA.
 pause
+goto :eof
+
+:end
+pause
+goto :eof
 
 :refresh_path
 endlocal & set "PATH=%USERPROFILE%\.local\bin;%PATH%"

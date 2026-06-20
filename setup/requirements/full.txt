@@ -1,5 +1,5 @@
-# Miya - Full Production Dependencies
-# This is the complete dependency list for Miya production environment
+# Miya - All Production Dependencies
+# Complete production dependency list (no dev tools)
 # Install: pip install -r setup/requirements/full.txt
 
 # Core
@@ -31,6 +31,9 @@
 
 # Observability
 -r ../dependencies/observability.txt
+
+# Windows Platform Extras
+-r ../dependencies/win32.txt
 
 # Task Scheduling
 apscheduler>=3.10.0

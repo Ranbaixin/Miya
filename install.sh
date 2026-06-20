@@ -1,21 +1,21 @@
 #!/bin/bash
 # ============================================================
-#  MIYA v8.0 - Dependencies Installer (pip / uv 双模式)
+#  MIYA v8.0 - Dependency Installer (pip / uv dual mode)
 #
-#  pip 模式:
-#    ./install.sh              完整安装
-#    ./install.sh dev          开发环境
-#    ./install.sh minimal      最小安装
-#    ./install.sh lightweight  轻量级 (Mock 模式)
-#    ./install.sh check        仅检查依赖
-#    ./install.sh upgrade      升级全部依赖
+#  pip mode:
+#    ./install.sh              all deps
+#    ./install.sh dev          all + dev tools
+#    ./install.sh minimal      minimal
+#    ./install.sh lightweight  lightweight (Mock mode)
+#    ./install.sh check        check only
+#    ./install.sh upgrade      upgrade all
 #
-#  uv 模式:
-#    ./install.sh uv           完整安装
-#    ./install.sh uv dev       开发环境
-#    ./install.sh uv minimal   最小安装
-#    ./install.sh uv lightweight  轻量级
-#    ./install.sh uv sync      仅同步 uv.lock (离线/锁定)
+#  uv mode:
+#    ./install.sh uv           full
+#    ./install.sh uv dev       dev
+#    ./install.sh uv minimal   minimal
+#    ./install.sh uv lightweight lightweight
+#    ./install.sh uv sync      sync uv.lock (offline/locked)
 # ============================================================
 
 set -e
@@ -92,16 +92,28 @@ echo ""
 
 MODE="${1:-full}"
 
+# Quick pre-check: skip pip if ALL dependencies already installed
+if [ "$MODE" = "full" ]; then
+    if python3 setup/scripts/verify_install.py --all > /dev/null 2>&1; then
+        echo -e "${GREEN}[OK] All dependencies already installed, skipping...${NC}"
+        echo ""
+        echo -e "${GREEN}Done! Run ./start.sh to launch MIYA.${NC}"
+        exit 0
+    fi
+    echo -e "${YELLOW}[INFO] Missing dependencies detected, installing...${NC}"
+    echo ""
+fi
+
 case "$MODE" in
     dev)
-        pip install -r requirements.txt
-        pip install -r setup/dependencies/dev.txt
+        pip install -q -r setup/requirements/full.txt
+        pip install -q -r setup/dependencies/dev.txt
         ;;
     minimal)
-        pip install -r setup/requirements/minimal.txt
+        pip install -q -r setup/requirements/minimal.txt
         ;;
     lightweight)
-        pip install -r setup/requirements/lightweight.txt
+        pip install -q -r setup/requirements/lightweight.txt
         ;;
     check)
         python3 setup/scripts/check_deps.py
@@ -111,7 +123,7 @@ case "$MODE" in
         pip install -r requirements.txt --upgrade
         ;;
     *)
-        pip install -r requirements.txt
+        pip install -q -r requirements.txt
         ;;
 esac
 

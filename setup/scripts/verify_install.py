@@ -109,7 +109,7 @@ def dedup(items: list[str]) -> list[str]:
     return result
 
 
-def run() -> int:
+def run(strict: bool = False) -> int:
     print("\n" + "=" * 60)
     print("Miya Install Verification")
     print(f"Config dir: {DEPS_DIR}")
@@ -171,6 +171,10 @@ def run() -> int:
         print("  Run: pip install -r setup/dependencies/base.txt")
         return 1
 
+    if strict and opt_missing:
+        print("\n[FAIL] Strict mode: optional modules missing!")
+        return 1
+
     print("\n[OK] Core verification passed!")
     if opt_missing:
         print(
@@ -183,4 +187,5 @@ def run() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(run())
+    strict = "--all" in sys.argv or "--strict" in sys.argv
+    sys.exit(run(strict=strict))
