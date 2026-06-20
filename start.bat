@@ -67,7 +67,7 @@ echo.
 
 if not exist "claude-code-engine\dist\cli-node.js" (
     echo [ERROR] Claude Code Engine not found
-    echo Run: cd claude-code-engine ^&^& bun run build:miya
+    echo Run: build.bat cce
     pause
     goto :menu
 )

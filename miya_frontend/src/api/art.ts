@@ -45,9 +45,11 @@ export class ArtApiClient extends ApiClient {
     return this.instance.get('/api/art/stats')
   }
 
+const API_PORT = Number(import.meta.env.VITE_API_PORT) || 9800
+
   getImageUrl(filename: string): string {
-    return `http://localhost:8000/api/art/image/${filename}`
+    return `http://localhost:${API_PORT}/api/art/image/${filename}`
   }
 }
 
-export default new ArtApiClient(8000)
+export default new ArtApiClient(API_PORT)

@@ -21,6 +21,7 @@ tomli>=2.0.0
 # Security / Auth
 PyJWT>=2.8.0
 cryptography>=41.0.0
+email-validator>=2.0.0
 
 # System Utilities
 psutil>=5.9.0

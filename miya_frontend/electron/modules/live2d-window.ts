@@ -92,7 +92,7 @@ export function createLive2dWindow(
 
   live2dWindow.webContents.on('did-finish-load', () => {
     live2dWindow?.webContents.executeJavaScript(
-      'window.__MIYA_API_PORT__ = 8000'
+      `window.__MIYA_API_PORT__ = ${process.env.VITE_API_PORT || 9800}`
     ).catch(() => {})
   })
 

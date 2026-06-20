@@ -60,7 +60,7 @@ function applySoulToMessage(soul: any) {
 async function fetchSoulData(retryCount = 0) {
   try {
     // 优先：直连后端灵魂数据（_last_soul_output）
-    const soulRes = await fetch('http://localhost:8000/api/soul/current')
+    const soulRes = await fetch('http://localhost:${Number(import.meta.env.VITE_API_PORT) || 9800}/api/soul/current')
     const directSoul = await soulRes.json()
     if (directSoul && (directSoul.emotions || directSoul.inner_thought || directSoul.thinking)) {
       applySoulToMessage(directSoul)
@@ -68,7 +68,7 @@ async function fetchSoulData(retryCount = 0) {
     }
 
     // Fallback: 认知记忆文件
-    const res = await fetch('http://localhost:8000/api/desktop/files/read?path=data%2Fmemory%2Fcognitive_memories.json')
+    const res = await fetch('http://localhost:${Number(import.meta.env.VITE_API_PORT) || 9800}/api/desktop/files/read?path=data%2Fmemory%2Fcognitive_memories.json')
     const data = await res.json()
     if (data?.lines) {
       const items = JSON.parse(data.lines.join(''))

@@ -167,6 +167,9 @@ class MiyaDaemon:
             self._miya = Miya()
             logger.info("✅ Miya 核心初始化完成")
 
+            # Start Web API server on port 8000 (for frontend)
+            self._start_web_api()
+
             if self._miya.memory_net:
                 try:
                     await self._miya.memory_net.initialize()
@@ -340,6 +343,45 @@ class MiyaDaemon:
     def miya(self):
         """获取 Miya 核心实例"""
         return self._miya
+
+    def _start_web_api(self):
+        """启动 Web API 服务器（后台线程，端口 8000）"""
+        try:
+            import threading
+
+            web_api = getattr(self._miya, "web_api", None)
+            if not web_api or not getattr(web_api, "router", None):
+                logger.debug("Web API 未初始化，跳过")
+                return
+
+            import uvicorn
+            from fastapi import FastAPI
+            from fastapi.middleware.cors import CORSMiddleware
+
+            app = FastAPI(title="Miya Web API")
+            app.add_middleware(
+                CORSMiddleware,
+                allow_origins=["*"],
+                allow_credentials=True,
+                allow_methods=["*"],
+                allow_headers=["*"],
+            )
+            app.include_router(web_api.router)
+
+            # Load yinmei plugin if available
+            try:
+                from plugins.yinmei.integration import install_yinmei_plugin
+                install_yinmei_plugin(app, enable_scheduler=False)
+            except Exception:
+                pass
+
+            def _run():
+                uvicorn.run(app, host="0.0.0.0", port=8000, log_level="warning")
+
+            threading.Thread(target=_run, daemon=True, name="Miya-WebAPI").start()
+            logger.info("Web API 服务器已启动 (http://0.0.0.0:8000)")
+        except Exception as e:
+            logger.warning(f"Web API 启动失败: {e}")
 
     @property
     def registry(self) -> PlatformRegistry:

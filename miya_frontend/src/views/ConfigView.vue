@@ -70,14 +70,14 @@ function resetLive2dSize() {
 
 async function loadConfigFiles() {
   try {
-    const res = await fetch('http://localhost:8000/api/desktop/files/list?path=config').then(r => r.json())
+    const res = await fetch('http://localhost:${Number(import.meta.env.VITE_API_PORT) || 9800}/api/desktop/files/list?path=config').then(r => r.json())
     configFiles.value = (res.files || []).filter((f: any) => !f.is_dir && (f.name.endsWith('.json') || f.name.endsWith('.yaml') || f.name.endsWith('.yml')))
   } catch {}
 }
 
 async function openConfigFile(filePath: string) {
   try {
-    const res = await fetch(`http://localhost:8000/api/desktop/files/read?path=${encodeURIComponent(filePath)}`).then(r => r.json())
+    const res = await fetch(`http://localhost:${Number(import.meta.env.VITE_API_PORT) || 9800}/api/desktop/files/read?path=${encodeURIComponent(filePath)}`).then(r => r.json())
     editingFile.value = filePath
     editingContent.value = res.content || JSON.stringify(res.data || res, null, 2)
     editingSaved.value = false
@@ -86,7 +86,7 @@ async function openConfigFile(filePath: string) {
 
 async function saveConfigFile() {
   try {
-    await fetch('http://localhost:8000/api/desktop/files/write', {
+    await fetch('http://localhost:${Number(import.meta.env.VITE_API_PORT) || 9800}/api/desktop/files/write', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path: editingFile.value, content: editingContent.value }),
@@ -115,7 +115,7 @@ onMounted(async () => {
     providerList.value = providers.status === 'fulfilled' ? providers.value : []
 
     // 平台
-    const plat = await fetch('http://localhost:9800/api/v1/platforms').then(r => r.json()).catch(() => ({}))
+    const plat = await fetch('http://localhost:${Number(import.meta.env.VITE_API_PORT) || 9800}/api/v1/platforms').then(r => r.json()).catch(() => ({}))
     platformData.value = plat.platforms || []
     loadConfigFiles()
   } catch {}
@@ -393,7 +393,7 @@ function getRouteModel(key: string): string {
           <div class="model-item"><span class="model-name">后端状态</span><span class="model-val" :class="backendOnline ? 'status-on' : ''">{{ backendOnline ? '● 在线' : '○ 离线' }}</span></div>
           <div class="config-item" style="margin-top:0.5rem">
             <label>API 地址</label>
-            <InputText v-model="CONFIG.api.base_url" placeholder="http://localhost:8000" class="input-sm" />
+            <InputText v-model="CONFIG.api.base_url" placeholder="http://localhost:${Number(import.meta.env.VITE_API_PORT) || 9800}" class="input-sm" />
           </div>
         </div>
         <div class="config-section">

@@ -350,4 +350,6 @@ export class CoreApiClient extends ApiClient {
   }
 }
 
-export default new CoreApiClient(8000)
+const API_PORT = Number(import.meta.env.VITE_API_PORT) || 9800
+
+export default new CoreApiClient(API_PORT)

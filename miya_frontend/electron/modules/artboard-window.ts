@@ -80,7 +80,7 @@ export function createArtboardWindow(): BrowserWindow {
 
   artboardWindow.webContents.on('did-finish-load', () => {
     artboardWindow?.webContents.executeJavaScript(
-      'window.__MIYA_API_PORT__ = 8000'
+      `window.__MIYA_API_PORT__ = ${process.env.VITE_API_PORT || 9800}`
     ).catch(() => {})
     artboardWindow?.webContents.executeJavaScript(
       'window.__IS_ARTBOARD_WINDOW__ = true'

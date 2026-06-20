@@ -178,7 +178,7 @@ function stopYinmeiPolling(): void {
 
 function startYinmeiPolling(): void {
   stopYinmeiPolling()
-  const apiPort = (window as any).__MIYA_API_PORT__ || 8000
+  const apiPort = (window as any).__MIYA_API_PORT__ || Number(import.meta.env.VITE_API_PORT) || 9800
   const pollUrl = `http://127.0.0.1:${apiPort}/api/yinmei/live2d/commands`
 
   _yinmeiPollTimer = setInterval(async () => {

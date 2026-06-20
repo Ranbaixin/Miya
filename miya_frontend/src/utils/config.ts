@@ -27,7 +27,7 @@ export const DEFAULT_CONFIG = {
   api_server: {
     enabled: true,
     host: '127.0.0.1',
-    port: 8000,
+    port: Number(import.meta.env.VITE_API_PORT) || 9800,
     auto_start: true,
     docs_enabled: true,
   },
@@ -249,7 +249,7 @@ let connectRetries = 0
 const MAX_RETRIES = 5
 
 function connectBackend() {
-  fetch('http://localhost:8000/health')
+  fetch(`http://localhost:${Number(import.meta.env.VITE_API_PORT) || 9800}/health`)
     .then(r => r.json())
     .then((res) => {
       if (res.status === 'healthy') {
