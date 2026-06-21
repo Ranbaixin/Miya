@@ -233,6 +233,12 @@ class BasePlatform(ABC):
                         return
                     else:
                         await self._emit(PlatformEvent.HEALTH_CHECK_FAILED, {})
+                        # 即使 auto_reconnect=False，也尝试重新拉起连接
+                        # （适用于 listen_loop 任务意外死亡的情况）
+                        try:
+                            await self._do_connect()
+                        except Exception:
+                            pass
                 else:
                     if self._health.status == PlatformStatus.DEGRADED:
                         self._health.status = PlatformStatus.ONLINE

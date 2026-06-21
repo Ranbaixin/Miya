@@ -315,6 +315,10 @@ class WorkingMemoryManager:
         if sender_id:
             message_with_id = f"{sender}[{sender_id}]: {content}"
             state.recent_senders[sender_id] = sender
+            # 记录最近活跃时间（用于时间感知矫正）
+            now = time.time()
+            if state.last_update < now:
+                state.last_active_time = now
         else:
             message_with_id = f"{sender}: {content}"
         state.recent_messages.append(message_with_id)
@@ -865,7 +869,7 @@ class WorkingMemoryManager:
                     recent_msgs[-self.max_recent :] if recent_msgs else []
                 )
                 state.recent_senders = (
-                    {int(k): v for k, v in recent_senders_raw.items()}
+                    {int(k) if k.isdigit() else k: v for k, v in recent_senders_raw.items()}
                     if recent_senders_raw
                     else {}
                 )

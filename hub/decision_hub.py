@@ -605,7 +605,9 @@ class DecisionHub:
                         elif hasattr(inst, "send_private_message"):
                             sent = await inst.send_private_message(target_id, message)
 
-                if not sent and self.onebot_client:
+                # 仅对 QQ 类平台回退到 OneBot，避免将 desktop/terminal 误发到 QQ
+                _qq_platforms = {"aiocqhttp", "qqofficial", "qq"}
+                if not sent and self.onebot_client and platform in _qq_platforms:
                     if chat_type == "group":
                         sent = await self.onebot_client.send_group_message(target_id, message)
                     else:
@@ -850,8 +852,9 @@ class DecisionHub:
                             )
                             sent = await inst.send_private_message(user_id_to_send, result.message)
 
-                # 回退到 OneBot（兼容）
-                if not sent and self.onebot_client:
+                # 回退到 OneBot（兼容，仅 QQ 类平台）
+                _qq_platforms = {"aiocqhttp", "qqofficial", "qq"}
+                if not sent and self.onebot_client and platform in _qq_platforms:
                     if chat_type == "group":
                         group_id_to_send = result.context.target_id if result.context else target_id
                         logger.info(f"[决策层] [主动聊天] 发送到群 {group_id_to_send}: {result.message}")
@@ -1367,6 +1370,13 @@ class DecisionHub:
         uid = perception.get("user_id", "")
         if uid:
             record_activity(str(uid), str(perception.get("content", ""))[:100])
+
+        # 【时间感知矫正】每次收到用户消息时更新全局 last_active_at
+        if hasattr(self, "_birth_data") and self._birth_data:
+            try:
+                self._birth_data["last_active_at"] = datetime.now().isoformat()
+            except Exception:
+                pass
 
         # 6. 生成响应（委托给响应生成器）
         raw_content = perception.get("content", "")

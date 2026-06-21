@@ -220,9 +220,11 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
             self._shutting_down = False
 
+            # 清理已死亡的任务，防止 accumulate dead tasks
+            self._tasks[:] = [t for t in self._tasks if not t.done()]
+
             # 如果已有后台任务在运行，不重复创建
-            existing_tasks = [t for t in self._tasks if not t.done()]
-            if existing_tasks:
+            if self._tasks:
                 self._connected = True
                 return True
 
@@ -253,6 +255,9 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                                         logger.error(f"[{self.platform_id}] WebSocket 错误")
                                         break
 
+                    except asyncio.CancelledError:
+                        logger.info(f"[{self.platform_id}] listen_loop 任务取消")
+                        break
                     except Exception as e:
                         if self._shutting_down:
                             break

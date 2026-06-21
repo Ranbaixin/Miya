@@ -375,11 +375,14 @@ class MiyaDaemon:
             except Exception:
                 pass
 
+            from utils.port_utils import check_and_get_port
+            api_port, port_changed = check_and_get_port(8000, port_name="Web API")
+
             def _run():
-                uvicorn.run(app, host="0.0.0.0", port=8000, log_level="warning")
+                uvicorn.run(app, host="0.0.0.0", port=api_port, log_level="warning")
 
             threading.Thread(target=_run, daemon=True, name="Miya-WebAPI").start()
-            logger.info("Web API 服务器已启动 (http://0.0.0.0:8000)")
+            logger.info(f"Web API 服务器已启动 (http://0.0.0.0:{api_port})")
         except Exception as e:
             logger.warning(f"Web API 启动失败: {e}")
 
