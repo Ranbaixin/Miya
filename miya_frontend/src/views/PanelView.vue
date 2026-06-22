@@ -27,6 +27,12 @@ function togglePanels() {
   panelsHidden.value = !panelsHidden.value
 }
 
+// ═══ 陀螺仪开关 ═══
+const gyroEnabled = useStorage('miya-gyro-enabled', true)
+function toggleGyro() {
+  gyroEnabled.value = !gyroEnabled.value
+}
+
 // ═══ BGM 控制 ═══
 const bgmPlaying = ref(false)
 const bgmAvailable = computed(() => bgmFileOptions.length > 0)
@@ -141,6 +147,8 @@ onUnmounted(() => {
 const gyroLeftPanel = computed(() => {
   if (panelsHidden.value)
     return ''
+  if (!gyroEnabled.value)
+    return 'rotateY(30deg)'
   const ry = 30 + pX.value * 10
   const rx = pY.value * -5
   return `rotateY(${ry.toFixed(1)}deg) rotateX(${rx.toFixed(1)}deg)`
@@ -149,6 +157,8 @@ const gyroLeftPanel = computed(() => {
 const gyroRightPanel = computed(() => {
   if (panelsHidden.value)
     return ''
+  if (!gyroEnabled.value)
+    return 'rotateY(-30deg)'
   const ry = -30 + pX.value * 10
   const rx = pY.value * -5
   return `rotateY(${ry.toFixed(1)}deg) rotateX(${rx.toFixed(1)}deg)`
@@ -156,13 +166,13 @@ const gyroRightPanel = computed(() => {
 
 // CSS 变量注入：传给子卡片做 calc() 叠加
 const gyroVarsRight = computed(() => ({
-  '--gyro-rx': `${(pY.value * -3).toFixed(1)}deg`,
-  '--gyro-ry': `${(pX.value * 5).toFixed(1)}deg`,
+  '--gyro-rx': gyroEnabled.value ? `${(pY.value * -3).toFixed(1)}deg` : '0deg',
+  '--gyro-ry': gyroEnabled.value ? `${(pX.value * 5).toFixed(1)}deg` : '0deg',
 }))
 
 const gyroVarsLeft = computed(() => ({
-  '--gyro-rx': `${(pY.value * -2).toFixed(1)}deg`,
-  '--gyro-ry': `${(pX.value * 3).toFixed(1)}deg`,
+  '--gyro-rx': gyroEnabled.value ? `${(pY.value * -2).toFixed(1)}deg` : '0deg',
+  '--gyro-ry': gyroEnabled.value ? `${(pX.value * 3).toFixed(1)}deg` : '0deg',
 }))
 
 function navigate(path: string) {
@@ -200,6 +210,14 @@ function toggleChat() {
         <div class="cmd-toggle-row">
           <button class="cmd-toggle-btn" title="隐藏面板" @click="togglePanels">
             <span class="cmd-toggle-icon">⊙</span>
+          </button>
+          <button
+            class="cmd-toggle-btn cmd-gyro-btn"
+            :class="{ active: gyroEnabled }"
+            :title="gyroEnabled ? '陀螺仪已开启' : '陀螺仪已关闭'"
+            @click="toggleGyro"
+          >
+            <span class="cmd-toggle-icon">◎</span>
           </button>
           <div class="cmd-music" :title="bgmPlaying ? '暂停 BGM' : '播放 BGM'" @click="toggleBgm">
             <span class="cmd-music-icon" :class="{ playing: bgmPlaying }">♪</span>
@@ -625,6 +643,19 @@ function toggleChat() {
 
 .cmd-toggle-btn:hover .cmd-toggle-icon {
   transform: scale(1.2);
+}
+
+/* 陀螺仪按钮状态 */
+.cmd-gyro-btn {
+  color: rgba(0, 173, 181, 0.15);
+}
+
+.cmd-gyro-btn.active {
+  color: rgba(0, 255, 245, 0.45);
+}
+
+.cmd-gyro-btn.active:hover {
+  color: rgba(0, 255, 245, 0.7);
 }
 
 .cmd-music {
