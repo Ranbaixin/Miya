@@ -163,7 +163,10 @@ class MessageBatcher:
                 window.processed_message_ids.add(msg_id)
                 return True
 
-            # 检查是否达到最大消息数
+            # 先加入当前消息，再检查是否达到上限
+            window.messages.append(msg)
+            window.processed_message_ids.add(msg_id)
+
             if len(window.messages) >= self.max_messages:
                 logger.info(
                     f"[消息汇总] 窗口 {group_key} 达到最大消息数 {self.max_messages}，立即处理"
@@ -173,8 +176,7 @@ class MessageBatcher:
                 window.messages.clear()
                 window.is_active = False
                 window.is_flushing = False
-                window.processed_message_ids.clear()  # 清空已处理消息ID
-                # 放入输出队列
+                window.processed_message_ids.clear()
                 await self.output_queue.put((group_key, batch))
                 return True
 
