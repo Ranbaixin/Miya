@@ -1,0 +1,51 @@
+{
+  "name": "pc_tracker",
+  "displayName": "PC时间追踪",
+  "description": "电脑使用时间追踪数据 — 今日统计、应用排行、多日趋势、工作习惯分析",
+  "version": "1.0.0",
+  "enabled": true,
+  "agentType": "mcp",
+  "entryPoint": {
+    "module": "mcpserver.pc_tracker.service",
+    "class": "PcTrackerService"
+  },
+  "capabilities": {
+    "tools": [
+      {
+        "name": "pc_context",
+        "description": "获取电脑使用综合总览 — 当前活动窗口、今日使用时长、应用分布Top5、近7天趋势、中文文本摘要",
+        "parameters": {}
+      },
+      {
+        "name": "pc_daily",
+        "description": "获取多日使用时长趋势（最近N天）",
+        "parameters": {
+          "days": { "type": "integer", "description": "查询天数 (1-90)", "default": 7 }
+        }
+      },
+      {
+        "name": "pc_processes",
+        "description": "获取应用使用排行 — 看时间花在哪些应用上",
+        "parameters": {
+          "date": { "type": "string", "description": "日期 (today 或 YYYY-MM-DD)", "default": "today" },
+          "limit": { "type": "integer", "description": "返回数量", "default": 10 }
+        }
+      },
+      {
+        "name": "pc_current",
+        "description": "获取当前开机会话的实时状态 — 开机多长时间、当前在用什么应用、是否空闲",
+        "parameters": {}
+      },
+      {
+        "name": "pc_insights",
+        "description": "获取预计算的工作习惯洞察 — 高峰时段、切换频率、工作日vs周末模式",
+        "parameters": {}
+      },
+      {
+        "name": "pc_status",
+        "description": "检查PC时间追踪器是否在运行",
+        "parameters": {}
+      }
+    ]
+  }
+}
