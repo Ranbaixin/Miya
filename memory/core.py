@@ -388,6 +388,7 @@ class JsonBackend(MemoryBackend):
 
         # 文件锁保护索引读写
         self._index_lock = asyncio.Lock()
+        self._backup_lock = asyncio.Lock()
 
         self._load_index()
         self._load_tag_index()
@@ -542,21 +543,21 @@ class JsonBackend(MemoryBackend):
         if memory_id not in self._index:
             return None
 
-        try:
-            file_path = Path(self._index[memory_id]["file_path"])
-            if not file_path.exists():
-                return None
-
-            async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
-                content = await f.read()
-                # 检查文件是否为空
-                if not content or not content.strip():
-                    logger.warning(f"记忆文件为空: {file_path}")
+        async with self._index_lock:
+            try:
+                file_path = Path(self._index[memory_id]["file_path"])
+                if not file_path.exists():
                     return None
-                data = json.loads(content)
-                return MemoryItem.from_dict(data)
-        except Exception as e:
-            logger.error(f"加载记忆失败: {e}")
+
+                async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
+                    content = await f.read()
+                    if not content or not content.strip():
+                        logger.warning(f"记忆文件为空: {file_path}")
+                        return None
+                    data = json.loads(content)
+                    return MemoryItem.from_dict(data)
+            except Exception as e:
+                logger.error(f"加载记忆失败: {e}")
             return None
 
     async def delete(self, memory_id: str) -> bool:
@@ -1239,6 +1240,9 @@ class MiyaMemoryCore:
 
         # 更新缓存和索引
         self._cache[memory.id] = memory
+        if len(self._cache) > 5000:
+            old_keys = sorted(self._cache, key=lambda k: self._cache[k].access_count)[:2500]
+            for k in old_keys: del self._cache[k]
         self._user_index[user_id].add(memory.id)
         for tag in memory.tags:
             self._tag_index[tag].add(memory.id)
@@ -2109,28 +2113,24 @@ class MiyaMemoryCore:
                 logger.debug(f"[MiyaMemoryCore] 向量生成并同步成功: {memory.id}")
         except Exception as e:
             logger.warning(f"[MiyaMemoryCore] 向量生成失败: {e}")
-        except Exception as e:
-            logger.warning(f"[MiyaMemoryCore] Neo4j同步失败: {e}")
 
     async def _backup_memory(self, memory: MemoryItem):
         """备份记忆 - 按周归档，避免数据丢失"""
         backup_dir = self.data_dir / "backups"
         backup_dir.mkdir(parents=True, exist_ok=True)
 
-        # 使用 ISO 周年格式 (2026-W14) 按周归档
         iso_year, iso_week, _ = datetime.now().isocalendar()
         week_key = f"{iso_year}-W{iso_week:02d}"
         backup_file = backup_dir / f"{week_key}.json"
 
-        try:
-            # 读取现有备份
-            backups = []
-            if backup_file.exists():
-                with open(backup_file, "r", encoding="utf-8") as f:
-                    backups = json.load(f)
+        async with self.backend._backup_lock:
+            try:
+                backups = []
+                if backup_file.exists():
+                    with open(backup_file, "r", encoding="utf-8") as f:
+                        backups = json.load(f)
 
-            # 添加新备份
-            backups.append(memory.to_dict())
+                backups.append(memory.to_dict())
 
             # 每周最多10000条，超出后归档旧数据到archive
             if len(backups) > 10000:
