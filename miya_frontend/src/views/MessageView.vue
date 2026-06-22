@@ -59,7 +59,6 @@ function applySoulToMessage(soul: any) {
 
 async function fetchSoulData(retryCount = 0) {
   try {
-    // 优先：直连后端灵魂数据（_last_soul_output）
     const soulRes = await fetch(`http://localhost:${Number(import.meta.env.VITE_API_PORT) || 9800}/api/soul/current`)
     const directSoul = await soulRes.json()
     if (directSoul && (directSoul.emotions || directSoul.inner_thought || directSoul.thinking)) {
@@ -67,7 +66,6 @@ async function fetchSoulData(retryCount = 0) {
       return
     }
 
-    // Fallback: 认知记忆文件
     const res = await fetch(`http://localhost:${Number(import.meta.env.VITE_API_PORT) || 9800}/api/desktop/files/read?path=data%2Fmemory%2Fcognitive_memories.json`)
     const data = await res.json()
     if (data?.lines) {
@@ -125,7 +123,6 @@ async function chatStreamInternal(content: string, options?: { skill?: string, i
   const pushContent = (text: string) => {
     contentBuf += text
     message.content = contentBuf
-    // 每次内容更新保存到 localStorage
     try {
       localStorage.setItem('miya-messages', JSON.stringify(MESSAGES.value.slice(-200)))
     } catch {}
@@ -145,11 +142,9 @@ async function chatStreamInternal(content: string, options?: { skill?: string, i
     usg_id: CONFIG.value.ui?.desktop_usg_id || 'desktop_user',
     image_data: (options?.images?.length ?? 0) > 0 ? options!.images![0] : undefined,
   } as any).then((res: any) => {
-    // 解析响应 (可能是 SSE 或 JSON)
     let responseText = ''
     const soulRaw: any = {}
     if (typeof res === 'string' && res.startsWith('data:')) {
-      // SSE 格式 - 弥娅后端返回: data: {"type":"plain","data":"...","chain_type":"final"}
       const lines = res.split('\n')
       for (const line of lines) {
         const dataPrefix = 'data: '
@@ -171,7 +166,6 @@ async function chatStreamInternal(content: string, options?: { skill?: string, i
       }
     } else {
       responseText = res?.response || res?.data?.response || JSON.stringify(res)
-      // JSON 响应路径：直接提取 soul 数据
       if (res?.soul) {
         Object.assign(soulRaw, res.soul)
       }
@@ -182,7 +176,6 @@ async function chatStreamInternal(content: string, options?: { skill?: string, i
     message.status = undefined
     proxySetState('idle')
 
-    // 存储灵魂数据到消息（仅来自 SSE 流每句专属数据）
     if (Object.keys(soulRaw).length > 0) {
       const soulData: any = {}
       if (soulRaw.emotions) {
@@ -199,11 +192,9 @@ async function chatStreamInternal(content: string, options?: { skill?: string, i
       if (soulRaw.thinking) soulData.thinking = soulRaw.thinking
       ;(message as any).soulData = soulData
       saveMessages()
-      // 异步从认知记忆补全灵魂数据（内心独白/归因/反思/思考/情绪）
       fetchSoulData()
     }
 
-    // 滚动到底部
     nextTick(() => {
       const el = document.querySelector('.p-scrollpanel-content')
       if (el) el.scrollTop = el.scrollHeight
@@ -240,6 +231,7 @@ const expandedInputStyle = ref<Record<string, string>>({})
 const expandedAnchorLeft = ref(8)
 const msgListRef = ref<HTMLDivElement | null>(null)
 const msgListExpandedRef = ref<HTMLDivElement | null>(null)
+const showMoreActions = ref(false)
 
 function isImeComposing(event: KeyboardEvent) {
   return event.isComposing || (event as any).keyCode === 229
@@ -545,74 +537,73 @@ function getSupportedMimeType(): string {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 h-full">
-    <div class="flex min-h-0 grow">
+  <div class="msg-view">
+    <div class="msg-view-main">
       <!-- 主内容区 -->
-      <GlassPanel v-show="!isExpanded" ref="normalContainerRef" title="弥娅对话" subtitle="CHAT · SOUL RESONANCE" size="fluid" class="w-full grow">
+      <GlassPanel v-show="!isExpanded" ref="normalContainerRef" title="弥娅对话" subtitle="CHAT · SOUL RESONANCE" size="fluid" class="msg-glass">
         <template #header-actions>
-          <div class="window-actions">
-            <button
-              v-if="!isExpanded"
-              class="window-btn"
-              title="放大对话窗口"
-              @click="toggleExpanded"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M15 3h6v6" />
-                <path d="M9 21H3v-6" />
-                <path d="M21 3l-7 7" />
-                <path d="M3 21l7-7" />
-              </svg>
-            </button>
-          </div>
+          <button
+            class="msg-expand-btn"
+            title="放大对话窗口"
+            @click="toggleExpanded"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 3h6v6" />
+              <path d="M9 21H3v-6" />
+              <path d="M21 3l-7 7" />
+              <path d="M3 21l7-7" />
+            </svg>
+          </button>
         </template>
 
-        <div ref="msgListRef" class="msg-scroll-area">
-          <div class="grid gap-4 pb-4">
-            <MessageItem
-              v-for="item, index in activeMessages" :key="index"
-              :role="item.role" :content="item.content"
-              :reasoning="item.reasoning" :sender="item.sender"
-              :generating="item.generating" :status="item.status"
-              :tool-events="item.toolEvents"
-              :soul-data="item.soulData"
-              :class="(item.generating && index === activeMessages.length - 1) || 'msg-sep'"
-            />
+        <div ref="msgListRef" class="msg-scroll">
+          <div class="msg-list">
+            <TransitionGroup name="msg-in">
+              <MessageItem
+                v-for="item, index in activeMessages" :key="index"
+                :role="item.role" :content="item.content"
+                :reasoning="item.reasoning" :sender="item.sender"
+                :generating="item.generating" :status="item.status"
+                :tool-events="item.toolEvents"
+                :soul-data="item.soulData"
+                :style="{ '--msg-index': index }"
+              />
+            </TransitionGroup>
           </div>
         </div>
       </GlassPanel>
 
       <Teleport to="body">
-        <div v-if="isExpanded" class="expanded-chat-overlay" :style="expandedStyle">
+        <div v-if="isExpanded" class="expanded-overlay" :style="expandedStyle">
           <GlassPanel ref="expandedContainerRef" title="弥娅对话" subtitle="CHAT · EXPANDED VIEW" size="full" :hide-back="false">
             <template #header-actions>
-              <div class="window-actions">
-                <button
-                  class="window-btn"
-                  title="缩小对话窗口"
-                  @click="toggleExpanded"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14 10 21 3" />
-                    <path d="M21 10V3h-7" />
-                    <path d="M3 14l7 7" />
-                    <path d="M3 21h7v-7" />
-                  </svg>
-                </button>
-              </div>
+              <button
+                class="msg-expand-btn"
+                title="缩小对话窗口"
+                @click="toggleExpanded"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 10 21 3" />
+                  <path d="M21 10V3h-7" />
+                  <path d="M3 14l7 7" />
+                  <path d="M3 21h7v-7" />
+                </svg>
+              </button>
             </template>
 
-            <div ref="msgListExpandedRef" class="msg-scroll-area">
-              <div class="grid gap-4 pb-4">
-                <MessageItem
-                  v-for="item, index in activeMessages" :key="`expanded-${index}`"
-                  :role="item.role" :content="item.content"
-                  :reasoning="item.reasoning" :sender="item.sender"
-                  :generating="item.generating" :status="item.status"
-                  :tool-events="item.toolEvents"
-                  :soul-data="item.soulData"
-                  :class="(item.generating && index === activeMessages.length - 1) || 'msg-sep'"
-                />
+            <div ref="msgListExpandedRef" class="msg-scroll">
+              <div class="msg-list">
+                <TransitionGroup name="msg-in">
+                  <MessageItem
+                    v-for="item, index in activeMessages" :key="`expanded-${index}`"
+                    :role="item.role" :content="item.content"
+                    :reasoning="item.reasoning" :sender="item.sender"
+                    :generating="item.generating" :status="item.status"
+                    :tool-events="item.toolEvents"
+                    :soul-data="item.soulData"
+                    :style="{ '--msg-index': index }"
+                  />
+                </TransitionGroup>
               </div>
             </div>
           </GlassPanel>
@@ -620,302 +611,494 @@ function getSupportedMimeType(): string {
       </Teleport>
     </div>
 
+    <!-- ── 会话历史面板 ── -->
     <Transition name="slide-up">
-      <div v-if="showHistory && !isExpanded" class="session-panel">
-        <div class="flex items-center justify-between px-3 py-2 session-panel-header">
-          <span class="text-white/70 text-sm font-bold">对话历史</span>
-          <button
-            class="text-white/40 hover:text-white/80 bg-transparent border-none cursor-pointer text-xs"
-            @click="showHistory = false"
-          >
-            关闭
-          </button>
+      <div v-if="showHistory && !isExpanded" class="history-panel">
+        <div class="history-header">
+          <span class="history-title">◇ 对话历史</span>
+          <button class="history-close" @click="showHistory = false">✕</button>
         </div>
-        <div class="overflow-y-auto max-h-48">
-          <div v-if="loadingSessions" class="text-white/40 text-xs text-center py-4">
-            加载中...
-          </div>
-          <div v-else-if="sessions.length === 0" class="text-white/40 text-xs text-center py-4">
-            暂无历史对话
-          </div>
+        <div class="history-list">
+          <div v-if="loadingSessions" class="history-loading">加载中...</div>
+          <div v-else-if="sessions.length === 0" class="history-empty">暂无历史对话</div>
           <div
             v-for="s in sessions" :key="s.sessionId"
-            class="session-item"
-            :class="{ 'bg-white/10': s.sessionId === CURRENT_SESSION_ID }"
+            class="history-item"
+            :class="{ active: s.sessionId === CURRENT_SESSION_ID }"
             @click="handleSwitchSession(s.sessionId)"
           >
-            <div class="flex-1 min-w-0">
-              <div class="text-white/80 text-sm truncate">
-                {{ s.sessionId.slice(0, 8) }}...
-              </div>
-              <div class="text-white/40 text-xs">
-                {{ formatRelativeTime(s.lastActiveAt) }} · {{ s.conversationRounds }} 轮对话
-              </div>
+            <div class="history-item-main">
+              <span class="history-item-id">{{ s.sessionId.slice(0, 8) }}</span>
+              <span class="history-item-meta">{{ formatRelativeTime(s.lastActiveAt) }} · {{ s.conversationRounds }} 轮</span>
             </div>
             <button
-              class="text-white/30 hover:text-red-400 bg-transparent border-none cursor-pointer text-xs shrink-0 ml-2"
+              class="history-del"
               title="删除"
               @click.stop="handleDeleteSession(s.sessionId)"
-            >
-              x
-            </button>
+            >✕</button>
           </div>
         </div>
       </div>
     </Transition>
 
+    <!-- ── 输入栏 ── -->
     <div
       ref="inputDockRef"
-      :class="isExpanded ? 'expanded-input-dock' : 'mx-[var(--nav-back-width)]'"
+      class="input-dock"
+      :class="{ expanded: isExpanded }"
       :style="isExpanded ? expandedInputStyle : undefined"
     >
-      <div class="miya-input-box flex items-center gap-2 min-w-0">
-        <button
-          class="input-icon-btn shrink-0"
-          title="新建对话"
-          @click="handleNewSession"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
-        </button>
-        <button
-          class="input-icon-btn shrink-0"
-          :class="{ 'active': showHistory }"
-          title="对话历史"
-          @click="toggleHistory"
-        >
-          H
-        </button>
-        <span class="input-prefix shrink-0">&gt;</span>
-        <textarea
-          ref="composerRef"
-          v-model="input"
-          rows="1"
-          class="composer-textarea flex-1 min-w-0 text-white bg-transparent border-none outline-none"
-          placeholder="Type a message..."
-          @keydown.enter.exact="handleComposerEnter"
-          @input="resizeComposer"
-        />
-        <button
-          v-if="CONFIG.voice_realtime.enabled"
-          class="input-icon-btn shrink-0"
-          :class="{ recording: isRecording }"
-          :title="isRecording ? '停止录音' : '语音输入'"
-          @click="toggleVoiceInput"
-        >
-          <svg v-if="!isRecording" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" x2="12" y1="19" y2="22" /></svg>
-          <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
-        </button>
-        <button
-          v-if="CONFIG.system.voice_enabled"
-          class="input-icon-btn shrink-0"
-          :title="ttsEnabled ? '关闭语音播报' : '开启语音播报'"
-          @click="toggleTTS"
-        >
-          <svg v-if="ttsEnabled" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
-          <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><line x1="22" y1="9" x2="16" y2="15" /><line x1="16" y1="9" x2="22" y2="15" /></svg>
-        </button>
-        <button
-          class="input-icon-btn shrink-0"
-          title="上传文件 (Word/Excel/文本)"
-          @click="triggerUpload"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M12 18v-6" /><path d="m9 15 3-3 3 3" /></svg>
-        </button>
-        <input
-          ref="fileInput"
-          type="file"
-          accept=".docx,.xlsx,.txt,.csv,.md,.pdf,.png,.jpg,.jpeg"
-          class="hidden"
-          @change="handleFileUpload"
-        >
-        <button
-          class="send-btn shrink-0"
-          :disabled="!input?.trim()"
-          title="发送消息"
-          @click="sendMessage"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 2 11 13" />
-            <path d="m22 2-7 20-4-9-9-4Z" />
-          </svg>
-        </button>
+      <div class="input-box">
+        <div class="input-main">
+          <button class="input-btn" title="新建对话" @click="handleNewSession">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
+          </button>
+          <span class="input-cursor">&gt;</span>
+          <textarea
+            ref="composerRef"
+            v-model="input"
+            rows="1"
+            class="input-textarea"
+            placeholder="与弥娅对话..."
+            @keydown.enter.exact="handleComposerEnter"
+            @input="resizeComposer"
+          />
+          <div class="input-actions">
+            <button
+              class="input-btn" :class="{ active: showHistory }"
+              title="对话历史" @click="toggleHistory"
+            >H</button>
+            <button
+              v-if="CONFIG.voice_realtime.enabled"
+              class="input-btn" :class="{ recording: isRecording }"
+              :title="isRecording ? '停止录音' : '语音输入'"
+              @click="toggleVoiceInput"
+            >
+              <svg v-if="!isRecording" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" x2="12" y1="19" y2="22" /></svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
+            </button>
+          </div>
+
+          <!-- 更多操作 -->
+          <div class="input-more-wrap">
+            <button class="input-btn" title="更多" @click="showMoreActions = !showMoreActions">···</button>
+          </div>
+
+          <button
+            class="send-btn" :disabled="!input?.trim()" title="发送"
+            @click="sendMessage"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 2 11 13" />
+              <path d="m22 2-7 20-4-9-9-4Z" />
+            </svg>
+          </button>
+        </div>
       </div>
+
+      <!-- 更多菜单 (放在 input-box 外面避免被 clip-path 裁切) -->
+      <Transition name="more-pop">
+        <div v-if="showMoreActions" class="input-more-menu">
+          <button v-if="CONFIG.system.voice_enabled" class="more-item" @click="toggleTTS">
+            {{ ttsEnabled ? '♪ 关闭语音播报' : '♪ 开启语音播报' }}
+          </button>
+          <button class="more-item" @click="triggerUpload">⇧ 上传文件</button>
+        </div>
+      </Transition>
+      <input
+        ref="fileInput"
+        type="file"
+        accept=".docx,.xlsx,.txt,.csv,.md,.pdf,.png,.jpg,.jpeg"
+        class="hidden"
+        @change="handleFileUpload"
+      >
     </div>
   </div>
 </template>
 
 <style scoped>
-.msg-scroll-area {
+.msg-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.msg-view-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.msg-glass {
+  width: 100%;
+  flex: 1;
+}
+
+/* ── 消息列表 ── */
+.msg-scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   padding-right: 0.3rem;
 }
 
-.msg-scroll-area::-webkit-scrollbar { width: 4px; }
-.msg-scroll-area::-webkit-scrollbar-track { background: transparent; }
-.msg-scroll-area::-webkit-scrollbar-thumb { background: rgba(0, 173, 181, 0.12); border-radius: 2px; }
+.msg-scroll::-webkit-scrollbar { width: 4px; }
+.msg-scroll::-webkit-scrollbar-track { background: transparent; }
+.msg-scroll::-webkit-scrollbar-thumb { background: rgba(0, 173, 181, 0.12); border-radius: 2px; }
 
-.expanded-chat-overlay {
+.msg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding-bottom: 0.5rem;
+}
+
+/* 消息入场动画 */
+.msg-in-enter-active {
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--msg-index, 0) * 30ms);
+}
+
+.msg-in-leave-active {
+  transition: all 0.2s ease-in;
+}
+
+.msg-in-enter-from {
+  opacity: 0;
+  transform: translateY(16px) scale(0.97);
+}
+
+.msg-in-leave-to {
+  opacity: 0;
+}
+
+/* ── 展开按钮 ── */
+.msg-expand-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 173, 181, 0.2);
+  border-radius: 4px;
+  background: rgba(0, 173, 181, 0.06);
+  color: rgba(0, 173, 181, 0.6);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.msg-expand-btn:hover {
+  background: rgba(0, 173, 181, 0.14);
+  border-color: rgba(0, 255, 245, 0.4);
+  color: rgba(0, 255, 245, 0.9);
+  box-shadow: 0 0 12px rgba(0, 173, 181, 0.15);
+}
+
+/* ── 展开浮层 ── */
+.expanded-overlay {
   position: fixed;
   z-index: 80;
 }
 
-.expanded-input-dock {
-  position: fixed;
-  z-index: 81;
-}
-
-.expanded-chat-overlay :deep(.glass-panel) {
+.expanded-overlay :deep(.glass-panel) {
   width: 100%;
   height: 100%;
 }
 
-.message-header {
-  display: none;
-}
-
-.window-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  flex-shrink: 0;
-}
-
-.window-btn {
-  width: 30px;
-  height: 30px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid color-mix(in srgb, var(--miya-comp-message-ai) 15%, transparent);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--miya-comp-message-ai) 5%, transparent);
-  color: color-mix(in srgb, var(--miya-comp-message-ai) 60%, transparent);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.window-btn:hover {
-  background: color-mix(in srgb, var(--miya-comp-message-ai) 12%, transparent);
-  color: color-mix(in srgb, var(--miya-comp-message-ai) 95%, transparent);
-  border-color: color-mix(in srgb, var(--miya-comp-message-ai) 40%, transparent);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--miya-comp-message-ai) 15%, transparent);
-}
-
-.msg-sep {
-  border-bottom: 1px solid color-mix(in srgb, var(--miya-comp-message-ai) 8%, transparent);
-}
-
-.session-panel-header {
-  border-bottom: 1px solid color-mix(in srgb, var(--miya-comp-message-ai) 8%, transparent);
-}
-
-.session-panel {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 5rem;
-  background: rgba(34, 40, 49, 0.95);
+/* ── 会话历史面板 ── */
+.history-panel {
+  position: relative;
+  margin: 0 0 0.5rem;
+  background: linear-gradient(135deg, rgba(34, 40, 49, 0.92), rgba(24, 28, 35, 0.95));
   border: 1px solid rgba(0, 173, 181, 0.12);
-  border-radius: 4px;
-  backdrop-filter: blur(12px);
-  z-index: 10;
+  clip-path: polygon(0 6px, 6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%);
+  backdrop-filter: blur(16px);
+  overflow: hidden;
+  animation: panel-in 0.25s ease;
 }
 
-.session-item {
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.history-header {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
+  justify-content: space-between;
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid rgba(0, 173, 181, 0.08);
+}
+
+.history-title {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 0.75rem;
+  color: rgba(0, 255, 245, 0.65);
+  letter-spacing: 0.08em;
+}
+
+.history-close {
+  background: none;
+  border: none;
+  color: rgba(0, 173, 181, 0.3);
   cursor: pointer;
-  transition: background 0.15s;
+  font-size: 0.7rem;
+  transition: color 0.2s;
 }
 
-.session-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+.history-close:hover { color: rgba(0, 255, 245, 0.7); }
+
+.history-list {
+  max-height: 200px;
+  overflow-y: auto;
 }
 
+.history-list::-webkit-scrollbar { width: 3px; }
+.history-list::-webkit-scrollbar-thumb { background: rgba(0, 173, 181, 0.1); border-radius: 2px; }
+
+.history-loading,
+.history-empty {
+  text-align: center;
+  padding: 1rem;
+  color: rgba(0, 173, 181, 0.3);
+  font-size: 0.7rem;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-bottom: 1px solid rgba(0, 173, 181, 0.04);
+}
+
+.history-item:hover,
+.history-item.active {
+  background: rgba(0, 173, 181, 0.06);
+}
+
+.history-item.active {
+  border-left: 2px solid rgba(0, 255, 245, 0.4);
+}
+
+.history-item-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.history-item-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: rgba(228, 236, 240, 0.7);
+}
+
+.history-item-meta {
+  font-size: 0.6rem;
+  color: rgba(0, 173, 181, 0.35);
+}
+
+.history-del {
+  background: none;
+  border: none;
+  color: rgba(0, 173, 181, 0.2);
+  cursor: pointer;
+  font-size: 0.65rem;
+  padding: 4px;
+  transition: color 0.2s;
+}
+
+.history-del:hover { color: rgba(255, 100, 100, 0.7); }
+
+/* ── 动画 ── */
 .slide-up-enter-active,
 .slide-up-leave-active {
   transition: all 0.2s ease;
 }
-
 .slide-up-enter-from,
 .slide-up-leave-to {
   opacity: 0;
   transform: translateY(8px);
 }
 
-.input-icon-btn {
-  padding: 0.5rem;
-  color: color-mix(in srgb, var(--miya-comp-message-ai) 40%, transparent);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  border-radius: 0.5rem;
-  transition: all 0.2s;
-  font-size: 0.9rem;
+/* ── 输入栏 ── */
+.input-dock {
+  position: relative;
+  padding-top: 0.5rem;
+  margin: 0 0 0 var(--nav-back-width);
 }
 
-.input-icon-btn:hover {
-  color: color-mix(in srgb, var(--miya-comp-message-ai) 80%, transparent);
-  background: color-mix(in srgb, var(--miya-comp-message-ai) 8%, transparent);
+.input-dock.expanded {
+  position: fixed;
+  z-index: 81;
+  margin: 0;
+  padding: 0.5rem 0.5rem 0;
 }
 
-.miya-input-box {
-  background: color-mix(in srgb, var(--miya-comp-message-bg) 50%, #000);
-  border: 1px solid color-mix(in srgb, var(--miya-comp-message-ai) 15%, transparent);
+.input-box {
+  background: linear-gradient(135deg, rgba(34, 40, 49, 0.85), rgba(24, 28, 35, 0.9));
+  border: 1px solid rgba(0, 173, 181, 0.1);
   clip-path: polygon(0 4px, 4px 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 0 100%);
-  padding: 0.4rem 0.6rem;
+  padding: 0.35rem 0.5rem;
   backdrop-filter: blur(12px);
-  transition: border-color 0.3s;
-}
-.miya-input-box:focus-within {
-  border-color: rgba(0, 173, 181, 0.4);
-  box-shadow: 0 0 20px rgba(0, 173, 181, 0.08);
+  transition: border-color 0.3s, box-shadow 0.3s;
 }
 
-.composer-textarea {
-  min-height: 40px;
+.input-box:focus-within {
+  border-color: rgba(0, 173, 181, 0.35);
+  box-shadow: 0 0 20px rgba(0, 173, 181, 0.06);
+}
+
+.input-main {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.input-cursor {
+  color: rgba(0, 173, 181, 0.35);
+  font-size: 0.85rem;
+  font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.input-textarea {
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
   max-height: 140px;
-  padding: 8px 0;
+  padding: 6px 0;
   line-height: 22px;
   resize: none;
   overflow-y: auto;
   font-family: 'Noto Sans SC', sans-serif;
+  font-size: 0.85rem;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: rgba(228, 236, 240, 0.9);
 }
 
-.composer-textarea::placeholder {
-  color: rgba(0, 173, 181, 0.18);
+.input-textarea::placeholder {
+  color: rgba(0, 173, 181, 0.15);
 }
 
-.input-prefix {
-  color: rgba(0, 173, 181, 0.4);
-  font-size: 0.9rem;
+.input-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.input-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: none;
+  color: rgba(0, 173, 181, 0.35);
+  cursor: pointer;
+  border-radius: 4px;
   font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
-.send-btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  align-self: center; width: 34px; height: 34px;
-  border: 1px solid rgba(0, 173, 181, 0.25); border-radius: 2px;
-  background: rgba(0, 173, 181, 0.06); color: rgba(0, 173, 181, 0.8);
-  cursor: pointer; transition: all 0.25s ease;
-  clip-path: polygon(2px 0, 100% 0, 100% calc(100% - 2px), calc(100% - 2px) 100%, 0 100%, 0 2px);
+.input-btn:hover {
+  color: rgba(0, 255, 245, 0.7);
+  background: rgba(0, 173, 181, 0.08);
 }
-.send-btn:hover:not(:disabled) {
-  background: rgba(0, 173, 181, 0.15); border-color: rgba(0, 173, 181, 0.5);
-  box-shadow: 0 0 20px rgba(0, 173, 181, 0.2);
-}
-.send-btn:disabled { opacity: 0.25; cursor: default; background: transparent; }
 
-.input-icon-btn.recording {
+.input-btn.active {
+  color: rgba(0, 255, 245, 0.65);
+  background: rgba(0, 173, 181, 0.1);
+}
+
+.input-btn.recording {
   color: #f87171;
-  animation: recording-pulse 1.2s ease-in-out infinite;
+  animation: rec-pulse 1.2s ease-in-out infinite;
 }
 
-@keyframes recording-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.4); }
-  50% { box-shadow: 0 0 0 6px rgba(248, 113, 113, 0); }
+@keyframes rec-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.3); }
+  50% { box-shadow: 0 0 0 5px rgba(248, 113, 113, 0); }
+}
+
+/* 更多菜单 */
+.input-more-wrap {
+  flex-shrink: 0;
+}
+
+.input-more-menu {
+  position: absolute;
+  bottom: calc(100% - 2px);
+  right: 1rem;
+  min-width: 130px;
+  background: rgba(24, 28, 35, 0.95);
+  border: 1px solid rgba(0, 173, 181, 0.15);
+  border-radius: 4px;
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+  z-index: 100;
+}
+
+.more-item {
+  display: block;
+  width: 100%;
+  padding: 0.4rem 0.7rem;
+  background: none;
+  border: none;
+  color: rgba(0, 173, 181, 0.55);
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 0.7rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.more-item:hover {
+  background: rgba(0, 173, 181, 0.1);
+  color: rgba(0, 255, 245, 0.8);
+}
+
+.more-pop-enter-active { transition: all 0.15s ease; }
+.more-pop-leave-active { transition: all 0.1s ease; }
+.more-pop-enter-from,
+.more-pop-leave-to { opacity: 0; transform: translateY(4px); }
+
+/* 发送按钮 */
+.send-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(0, 173, 181, 0.2);
+  border-radius: 2px;
+  background: rgba(0, 173, 181, 0.06);
+  color: rgba(0, 173, 181, 0.6);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+}
+
+.send-btn:hover:not(:disabled) {
+  background: rgba(0, 173, 181, 0.15);
+  border-color: rgba(0, 255, 245, 0.45);
+  color: rgba(0, 255, 245, 0.9);
+  box-shadow: 0 0 16px rgba(0, 173, 181, 0.18);
+}
+
+.send-btn:disabled {
+  opacity: 0.2;
+  cursor: default;
 }
 </style>

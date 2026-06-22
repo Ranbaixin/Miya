@@ -338,7 +338,7 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
   user-select: none;
   animation: cmd-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: visible;
-  padding: 0 3% 0;
+  padding: 0.2rem 3% 0;
   position: relative;
 }
 
@@ -378,11 +378,11 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
 .panel-hidden {
   opacity: 0;
   pointer-events: none;
-  transform: rotateY(50deg) scale(0.95);
+  transform: rotateY(50deg) scale(0.95) !important;
 }
 
 .cmd-right.panel-hidden {
-  transform: rotateY(-50deg) scale(0.95);
+  transform: rotateY(-50deg) scale(0.95) !important;
 }
 
 /* 恢复显示按钮 */
@@ -651,14 +651,18 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
   justify-content: center;
   align-items: flex-start;
   padding: 0.35rem;
-  background: rgba(34, 40, 49, 0.35);
-  border: 1px solid rgba(0, 173, 181, 0.04);
+  background: rgba(34, 40, 49, 0.55);
+  border: 1px solid rgba(0, 173, 181, 0.1);
   cursor: pointer;
-  transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   font-family: inherit;
   color: inherit;
   overflow: hidden;
   position: relative;
+  transform: rotateX(3deg) rotateY(-5deg);
+  box-shadow:
+    2px 4px 12px rgba(0, 0, 0, 0.3),
+    0 1px 0 rgba(0, 173, 181, 0.06);
 }
 
 .cmd-nav-card::before {
@@ -667,14 +671,22 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
   inset: 0;
   background: linear-gradient(135deg, rgba(0, 255, 245, 0.06), transparent 60%);
   opacity: 0;
-  transition: opacity 0.5s ease;
+  transition: opacity 0.4s ease;
   pointer-events: none;
 }
 
 .cmd-nav-card:hover {
-  background: rgba(0, 173, 181, 0.12);
-  transform: skewX(-7deg) scale(1.03);
-  border-color: rgba(0, 255, 245, 0.15);
+  background: rgba(0, 173, 181, 0.18);
+  transform: rotateX(1deg) rotateY(-8deg) scale(1.04) translateY(-3px);
+  border-color: rgba(0, 255, 245, 0.3);
+  box-shadow:
+    3px 6px 20px rgba(0, 173, 181, 0.15),
+    0 2px 0 rgba(0, 255, 245, 0.12);
+}
+
+.cmd-nav-card:active {
+  transform: skewX(-5deg) scale(0.98);
+  transition: transform 0.1s ease;
 }
 
 .cmd-nav-card:hover::before {
@@ -876,19 +888,27 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
   align-items: center;
   height: clamp(24px, 3.5vh, 30px);
   flex: 1;
-  background: rgba(34, 40, 49, 0.35);
-  border: 1px solid rgba(0, 173, 181, 0.03);
+  background: rgba(34, 40, 49, 0.55);
+  border: 1px solid rgba(0, 173, 181, 0.08);
   padding: 0 0.25rem;
   cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
   overflow: hidden;
   position: relative;
+  transform: rotateX(1deg) rotateY(-3deg);
+  box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 .cmd-res-item:hover {
-  background: rgba(0, 173, 181, 0.1);
-  border-color: rgba(0, 255, 245, 0.12);
-  transform: scale(1.02);
+  background: rgba(0, 173, 181, 0.14);
+  border-color: rgba(0, 255, 245, 0.25);
+  transform: rotateX(0deg) rotateY(-5deg) scale(1.03);
+  box-shadow: 1px 3px 12px rgba(0, 173, 181, 0.12);
+}
+
+.cmd-res-item:active {
+  transform: rotateX(1deg) rotateY(-3deg) scale(0.98);
+  transition: transform 0.1s ease;
 }
 
 .cmd-res-icon {
@@ -1116,18 +1136,30 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
   flex: 1;
   height: 100%;
   display: flex;
-  background: rgba(34, 40, 49, 0.38);
-  border: 1px solid rgba(0, 173, 181, 0.04);
+  background: rgba(34, 40, 49, 0.55);
+  border: 1px solid rgba(0, 173, 181, 0.08);
   padding: 0.25rem 0.4rem;
   cursor: pointer;
-  transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   overflow: hidden;
+  transform: rotateX(2deg) rotateY(-4deg);
+  box-shadow:
+    2px 3px 10px rgba(0, 0, 0, 0.3),
+    0 1px 0 rgba(0, 173, 181, 0.06);
 }
 
 .cmd-battle-info:hover {
-  background: rgba(0, 173, 181, 0.08);
-  border-color: rgba(0, 255, 245, 0.12);
-  transform: rotateY(4deg) scale(1.02);
+  background: rgba(0, 173, 181, 0.14);
+  border-color: rgba(0, 255, 245, 0.25);
+  transform: rotateX(1deg) rotateY(-7deg) scale(1.02);
+  box-shadow:
+    3px 5px 18px rgba(0, 173, 181, 0.12),
+    0 2px 0 rgba(0, 255, 245, 0.12);
+}
+
+.cmd-battle-info:active {
+  transform: rotateX(2deg) rotateY(-4deg) scale(0.98);
+  transition: transform 0.1s ease;
 }
 
 .cmd-battle-left {
@@ -1266,18 +1298,26 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
   height: 100%;
   display: flex;
   cursor: pointer;
-  transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   overflow: hidden;
+  transform: rotateX(2deg) rotateY(-3deg);
+  box-shadow: 1px 2px 8px rgba(0, 0, 0, 0.25);
 }
 
 .cmd-quest:hover {
-  background: rgba(0, 173, 181, 0.06);
-  transform: rotateY(4deg);
+  background: rgba(0, 173, 181, 0.1);
+  transform: rotateX(1deg) rotateY(-6deg) scale(1.02);
+  box-shadow: 2px 4px 14px rgba(0, 173, 181, 0.1);
+}
+
+.cmd-quest:active {
+  transform: rotateX(2deg) rotateY(-3deg) scale(0.98);
+  transition: transform 0.1s ease;
 }
 
 .cmd-quest-left {
   width: 25%;
-  background: rgba(0, 173, 181, 0.05);
+  background: rgba(0, 173, 181, 0.08);
   padding: 0.25rem;
   display: flex;
   flex-direction: column;
@@ -1286,7 +1326,7 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
 }
 
 .cmd-quest:hover .cmd-quest-left {
-  background: rgba(0, 173, 181, 0.1);
+  background: rgba(0, 173, 181, 0.16);
 }
 
 .cmd-quest-left h2 {
@@ -1307,7 +1347,7 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
 
 .cmd-quest-right {
   flex: 1;
-  background: rgba(34, 40, 49, 0.35);
+  background: rgba(34, 40, 49, 0.55);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1318,7 +1358,7 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
 }
 
 .cmd-quest:hover .cmd-quest-right {
-  background: rgba(34, 40, 49, 0.5);
+  background: rgba(34, 40, 49, 0.7);
 }
 
 .cmd-quest-right p {
@@ -1374,39 +1414,48 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
 .cmd-feat-card {
   flex: 1;
   height: 100%;
-  background: rgba(34, 40, 49, 0.35);
-  border: 1px solid rgba(0, 173, 181, 0.03);
+  background: rgba(34, 40, 49, 0.55);
+  border: 1px solid rgba(0, 173, 181, 0.08);
   padding: 0.3rem;
   cursor: pointer;
-  transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   position: relative;
   font-family: inherit;
   color: inherit;
   text-align: left;
   overflow: hidden;
+  transform: rotateX(3deg) rotateY(-4deg);
+  box-shadow:
+    2px 4px 10px rgba(0, 0, 0, 0.3),
+    0 1px 0 rgba(0, 173, 181, 0.06);
 }
 
 .cmd-feat-card::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(0, 255, 245, 0.04), transparent 50%);
+  background: linear-gradient(135deg, rgba(0, 255, 245, 0.05), transparent 50%);
   opacity: 0;
-  transition: opacity 0.5s ease;
+  transition: opacity 0.4s ease;
   pointer-events: none;
 }
 
 .cmd-feat-card:hover {
-  background: rgba(0, 173, 181, 0.08);
-  transform: rotateY(5deg) scale(1.02);
-  border-color: rgba(0, 255, 245, 0.12);
+  background: rgba(0, 173, 181, 0.15);
+  transform: rotateX(1deg) rotateY(-7deg) scale(1.03) translateY(-3px);
+  border-color: rgba(0, 255, 245, 0.28);
+  box-shadow:
+    3px 6px 18px rgba(0, 173, 181, 0.12),
+    0 2px 0 rgba(0, 255, 245, 0.12);
 }
 
-.cmd-feat-card:hover::before {
-  opacity: 1;
+.cmd-feat-card:active {
+  transform: rotateX(3deg) rotateY(-4deg) scale(0.98);
+  transition: transform 0.1s ease;
 }
 
-.cmd-feat-card:hover h1 { color: #E4ECF0; text-shadow: 0 0 8px rgba(0, 255, 245, 0.15); }
+.cmd-feat-card:hover::before { opacity: 1; }
+.cmd-feat-card:hover h1 { color: #E4ECF0; text-shadow: 0 0 10px rgba(0, 255, 245, 0.25); }
 .cmd-feat-card:hover span { color: rgba(228, 236, 240, 0.65); }
 
 .cmd-feat-card h1 {
@@ -1455,11 +1504,11 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
 .cmd-boxline4 {
   flex: 1;
   width: 70%;
-  background: rgba(34, 40, 49, 0.28);
-  border: 1px solid rgba(0, 173, 181, 0.03);
+  background: rgba(34, 40, 49, 0.5);
+  border: 1px solid rgba(0, 173, 181, 0.08);
   padding: 0 0.6rem;
   cursor: pointer;
-  transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1468,9 +1517,10 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
 }
 
 .cmd-boxline4:hover {
-  background: rgba(0, 173, 181, 0.08);
-  border-color: rgba(0, 255, 245, 0.1);
+  background: rgba(0, 173, 181, 0.14);
+  border-color: rgba(0, 255, 245, 0.2);
   width: 100%;
+  box-shadow: 0 0 14px rgba(0, 173, 181, 0.08);
 }
 
 .cmd-guild-title {
@@ -1481,7 +1531,7 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
 }
 
 .cmd-boxline4:hover .cmd-guild-title {
-  text-shadow: 0 0 6px rgba(0, 255, 245, 0.2);
+  text-shadow: 0 0 10px rgba(0, 255, 245, 0.3);
 }
 
 .cmd-guild-desc {
@@ -1512,23 +1562,31 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
   justify-content: center;
   padding: 0.3rem 0.15rem;
   cursor: pointer;
-  transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-  background: transparent;
-  border: none;
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  background: rgba(34, 40, 49, 0.4);
+  border: 1px solid rgba(0, 173, 181, 0.06);
   font-family: inherit;
   color: inherit;
   overflow: hidden;
   gap: 0.08rem;
+  transform: rotateX(2deg) rotateY(-3deg);
+  box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 .cmd-bottom-item:hover {
-  background: rgba(0, 173, 181, 0.08);
-  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.35);
-  transform: translateY(-1px);
+  background: rgba(0, 173, 181, 0.15);
+  border-color: rgba(0, 255, 245, 0.2);
+  box-shadow: 3px 5px 16px rgba(0, 0, 0, 0.35), 0 0 10px rgba(0, 173, 181, 0.1);
+  transform: rotateX(1deg) rotateY(-6deg) translateY(-3px);
+}
+
+.cmd-bottom-item:active {
+  transform: rotateX(2deg) rotateY(-3deg) scale(0.97);
+  transition: transform 0.1s ease;
 }
 
 .cmd-bottom-item:hover h1 {
-  text-shadow: 0 0 10px rgba(0, 255, 245, 0.3);
+  text-shadow: 0 0 12px rgba(0, 255, 245, 0.35);
 }
 
 .cmd-bottom-icon {

@@ -121,15 +121,8 @@ function navigateTo(item: NavItem) {
   min-width: 64px;
   height: 100%;
   padding: 0.5rem 0;
-  background: linear-gradient(
-    180deg,
-    rgba(34, 40, 49, 0.7) 0%,
-    rgba(34, 40, 49, 0.5) 50%,
-    rgba(34, 40, 49, 0.7) 100%
-  );
-  border-right: 1px solid rgba(0, 173, 181, 0.08);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: transparent;
+  border-right: 1px solid rgba(0, 173, 181, 0.06);
   perspective: 400px;
   -webkit-perspective: 400px;
   z-index: 50;

@@ -51,14 +51,8 @@ function handleShortcut(s: Shortcut) {
   height: 40px;
   min-height: 40px;
   padding: 0 1rem;
-  background: linear-gradient(
-    180deg,
-    rgba(34, 40, 49, 0.5) 0%,
-    rgba(34, 40, 49, 0.85) 100%
-  );
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(0, 173, 181, 0.06);
+  background: transparent;
+  border-top: 1px solid rgba(0, 173, 181, 0.04);
   z-index: 60;
   user-select: none;
 }
