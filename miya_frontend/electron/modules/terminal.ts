@@ -116,20 +116,26 @@ export function startTerminal(
   const cliPath = cliCandidates.find(p => existsSync(p))
 
   if (!cliPath) {
-    throw new Error(`Claude Code Engine not found. Checked: ${cliCandidates.filter(p => p).join(', ')}`)
+    // Claude Code Engine 未安装，回退到 Python 终端
+    const pythonCmd = process.platform === 'win32' ? 'python' : 'python3'
+    ptyProcess = spawn(pythonCmd, ['-X', 'utf8', 'run/main.py'], {
+      name: 'xterm-256color',
+      cwd: rootDir,
+      env,
+      cols: 120,
+      rows: 40,
+    })
+  } else if (!existsSync(NODE_EXE)) {
+    throw new Error('Node.js not found. Searched PATH and common locations.')
+  } else {
+    ptyProcess = spawn(NODE_EXE, [cliPath], {
+      name: 'xterm-256color',
+      cwd: rootDir,
+      env,
+      cols: 120,
+      rows: 40,
+    })
   }
-
-  if (!existsSync(NODE_EXE)) {
-    throw new Error(`Node.js not found. Searched PATH and common locations. Try installing Node.js.`)
-  }
-
-  ptyProcess = spawn(NODE_EXE, [cliPath], {
-    name: 'xterm-256color',
-    cwd: rootDir,
-    env,
-    cols: 120,
-    rows: 40,
-  })
 
   terminalBuffer = ''
 
