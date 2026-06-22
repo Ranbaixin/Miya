@@ -2123,14 +2123,13 @@ class MiyaMemoryCore:
         week_key = f"{iso_year}-W{iso_week:02d}"
         backup_file = backup_dir / f"{week_key}.json"
 
-        async with self.backend._backup_lock:
-            try:
-                backups = []
-                if backup_file.exists():
-                    with open(backup_file, "r", encoding="utf-8") as f:
-                        backups = json.load(f)
+        try:
+            backups = []
+            if backup_file.exists():
+                with open(backup_file, "r", encoding="utf-8") as f:
+                    backups = json.load(f)
 
-                backups.append(memory.to_dict())
+            backups.append(memory.to_dict())
 
             # 每周最多10000条，超出后归档旧数据到archive
             if len(backups) > 10000:
