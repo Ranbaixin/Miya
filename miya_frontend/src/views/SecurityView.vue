@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStorage } from '@vueuse/core'
@@ -159,7 +159,7 @@ function createKaliTerm() {
   if (!kaliTermEl.value || kaliTerm) return
   kaliFitAddon = new FitAddon()
   kaliTerm = new Terminal({
-    theme: { background: '#080618', foreground: '#d0c8f0', cursor: '#a78bfa',
+    theme: { background: '#080618', foreground: '#d0c8f0', cursor: '#00ADB5',
       selectionBackground: '#3730a340', black: '#1a1635', red: '#f87171',
       green: '#6ee7b7', yellow: '#fbbf24', blue: '#93c5fd', magenta: '#c084fc',
       cyan: '#67e8f9', white: '#e2e8f0', brightBlack: '#4a4560',
@@ -912,7 +912,7 @@ onUnmounted(() => { destroyKaliTerm() })
 <style scoped>
 .security-view {
   height: 100%; display: flex; flex-direction: column; padding: 28px 28px 16px;
-  overflow: hidden; color: var(--miya-text, #e8d5f5);
+  overflow: hidden; color: var(--miya-text, #E4ECF0);
   font-family: 'Noto Serif SC', 'Inter', system-ui, sans-serif;
 }
 

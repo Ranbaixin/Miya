@@ -1,403 +1,1094 @@
-<script setup lang="ts">
-import { useStorage, useWindowSize } from '@vueuse/core'
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+﻿<script setup lang="ts">
+import { useStorage } from '@vueuse/core'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import API from '@/api/core'
-import { CONFIG } from '@/utils/config'
 
 const router = useRouter()
 
-const miyaPersona = ref('')
-const miyaBackendOnline = ref(false)
-const miyaPlatforms = ref(0)
-const verseText = useStorage('miya-verse-text', '雪落无声 — 愿系铃中')
-const showStatus = useStorage('miya-show-status', true)
-const logoBrightness = useStorage('miya-logo-brightness', 1.0)
-const footerBrightness = useStorage('miya-footer-brightness', 1.0)
+const backendOnline = ref(false)
+const miyaPersona = ref('默认')
+const soulActive = ref(87)
+const currentTime = ref('')
+const miyaThought = ref('佳，今天的星空很美呢...')
+const currentBgm = ref('快乐的小曲')
+const miyaPlatforms = ref(3)
+let timer: ReturnType<typeof setInterval> | null = null
 
 onMounted(async () => {
   try {
     const health = await API.health()
-    miyaBackendOnline.value = health.status === 'healthy'
+    backendOnline.value = health.status === 'healthy'
     const persona = await API.getCurrentPersona()
     miyaPersona.value = persona?.persona?.name || persona?.persona?.id || '默认'
-    const platforms = await fetch('http://localhost:9800/api/v1/platforms').then(r => r.json())
-    miyaPlatforms.value = platforms.online || 0
-  } catch (e) {
-    miyaBackendOnline.value = false
-  }
+    soulActive.value = persona?.soul?.activity || 87
+  } catch { backendOnline.value = false }
+  updateTime()
+  timer = setInterval(updateTime, 10000)
 })
 
-const { height } = useWindowSize()
+onUnmounted(() => { if (timer) clearInterval(timer) })
 
-// ─── Wing layout — 左翼 5 张 + 右翼 5 张 ──────────────────────────
-// radii: 1 羽尖 / 2 内羽 — 依次排开如翅膀层次
-const cards = [
-  // ═══ 左翼（135°→220°, 85°展幅）═══
-  { id: 'community', label: '娜迦社区', desc: '发帖 · 交友 · 互动', path: '/community', angle: 135, radius: 1, varName: '--miya-comp-panel-card-1', fallback: '#ff77aa', emoji: '✧' },
-  { id: 'screen',    label: '屏幕视觉', desc: '截图 · AI 分析',       path: '/screen',    angle: 158, radius: 2, varName: '--miya-comp-panel-card-2', fallback: '#ff9944', emoji: '⊙' },
-  { id: 'security',  label: '安全中心', desc: '扫描 · 渗透 · 分析',   path: '/security',  angle: 180, radius: 2, varName: '--miya-comp-panel-card-9', fallback: '#ff5555', emoji: '⬡' },
-  { id: 'terminal',  label: '终端引擎', desc: 'Claude Code · 代码',   path: '/terminal',  angle: 202, radius: 2, varName: '--miya-comp-panel-card-3', fallback: '#00e88f', emoji: '⬡' },
-  { id: 'openclaw',  label: '电脑控制', desc: 'OpenClaw · AI 操作',   path: '/openclaw',  angle: 220, radius: 1, varName: '--miya-comp-panel-card-4', fallback: '#ff5577', emoji: '⬢' },
-  // ═══ 右翼（-40°→40°, 80°展幅）═══
-  { id: 'chat',      label: '弥娅对话', desc: '决策层 · 感知 · 协作', path: '/chat',      angle: -40, radius: 1, varName: '--miya-comp-panel-card-5', fallback: '#b44dff', emoji: '◆' },
-  { id: 'mind',      label: '记忆星河', desc: '认知引擎 · 记忆网络',  path: '/mind',      angle: -22, radius: 2, varName: '--miya-comp-panel-card-6', fallback: '#00e5ff', emoji: '◇' },
-  { id: 'config',    label: '灵魂调谐', desc: '人格 · 情绪 · 模型池', path: '/config',    angle:   0, radius: 2, varName: '--miya-comp-panel-card-7', fallback: '#d4af37', emoji: '❖' },
-  { id: 'floating',  label: '铃音守护', desc: '轻量陪伴 · 悬浮球',   icon: 'floating',  angle:  22, radius: 2, varName: '--miya-comp-panel-card-8', fallback: '#4da6ff', emoji: '◈' },
-  { id: 'artboard',  label: '弥娅画板', desc: 'AI 绘画 · 创作展示',   path: '/artboard',  angle:  40, radius: 1, varName: '--miya-comp-panel-card-10', fallback: '#f59e0b', emoji: '⬗' },
+function updateTime() {
+  currentTime.value = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+}
+
+const leftCards = [
+  { id: 'chat', label: '对话', desc: '灵魂共鸣', path: '/chat' },
+  { id: 'mind', label: '记忆', desc: '认知星河', path: '/mind' },
+  { id: 'artboard', label: '画板', desc: 'AI 创作', path: '/artboard' },
+  { id: 'terminal', label: '终端', desc: 'CC 引擎', path: '/terminal' },
 ]
 
-// ─── Mouse tracking ──────────────────────────────────────────────────
-const mouse = reactive({ x: 0.5, y: 0.5 })
-function onMouseMove(e: MouseEvent) { mouse.x = e.clientX / window.innerWidth; mouse.y = e.clientY / window.innerHeight }
-const hoveredCard = ref<string | null>(null)
-onMounted(() => window.addEventListener('mousemove', onMouseMove))
-onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
+const rightLinks = [
+  { id: 'config', label: '调谐', desc: '人格·模型', path: '/config' },
+  { id: 'community', label: '社区', desc: '娜迦', path: '/community' },
+  { id: 'security', label: '安全', desc: '扫描', path: '/security' },
+  { id: 'screen', label: '视觉', desc: '截图', path: '/screen' },
+]
 
-// ─── Wing geometry ───────────────────────────────────────────────────
-const cardScale = useStorage('miya-panel-card-scale', 1.0)
-// 半径随缩放自适应：卡片越大，轨道越远，减少重叠
-const gapFactor = computed(() => 0.5 + cardScale.value * 0.6) // scale 1.0→1.1, scale 2.0→1.7
-const tipRadius   = computed(() => Math.min(320, height.value * 0.35) * gapFactor.value)
-const innerRadius = computed(() => Math.min(250, height.value * 0.30) * gapFactor.value)
-const rotationRx  = computed(() => (mouse.y - 0.5) * -5)
-const rotationRy  = computed(() => (mouse.x - 0.5) * 8)
-const SCALE       = computed(() => Math.min(1.08, Math.max(0.72, height.value / 900)) * cardScale.value)
+const banners = ['弥娅 v2.0 · 全新看板娘上线', '新增记忆星河 3D 可视化', '安全中心 · 漏洞扫描引擎']
+const bannerIdx = ref(0)
+const bannerText = ref(banners[0])
+let bannerTimer: ReturnType<typeof setInterval> | null = null
 
-const cardPositions = computed(() =>
-  cards.map(c => {
-    const rad = (c.angle * Math.PI) / 180
-    const r = c.radius === 1 ? tipRadius.value : innerRadius.value
-    return { x: Math.cos(rad) * r, y: Math.sin(rad) * r }
-  }),
-)
-
-// ─── Constellation ───────────────────────────────────────────────────
-const wingLines = computed(() => {
-  const pos = cardPositions.value as { x: number; y: number }[]
-  const lines: { x1: number; y1: number; x2: number; y2: number; cls: string }[] = []
-  // Left wing: feather chain (0→1→2→3→4)
-  for (let i = 0; i < 4; i++) lines.push({ x1: pos[i]!.x, y1: pos[i]!.y, x2: pos[i + 1]!.x, y2: pos[i + 1]!.y, cls: 'wing-feather' })
-  // Right wing: feather chain (5→6→7→8→9)
-  for (let i = 5; i < 9; i++) lines.push({ x1: pos[i]!.x, y1: pos[i]!.y, x2: pos[i + 1]!.x, y2: pos[i + 1]!.y, cls: 'wing-feather' })
-  // Each feather to center
-  for (let i = 0; i < cards.length; i++) lines.push({ x1: 0, y1: 0, x2: pos[i]!.x, y2: pos[i]!.y, cls: 'feather-to-center' })
-  // Wing root connectors (tip feathers → center with highlight)
-  lines.push({ x1: 0, y1: 0, x2: pos[0]!.x, y2: pos[0]!.y, cls: 'wing-root' })
-  lines.push({ x1: 0, y1: 0, x2: pos[4]!.x, y2: pos[4]!.y, cls: 'wing-root' })
-  lines.push({ x1: 0, y1: 0, x2: pos[5]!.x, y2: pos[5]!.y, cls: 'wing-root' })
-  lines.push({ x1: 0, y1: 0, x2: pos[9]!.x, y2: pos[9]!.y, cls: 'wing-root' })
-  return lines
+onMounted(() => {
+  bannerTimer = setInterval(() => {
+    bannerIdx.value = (bannerIdx.value + 1) % banners.length
+    bannerText.value = banners[bannerIdx.value]!
+  }, 4000)
 })
+onUnmounted(() => { if (bannerTimer) clearInterval(bannerTimer) })
 
-const leftWingPoints = computed(() => {
-  const p = cardPositions.value as { x: number; y: number }[]
-  return `0,0 ${p[0]!.x},${p[0]!.y} ${p[1]!.x},${p[1]!.y} ${p[2]!.x},${p[2]!.y} ${p[3]!.x},${p[3]!.y} ${p[4]!.x},${p[4]!.y}`
-})
+function navigate(path: string) { router.push(path) }
 
-const rightWingPoints = computed(() => {
-  const p = cardPositions.value as { x: number; y: number }[]
-  return `0,0 ${p[5]!.x},${p[5]!.y} ${p[6]!.x},${p[6]!.y} ${p[7]!.x},${p[7]!.y} ${p[8]!.x},${p[8]!.y} ${p[9]!.x},${p[9]!.y}`
-})
+const chatExpanded = ref(false)
 
-// ─── Per-card tilt ───────────────────────────────────────────────────
-const TILT = 10
-function cardTilt(idx: number) {
-  const pos = cardPositions.value as { x: number; y: number }[]
-  const p = pos[idx]
-  if (!p) return { rx: 0, ry: 0 }
-  return { rx: (mouse.y - 0.5) * -TILT, ry: (mouse.x - 0.5) * TILT }
-}
-function cardTransform(i: number) {
-  const t = cardTilt(i)
-  const s = hoveredCard.value === cards[i]!.id ? SCALE.value * 1.12 : SCALE.value
-  return `translate(-50%,-50%) perspective(800px) rotateX(${t.rx}deg) rotateY(${t.ry}deg) scale(${s})`
-}
-
-function cardStyleLeft(i: number): string {
-  const p = (cardPositions.value as { x: number; y: number }[])[i]
-  return p ? `calc(50% + ${p.x}px)` : '50%'
-}
-
-function cardStyleTop(i: number): string {
-  const p = (cardPositions.value as { x: number; y: number }[])[i]
-  return p ? `calc(50% + ${p.y}px)` : '50%'
-}
-
-function navigate(card: typeof cards[0]) {
-  if (card.id === 'floating') return enterFloatingMode()
-  if (card.path) router.push(card.path)
-}
-function enterFloatingMode() {
-  CONFIG.value.floating.enabled = true
-  window.electronAPI?.floating.enter()
-}
+function toggleChat() { chatExpanded.value = !chatExpanded.value }
 </script>
 
 <template>
-  <div class="star-orbit">
-    <!-- ── Center Logo ── -->
-    <div class="logo-center" :style="{ filter: `brightness(${logoBrightness})` }">
-      <div class="logo-ring">
-        <svg viewBox="0 0 100 100" fill="none">
-          <circle cx="50" cy="42" r="40" stroke="var(--miya-primary)" stroke-width="0.8" opacity="0.18" />
-          <circle cx="50" cy="42" r="36" stroke="var(--miya-primary)" stroke-width="1.0" opacity="0.25" />
-          <circle cx="50" cy="42" r="28" stroke="var(--miya-accent)" stroke-width="1.5" opacity="0.35" />
-          <circle cx="50" cy="42" r="18" stroke="var(--miya-primary)" stroke-width="1.8" opacity="0.4" />
-          <circle cx="50" cy="42" r="8" stroke="var(--miya-accent)" stroke-width="2" opacity="0.5" />
-          <path d="M50 5C50 5 22 25 22 50C22 68 50 85 50 85" stroke="var(--miya-primary)" stroke-width="1.2" stroke-linecap="round" opacity="0.35" />
-          <path d="M50 5C50 5 78 25 78 50C78 68 50 85 50 85" stroke="var(--miya-primary)" stroke-width="1.2" stroke-linecap="round" opacity="0.25" />
-          <circle cx="50" cy="42" r="2" fill="var(--miya-accent)" opacity="0.9" />
-          <circle cx="38" cy="36" r="1.5" fill="var(--miya-gold)" opacity="0.7" />
-          <circle cx="62" cy="36" r="1.2" fill="var(--miya-gold)" opacity="0.6" />
-          <circle cx="30" cy="52" r="1" fill="var(--miya-gold)" opacity="0.4" />
-          <circle cx="70" cy="52" r="0.8" fill="var(--miya-gold)" opacity="0.35" />
-          <circle cx="50" cy="58" r="1" fill="var(--miya-gold)" opacity="0.3" />
-        </svg>
-      </div>
-      <div class="logo-title">弥娅</div>
-      <div class="logo-sub">MIYA · AI COMPANION</div>
-      <div class="logo-pulse" />
-    </div>
-
-    <!-- ── Wing system ── -->
-    <div
-      class="orbit-system"
-      :style="{ transform: `perspective(1000px) rotateX(${rotationRx}deg) rotateY(${rotationRy}deg)` }"
-    >
-      <!-- Wing SVG overlay -->
-      <svg class="wing-svg" viewBox="-350 -350 700 700">
-        <defs>
-          <filter id="wing-glow">
-            <feGaussianBlur stdDeviation="1.5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-          <linearGradient id="left-wing-grad" x1="1" y1="0.5" x2="0" y2="0.5">
-            <stop offset="0%" stop-color="rgba(167,139,250,0)" />
-            <stop offset="100%" stop-color="rgba(167,139,250,0.18)" />
-          </linearGradient>
-          <linearGradient id="right-wing-grad" x1="0" y1="0.5" x2="1" y2="0.5">
-            <stop offset="0%" stop-color="rgba(167,139,250,0.18)" />
-            <stop offset="100%" stop-color="rgba(167,139,250,0)" />
-          </linearGradient>
-        </defs>
-        <!-- Left wing energy field -->
-        <polygon
-          :points="leftWingPoints"
-          fill="url(#left-wing-grad)" opacity="0.15" stroke="var(--miya-accent)" stroke-width="0.4" stroke-dasharray="3 5" />
-        <!-- Right wing energy field -->
-        <polygon
-          :points="rightWingPoints"
-          fill="url(#right-wing-grad)" opacity="0.15" stroke="var(--miya-accent)" stroke-width="0.4" stroke-dasharray="3 5" />
-        <!-- Lines -->
-        <g opacity="0.3">
-          <line v-for="(l,i) in wingLines.filter(l=>l.cls==='feather-to-center')" :key="'fc'+i"
-            :x1="l.x1" :y1="l.y1" :x2="l.x2" :y2="l.y2"
-            stroke="var(--miya-accent,#a78bfa)" stroke-width="0.35" stroke-dasharray="2 6" opacity="0.3" />
-          <line v-for="(l,i) in wingLines.filter(l=>l.cls==='wing-feather')" :key="'wf'+i"
-            :x1="l.x1" :y1="l.y1" :x2="l.x2" :y2="l.y2"
-            stroke="var(--miya-accent,#a78bfa)" stroke-width="0.4" stroke-dasharray="3 4" opacity="0.35" />
-          <line v-for="(l,i) in wingLines.filter(l=>l.cls==='wing-root')" :key="'wr'+i"
-            :x1="l.x1" :y1="l.y1" :x2="l.x2" :y2="l.y2"
-            stroke="var(--miya-gold,#d4af37)" stroke-width="0.8" opacity="0.4" filter="url(#wing-glow)" />
-        </g>
-      </svg>
-
-      <!-- Orbit cards (wings) -->
-      <div
-        v-for="(card, i) in cards"
-        :key="card.id"
-        class="orbit-card"
-        :class="[{ 'is-hovered': hoveredCard === card.id }, `wing-${i < 4 ? 'left' : 'right'}`]"
-        :style="{
-          '--card-color': `var(${card.varName}, ${card.fallback})`,
-          left: cardStyleLeft(i),
-          top: cardStyleTop(i),
-          transform: cardTransform(i),
-          transition: hoveredCard === card.id
-            ? 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s, border-color 0.3s'
-            : 'transform 0.18s ease-out, box-shadow 0.35s, border-color 0.3s',
-        }"
-        @click="navigate(card)"
-        @mouseenter="hoveredCard = card.id"
-        @mouseleave="hoveredCard = null"
-      >
-        <div class="card-track" />
-        <div class="card-corners" />
-        <div class="card-sheen" />
-        <div class="card-aurora" />
-        <div class="card-particles">
-          <span v-for="n in 6" :key="n" class="particle-dot" :style="{ '--i': n }" />
+  <div class="command-center">
+    <!-- ═══ 左面板 ═══ -->
+    <div class="cmd-panel cmd-left">
+      <div class="cmd-top">
+        <div class="cmd-level">
+          <div class="cmd-level-head">
+            <span class="cmd-level-label">灵魂活跃度</span>
+            <span class="cmd-level-val">{{ soulActive }}</span>
+          </div>
+          <div class="cmd-level-bar">
+            <div class="cmd-level-fill" :style="{ width: `${soulActive}%` }" />
+          </div>
         </div>
-        <div class="card-inner">
-          <span class="card-emoji">{{ card.emoji }}</span>
-          <div class="card-text">
-            <span class="card-label">{{ card.label }}</span>
-            <span class="card-desc">{{ card.desc }}</span>
+        <div class="cmd-name">
+          <span class="cmd-name-main">弥娅</span>
+          <span class="cmd-name-sub">MIYA · {{ miyaPersona }}</span>
+        </div>
+      </div>
+
+      <div class="cmd-center">
+        <div class="cmd-music">
+          <span class="cmd-music-icon">♪</span>
+          <div class="cmd-music-scroll">
+            <span class="cmd-music-text">正在播放 — {{ currentBgm }}</span>
+          </div>
+        </div>
+
+        <div class="cmd-nav">
+          <button
+            v-for="card in leftCards" :key="card.id"
+            class="cmd-nav-card"
+            @click="navigate(card.path)"
+          >
+            <span class="cmd-nav-title">{{ card.label }}</span>
+            <span class="cmd-nav-desc">{{ card.desc }}</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="cmd-bottom-area">
+        <div class="cmd-banner" @click="navigate('/chat')">
+          <Transition name="banner-fade" mode="out-in">
+            <span :key="bannerText" class="cmd-banner-text">{{ bannerText }}</span>
+          </Transition>
+        </div>
+        <div class="cmd-chat" :class="{ expanded: chatExpanded }" @click="toggleChat">
+          <div class="cmd-chat-icon">💬</div>
+          <div class="cmd-chat-text">
+            <span class="cmd-chat-line">✦「{{ miyaThought }}」</span>
+            <span class="cmd-chat-line">✨ 佳，有什么需要帮忙的吗？</span>
+            <span class="cmd-chat-line">💭 今天的系统状态一切正常哦~</span>
+            <span class="cmd-chat-line">🎵 BGM: {{ currentBgm }}</span>
           </div>
         </div>
       </div>
     </div>
 
-    <div v-if="verseText" class="orbit-verse" :style="{ filter: `brightness(${footerBrightness})` }">{{ verseText }}</div>
-    <div v-if="miyaBackendOnline && showStatus" class="orbit-status" :style="{ filter: `brightness(${footerBrightness})` }">
-      <span class="status-dot" />
-      <span class="status-item">在线</span>
-      <span class="status-sep">·</span>
-      <span class="status-item">{{ miyaPlatforms }} 平台</span>
-      <span class="status-sep">·</span>
-      <span class="status-item">人格：{{ miyaPersona }}</span>
+    <!-- ═══ 右面板 ═══ -->
+    <div class="cmd-panel cmd-right">
+      <div class="cmd-resources">
+        <div class="cmd-res-item">
+          <span class="cmd-res-icon">◆</span>
+          <span class="cmd-res-val">{{ soulActive }}</span>
+          <span class="cmd-res-plus">+</span>
+        </div>
+        <div class="cmd-res-item">
+          <span class="cmd-res-icon">⬢</span>
+          <span class="cmd-res-val">{{ miyaPlatforms }}</span>
+          <span class="cmd-res-plus">+</span>
+        </div>
+        <div class="cmd-res-item">
+          <span class="cmd-res-icon">⬡</span>
+          <span class="cmd-res-val time-font">{{ currentTime }}</span>
+          <span class="cmd-res-plus">+</span>
+        </div>
+      </div>
+
+      <div class="cmd-right-center">
+        <!-- 时间 + 图标 -->
+        <div class="cmd-time-row">
+          <span class="cmd-time-icon">🔋</span>
+          <span class="cmd-time-val">{{ currentTime }}</span>
+          <div class="cmd-time-icons">
+            <span class="cmd-time-icn" title="消息" @click="navigate('/chat')">✉</span>
+            <span class="cmd-time-icn" title="设置" @click="navigate('/config')">⚙</span>
+          </div>
+        </div>
+
+        <!-- 看板娘卡片 -->
+        <div class="cmd-boxline cmd-boxline1">
+          <div class="cmd-portrait" @click="navigate('/chat')">
+            <div class="cmd-portrait-gloss" />
+            <div class="cmd-portrait-avatar">
+              <span class="cmd-portrait-char">弥</span>
+            </div>
+          </div>
+          <div class="cmd-battle-info" @click="navigate('/chat')">
+            <div class="cmd-battle-left">
+              <h1>对话</h1>
+              <span class="cmd-battle-tip">灵魂共鸣</span>
+              <span class="cmd-battle-nd">弥娅在线</span>
+            </div>
+            <div class="cmd-battle-right">
+              <h2 class="cmd-battle-pct">∞</h2>
+              <span>陪伴</span>
+            </div>
+          </div>
+          <div class="cmd-mascot" @click="navigate('/mind')">
+            <span class="cmd-mascot-icon">◆</span>
+            <span class="cmd-mascot-label">记忆</span>
+          </div>
+        </div>
+
+        <!-- 任务卡 -->
+        <div class="cmd-boxline cmd-boxline2">
+          <div class="cmd-quest" @click="navigate('/chat')">
+            <div class="cmd-quest-left">
+              <h2>日常</h2>
+              <span>对话互动</span>
+            </div>
+            <div class="cmd-quest-right">
+              <p>与弥娅进行每日交流</p>
+              <span class="cmd-quest-check">✓</span>
+            </div>
+          </div>
+          <div class="cmd-quest-spacer" />
+        </div>
+
+        <!-- 功能区 -->
+        <div class="cmd-boxline cmd-boxline3">
+          <button class="cmd-feat-card" @click="navigate('/artboard')">
+            <h1>画板</h1>
+            <span>AI 创作</span>
+          </button>
+          <button class="cmd-feat-card" @click="navigate('/terminal')">
+            <h1>终端</h1>
+            <span>CC 引擎</span>
+            <div class="cmd-feat-badge">新</div>
+          </button>
+          <div class="cmd-feat-spacer" />
+        </div>
+
+        <!-- 社区卡 -->
+        <div class="cmd-boxline cmd-boxline4" @click="navigate('/community')">
+          <span class="cmd-guild-title">娜迦社区</span>
+          <span class="cmd-guild-desc">发帖 · 交友 · 互动</span>
+        </div>
+      </div>
+
+      <!-- 底部4入口 -->
+      <div class="cmd-bottom-nav">
+        <button v-for="link in rightLinks" :key="link.id" class="cmd-bottom-item" @click="navigate(link.path)">
+          <h1>{{ link.label }}</h1>
+          <span>{{ link.desc }}</span>
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* ─── Container ───────────────────────────────────── */
-.star-orbit {
-  position: relative; width: 100%; height: 100%;
-  overflow: hidden; user-select: none;
-  font-family: 'Noto Serif SC','Inter',system-ui,sans-serif;
-}
-.orbit-system { position: relative; width: 100%; height: 100%; will-change: transform; }
-
-/* ─── Wing SVG ────────────────────────────────────── */
-.wing-svg {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
-  width: 700px; height: 700px; pointer-events: none; z-index: 0;
-}
-
-/* ─── Center Logo ─────────────────────────────────── */
-.logo-center {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
-  display: flex; flex-direction: column; align-items: center; gap: 0.25rem; z-index: 10;
-  filter: drop-shadow(0 0 40px var(--miya-glow,rgba(167,139,250,0.3)));
-}
-.logo-ring { width: 130px; height: 130px; animation: logo-glow 4s ease-in-out infinite; }
-.logo-title {
-  font-family: 'Noto Serif SC',serif; font-size: 2.6rem; font-weight: 700;
-  background: linear-gradient(135deg,#e8d5f5 0%,var(--miya-accent) 35%,var(--miya-primary,#a78bfa) 70%,#bae6fd 100%);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  letter-spacing: 0.25em;
-  filter: drop-shadow(0 0 14px var(--miya-glow,rgba(167,139,250,0.35)));
-}
-.logo-sub { font-size: 0.58rem; color: var(--miya-text-dim,#888); letter-spacing: 0.55em; opacity: 0.6; }
-.logo-pulse {
-  position: absolute; width: 200px; height: 200px; border-radius: 50%;
-  background: radial-gradient(circle,rgba(167,139,250,0.06) 0%,transparent 70%);
-  animation: pulse-ring 3s ease-in-out infinite; pointer-events: none;
-}
-@keyframes logo-glow {
-  0%,100% { filter: drop-shadow(0 0 20px var(--miya-glow,rgba(167,139,250,0.25))); }
-  50% { filter: drop-shadow(0 0 45px var(--miya-glow,rgba(167,139,250,0.5))); }
-}
-@keyframes pulse-ring {
-  0%,100% { transform: scale(0.92); opacity: 0.25; }
-  50% { transform: scale(1.08); opacity: 0.08; }
+/* ═══ 容器 ═══ */
+.command-center {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  width: 100%;
+  height: 100%;
+  perspective: 600px;
+  -webkit-perspective: 600px;
+  perspective-origin: center;
+  -webkit-perspective-origin: center;
+  user-select: none;
+  animation: cmd-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  padding: 0 5%;
 }
 
-/* ─── Orbit Cards — 透明浮空 + 双层轨线 ──────────── */
-.orbit-card {
-  --card-color: #a78bfa;
-  position: absolute; cursor: pointer;
-  width: 162px; padding: 1rem 1.1rem;
-  background: rgba(10, 8, 21, 0.06);
-  border: 1px solid color-mix(in srgb, var(--card-color) 20%, transparent);
-  border-radius: 12px;
-  overflow: visible; z-index: 5;
-  will-change: transform, box-shadow;
-}
-.orbit-card.is-hovered {
-  background: rgba(10, 8, 21, 0.15);
-  border-color: color-mix(in srgb, var(--card-color) 65%, transparent);
-  box-shadow: 0 0 26px color-mix(in srgb, var(--card-color) 38%, transparent), 0 6px 34px rgba(0,0,0,0.35);
-  z-index: 20;
+@keyframes cmd-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-/* Inner track */
-.card-track {
-  position: absolute; inset: 3px; border-radius: 9px;
-  border: 0.5px solid color-mix(in srgb, var(--card-color) 8%, transparent);
-  pointer-events: none; z-index: 0; opacity: 0.5;
-  transition: border-color 0.35s, opacity 0.35s;
-}
-.orbit-card.is-hovered .card-track { border-color: color-mix(in srgb, var(--card-color) 35%, transparent); opacity: 0.9; }
-
-/* Corner dots */
-.card-corners {
-  position: absolute; inset: -3px; border-radius: 14px;
-  background:
-    radial-gradient(1.8px, var(--card-color) 100%, transparent) 0 0,
-    radial-gradient(1.8px, var(--card-color) 100%, transparent) 100% 0,
-    radial-gradient(1.8px, var(--card-color) 100%, transparent) 0 100%,
-    radial-gradient(1.8px, var(--card-color) 100%, transparent) 100% 100%;
-  background-size: 4px 4px; background-repeat: no-repeat;
-  opacity: 0; transition: opacity 0.35s; pointer-events: none; z-index: 4;
-  filter: drop-shadow(0 0 3px var(--card-color));
-}
-.orbit-card.is-hovered .card-corners { opacity: 0.85; }
-
-/* Glass sheen */
-.card-sheen {
-  position: absolute; inset: 0; border-radius: inherit;
-  background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.03) 38%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.02) 62%, transparent 100%);
-  opacity: 0.3; transition: opacity 0.4s; pointer-events: none; z-index: 1;
-}
-.orbit-card.is-hovered .card-sheen { opacity: 0.65; }
-
-/* Aurora */
-.card-aurora {
-  position: absolute; inset: 0; border-radius: inherit;
-  background: linear-gradient(120deg, transparent 0%, color-mix(in srgb, var(--card-color) 5%, transparent) 25%, color-mix(in srgb, var(--miya-gold,#d4af37) 3%, transparent) 50%, color-mix(in srgb, var(--card-color) 5%, transparent) 75%, transparent 100%);
-  background-size: 300% 100%;
-  animation: aurora-sweep 5s ease-in-out infinite;
-  pointer-events: none; z-index: 0; opacity: 0.55;
-}
-.orbit-card.is-hovered .card-aurora { animation-duration: 2s; opacity: 1; }
-@keyframes aurora-sweep { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
-
-/* Particles */
-.card-particles { position: absolute; inset: -10px; pointer-events: none; opacity: 0; transition: opacity 0.4s; z-index: 0; }
-.orbit-card.is-hovered .card-particles { opacity: 1; }
-.particle-dot {
-  --i: 1; position: absolute; width: 2.5px; height: 2.5px; border-radius: 50%;
-  background: var(--card-color); box-shadow: 0 0 4px var(--card-color);
-  top: 50%; left: 50%;
-  animation: particle-orbit 2.8s linear infinite;
-  animation-delay: calc(var(--i) * -0.45s);
-}
-@keyframes particle-orbit {
-  0% { transform: translate(-50%,-50%) rotate(calc(var(--i)*60deg)) translateX(80px) rotate(calc(var(--i)*-60deg)); }
-  to { transform: translate(-50%,-50%) rotate(calc(var(--i)*60deg + 360deg)) translateX(80px) rotate(calc(var(--i)*-60deg - 360deg)); }
+/* ═══ 面板容器 ═══ */
+.cmd-panel {
+  height: 90%;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease-out;
+  will-change: transform;
+  overflow: hidden;
+  background: transparent; /* 去掉自带背景 */
 }
 
-/* Inner content */
-.card-inner { position: relative; z-index: 2; display: flex; align-items: center; gap: 0.7rem; }
-.card-emoji {
-  font-size: 1.3rem; flex-shrink: 0;
-  transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), filter 0.3s;
-  filter: drop-shadow(0 0 4px color-mix(in srgb,var(--card-color) 40%,transparent));
+.cmd-left {
+  width: 28%;
+  min-width: 200px;
+  transform: rotateY(30deg);
+  padding: 0.5rem 0.5rem 0.2rem;
 }
-.orbit-card.is-hovered .card-emoji { transform: scale(1.25) rotate(-5deg); filter: drop-shadow(0 0 10px var(--card-color)); }
-.card-text { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
-.card-label { font-size: 0.85rem; font-weight: 600; letter-spacing: 0.06em; color: var(--miya-text,#e8d5f5); white-space: nowrap; }
-.card-desc {
-  font-size: 0.58rem; color: var(--miya-text-dim,#666); letter-spacing: 0.05em; white-space: nowrap;
-  max-height: 0; opacity: 0; overflow: hidden;
-  transition: max-height 0.4s ease, opacity 0.35s ease, margin 0.35s ease;
-}
-.orbit-card.is-hovered .card-desc { max-height: 1.2em; opacity: 0.8; margin-top: 2px; }
 
-/* ─── Bottom ──────────────────────────────────────── */
-.orbit-verse {
-  position: absolute; bottom: 38px; left: 50%; transform: translateX(-50%);
-  font-family: 'Noto Serif SC',serif; font-size: 0.72rem; color: var(--miya-text-dim,#666);
-  letter-spacing: 0.25em; opacity: 0.35; white-space: nowrap;
+.cmd-right {
+  width: 32%;
+  min-width: 240px;
+  transform: rotateY(-30deg);
+  padding: 0.5rem 0.5rem 0.2rem;
 }
-.orbit-status {
-  position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 0.5rem;
-  font-family: 'JetBrains Mono',monospace; font-size: 0.6rem; color: var(--miya-text-dim,#666); opacity: 0.5;
+
+/* ═══ 左面板: 顶部 (固定高度) ═══ */
+.cmd-top {
+  flex-shrink: 0;
+  padding-bottom: 0.2rem;
 }
-.status-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(0,229,255,0.6); box-shadow: 0 0 6px rgba(0,229,255,0.3); }
-.status-sep { opacity: 0.3; }
-.status-item { opacity: 0.7; }
+
+.cmd-level {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: 0.8s;
+}
+
+.cmd-level:hover {
+  letter-spacing: 0.12em;
+  background: rgba(0, 173, 181, 0.08);
+}
+
+.cmd-level-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.cmd-level-label {
+  color: rgba(228, 236, 240, 0.5);
+  font-size: clamp(0.45rem, 1.2vw, 0.6rem);
+  font-family: 'Noto Sans SC', sans-serif;
+}
+
+.cmd-level-val {
+  color: #E4ECF0;
+  font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+  font-weight: 700;
+  font-family: 'Noto Serif SC', serif;
+  line-height: 1;
+}
+
+.cmd-level-bar {
+  width: 28%;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(0, 255, 245, 0.4) 50%, rgba(57, 62, 70, 0.4) 50%);
+  margin-top: 0.15rem;
+}
+
+.cmd-level-fill {
+  height: 100%;
+  background: rgba(0, 255, 245, 0.55);
+  transition: width 0.6s ease;
+}
+
+.cmd-name {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+}
+
+.cmd-name-main {
+  color: #E4ECF0;
+  font-size: clamp(1rem, 2.2vw, 1.3rem);
+  font-weight: 700;
+  font-family: 'Noto Serif SC', serif;
+  letter-spacing: 0.1em;
+  transition: letter-spacing 1s;
+  line-height: 1.3;
+}
+
+.cmd-name:hover .cmd-name-main {
+  letter-spacing: 0.3em;
+}
+
+.cmd-name-sub {
+  color: rgba(0, 173, 181, 0.5);
+  font-size: clamp(0.4rem, 0.9vw, 0.55rem);
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.06em;
+  transition: letter-spacing 0.5s;
+}
+
+.cmd-name:hover .cmd-name-sub {
+  letter-spacing: 0.15em;
+}
+
+/* ═══ 左面板: 中间 (弹性填充) ═══ */
+.cmd-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.cmd-music {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  transition: 0.8s;
+  padding: 0.15rem 0;
+  margin-left: 0.8rem;
+  flex-shrink: 0;
+}
+
+.cmd-music:hover {
+  background: rgba(0, 173, 181, 0.1);
+}
+
+.cmd-music-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0, 255, 245, 0.45);
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  transition: 1.5s;
+}
+
+.cmd-music-scroll {
+  overflow: hidden;
+  flex: 1;
+}
+
+.cmd-music-text {
+  color: rgba(228, 236, 240, 0.65);
+  font-size: clamp(0.5rem, 1vw, 0.6rem);
+  font-weight: bold;
+  white-space: nowrap;
+  display: block;
+  animation: music-scroll 6s linear infinite;
+}
+
+@keyframes music-scroll {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-120%); }
+}
+
+/* 导航卡 */
+.cmd-nav {
+  display: flex;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+
+.cmd-nav-card {
+  flex: 1;
+  aspect-ratio: 1.05;
+  min-height: 60px;
+  max-height: 90px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0.35rem;
+  background: rgba(34, 40, 49, 0.4);
+  border: 1px solid rgba(0, 173, 181, 0.05);
+  cursor: pointer;
+  transition: all 0.5s ease;
+  font-family: inherit;
+  color: inherit;
+  overflow: hidden;
+}
+
+.cmd-nav-card:hover {
+  background: rgba(0, 173, 181, 0.15);
+  transform: skewX(-6deg);
+}
+
+.cmd-nav-title {
+  color: #E4ECF0;
+  font-size: clamp(0.7rem, 1.4vw, 0.9rem);
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.cmd-nav-desc {
+  color: rgba(228, 236, 240, 0.35);
+  font-size: clamp(0.35rem, 0.7vw, 0.45rem);
+}
+
+/* ═══ 左面板底部 (固定高度) ═══ */
+.cmd-bottom-area {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-top: 0.3rem;
+}
+
+.cmd-banner {
+  padding: 0.4rem 0.6rem;
+  background: rgba(34, 40, 49, 0.35);
+  border: 1px solid rgba(0, 173, 181, 0.05);
+  cursor: pointer;
+  transition: background 0.4s;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.cmd-banner:hover {
+  background: rgba(0, 173, 181, 0.08);
+}
+
+.cmd-banner-text {
+  color: rgba(0, 255, 245, 0.55);
+  font-size: clamp(0.45rem, 0.9vw, 0.55rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.banner-fade-enter-active,
+.banner-fade-leave-active {
+  transition: all 0.4s ease;
+}
+.banner-fade-enter-from,
+.banner-fade-leave-to {
+  opacity: 0;
+}
+
+/* 聊天区 */
+.cmd-chat {
+  display: flex;
+  align-items: flex-start;
+  background: rgba(34, 40, 49, 0.3);
+  border: 1px solid rgba(0, 173, 181, 0.03);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.cmd-chat-icon {
+  width: 28px;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0, 255, 245, 0.35);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  transition: 0.4s;
+}
+
+.cmd-chat-icon:hover {
+  background: rgba(0, 173, 181, 0.15);
+}
+
+.cmd-chat-text {
+  flex: 1;
+  max-height: 1.4em;
+  overflow: hidden;
+  padding: 0.15rem 0.5rem 0 0;
+  transition: all 0.5s ease;
+}
+
+.cmd-chat-line {
+  display: block;
+  color: rgba(228, 236, 240, 0.65);
+  font-size: clamp(0.4rem, 0.85vw, 0.5rem);
+  line-height: 1.35em;
+}
+
+.cmd-chat.expanded .cmd-chat-text {
+  max-height: none;
+  padding-bottom: 0.5rem;
+  background: rgba(0, 0, 0, 0.55);
+  position: relative;
+  bottom: 140px;
+}
+
+/* ═══ 右面板: 资源栏 (固定高度) ═══ */
+.cmd-resources {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.cmd-res-item {
+  display: flex;
+  align-items: center;
+  height: clamp(24px, 3.5vh, 30px);
+  flex: 1;
+  background: rgba(34, 40, 49, 0.38);
+  border: 1px solid rgba(0, 173, 181, 0.04);
+  padding: 0 0.25rem;
+  cursor: pointer;
+  transition: 0.4s;
+  overflow: hidden;
+}
+
+.cmd-res-item:hover {
+  background: rgba(0, 173, 181, 0.12);
+}
+
+.cmd-res-icon {
+  width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0, 255, 245, 0.45);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.cmd-res-val {
+  flex: 1;
+  color: #E4ECF0;
+  font-size: clamp(0.65rem, 1.2vw, 0.8rem);
+  font-family: 'JetBrains Mono', monospace;
+  padding: 0 0.3rem;
+  min-width: 0;
+}
+
+.time-font {
+  font-size: clamp(0.5rem, 1vw, 0.65rem) !important;
+}
+
+.cmd-res-plus {
+  width: 22px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 173, 181, 0.2);
+  color: #E4ECF0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ═══ 右面板: 中间内容 (弹性) ═══ */
+.cmd-right-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 时间行 */
+.cmd-time-row {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0.05rem 0.4rem;
+  gap: 0.3rem;
+}
+
+.cmd-time-icon {
+  font-size: 0.9rem;
+  color: rgba(0, 255, 245, 0.25);
+  cursor: pointer;
+  transition: 0.4s;
+  flex-shrink: 0;
+}
+
+.cmd-time-icon:hover {
+  transform: skewX(-10deg);
+  color: rgba(0, 255, 245, 0.55);
+}
+
+.cmd-time-val {
+  color: rgba(228, 236, 240, 0.75);
+  font-size: clamp(0.8rem, 1.5vw, 1rem);
+  font-family: 'JetBrains Mono', monospace;
+  margin-right: auto;
+  cursor: pointer;
+  transition: 1.5s;
+}
+
+.cmd-time-val:hover {
+  color: rgba(0, 255, 245, 0.85);
+  font-size: clamp(1rem, 2vw, 1.4rem);
+}
+
+.cmd-time-icons {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.cmd-time-icn {
+  width: 28px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: rgba(0, 173, 181, 0.3);
+  cursor: pointer;
+  transition: 0.4s;
+}
+
+.cmd-time-icn:hover {
+  color: rgba(0, 255, 245, 0.65);
+  transform: skewX(-8deg) scale(1.1);
+}
+
+/* ── boxline 通用 ── */
+.cmd-boxline {
+  display: flex;
+  align-items: center;
+  min-height: 0;
+}
+
+/* boxline1: 看板娘卡 (flex: 3.5) */
+.cmd-boxline1 {
+  flex: 3.5;
+  justify-content: center;
+  gap: 0.25rem;
+  overflow: hidden;
+}
+
+.cmd-portrait {
+  width: 18%;
+  min-width: 70px;
+  max-width: 100px;
+  height: 100%;
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+  background: rgba(34, 40, 49, 0.3);
+  border: 1px solid rgba(0, 173, 181, 0.06);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cmd-portrait-avatar {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(0, 173, 181, 0.15), rgba(0, 255, 245, 0.05));
+  transition: transform 0.4s ease;
+}
+
+.cmd-portrait:hover .cmd-portrait-avatar {
+  transform: scale(1.08);
+}
+
+.cmd-portrait-char {
+  font-family: 'Noto Serif SC', serif;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 700;
+  color: rgba(0, 255, 245, 0.7);
+  text-shadow: 0 0 12px rgba(0, 255, 245, 0.3);
+}
+
+.cmd-portrait-gloss {
+  position: absolute;
+  top: -15%;
+  left: -10%;
+  width: 4px;
+  height: 130%;
+  background: rgba(255, 255, 255, 0.2);
+  transform: skewX(-20deg);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.25);
+  z-index: 1;
+  filter: blur(4px);
+  animation: gloss-sweep 2.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes gloss-sweep {
+  0% { left: -10%; }
+  50% { left: 130%; }
+  100% { left: 130%; }
+}
+
+.cmd-portrait :deep(canvas) {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain;
+}
+
+.cmd-portrait:hover {
+  background: rgba(0, 173, 181, 0.1);
+}
+
+.cmd-battle-info {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  background: rgba(34, 40, 49, 0.4);
+  border: 1px solid rgba(0, 173, 181, 0.05);
+  padding: 0.25rem 0.4rem;
+  cursor: pointer;
+  transition: 0.6s;
+  overflow: hidden;
+}
+
+.cmd-battle-info:hover {
+  background: rgba(0, 173, 181, 0.1);
+}
+
+.cmd-battle-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.cmd-battle-left h1 {
+  color: #E4ECF0;
+  font-size: clamp(1rem, 2vw, 1.4rem);
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.cmd-battle-tip {
+  color: rgba(228, 236, 240, 0.45);
+  font-size: clamp(0.45rem, 0.9vw, 0.55rem);
+}
+
+.cmd-battle-nd {
+  color: rgba(0, 255, 245, 0.5);
+  font-size: clamp(0.4rem, 0.8vw, 0.5rem);
+}
+
+.cmd-battle-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: clamp(36px, 9%, 48px);
+  height: clamp(36px, 9%, 48px);
+  border: 2px solid rgba(0, 255, 245, 0.25);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cmd-battle-pct {
+  color: #E4ECF0;
+  font-size: clamp(0.7rem, 1.3vw, 0.9rem);
+  font-weight: 700;
+  margin: 0;
+  line-height: 1;
+}
+
+.cmd-battle-right span {
+  color: rgba(228, 236, 240, 0.35);
+  font-size: clamp(0.35rem, 0.6vw, 0.45rem);
+}
+
+.cmd-mascot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 10%;
+  min-width: 35px;
+  max-width: 50px;
+  height: 100%;
+  cursor: pointer;
+  transition: 0.4s;
+  gap: 0.15rem;
+  flex-shrink: 0;
+}
+
+.cmd-mascot:hover {
+  transform: scale(1.15);
+}
+
+.cmd-mascot-icon {
+  color: rgba(0, 255, 245, 0.4);
+  font-size: clamp(0.8rem, 1.5vw, 1.1rem);
+}
+
+.cmd-mascot-label {
+  color: rgba(228, 236, 240, 0.45);
+  font-size: clamp(0.35rem, 0.6vw, 0.4rem);
+  font-weight: bold;
+}
+
+/* boxline2: 任务卡 (flex: 1.3) */
+.cmd-boxline2 {
+  flex: 1.3;
+  justify-content: center;
+  gap: 0.25rem;
+  overflow: hidden;
+}
+
+.cmd-quest {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  cursor: pointer;
+  transition: 0.6s;
+  overflow: hidden;
+}
+
+.cmd-quest:hover {
+  background: rgba(0, 173, 181, 0.08);
+}
+
+.cmd-quest-left {
+  width: 25%;
+  background: rgba(0, 173, 181, 0.06);
+  padding: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.cmd-quest-left h2 {
+  color: #E4ECF0;
+  font-size: clamp(0.7rem, 1.3vw, 0.85rem);
+  font-weight: 700;
+  margin: 0;
+}
+
+.cmd-quest-left span {
+  color: rgba(228, 236, 240, 0.35);
+  font-size: clamp(0.35rem, 0.7vw, 0.45rem);
+}
+
+.cmd-quest-right {
+  flex: 1;
+  background: rgba(34, 40, 49, 0.38);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.4rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.cmd-quest-right p {
+  color: rgba(228, 236, 240, 0.55);
+  font-size: clamp(0.4rem, 0.8vw, 0.5rem);
+  font-weight: bold;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cmd-quest-check {
+  color: rgba(0, 255, 245, 0.45);
+  font-size: clamp(0.7rem, 1.2vw, 0.85rem);
+  position: absolute;
+  right: 4px;
+  bottom: 1px;
+  flex-shrink: 0;
+}
+
+.cmd-quest-spacer {
+  width: 12%;
+  min-width: 45px;
+  max-width: 70px;
+  height: 60%;
+  background: rgba(34, 40, 49, 0.25);
+  border: 1px solid rgba(0, 173, 181, 0.03);
+  align-self: flex-end;
+  flex-shrink: 0;
+}
+
+/* boxline3: 功能区 (flex: 1.8) */
+.cmd-boxline3 {
+  flex: 1.8;
+  justify-content: center;
+  gap: 0.25rem;
+  overflow: hidden;
+}
+
+.cmd-feat-card {
+  flex: 1;
+  height: 100%;
+  background: rgba(34, 40, 49, 0.38);
+  border: 1px solid rgba(0, 173, 181, 0.04);
+  padding: 0.3rem;
+  cursor: pointer;
+  transition: 0.6s;
+  position: relative;
+  font-family: inherit;
+  color: inherit;
+  text-align: left;
+  overflow: hidden;
+}
+
+.cmd-feat-card:hover {
+  background: rgba(0, 173, 181, 0.1);
+  transform: rotateY(4deg);
+  text-shadow: 0 0 6px rgba(0, 255, 245, 0.25);
+}
+.cmd-feat-card:hover h1 { color: #E4ECF0; }
+.cmd-feat-card:hover span { color: rgba(228, 236, 240, 0.65); }
+
+.cmd-feat-card h1 {
+  color: #E4ECF0;
+  font-size: clamp(0.65rem, 1.3vw, 0.85rem);
+  font-weight: 700;
+  margin: 0 0 0.1rem 0;
+}
+
+.cmd-feat-card span {
+  color: rgba(228, 236, 240, 0.35);
+  font-size: clamp(0.35rem, 0.7vw, 0.45rem);
+}
+
+.cmd-feat-badge {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  background: rgba(0, 255, 245, 0.65);
+  color: #111;
+  font-size: clamp(0.3rem, 0.5vw, 0.35rem);
+  font-weight: bold;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.cmd-feat-spacer {
+  width: 10%;
+  min-width: 40px;
+  max-width: 60px;
+  height: 100%;
+  background: rgba(34, 40, 49, 0.25);
+  border: 1px solid rgba(0, 173, 181, 0.03);
+  flex-shrink: 0;
+}
+
+/* boxline4: 社区 (flex: 1) */
+.cmd-boxline4 {
+  flex: 1;
+  width: 70%;
+  background: rgba(34, 40, 49, 0.3);
+  border: 1px solid rgba(0, 173, 181, 0.04);
+  padding: 0 0.6rem;
+  cursor: pointer;
+  transition: 0.5s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  align-self: flex-end;
+  overflow: hidden;
+}
+
+.cmd-boxline4:hover {
+  background: rgba(0, 173, 181, 0.1);
+  width: 100%;
+}
+
+.cmd-guild-title {
+  color: #E4ECF0;
+  font-size: clamp(0.6rem, 1.1vw, 0.7rem);
+  font-weight: 700;
+}
+
+.cmd-guild-desc {
+  color: rgba(228, 236, 240, 0.35);
+  font-size: clamp(0.4rem, 0.75vw, 0.5rem);
+}
+
+/* ═══ 底部导航 (固定高度) ═══ */
+.cmd-bottom-nav {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.15rem;
+  padding-top: 0.2rem;
+}
+
+.cmd-bottom-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem 0.15rem;
+  cursor: pointer;
+  transition: 0.5s;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  color: inherit;
+  overflow: hidden;
+}
+
+.cmd-bottom-item:hover {
+  background: rgba(0, 173, 181, 0.1);
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.cmd-bottom-item:hover h1 {
+  text-shadow: 0 0 8px rgba(0, 255, 245, 0.35);
+}
+
+.cmd-bottom-item h1 {
+  color: #E4ECF0;
+  font-size: clamp(0.5rem, 1vw, 0.6rem);
+  font-weight: 700;
+  margin: 0;
+  transition: text-shadow 0.4s;
+}
+
+.cmd-bottom-item span {
+  color: rgba(228, 236, 240, 0.35);
+  font-size: clamp(0.35rem, 0.7vw, 0.45rem);
+  transition: 0.4s;
+}
+
+.cmd-bottom-item:hover span {
+  color: rgba(228, 236, 240, 0.65);
+}
 </style>

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import ScrollPanel from 'primevue/scrollpanel'
 import { useTemplateRef } from 'vue'
 import { useParallax } from '@/composables/useParallax'
@@ -74,7 +74,7 @@ defineExpose({
 .back-btn:hover {
   background: color-mix(in srgb, var(--miya-border) 12%, transparent);
   border-color: color-mix(in srgb, var(--miya-border) 50%, transparent);
-  color: rgba(0, 229, 255, 0.95);
+  color: rgba(0, 173, 181, 0.95);
   box-shadow: 0 0 16px color-mix(in srgb, var(--miya-border) 20%, transparent);
 }
 
@@ -112,6 +112,6 @@ defineExpose({
   height: 20%;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(0, 229, 255, 0.3);
+  background-color: rgba(0, 173, 181, 0.3);
 }
 </style>

@@ -168,6 +168,7 @@ contextBridge.exposeInMainWorld('live2dAPI', {
   resetPosition: () => ipcRenderer.send('live2d:resetPosition'),
   setBackground: (colorHex: string, alpha: number) => ipcRenderer.send('live2d:background', { color: colorHex, alpha }),
   setWindowScale: (scale: number) => ipcRenderer.send('live2d:windowScale', scale),
+  positionRelative: (bounds?: { x: number, y: number, width: number, height: number }) => ipcRenderer.send('live2d:positionRelative', bounds),
 })
 
 // ── Live2D 窗口侧 IPC 接收 ──

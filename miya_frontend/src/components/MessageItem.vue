@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { Message, ToolEvent } from '@/utils/session'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { CONFIG } from '@/utils/config'
@@ -37,7 +37,7 @@ function buildEmotionColors(): Record<string, string> {
     '爱': c('--miya-comp-emotion-love', '#ff6b9d'), '心动': c('--miya-comp-emotion-love', '#ff6b9d'),
     '温暖': c('--miya-comp-emotion-warm', '#ff8c69'), '幸福': c('--miya-comp-emotion-warm', '#ff8c69'),
     '安心': c('--miya-comp-emotion-calm', '#7dd3fc'), '满足': c('--miya-comp-emotion-calm', '#7dd3fc'),
-    '挂念': c('--miya-comp-emotion-attachment', '#b44dff'), '思念': c('--miya-comp-emotion-attachment', '#c084fc'),
+    '挂念': c('--miya-comp-emotion-attachment', '#00ADB5'), '思念': c('--miya-comp-emotion-attachment', '#c084fc'),
     '害羞': c('--miya-comp-emotion-shy', '#fbbfca'),
     '期待': c('--miya-comp-emotion-anticipation', '#facc15'),
     '依恋': c('--miya-comp-emotion-attachment', '#e879f9'),
@@ -64,7 +64,7 @@ const soulBars = computed(() => {
   const total = emos.reduce((s, e) => s + e.intensity, 1) || 1
   return emos.slice(0, 5).map(e => ({
     name: e.name, intensity: e.intensity,
-    color: ec[e.name] || '#00e5ff',
+    color: ec[e.name] || '#00ADB5',
     width: Math.round((e.intensity / total) * 100),
   }))
 })
@@ -72,7 +72,7 @@ const soulBars = computed(() => {
 const emotionList = computed(() => {
   const ec = buildEmotionColors()
   const emos = props.soulData?.emotions
-  if (emos?.length) return emos.slice(0, 5).map(e => ({ name: e.name, pct: e.intensity, color: ec[e.name] || '#00e5ff' }))
+  if (emos?.length) return emos.slice(0, 5).map(e => ({ name: e.name, pct: e.intensity, color: ec[e.name] || '#00ADB5' }))
   return []
 })
 
@@ -252,11 +252,11 @@ watch(() => props.generating, (v) => {
 <style scoped>
 /* ── 组件调色变量 ── */
 .msg-card {
-  --ai: var(--miya-comp-message-ai, #00e5ff);
-  --usr: var(--miya-comp-message-user, #b44dff);
-  --bg: var(--miya-comp-message-bg, #0a0815);
-  --in: var(--miya-comp-message-input, #00e5ff);
-  --tx: var(--miya-comp-message-text, #e8d5f5);
+  --ai: var(--miya-comp-message-ai, #00ADB5);
+  --usr: var(--miya-comp-message-user, #00ADB5);
+  --bg: var(--miya-comp-message-bg, #222831);
+  --in: var(--miya-comp-message-input, #00ADB5);
+  --tx: var(--miya-comp-message-text, #E4ECF0);
 
   position: relative; padding: .8rem 1rem .6rem;
   background: linear-gradient(135deg, color-mix(in srgb, var(--bg) 35%, #000), color-mix(in srgb, var(--bg) 20%, #000));
@@ -336,11 +336,11 @@ watch(() => props.generating, (v) => {
 
 /* 灵魂详情面板 */
 .soul-detail {
-  --sp: var(--miya-comp-soul-primary, #00e5ff);
+  --sp: var(--miya-comp-soul-primary, #00ADB5);
   --spo: var(--miya-comp-soul-positive, #ff6b9d);
   --sne: var(--miya-comp-soul-negative, #7dd3fc);
   --ssu: var(--miya-comp-soul-surprise, #facc15);
-  --sth: var(--miya-comp-soul-thought, #00e5ff);
+  --sth: var(--miya-comp-soul-thought, #00ADB5);
   --stk: var(--miya-comp-soul-think, #4ade80);
   margin: 0.5rem 0 0;
   padding: 0.6rem;

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
 
 const props = defineProps<{
@@ -24,7 +24,7 @@ function buildEmotionColors(): Record<string, string> {
     joy: c('--miya-comp-emotion-joy', '#ffd700'),
     sadness: c('--miya-comp-emotion-sadness', '#7dd3fc'),
     anger: c('--miya-comp-emotion-anger', '#ef4444'),
-    fear: c('--miya-comp-emotion-fear', '#b44dff'),
+    fear: c('--miya-comp-emotion-fear', '#00ADB5'),
     love: c('--miya-comp-emotion-love', '#ff6b9d'),
     surprise: c('--miya-comp-emotion-surprise', '#fbbf24'),
     neutral: c('--miya-comp-emotion-neutral', '#94a3b8'),
@@ -48,7 +48,7 @@ function buildEmotionGradients(): Record<string, string> {
   const mv = c('--miya-comp-emotion-moved', '#c4b5fd')
   const cu = c('--miya-comp-emotion-curious', '#67e8f9')
   const ag = c('--miya-comp-emotion-anger', '#ef4444')
-  const fe = c('--miya-comp-emotion-fear', '#a78bfa')
+  const fe = c('--miya-comp-emotion-fear', '#00ADB5')
   const su = c('--miya-comp-emotion-surprise', '#facc15')
   const nt = c('--miya-comp-emotion-neutral', '#94a3b8')
 
@@ -56,7 +56,7 @@ function buildEmotionGradients(): Record<string, string> {
     '喜悦': `linear-gradient(90deg, ${j}, color-mix(in srgb, ${j} 70%, #ff8c00))`,
     '爱': `linear-gradient(90deg, ${l}, color-mix(in srgb, ${l} 70%, #ff4488))`,
     '温暖': `linear-gradient(90deg, ${w}, color-mix(in srgb, ${w} 80%, #ff6b9d))`,
-    '满足': `linear-gradient(90deg, ${cm}, color-mix(in srgb, ${cm} 80%, #00e5ff))`,
+    '满足': `linear-gradient(90deg, ${cm}, color-mix(in srgb, ${cm} 80%, #00ADB5))`,
     '思念': `linear-gradient(90deg, ${at}, color-mix(in srgb, ${at} 80%, #c084fc))`,
     '忧伤': `linear-gradient(90deg, ${sd}, color-mix(in srgb, ${sd} 80%, #38bdf8))`,
     '烦躁': `linear-gradient(90deg, ${ag}, color-mix(in srgb, ${ag} 80%, #fb923c))`,
@@ -69,10 +69,10 @@ function buildEmotionGradients(): Record<string, string> {
     '害羞': `linear-gradient(90deg, ${sh}, color-mix(in srgb, ${sh} 80%, #f9a8d4))`,
     '愧疚': `linear-gradient(90deg, ${tn}, color-mix(in srgb, ${tn} 80%, #818cf8))`,
     '释然': `linear-gradient(90deg, #86efac, #4ade80)`,
-    '挂念': `linear-gradient(90deg, ${mv}, color-mix(in srgb, ${mv} 70%, #a78bfa))`,
+    '挂念': `linear-gradient(90deg, ${mv}, color-mix(in srgb, ${mv} 70%, #00ADB5))`,
     '感动': `linear-gradient(90deg, #fde68a, color-mix(in srgb, #fde68a 70%, #fcd34d))`,
     '好奇': `linear-gradient(90deg, ${cu}, color-mix(in srgb, ${cu} 80%, #06b6d4))`,
-    '怀旧': `linear-gradient(90deg, ${no}, color-mix(in srgb, ${no} 70%, #a78bfa))`,
+    '怀旧': `linear-gradient(90deg, ${no}, color-mix(in srgb, ${no} 70%, #00ADB5))`,
     '心疼': `linear-gradient(90deg, #fb7185, #e11d48)`,
     'anger': `linear-gradient(90deg, ${ag}, color-mix(in srgb, ${ag} 80%, #f87171))`,
     'fear': `linear-gradient(90deg, ${fe}, color-mix(in srgb, ${fe} 80%, #7c3aed))`,
@@ -83,9 +83,9 @@ function buildEmotionGradients(): Record<string, string> {
 
 const dominantColor = computed(() => {
   const top = props.emotions?.[0]
-  if (!top) return '#00e5ff'
+  if (!top) return '#00ADB5'
   const ec = buildEmotionColors()
-  return ec[top.name] || '#00e5ff'
+  return ec[top.name] || '#00ADB5'
 })
 
 const accentGlow = computed(() => `0 0 18px ${dominantColor.value}22, 0 0 4px ${dominantColor.value}11`)
@@ -160,14 +160,14 @@ const accentGlow = computed(() => `0 0 18px ${dominantColor.value}22, 0 0 4px ${
 <style scoped>
 /* ── 组件调色变量 ── */
 .soul-card {
-  --sp: var(--miya-comp-soul-primary, #00e5ff);
+  --sp: var(--miya-comp-soul-primary, #00ADB5);
   --spo: var(--miya-comp-soul-positive, #ff6b9d);
   --sne: var(--miya-comp-soul-negative, #7dd3fc);
   --ssu: var(--miya-comp-soul-surprise, #facc15);
-  --sth: var(--miya-comp-soul-thought, #00e5ff);
+  --sth: var(--miya-comp-soul-thought, #00ADB5);
   --stk: var(--miya-comp-soul-think, #4ade80);
-  --bg: var(--miya-comp-message-bg, #0a0815);
-  --tx: var(--miya-comp-message-text, #e8d5f5);
+  --bg: var(--miya-comp-message-bg, #222831);
+  --tx: var(--miya-comp-message-text, #E4ECF0);
 
   position: absolute;
   right: -188px;
@@ -194,7 +194,7 @@ const accentGlow = computed(() => `0 0 18px ${dominantColor.value}22, 0 0 4px ${
 }
 
 .soul-card:hover {
-  border-color: rgba(0, 229, 255, 0.3);
+  border-color: rgba(0, 173, 181, 0.3);
   box-shadow: 0 6px 32px rgba(0, 0, 0, 0.35), var(--card-glow, none);
   transform: translateX(-2px);
 }
@@ -212,7 +212,7 @@ const accentGlow = computed(() => `0 0 18px ${dominantColor.value}22, 0 0 4px ${
 /* 滚动条 */
 .soul-card::-webkit-scrollbar { width: 3px; }
 .soul-card::-webkit-scrollbar-track { background: transparent; }
-.soul-card::-webkit-scrollbar-thumb { background: rgba(0, 229, 255, 0.12); border-radius: 3px; }
+.soul-card::-webkit-scrollbar-thumb { background: rgba(0, 173, 181, 0.12); border-radius: 3px; }
 
 /* 标题 */
 .soul-header {
@@ -221,7 +221,7 @@ const accentGlow = computed(() => `0 0 18px ${dominantColor.value}22, 0 0 4px ${
   gap: 0.35rem;
   margin-bottom: 0.5rem;
   padding-bottom: 0.4rem;
-  border-bottom: 1px solid rgba(0, 229, 255, 0.06);
+  border-bottom: 1px solid rgba(0, 173, 181, 0.06);
 }
 .soul-header-dot {
   width: 5px; height: 5px;
@@ -231,7 +231,7 @@ const accentGlow = computed(() => `0 0 18px ${dominantColor.value}22, 0 0 4px ${
 .soul-header-text {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.55rem;
-  color: rgba(0, 229, 255, 0.35);
+  color: rgba(0, 173, 181, 0.35);
   letter-spacing: 0.15em;
   text-transform: uppercase;
 }
@@ -258,7 +258,7 @@ const accentGlow = computed(() => `0 0 18px ${dominantColor.value}22, 0 0 4px ${
 .soul-emotion-bar {
   flex: 1;
   height: 5px;
-  background: rgba(0, 229, 255, 0.05);
+  background: rgba(0, 173, 181, 0.05);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -269,7 +269,7 @@ const accentGlow = computed(() => `0 0 18px ${dominantColor.value}22, 0 0 4px ${
 }
 .soul-em-val {
   font-size: 0.5rem;
-  color: rgba(0, 229, 255, 0.3);
+  color: rgba(0, 173, 181, 0.3);
   width: 1.8rem;
   text-align: right;
   font-family: 'JetBrains Mono', monospace;
@@ -287,7 +287,7 @@ const accentGlow = computed(() => `0 0 18px ${dominantColor.value}22, 0 0 4px ${
 .soul-loading-dot {
   width: 5px; height: 5px;
   border-radius: 50%;
-  background: rgba(0, 229, 255, 0.5);
+  background: rgba(0, 173, 181, 0.5);
   animation: ld-bounce 0.6s ease-in-out infinite;
 }
 @keyframes ld-bounce {
@@ -303,13 +303,13 @@ const accentGlow = computed(() => `0 0 18px ${dominantColor.value}22, 0 0 4px ${
   line-height: 1.6;
   margin-bottom: 0.4rem;
   padding: 0.3rem 0.4rem;
-  background: rgba(0, 229, 255, 0.03);
-  border-left: 2px solid rgba(0, 229, 255, 0.12);
+  background: rgba(0, 173, 181, 0.03);
+  border-left: 2px solid rgba(0, 173, 181, 0.12);
   border-radius: 0 3px 3px 0;
   font-style: italic;
 }
 .soul-quote {
-  color: rgba(0, 229, 255, 0.25);
+  color: rgba(0, 173, 181, 0.25);
   font-size: 0.75rem;
 }
 
@@ -326,7 +326,7 @@ const accentGlow = computed(() => `0 0 18px ${dominantColor.value}22, 0 0 4px ${
   margin-right: 0.15rem;
 }
 .soul-attribution {
-  color: rgba(0, 229, 255, 0.4);
+  color: rgba(0, 173, 181, 0.4);
   font-size: 0.55rem;
   line-height: 1.35;
 }
@@ -339,7 +339,7 @@ const accentGlow = computed(() => `0 0 18px ${dominantColor.value}22, 0 0 4px ${
 /* 思考 */
 .soul-thinking {
   margin-top: 0.3rem;
-  border-top: 1px solid rgba(0, 229, 255, 0.06);
+  border-top: 1px solid rgba(0, 173, 181, 0.06);
   padding-top: 0.35rem;
 }
 .thinking-toggle {
@@ -347,12 +347,12 @@ const accentGlow = computed(() => `0 0 18px ${dominantColor.value}22, 0 0 4px ${
   align-items: center;
   gap: 0.3rem;
   cursor: pointer;
-  color: rgba(0, 229, 255, 0.3);
+  color: rgba(0, 173, 181, 0.3);
   font-size: 0.55rem;
   transition: color 0.2s;
   user-select: none;
 }
-.thinking-toggle:hover { color: rgba(0, 229, 255, 0.6); }
+.thinking-toggle:hover { color: rgba(0, 173, 181, 0.6); }
 .thinking-icon { font-size: 0.6rem; }
 .thinking-len {
   margin-left: auto;

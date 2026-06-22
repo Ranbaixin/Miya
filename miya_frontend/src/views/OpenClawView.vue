@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import API from '@/api/core'
@@ -261,7 +261,7 @@ onMounted(() => checkStatus())
 
 .ocv-status-row { display: flex; align-items: center; gap: 0.4rem; margin-left: auto; }
 .status-dot { width: 8px; height: 8px; border-radius: 50%; }
-.status-dot.online { background: #00e5ff; box-shadow: 0 0 8px rgba(0,229,255,0.6); }
+.status-dot.online { background: #00ADB5; box-shadow: 0 0 8px rgba(0, 173, 181, 0.6); }
 .status-dot.offline { background: #ff4757; box-shadow: 0 0 8px rgba(255,71,87,0.4); }
 .status-dot.checking { background: #ffa502; animation: pulse 1s infinite; }
 .status-text { font-size: 0.7rem; color: var(--miya-text-dim); font-family: 'JetBrains Mono', monospace; }
@@ -315,8 +315,8 @@ onMounted(() => checkStatus())
 .ocv-mini-history { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
 .mini-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.6rem; }
 .mini-item { padding: 0.2rem 0.3rem; border-radius: 0.2rem; }
-.mini-item.user { background: color-mix(in srgb, #b44dff 8%, transparent); }
-.mini-item.assistant { background: color-mix(in srgb, #00e5ff 8%, transparent); }
+.mini-item.user { background: color-mix(in srgb, #00ADB5 8%, transparent); }
+.mini-item.assistant { background: color-mix(in srgb, #00ADB5 8%, transparent); }
 .mini-role { font-weight: 600; margin-right: 0.3rem; color: var(--miya-accent); }
 .mini-text { color: var(--miya-text-dim); }
 
@@ -355,13 +355,13 @@ onMounted(() => checkStatus())
   border-radius: 0.5rem; padding: 0.8rem;
   clip-path: polygon(0 6px, 5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%);
 }
-.ocv-result.success { border-color: color-mix(in srgb, #00e5ff 20%, transparent); }
+.ocv-result.success { border-color: color-mix(in srgb, #00ADB5 20%, transparent); }
 .ocv-result.error { border-color: color-mix(in srgb, #ff4757 20%, transparent); }
 
 .result-label {
   font-size: 0.65rem; font-weight: 600; margin-bottom: 0.5rem; letter-spacing: 0.05em;
 }
-.ocv-result.success .result-label { color: #00e5ff; }
+.ocv-result.success .result-label { color: #00ADB5; }
 .ocv-result.error .result-label { color: #ff6b7a; }
 
 .result-content {

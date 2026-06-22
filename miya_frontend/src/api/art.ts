@@ -1,6 +1,8 @@
 import type { ArtGenerateResult, ArtImageEntry, ArtProviderInfo, ArtStats } from '@/types/art'
 import { ApiClient } from './index'
 
+const API_PORT = Number(import.meta.env.VITE_API_PORT) || 9800
+
 export class ArtApiClient extends ApiClient {
   async getProviders(): Promise<{ success: boolean, providers: ArtProviderInfo[] }> {
     return this.instance.get('/api/art/providers')
@@ -44,8 +46,6 @@ export class ArtApiClient extends ApiClient {
   async getStats(): Promise<{ success: boolean, stats: ArtStats }> {
     return this.instance.get('/api/art/stats')
   }
-
-const API_PORT = Number(import.meta.env.VITE_API_PORT) || 9800
 
   getImageUrl(filename: string): string {
     return `http://localhost:${API_PORT}/api/art/image/${filename}`

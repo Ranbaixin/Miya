@@ -22,17 +22,17 @@ const COLOR_GROUPS: ColorGroup[] = [
     label: '全局',
     icon: '⬡',
     colors: [
-      { key: 'accent', label: '全局主色', cssVar: '--miya-accent', default: '#a78bfa' },
-      { key: 'home', label: '首页按钮', cssVar: '--miya-home', default: '#a78bfa' },
-      { key: 'chatAi', label: 'AI 消息', cssVar: '--miya-chat-ai', default: '#00e5ff' },
-      { key: 'chatUser', label: '用户消息', cssVar: '--miya-chat-user', default: '#b44dff' },
-      { key: 'chatBg', label: '聊天背景', cssVar: '--miya-chat-bg', default: '#0a0815' },
-      { key: 'border', label: '边框光', cssVar: '--miya-border', default: '#00e5ff' },
-      { key: 'bg', label: '全局背景', cssVar: '--miya-bg', default: '#0a0815' },
-      { key: 'surface', label: '卡片表面', cssVar: '--miya-surface', default: 'rgba(20, 16, 35, 0.85)' },
-      { key: 'gold', label: '金色', cssVar: '--miya-gold', default: 'rgba(212, 175, 55, 0.5)' },
-      { key: 'text', label: '主文字', cssVar: '--miya-text', default: '#e8d5f5' },
-      { key: 'textDim', label: '次文字', cssVar: '--miya-text-dim', default: 'rgba(232, 213, 245, 0.5)' },
+      { key: 'accent', label: '全局主色', cssVar: '--miya-accent', default: '#00ADB5' },
+      { key: 'home', label: '首页按钮', cssVar: '--miya-home', default: '#00ADB5' },
+      { key: 'chatAi', label: 'AI 消息', cssVar: '--miya-chat-ai', default: '#00FFF5' },
+      { key: 'chatUser', label: '用户消息', cssVar: '--miya-chat-user', default: '#00ADB5' },
+      { key: 'chatBg', label: '聊天背景', cssVar: '--miya-chat-bg', default: '#222831' },
+      { key: 'border', label: '边框光', cssVar: '--miya-border', default: '#00ADB5' },
+      { key: 'bg', label: '全局背景', cssVar: '--miya-bg', default: '#222831' },
+      { key: 'surface', label: '卡片表面', cssVar: '--miya-surface', default: 'rgba(57, 62, 70, 0.85)' },
+      { key: 'gold', label: '金色', cssVar: '--miya-gold', default: 'rgba(0, 255, 245, 0.35)' },
+      { key: 'text', label: '主文字', cssVar: '--miya-text', default: '#E4ECF0' },
+      { key: 'textDim', label: '次文字', cssVar: '--miya-text-dim', default: 'rgba(228, 236, 240, 0.45)' },
     ],
   },
   {
@@ -40,11 +40,11 @@ const COLOR_GROUPS: ColorGroup[] = [
     label: '消息卡片',
     icon: '◆',
     colors: [
-      { key: 'aiPrimary', label: 'AI 消息主色', cssVar: '--miya-comp-message-ai', default: '#00e5ff' },
-      { key: 'userPrimary', label: '用户消息主色', cssVar: '--miya-comp-message-user', default: '#b44dff' },
-      { key: 'cardBg', label: '卡片背景', cssVar: '--miya-comp-message-bg', default: '#0a0815' },
-      { key: 'inputPrimary', label: '输入框主色', cssVar: '--miya-comp-message-input', default: '#00e5ff' },
-      { key: 'textPrimary', label: '文字色', cssVar: '--miya-comp-message-text', default: '#e8d5f5' },
+      { key: 'aiPrimary', label: 'AI 消息主色', cssVar: '--miya-comp-message-ai', default: '#00FFF5' },
+      { key: 'userPrimary', label: '用户消息主色', cssVar: '--miya-comp-message-user', default: '#00ADB5' },
+      { key: 'cardBg', label: '卡片背景', cssVar: '--miya-comp-message-bg', default: '#222831' },
+      { key: 'inputPrimary', label: '输入框主色', cssVar: '--miya-comp-message-input', default: '#00ADB5' },
+      { key: 'textPrimary', label: '文字色', cssVar: '--miya-comp-message-text', default: '#E4ECF0' },
     ],
   },
   {
@@ -52,11 +52,11 @@ const COLOR_GROUPS: ColorGroup[] = [
     label: '灵魂卡片',
     icon: '♥',
     colors: [
-      { key: 'cardPrimary', label: '卡片主色', cssVar: '--miya-comp-soul-primary', default: '#00e5ff' },
+      { key: 'cardPrimary', label: '卡片主色', cssVar: '--miya-comp-soul-primary', default: '#00FFF5' },
       { key: 'emotionPositive', label: '积极情绪', cssVar: '--miya-comp-soul-positive', default: '#ff6b9d' },
       { key: 'emotionNegative', label: '消极情绪', cssVar: '--miya-comp-soul-negative', default: '#7dd3fc' },
       { key: 'emotionSurprise', label: '惊喜情绪', cssVar: '--miya-comp-soul-surprise', default: '#facc15' },
-      { key: 'thoughtColor', label: '内心独白', cssVar: '--miya-comp-soul-thought', default: '#00e5ff' },
+      { key: 'thoughtColor', label: '内心独白', cssVar: '--miya-comp-soul-thought', default: '#00ADB5' },
       { key: 'thinkColor', label: '思考过程', cssVar: '--miya-comp-soul-think', default: '#4ade80' },
     ],
   },
@@ -89,9 +89,9 @@ const COLOR_GROUPS: ColorGroup[] = [
     label: 'HUD 覆盖层',
     icon: '◎',
     colors: [
-      { key: 'primary', label: '主色调', cssVar: '--miya-comp-hud-primary', default: '#00e5ff' },
-      { key: 'secondary', label: '辅色调', cssVar: '--miya-comp-hud-secondary', default: '#b44dff' },
-      { key: 'particle', label: '粒子色', cssVar: '--miya-comp-hud-particle', default: '#00e5ff' },
+      { key: 'primary', label: '主色调', cssVar: '--miya-comp-hud-primary', default: '#00FFF5' },
+      { key: 'secondary', label: '辅色调', cssVar: '--miya-comp-hud-secondary', default: '#00ADB5' },
+      { key: 'particle', label: '粒子色', cssVar: '--miya-comp-hud-particle', default: '#00FFF5' },
     ],
   },
   {
@@ -99,9 +99,9 @@ const COLOR_GROUPS: ColorGroup[] = [
     label: '悬浮窗',
     icon: '◈',
     colors: [
-      { key: 'ballPrimary', label: '球体主色', cssVar: '--miya-comp-floating-ball', default: '#00e5ff' },
-      { key: 'ringColor', label: '光环色', cssVar: '--miya-comp-floating-ring', default: '#ac45f1' },
-      { key: 'bgColor', label: '背景色', cssVar: '--miya-comp-floating-bg', default: '#110901' },
+      { key: 'ballPrimary', label: '球体主色', cssVar: '--miya-comp-floating-ball', default: '#00FFF5' },
+      { key: 'ringColor', label: '光环色', cssVar: '--miya-comp-floating-ring', default: '#00ADB5' },
+      { key: 'bgColor', label: '背景色', cssVar: '--miya-comp-floating-bg', default: '#222831' },
     ],
   },
   {
@@ -109,16 +109,16 @@ const COLOR_GROUPS: ColorGroup[] = [
     label: '首页面板',
     icon: '✦',
     colors: [
-      { key: 'cardBorder', label: '卡片边框', cssVar: '--miya-comp-panel-border', default: '#a78bfa' },
-      { key: 'buttonPrimary', label: '按钮主色', cssVar: '--miya-comp-panel-btn', default: '#a78bfa' },
-      { key: 'iconColor', label: '图标色', cssVar: '--miya-comp-panel-icon', default: '#a78bfa' },
+      { key: 'cardBorder', label: '卡片边框', cssVar: '--miya-comp-panel-border', default: '#00ADB5' },
+      { key: 'buttonPrimary', label: '按钮主色', cssVar: '--miya-comp-panel-btn', default: '#00ADB5' },
+      { key: 'iconColor', label: '图标色', cssVar: '--miya-comp-panel-icon', default: '#00ADB5' },
       { key: 'card1', label: '轨道卡 1', cssVar: '--miya-comp-panel-card-1', default: '#ff77aa' },
       { key: 'card2', label: '轨道卡 2', cssVar: '--miya-comp-panel-card-2', default: '#ff9944' },
       { key: 'card3', label: '轨道卡 3', cssVar: '--miya-comp-panel-card-3', default: '#00e88f' },
       { key: 'card4', label: '轨道卡 4', cssVar: '--miya-comp-panel-card-4', default: '#ff5577' },
-      { key: 'card5', label: '轨道卡 5', cssVar: '--miya-comp-panel-card-5', default: '#b44dff' },
-      { key: 'card6', label: '轨道卡 6', cssVar: '--miya-comp-panel-card-6', default: '#00e5ff' },
-      { key: 'card7', label: '轨道卡 7', cssVar: '--miya-comp-panel-card-7', default: '#d4af37' },
+      { key: 'card5', label: '轨道卡 5', cssVar: '--miya-comp-panel-card-5', default: '#00FFF5' },
+      { key: 'card6', label: '轨道卡 6', cssVar: '--miya-comp-panel-card-6', default: '#00ADB5' },
+      { key: 'card7', label: '轨道卡 7', cssVar: '--miya-comp-panel-card-7', default: '#00FFF5' },
       { key: 'card8', label: '轨道卡 8', cssVar: '--miya-comp-panel-card-8', default: '#4da6ff' },
       { key: 'card9', label: '轨道卡 9', cssVar: '--miya-comp-panel-card-9', default: '#ff5555' },
       { key: 'card10', label: '轨道卡 10', cssVar: '--miya-comp-panel-card-10', default: '#f59e0b' },
@@ -129,12 +129,12 @@ const COLOR_GROUPS: ColorGroup[] = [
     label: '记忆星图',
     icon: '◆',
     colors: [
-      { key: 'nodeLine', label: '节点连线', cssVar: '--miya-comp-mind-line', default: '#00e5ff' },
-      { key: 'anchorColor', label: '锚点色', cssVar: '--miya-comp-mind-anchor', default: '#ffd700' },
-      { key: 'highlightColor', label: '高亮色', cssVar: '--miya-comp-mind-highlight', default: '#00e5ff' },
-      { key: 'levelLongTerm', label: '长期记忆', cssVar: '--miya-comp-mind-long-term', default: '#00e5ff' },
+      { key: 'nodeLine', label: '节点连线', cssVar: '--miya-comp-mind-line', default: '#00ADB5' },
+      { key: 'anchorColor', label: '锚点色', cssVar: '--miya-comp-mind-anchor', default: '#00FFF5' },
+      { key: 'highlightColor', label: '高亮色', cssVar: '--miya-comp-mind-highlight', default: '#00FFF5' },
+      { key: 'levelLongTerm', label: '长期记忆', cssVar: '--miya-comp-mind-long-term', default: '#00ADB5' },
       { key: 'levelShortTerm', label: '短期记忆', cssVar: '--miya-comp-mind-short-term', default: '#7dd3fc' },
-      { key: 'levelDialogue', label: '对话记忆', cssVar: '--miya-comp-mind-dialogue', default: '#b44dff' },
+      { key: 'levelDialogue', label: '对话记忆', cssVar: '--miya-comp-mind-dialogue', default: '#00ADB5' },
       { key: 'levelSemantic', label: '语义记忆', cssVar: '--miya-comp-mind-semantic', default: '#ff6b9d' },
       { key: 'levelKnowledge', label: '知识记忆', cssVar: '--miya-comp-mind-knowledge', default: '#ffd700' },
     ],
@@ -146,8 +146,8 @@ const COLOR_GROUPS: ColorGroup[] = [
     colors: [
       { key: 'bg', label: '背景', cssVar: '--miya-comp-terminal-bg', default: '#0a0a14' },
       { key: 'fg', label: '前景文字', cssVar: '--miya-comp-terminal-fg', default: '#d4d4e8' },
-      { key: 'cursor', label: '光标', cssVar: '--miya-comp-terminal-cursor', default: '#a78bfa' },
-      { key: 'selection', label: '选区', cssVar: '--miya-comp-terminal-selection', default: '#a78bfa44' },
+      { key: 'cursor', label: '光标', cssVar: '--miya-comp-terminal-cursor', default: '#00FFF5' },
+      { key: 'selection', label: '选区', cssVar: '--miya-comp-terminal-selection', default: '#00FFF544' },
       { key: 'black', label: 'ANSI 黑', cssVar: '--miya-comp-terminal-black', default: '#1a1a2e' },
       { key: 'red', label: 'ANSI 红', cssVar: '--miya-comp-terminal-red', default: '#f87171' },
       { key: 'green', label: 'ANSI 绿', cssVar: '--miya-comp-terminal-green', default: '#34d399' },
@@ -171,9 +171,9 @@ const COLOR_GROUPS: ColorGroup[] = [
     label: '启动画面',
     icon: '◇',
     colors: [
-      { key: 'particle', label: '粒子色', cssVar: '--miya-comp-splash-particle', default: '#d4af37' },
-      { key: 'progressBar', label: '进度条色', cssVar: '--miya-comp-splash-progress', default: '#d4af37' },
-      { key: 'titleGold', label: '标题金色', cssVar: '--miya-comp-splash-title', default: '#d4af37' },
+      { key: 'particle', label: '粒子色', cssVar: '--miya-comp-splash-particle', default: '#00FFF5' },
+      { key: 'progressBar', label: '进度条色', cssVar: '--miya-comp-splash-progress', default: '#00FFF5' },
+      { key: 'titleGold', label: '标题金色', cssVar: '--miya-comp-splash-title', default: '#00FFF5' },
     ],
   },
 ]
@@ -204,7 +204,7 @@ function applyComponentColors(colors: Record<string, string>) {
     }
   }
   // 同步派生变量（依赖 global 组）
-  const accent = colors.accent || '#a78bfa'
+  const accent = colors.accent || '#00ADB5'
   root.style.setProperty('--miya-primary', accent)
   root.style.setProperty('--miya-glow', `color-mix(in srgb, ${accent} 30%, transparent)`)
 }

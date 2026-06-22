@@ -148,6 +148,33 @@ export function resetLive2dPosition(): void {
   win.setBounds({ x, y, width: DEFAULT_SIZE.width, height: DEFAULT_SIZE.height })
 }
 
+export function positionLive2dRelative(mainBounds: { x: number, y: number, width: number, height: number }): void {
+  const win = getLive2dWindow()
+  if (!win) return
+
+  // 先释放宽高比锁定
+  win.setAspectRatio(0, { width: 0, height: 0 })
+
+  const topBarH = 68   // titleBar 32 + statusBar 36
+  const bottomBarH = 40
+  const sideNavW = 64
+  const gap = 28
+
+  const contentX = mainBounds.x + sideNavW + gap
+  const contentY = mainBounds.y + topBarH + gap
+  const contentW = mainBounds.width - sideNavW - gap * 2
+  const contentH = mainBounds.height - topBarH - bottomBarH - gap * 2
+
+  const l2dW = Math.round(contentW * 0.4)
+  const l2dH = Math.round(contentH * 0.85)
+
+  const x = contentX + Math.round((contentW - l2dW) / 2)
+  const y = contentY + Math.round((contentH - l2dH) / 2)
+
+  win.setBounds({ x, y, width: l2dW, height: l2dH })
+  console.log('[Live2D] positioned:', { x, y, width: l2dW, height: l2dH, mainBounds })
+}
+
 export function setLive2dWindowScale(scale: number): void {
   const win = getLive2dWindow()
   if (!win) return

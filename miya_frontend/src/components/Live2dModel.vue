@@ -4,20 +4,25 @@ import * as PIXI from 'pixi.js'
 
 <script setup lang="ts">
 import { Live2DModel } from 'pixi-live2d-display/cubism4'
-import { computed, nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, useTemplateRef, watch } from 'vue'
 import { CONFIG } from '@/utils/config'
 import { ensureLive2dCoreLoaded } from '@/utils/live2dCoreLoader'
 import { destroyController, initController } from '@/utils/live2dController'
 
-const { source, width, height, x, y, scale, ssaa } = defineProps<{
+const props = withDefaults(defineProps<{
   source: string
   width: number
   height: number
-  x: number
-  y: number
-  scale: number
-  ssaa: number
-}>()
+  x?: number
+  y?: number
+  fillRatio?: number
+  ssaa?: number
+}>(), {
+  x: 0.5,
+  y: 0.4,
+  fillRatio: 0.75,
+  ssaa: 2,
+})
 
 const emit = defineEmits<{
   modelReady: [pos: { faceX: number, faceY: number }]
@@ -27,9 +32,8 @@ const emit = defineEmits<{
 
 let app: PIXI.Application
 
-const computedScale = computed(() => scale * ssaa)
-const computedWidth = computed(() => width * ssaa)
-const computedHeight = computed(() => height * ssaa)
+const bufWidth = computed(() => props.width * props.ssaa)
+const bufHeight = computed(() => props.height * props.ssaa)
 
 const canvas = useTemplateRef('canvas')
 
@@ -38,16 +42,15 @@ onMounted(async () => {
 
   app = new PIXI.Application({
     view: canvas.value,
-    width: computedWidth.value,
-    height: computedHeight.value,
+    width: bufWidth.value,
+    height: bufHeight.value,
     antialias: true,
     backgroundAlpha: 0,
-    resizeTo: canvas.value,
   })
 
-  watch(() => [width, height, ssaa], () => nextTick().then(() => app.resize()))
+  watch(() => [props.width, props.height, props.ssaa], () => nextTick().then(() => app.resize()))
 
-  watch(() => source, async (source, _, onCleanUp) => {
+  watch(() => props.source, async (source, _, onCleanUp) => {
     try {
       await ensureLive2dCoreLoaded()
       const rawModel = await Live2DModel.from(source)
@@ -56,30 +59,39 @@ onMounted(async () => {
         rawHeight: rawModel.height,
       })
 
-      const computedX = computed(() => width * ssaa * (1 + x) - model.rawWidth * computedScale.value)
-      const computedY = computed(() => height * ssaa * (1 + y) - model.rawHeight * computedScale.value)
+      function relayout() {
+        const fitScale = Math.min(
+          bufWidth.value / model.rawWidth,
+          bufHeight.value / model.rawHeight,
+        ) * props.fillRatio
 
-      const handles = [
-        watch(computedScale, scale => model.scale.set(scale), { immediate: true }),
-        watch(computedX, x => model.x = x / 2, { immediate: true }),
-        watch(computedY, y => model.y = y / 2, { immediate: true }),
-      ]
+        model.scale.set(fitScale)
+        model.x = props.x * (bufWidth.value - model.rawWidth * fitScale)
+        model.y = props.y * (bufHeight.value - model.rawHeight * fitScale)
 
-      const s = computedScale.value
-      const faceY = CONFIG.value.web_live2d.face_y_ratio ?? 0.25
-      const faceX = (model.x + model.rawWidth * s * 0.5) / ssaa
-      const fY = (model.y + model.rawHeight * s * faceY) / ssaa
-      emit('modelReady', { faceX, faceY: fY })
+        const faceY = CONFIG.value.web_live2d.face_y_ratio ?? 0.25
+        const faceX = (model.x + model.rawWidth * fitScale * 0.5) / props.ssaa
+        const fY = (model.y + model.rawHeight * fitScale * faceY) / props.ssaa
+        emit('modelReady', { faceX, faceY: fY })
+      }
+
+      relayout()
+
+      const relayoutHandle = watch(
+        () => [props.width, props.height, props.ssaa, props.x, props.y, props.fillRatio],
+        () => nextTick().then(relayout),
+      )
 
       model.autoInteract = false
       app.stage.addChild(model)
       await initController(rawModel, source)
+      console.log('[Live2D Embedded] Model loaded:', model.rawWidth, 'x', model.rawHeight, 'scale:', model.scale.x)
 
       onCleanUp(() => {
         destroyController()
+        relayoutHandle()
         app.stage.removeChild(model)
         model.destroy()
-        handles.forEach(h => h.stop())
       })
     }
     catch (error) {
@@ -89,14 +101,16 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  if (app) app.destroy()
+  if (app) {
+    app.destroy(true, { children: true })
+  }
 })
 </script>
 
 <template>
   <canvas
     ref="canvas"
-    :width="computedWidth" :height="computedHeight"
-    :style="{ transform: `scale(${1 / ssaa})`, transformOrigin: '0 0', touchAction: 'none' }"
+    :width="bufWidth" :height="bufHeight"
+    :style="{ transform: `scale(${1 / props.ssaa})`, transformOrigin: '0 0', touchAction: 'none' }"
   />
 </template>

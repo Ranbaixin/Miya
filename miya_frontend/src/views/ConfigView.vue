@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { useStorage } from '@vueuse/core'
 import { Slider, InputText, ToggleSwitch } from 'primevue'
 import { computed, onMounted, ref } from 'vue'
@@ -7,6 +7,7 @@ import API from '@/api/core'
 import { CONFIG } from '@/utils/config'
 import { audioSettings, bgmFileOptions, playBgm, stopBgm } from '@/composables/useAudio'
 import { componentColors, COLOR_GROUPS } from '@/composables/useComponentColors'
+import { mascotCfg } from '@/utils/live2dMascotConfig'
 
 const router = useRouter()
 type TabKey = 'appearance' | 'model' | 'soul' | 'memory' | 'system' | 'audio' | 'color' | 'live2d'
@@ -141,10 +142,10 @@ const footerBrightness = useStorage('miya-footer-brightness', 1.0)
 
 const hudColorMode = useStorage('miya-hud-color', 'mixed')
 const COLOR_MODES = [
-  { key: 'mixed', label: '混色', colors: ['#00e5ff', '#ff6b9d', '#b44dff', '#ff4488'] },
-  { key: 'cyan', label: '青蓝', colors: ['#00e5ff'] },
+  { key: 'mixed', label: '混色', colors: ['#00ADB5', '#ff6b9d', '#00ADB5', '#ff4488'] },
+  { key: 'cyan', label: '青蓝', colors: ['#00ADB5'] },
   { key: 'warm', label: '暖粉', colors: ['#ff6b9d', '#ff4488'] },
-  { key: 'purple', label: '紫调', colors: ['#b44dff'] },
+  { key: 'purple', label: '紫调', colors: ['#00ADB5'] },
   { key: 'blue', label: '深蓝', colors: ['#4488ff'] },
 ]
 
@@ -520,7 +521,7 @@ function getRouteModel(key: string): string {
               type="color"
               :value="live2dCfg.bgColor"
               class="cp-input"
-              style="width:48px;height:36px;border-radius:6px;border:1px solid rgba(0,229,255,0.2)"
+              style="width:48px;height:36px;border-radius:6px;border:1px solid rgba(0, 173, 181, 0.2)"
               @input="setLive2dBg($event)"
             >
             <span style="font-size:0.75rem;color:var(--miya-text-dim)">{{ live2dCfg.bgColor }}</span>
@@ -562,6 +563,15 @@ function getRouteModel(key: string): string {
             <button class="action-btn" @click="resetLive2dSize()">重置大小</button>
           </div>
         </div>
+
+        <div class="config-section" style="margin-top:1.5rem; padding-top:1rem; border-top:1px solid rgba(0,173,181,0.06)">
+          <h3>看板娘（内嵌）</h3>
+          <p class="hint" style="margin-bottom:0.6rem">在主窗口中显示弥娅 Live2D 角色</p>
+          <div class="toggle-row">
+            <span>启用看板娘</span>
+            <ToggleSwitch v-model="mascotCfg.enabled" />
+          </div>
+        </div>
       </div>
     </main>
   </div>
@@ -571,12 +581,12 @@ function getRouteModel(key: string): string {
 .config-layout { display: flex; height: 100%; }
 .config-sidebar {
   width: 140px; flex-shrink: 0;
-  background: rgba(8,14,24,0.6); border-right: 1px solid rgba(0,229,255,0.08);
+  background: rgba(8,14,24,0.6); border-right: 1px solid rgba(0, 173, 181, 0.08);
   display: flex; flex-direction: column; padding: 0.8rem 0;
 }
-.sidebar-header { display: flex; align-items: center; gap: 0.5rem; padding: 0 0.8rem 0.6rem; border-bottom: 1px solid rgba(0,229,255,0.06); }
+.sidebar-header { display: flex; align-items: center; gap: 0.5rem; padding: 0 0.8rem 0.6rem; border-bottom: 1px solid rgba(0, 173, 181, 0.06); }
 .sidebar-title { font-family: 'Noto Serif SC', serif; font-size: 0.9rem; color: var(--miya-accent); }
-.sidebar-version { margin-top: auto; padding: 0.6rem 0.8rem 0; font-size: 0.6rem; color: var(--miya-text-dim); border-top: 1px solid rgba(0,229,255,0.04); }
+.sidebar-version { margin-top: auto; padding: 0.6rem 0.8rem 0; font-size: 0.6rem; color: var(--miya-text-dim); border-top: 1px solid rgba(0, 173, 181, 0.04); }
 
 .sidebar-nav { display: flex; flex-direction: column; padding: 0.4rem; gap: 1px; }
 .tab-btn {
@@ -585,8 +595,8 @@ function getRouteModel(key: string): string {
   background: transparent; border: none; color: var(--miya-text-dim);
   font-size: 0.78rem; transition: all 0.2s; text-align: left;
 }
-.tab-btn:hover { background: rgba(0,229,255,0.05); color: var(--miya-text); }
-.tab-btn.active { background: rgba(0,229,255,0.08); color: var(--miya-accent); }
+.tab-btn:hover { background: rgba(0, 173, 181, 0.05); color: var(--miya-text); }
+.tab-btn.active { background: rgba(0, 173, 181, 0.08); color: var(--miya-accent); }
 .tab-icon { font-size: 0.8rem; width: 1.2rem; text-align: center; }
 
 .config-main { flex: 1; overflow-y: auto; padding: 1.2rem 1.5rem; color: var(--miya-text); font-size: 0.82rem; }
@@ -601,65 +611,65 @@ function getRouteModel(key: string): string {
 .slider-row :first-child { flex: 1; }
 .slider-val { font-size: 0.7rem; color: var(--miya-text-dim); min-width: 2.5rem; text-align: right; }
 
-.input-sm { width: 100%; max-width: 280px; background: rgba(10,18,32,0.8) !important; border: 1px solid rgba(0,229,255,0.15) !important; border-radius: 0.3rem !important; color: rgba(220,235,255,0.9) !important; padding: 0.3rem 0.5rem !important; font-size: 0.75rem; }
+.input-sm { width: 100%; max-width: 280px; background: rgba(10,18,32,0.8) !important; border: 1px solid rgba(0, 173, 181, 0.15) !important; border-radius: 0.3rem !important; color: rgba(220,235,255,0.9) !important; padding: 0.3rem 0.5rem !important; font-size: 0.75rem; }
 
-.back-btn { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 0.3rem; border: 1px solid rgba(0,229,255,0.12); background: rgba(0,229,255,0.04); color: rgba(0,229,255,0.6); cursor: pointer; transition: all 0.2s; }
-.back-btn:hover { background: rgba(0,229,255,0.1); border-color: rgba(0,229,255,0.3); }
+.back-btn { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 0.3rem; border: 1px solid rgba(0, 173, 181, 0.12); background: rgba(0, 173, 181, 0.04); color: rgba(0, 173, 181, 0.6); cursor: pointer; transition: all 0.2s; }
+.back-btn:hover { background: rgba(0, 173, 181, 0.1); border-color: rgba(0, 173, 181, 0.3); }
 
 /* 背景 */
 .bg-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.3rem; }
 .bg-thumb { aspect-ratio: 4/3; border-radius: 0.2rem; overflow: hidden; cursor: pointer; border: 2px solid transparent; background: var(--miya-surface); display: flex; align-items: center; justify-content: center; }
 .bg-thumb img { width: 100%; height: 100%; object-fit: cover; }
-.bg-thumb:hover { border-color: rgba(0,229,255,0.15); }
-.bg-thumb.active { border-color: rgba(0,229,255,0.4); }
+.bg-thumb:hover { border-color: rgba(0, 173, 181, 0.15); }
+.bg-thumb.active { border-color: rgba(0, 173, 181, 0.4); }
 .bg-default { font-size: 0.6rem; color: var(--miya-text-dim); }
 .bg-actions { margin-top: 0.4rem; }
 
-.action-btn { padding: 0.2rem 0.6rem; font-size: 0.68rem; border: 1px dashed rgba(0,229,255,0.15); border-radius: 0.2rem; background: transparent; color: rgba(0,229,255,0.35); cursor: pointer; transition: all 0.2s; }
-.action-btn:hover { border-color: rgba(0,229,255,0.4); color: rgba(0,229,255,0.6); }
+.action-btn { padding: 0.2rem 0.6rem; font-size: 0.68rem; border: 1px dashed rgba(0, 173, 181, 0.15); border-radius: 0.2rem; background: transparent; color: rgba(0, 173, 181, 0.35); cursor: pointer; transition: all 0.2s; }
+.action-btn:hover { border-color: rgba(0, 173, 181, 0.4); color: rgba(0, 173, 181, 0.6); }
 .ml-a { margin-left: auto; }
 
 /* 颜色 */
 .color-modes { display: flex; gap: 0.3rem; flex-wrap: wrap; }
-.color-btn { display: flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.5rem; border-radius: 0.25rem; cursor: pointer; border: 1px solid rgba(0,229,255,0.06); background: rgba(0,229,255,0.02); color: var(--miya-text-dim); font-size: 0.7rem; transition: all 0.2s; }
-.color-btn:hover { border-color: rgba(0,229,255,0.2); }
-.color-btn.active { border-color: rgba(0,229,255,0.4); background: rgba(0,229,255,0.06); color: var(--miya-accent); }
+.color-btn { display: flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.5rem; border-radius: 0.25rem; cursor: pointer; border: 1px solid rgba(0, 173, 181, 0.06); background: rgba(0, 173, 181, 0.02); color: var(--miya-text-dim); font-size: 0.7rem; transition: all 0.2s; }
+.color-btn:hover { border-color: rgba(0, 173, 181, 0.2); }
+.color-btn.active { border-color: rgba(0, 173, 181, 0.4); background: rgba(0, 173, 181, 0.06); color: var(--miya-accent); }
 .color-dots { display: flex; gap: 1px; }
 .dot { width: 6px; height: 6px; border-radius: 50%; }
 
 /* 模型/灵魂/记忆/系统信息项 */
-.model-item { display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0; border-bottom: 1px solid rgba(0,229,255,0.04); font-size: 0.75rem; }
+.model-item { display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0; border-bottom: 1px solid rgba(0, 173, 181, 0.04); font-size: 0.75rem; }
 .model-name { color: var(--miya-text-dim); }
 .model-val { color: var(--miya-text); font-size: 0.7rem; }
-.status-on { color: rgba(0,229,255,0.6); }
+.status-on { color: rgba(0, 173, 181, 0.6); }
 
 .offline-hint {
   padding: 1rem; text-align: center;
   color: var(--miya-text-dim); font-size: 0.8rem;
-  border: 1px dashed rgba(0,229,255,0.1); border-radius: 0.3rem;
+  border: 1px dashed rgba(0, 173, 181, 0.1); border-radius: 0.3rem;
 }
 
 .emotion-bar {
-  flex: 1; height: 6px; background: rgba(0,229,255,0.06);
+  flex: 1; height: 6px; background: rgba(0, 173, 181, 0.06);
   border-radius: 3px; overflow: hidden; margin-left: 0.5rem;
   max-width: 120px;
 }
 .emotion-fill {
-  height: 100%; background: linear-gradient(90deg, rgba(0,229,255,0.3), rgba(0,229,255,0.6));
+  height: 100%; background: linear-gradient(90deg, rgba(0, 173, 181, 0.3), rgba(0, 173, 181, 0.6));
   transition: width 0.5s ease;
 }
 
 /* 声音 */
-.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 0.35rem 0; border-bottom: 1px solid rgba(0,229,255,0.04); }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 0.35rem 0; border-bottom: 1px solid rgba(0, 173, 181, 0.04); }
 .file-btn-audio { font-size: 0.68rem; }
 
 /* 调色 */
 .color-group-header { display: flex; align-items: center; gap: 0.4rem; }
 .color-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 0.4rem; }
-.color-picker-item { padding: 0.4rem; background: rgba(0,0,0,0.15); border-radius: 0.25rem; border: 1px solid rgba(0,229,255,0.05); }
+.color-picker-item { padding: 0.4rem; background: rgba(0,0,0,0.15); border-radius: 0.25rem; border: 1px solid rgba(0, 173, 181, 0.05); }
 .cp-label { display: block; font-size: 0.65rem; color: var(--miya-text-dim); margin-bottom: 0.3rem; }
 .cp-row { display: flex; align-items: center; gap: 0.4rem; }
-.cp-input { width: 28px; height: 22px; border: 1px solid rgba(0,229,255,0.15); border-radius: 0.2rem; background: transparent; cursor: pointer; padding: 1px; }
+.cp-input { width: 28px; height: 22px; border: 1px solid rgba(0, 173, 181, 0.15); border-radius: 0.2rem; background: transparent; cursor: pointer; padding: 1px; }
 .cp-val { font-size: 0.6rem; color: var(--miya-text-dim); font-family: 'JetBrains Mono', monospace; }
 
 /* Live2D 配置 */

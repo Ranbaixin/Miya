@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { useStorage } from '@vueuse/core'
 import { Slider, ToggleSwitch } from 'primevue'
 import { useRouter } from 'vue-router'
@@ -122,14 +122,14 @@ function resetLive2dSize() {
 }
 .back-btn {
   background: transparent;
-  border: 1px solid rgba(0,229,255,0.2);
+  border: 1px solid rgba(0, 173, 181, 0.2);
   color: var(--miya-accent);
   padding: 0.3rem 0.6rem;
   border-radius: 0.3rem;
   cursor: pointer;
   font-size: 0.9rem;
 }
-.back-btn:hover { background: rgba(0,229,255,0.08); }
+.back-btn:hover { background: rgba(0, 173, 181, 0.08); }
 .page-title {
   font-family: 'Noto Serif SC', serif;
   font-size: 1.2rem;
@@ -143,7 +143,7 @@ function resetLive2dSize() {
 }
 .config-card {
   background: rgba(10,8,21,0.6);
-  border: 1px solid rgba(0,229,255,0.08);
+  border: 1px solid rgba(0, 173, 181, 0.08);
   border-radius: 0.5rem;
   padding: 1rem 1.2rem;
   margin-bottom: 0.8rem;
@@ -162,7 +162,7 @@ function resetLive2dSize() {
   width: 52px;
   height: 40px;
   border-radius: 6px;
-  border: 1px solid rgba(0,229,255,0.2);
+  border: 1px solid rgba(0, 173, 181, 0.2);
   background: transparent;
   cursor: pointer;
   padding: 2px;
@@ -197,15 +197,15 @@ function resetLive2dSize() {
 .action-btn {
   padding: 0.3rem 0.8rem;
   font-size: 0.72rem;
-  border: 1px dashed rgba(0,229,255,0.15);
+  border: 1px dashed rgba(0, 173, 181, 0.15);
   border-radius: 0.3rem;
   background: transparent;
-  color: rgba(0,229,255,0.4);
+  color: rgba(0, 173, 181, 0.4);
   cursor: pointer;
   transition: all 0.2s;
 }
 .action-btn:hover {
-  border-color: rgba(0,229,255,0.4);
-  color: rgba(0,229,255,0.7);
+  border-color: rgba(0, 173, 181, 0.4);
+  color: rgba(0, 173, 181, 0.7);
 }
 </style>

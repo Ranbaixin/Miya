@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
 import { playWakeVoice } from '@/composables/useAudio'
 import { CONFIG } from '@/utils/config'
@@ -96,7 +96,7 @@ function initParticles() {
   }
 
   function animate() {
-    const particleHex = getSplashColor('--miya-comp-splash-particle', '#d4af37')
+    const particleHex = getSplashColor('--miya-comp-splash-particle', '#00FFF5')
     ctx.clearRect(0, 0, w, h)
 
     for (let i = particles.length - 1; i >= 0; i--) {
@@ -192,17 +192,17 @@ const displayProgress = computed(() => Math.min(100, Math.round(props.progress))
       <!-- 阶段文字 + 百分比 -->
       <div
         class="flex justify-between w-full px-1 text-xs tracking-widest"
-        :style='{ color: `color-mix(in srgb, ${getSplashColor("--miya-comp-splash-progress", "#d4af37")} 70%, transparent)`, fontFamily: "Segoe UI, sans-serif" }'
+        :style='{ color: `color-mix(in srgb, ${getSplashColor("--miya-comp-splash-progress", "#00FFF5")} 70%, transparent)`, fontFamily: "Segoe UI, sans-serif" }'
       >
         <span>{{ phase }}</span>
         <span>{{ displayProgress }}%</span>
       </div>
       <!-- 进度条轨道 -->
-      <div class="w-full h-0.5 rounded-full" :style="{ background: `color-mix(in srgb, ${getSplashColor('--miya-comp-splash-progress', '#d4af37')} 15%, transparent)` }">
+      <div class="w-full h-0.5 rounded-full" :style="{ background: `color-mix(in srgb, ${getSplashColor('--miya-comp-splash-progress', '#00FFF5')} 15%, transparent)` }">
         <div
           class="h-full rounded-full transition-all duration-300 ease-out"
           :style="{
-            background: `linear-gradient(90deg, color-mix(in srgb, ${getSplashColor('--miya-comp-splash-progress', '#d4af37')} 40%, transparent), color-mix(in srgb, ${getSplashColor('--miya-comp-splash-progress', '#d4af37')} 90%, transparent))`,
+            background: `linear-gradient(90deg, color-mix(in srgb, ${getSplashColor('--miya-comp-splash-progress', '#00FFF5')} 40%, transparent), color-mix(in srgb, ${getSplashColor('--miya-comp-splash-progress', '#00FFF5')} 90%, transparent))`,
             width: `${displayProgress}%`,
           }"
         />
@@ -225,7 +225,7 @@ const displayProgress = computed(() => Math.min(100, Math.round(props.progress))
         class="absolute inset-0 flex items-end justify-center pb-28 cursor-pointer clickable"
         @click="emit('dismiss')"
       >
-        <span class="click-hint text-sm tracking-[0.3em]" :style="{ color: `color-mix(in srgb, ${getSplashColor('--miya-comp-splash-title', '#d4af37')} 80%, transparent)` }">
+        <span class="click-hint text-sm tracking-[0.3em]" :style="{ color: `color-mix(in srgb, ${getSplashColor('--miya-comp-splash-title', '#00FFF5')} 80%, transparent)` }">
           点 击 唤 醒
         </span>
       </div>
@@ -246,9 +246,9 @@ const displayProgress = computed(() => Math.min(100, Math.round(props.progress))
 <style scoped>
 /* ── 组件调色变量 ── */
 .frame-mask, .particle-layer {
-  --splash-particle: var(--miya-comp-splash-particle, #d4af37);
-  --splash-progress: var(--miya-comp-splash-progress, #d4af37);
-  --splash-title: var(--miya-comp-splash-title, #d4af37);
+  --splash-particle: var(--miya-comp-splash-particle, #00FFF5);
+  --splash-progress: var(--miya-comp-splash-progress, #00FFF5);
+  --splash-title: var(--miya-comp-splash-title, #00FFF5);
 }
 /* 光粒层：与 frame-mask 相同 clip-path，只在四周暗区显示粒子，不遮挡 L2D 窗口 */
 .particle-layer {

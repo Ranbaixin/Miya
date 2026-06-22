@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
@@ -23,9 +23,9 @@ function buildXtermTheme() {
   return {
     background: c('--miya-comp-terminal-bg', '#0a0a14'),
     foreground: c('--miya-comp-terminal-fg', '#d4d4e8'),
-    cursor: c('--miya-comp-terminal-cursor', '#a78bfa'),
+    cursor: c('--miya-comp-terminal-cursor', '#00ADB5'),
     cursorAccent: '#0a0a14',
-    selectionBackground: c('--miya-comp-terminal-selection', '#a78bfa44'),
+    selectionBackground: c('--miya-comp-terminal-selection', '#00ADB544'),
     black: c('--miya-comp-terminal-black', '#1a1a2e'),
     red: c('--miya-comp-terminal-red', '#f87171'),
     green: c('--miya-comp-terminal-green', '#34d399'),
@@ -238,7 +238,7 @@ onUnmounted(() => {
 }
 
 .header-icon {
-  color: var(--miya-primary, #a78bfa);
+  color: var(--miya-primary, #00ADB5);
   display: flex;
 }
 

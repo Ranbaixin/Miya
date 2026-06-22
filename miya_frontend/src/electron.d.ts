@@ -67,6 +67,7 @@ export interface Live2dAPI {
   resetPosition: () => void
   setBackground: (colorHex: string, alpha: number) => void
   setWindowScale: (scale: number) => void
+  positionRelative: (bounds?: { x: number, y: number, width: number, height: number }) => void
   onReady: (callback: () => void) => () => void
   onModelInfo: (callback: (info: { faceX: number, faceY: number }) => void) => () => void
 }

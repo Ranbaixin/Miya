@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { CaptureSource, FloatingState } from '@/electron.d'
 import { useEventListener } from '@vueuse/core'
 import ScrollPanel from 'primevue/scrollpanel'
@@ -918,19 +918,19 @@ useEventListener('token', () => {
   position: absolute;
   inset: -2px;
   border-radius: 50%;
-  border: 2px solid rgba(0, 229, 255, 0.4);
-  box-shadow: 0 0 12px rgba(0, 229, 255, 0.2), inset 0 0 6px rgba(0, 229, 255, 0.1);
+  border: 2px solid rgba(0, 173, 181, 0.4);
+  box-shadow: 0 0 12px rgba(0, 173, 181, 0.2), inset 0 0 6px rgba(0, 173, 181, 0.1);
   animation: ring-rotate 6s linear infinite;
 }
 .ball-outer-ring.active {
-  border-color: rgba(0, 229, 255, 0.7);
-  box-shadow: 0 0 20px rgba(0, 229, 255, 0.4), inset 0 0 10px rgba(0, 229, 255, 0.2);
+  border-color: rgba(0, 173, 181, 0.7);
+  box-shadow: 0 0 20px rgba(0, 173, 181, 0.4), inset 0 0 10px rgba(0, 173, 181, 0.2);
   animation: ring-rotate 2s linear infinite, ring-pulse 1s ease-in-out infinite;
 }
 @keyframes ring-rotate { to { transform: rotate(360deg); } }
 @keyframes ring-pulse {
-  0%, 100% { opacity: 0.4; box-shadow: 0 0 6px rgba(0,229,255,0.2); }
-  50% { opacity: 1; box-shadow: 0 0 16px rgba(0,229,255,0.5); }
+  0%, 100% { opacity: 0.4; box-shadow: 0 0 6px rgba(0, 173, 181, 0.2); }
+  50% { opacity: 1; box-shadow: 0 0 16px rgba(0, 173, 181, 0.5); }
 }
 
 /* 内层环 */
@@ -956,8 +956,8 @@ useEventListener('token', () => {
 
 /* Hover */
 .floating-ball:hover .ball-outer-ring {
-  border-color: color-mix(in srgb, var(--miya-comp-floating-ball, #00e5ff) 60%, transparent);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--miya-comp-floating-ball, #00e5ff) 20%, transparent);
+  border-color: color-mix(in srgb, var(--miya-comp-floating-ball, #00ADB5) 60%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--miya-comp-floating-ball, #00ADB5) 20%, transparent);
 }
 .floating-ball:hover .ball-inner-ring {
   border-color: color-mix(in srgb, var(--miya-comp-floating-ring, #ac45f1) 40%, transparent);
@@ -1049,7 +1049,7 @@ useEventListener('token', () => {
   display: flex;
   align-items: stretch;
   background: rgba(8, 14, 24, 0.95);
-  border: 1px solid rgba(0, 229, 255, 0.1);
+  border: 1px solid rgba(0, 173, 181, 0.1);
   overflow: hidden;
 }
 
@@ -1074,7 +1074,7 @@ useEventListener('token', () => {
 /* 紧凑/完整态的球无光环，头像居中 */
 .compact-ball .ball-avatar-wrap {
   width: 40px; height: 40px; position: relative; inset: auto;
-  box-shadow: 0 0 10px rgba(0,229,255,0.1);
+  box-shadow: 0 0 10px rgba(0, 173, 181, 0.1);
 }
 .compact-ball .ball-border {
   display: none;
@@ -1084,7 +1084,7 @@ useEventListener('token', () => {
 .action-btn {
   background: transparent;
   border: none;
-  color: rgba(0, 229, 255, 0.3);
+  color: rgba(0, 173, 181, 0.3);
   cursor: pointer;
   font-size: 10px;
   padding: 2px 6px;
@@ -1094,20 +1094,20 @@ useEventListener('token', () => {
 }
 
 .action-btn:hover {
-  color: rgba(0, 229, 255, 0.8);
-  background-color: rgba(0, 229, 255, 0.06);
+  color: rgba(0, 173, 181, 0.8);
+  background-color: rgba(0, 173, 181, 0.06);
 }
 
 .action-btn.active {
-  color: rgba(0, 229, 255, 0.8);
-  background: rgba(0, 229, 255, 0.08);
+  color: rgba(0, 173, 181, 0.8);
+  background: rgba(0, 173, 181, 0.08);
 }
 
 /* ========== 快捷技能标签 ========== */
 .skill-tag {
-  background: rgba(0, 229, 255, 0.04);
-  border: 1px solid rgba(0, 229, 255, 0.1);
-  color: rgba(0, 229, 255, 0.5);
+  background: rgba(0, 173, 181, 0.04);
+  border: 1px solid rgba(0, 173, 181, 0.1);
+  color: rgba(0, 173, 181, 0.5);
   cursor: pointer;
   font-size: 10px;
   padding: 2px 10px;
@@ -1118,16 +1118,16 @@ useEventListener('token', () => {
 }
 
 .skill-tag:hover {
-  color: rgba(0, 229, 255, 0.9);
-  background: rgba(0, 229, 255, 0.1);
-  border-color: rgba(0, 229, 255, 0.35);
+  color: rgba(0, 173, 181, 0.9);
+  background: rgba(0, 173, 181, 0.1);
+  border-color: rgba(0, 173, 181, 0.35);
 }
 
 .skill-tag.active {
-  color: rgba(0, 229, 255, 0.95);
-  background: rgba(0, 229, 255, 0.15);
-  border-color: rgba(0, 229, 255, 0.5);
-  box-shadow: 0 0 8px rgba(0,229,255,0.1);
+  color: rgba(0, 173, 181, 0.95);
+  background: rgba(0, 173, 181, 0.15);
+  border-color: rgba(0, 173, 181, 0.5);
+  box-shadow: 0 0 8px rgba(0, 173, 181, 0.1);
 }
 
 /* ========== 完整态 ========== */
@@ -1138,7 +1138,7 @@ useEventListener('token', () => {
   display: flex;
   flex-direction: column;
   background: rgba(8, 14, 24, 0.95);
-  border: 1px solid rgba(0, 229, 255, 0.1);
+  border: 1px solid rgba(0, 173, 181, 0.1);
   overflow: hidden;
 }
 
@@ -1149,7 +1149,7 @@ useEventListener('token', () => {
   height: 100px;
   max-height: 100px;
   overflow: hidden;
-  border-bottom: 1px solid rgba(0,229,255,0.06);
+  border-bottom: 1px solid rgba(0, 173, 181, 0.06);
   background: rgba(6, 10, 18, 0.6);
 }
 

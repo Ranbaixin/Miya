@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { useStorage } from '@vueuse/core'
 import { onMounted, onUnmounted, ref, watchEffect } from 'vue'
 
@@ -9,14 +9,14 @@ function hexToRgb(hex: string): string {
   const r = parseInt(h.substring(0, 2), 16)
   const g = parseInt(h.substring(2, 4), 16)
   const b = parseInt(h.substring(4, 6), 16)
-  return isNaN(r) ? '0,229,255' : `${r},${g},${b}`
+  return isNaN(r) ? '0,173,181' : `${r},${g},${b}`
 }
 
 // 注入 RGB 版本到 CSS 变量
 watchEffect(() => {
   const style = getComputedStyle(document.documentElement)
-  const primary = style.getPropertyValue('--miya-comp-hud-primary').trim() || '#00e5ff'
-  const secondary = style.getPropertyValue('--miya-comp-hud-secondary').trim() || '#b44dff'
+  const primary = style.getPropertyValue('--miya-comp-hud-primary').trim() || '#00ADB5'
+  const secondary = style.getPropertyValue('--miya-comp-hud-secondary').trim() || '#00ADB5'
   document.documentElement.style.setProperty('--miya-comp-hud-primary-r', hexToRgb(primary))
   document.documentElement.style.setProperty('--miya-comp-hud-secondary-r', hexToRgb(secondary))
 })
@@ -185,9 +185,9 @@ onUnmounted(() => {
 
 /* 混色: 不同元素不同色 */
 .sci-fi-overlay.mode-mixed {
-  --c1: 0,229,255;
+  --c1: 0,255,245;
   --c2: 255,107,157;
-  --c3: 180,77,255;
+  --c3: 0,173,181;
   --c4: 255,68,136;
 }
 
@@ -218,11 +218,11 @@ onUnmounted(() => {
 .mode-warm .flow-label { color: rgba(255,180,200,.3); }
 
 /* ═══ 颜色覆盖: 混色 ═══ */
-.mode-mixed .hud-line { background: rgba(0,229,255,.2); }
-.mode-mixed .hud-label { color: rgba(0,229,255,.55); }
-.mode-mixed .hex-val { color: rgba(0,229,255,.35); }
-.mode-mixed .hud-dot { background: rgba(0,229,255,.12); }
-.mode-mixed .hud-dot.on { background: rgba(0,229,255,.55); box-shadow: 0 0 6px rgba(0,229,255,.4); }
+.mode-mixed .hud-line { background: rgba(0, 173, 181, .2); }
+.mode-mixed .hud-label { color: rgba(0, 173, 181, .55); }
+.mode-mixed .hex-val { color: rgba(0, 173, 181, .35); }
+.mode-mixed .hud-dot { background: rgba(0, 173, 181, .12); }
+.mode-mixed .hud-dot.on { background: rgba(0, 173, 181, .55); box-shadow: 0 0 6px rgba(0, 173, 181, .4); }
 .mode-mixed .drift-char { color: rgba(255,107,157,.35); }
 .mode-mixed .drift-word { color: rgba(255,107,157,.22); }
 .mode-mixed .drift-bar { background: rgba(255,107,157,.2); }
@@ -266,7 +266,7 @@ onUnmounted(() => {
 .mode-blue .flow-label { color: rgba(130,180,255,.3); }
 
 /* ── 共享线条 ── */
-.hud-line { position: absolute; background: rgba(0,229,255 0.2); }
+.hud-line { position: absolute; background: rgba(0, 173, 181, 0.2); }
 .line-h { top: 0; left: 0; width: 72px; height: 1px; }
 .line-v { top: 0; left: 0; width: 1px; height: 32px; }
 
@@ -276,19 +276,19 @@ onUnmounted(() => {
 .hud-label {
   position: absolute; top: -20px; left: 12px;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 11px; color: rgba(0,229,2550.55); letter-spacing: 0.2em;
+  font-size: 11px; color: rgba(0, 173, 181, 0.55); letter-spacing: 0.2em;
   animation: flicker 2.5s ease-in-out infinite;
 }
 
 .hud-hex { position: absolute; top: 8px; left: 18px; display: flex; gap: 8px; }
 .hex-val {
   font-family: 'JetBrains Mono', monospace; font-size: 9px;
-  color: rgba(0,229,2550.35); transition: color 0.3s;
+  color: rgba(0, 173, 181, 0.35); transition: color 0.3s;
 }
 
 .hud-indicators { position: absolute; top: 5px; left: 78px; display: flex; gap: 4px; }
-.hud-dot { width: 4px; height: 4px; border-radius: 50%; background: rgba(0,229,2550.12); }
-.hud-dot.on { background: rgba(0,229,2550.55); box-shadow: 0 0 6px rgba(0,229,2550.4); }
+.hud-dot { width: 4px; height: 4px; border-radius: 50%; background: rgba(0, 173, 181, 0.12); }
+.hud-dot.on { background: rgba(0, 173, 181, 0.55); box-shadow: 0 0 6px rgba(0, 173, 181, 0.4); }
 
 /* ═══ 全屏数据扰动 ═══ */
 .hud-drift {
@@ -306,7 +306,7 @@ onUnmounted(() => {
 
 .drift-char {
   font-family: 'JetBrains Mono', monospace; font-size: 10px;
-  color: rgba(0,229,2550.35);
+  color: rgba(0, 173, 181, 0.35);
   transition: all 0.1s;
 }
 
@@ -329,7 +329,7 @@ onUnmounted(() => {
 .drift-word {
   position: absolute;
   font-family: 'JetBrains Mono', monospace; font-size: 8px;
-  color: rgba(0,229,2550.22);
+  color: rgba(0, 173, 181, 0.22);
   letter-spacing: 0.2em;
   animation: drift-text 3s ease-in-out infinite;
 }
@@ -351,7 +351,7 @@ onUnmounted(() => {
 .drift-bar {
   position: absolute;
   height: 1px;
-  background: rgba(0,229,2550.2);
+  background: rgba(0, 173, 181, 0.2);
   animation: drift-bar 2.5s ease-in-out infinite;
 }
 
@@ -369,14 +369,14 @@ onUnmounted(() => {
 .scan-lines { position: absolute; inset: 0; }
 .scan-line {
   position: absolute; left: 0; width: 100%; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0,229,2550.07), transparent);
+  background: linear-gradient(90deg, transparent, rgba(0, 173, 181, 0.07), transparent);
   animation: scan-up 2.4s linear infinite;
 }
 @keyframes scan-up { 0%{top:100%;opacity:1} 90%{opacity:1} 100%{top:-1%;opacity:0} }
 
 .scan-dot {
   position: absolute; border-radius: 50%;
-  background: rgba(0,229,2550.25);
+  background: rgba(0, 173, 181, 0.25);
   animation: dot-beat 3s ease-in-out infinite;
 }
 @keyframes dot-beat {
@@ -385,7 +385,7 @@ onUnmounted(() => {
 
 .glitch-bar {
   position: absolute; left: 0; width: 100%;
-  background: rgba(0,229,2550.03);
+  background: rgba(0, 173, 181, 0.03);
   animation: glitch-pop 0.3s ease-out;
 }
 @keyframes glitch-pop { 0%{opacity:0;transform:scaleX(.3)} 100%{opacity:1;transform:scaleX(1)} }
@@ -398,7 +398,7 @@ onUnmounted(() => {
 }
 .flow-dash {
   position: absolute; top: 0; height: 1px;
-  width: 24px; background: linear-gradient(90deg, transparent, rgba(180,77,2550.3), transparent);
+  width: 24px; background: linear-gradient(90deg, transparent, rgba(0, 173, 181, 0.3), transparent);
   animation: flow-right 2s linear infinite;
 }
 @keyframes flow-right { 0%{left:-30px} 100%{left:100%} }
@@ -406,12 +406,12 @@ onUnmounted(() => {
 .flow-label {
   position: absolute; bottom: 0; right: 0;
   font-family: 'JetBrains Mono', monospace; font-size: 8px;
-  color: rgba(180,77,2550.3); letter-spacing: 0.2em;
+  color: rgba(0, 173, 181, 0.3); letter-spacing: 0.2em;
   animation: flicker 3s ease-in-out infinite;
 }
 .flow-hex { 
   display: block;
-  border-bottom: 1px solid rgba(180,77,2550.12);
+  border-bottom: 1px solid rgba(0, 173, 181, 0.12);
   padding-bottom: 2px;
 }
 </style>

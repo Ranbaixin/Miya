@@ -31,6 +31,7 @@ import {
   resetLive2dPosition,
   setLive2dWindowScale,
   broadcastLive2dCommand,
+  positionLive2dRelative,
 } from './modules/live2d-window'
 import {
   createArtboardWindow,
@@ -469,6 +470,19 @@ app.whenReady().then(async () => {
   })
   ipcMain.on('live2d:resetPosition', () => {
     resetLive2dPosition()
+  })
+  ipcMain.on('live2d:positionRelative', (_event, bounds?: { x: number, y: number, width: number, height: number }) => {
+    if (bounds) {
+      positionLive2dRelative(bounds)
+    } else {
+      const mainWin = getMainWindow()
+      if (mainWin) {
+        setTimeout(() => {
+          const b = mainWin.getBounds()
+          positionLive2dRelative({ x: b.x, y: b.y, width: b.width, height: b.height })
+        }, 300)
+      }
+    }
   })
   ipcMain.on('live2d:readyToggle', () => {
     // 启动时检查 localStorage 中的 visible 配置，如果关闭则隐藏窗口

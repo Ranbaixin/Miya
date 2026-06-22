@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import API from '@/api/core'
@@ -185,11 +185,11 @@ async function doScreenshot() {
   background: var(--miya-surface); border-radius: 0.5rem; padding: 1rem;
   border: 1px solid color-mix(in srgb, var(--miya-accent) 10%, transparent);
 }
-.sv-result.success { border-color: color-mix(in srgb, #00e5ff 15%, transparent); }
+.sv-result.success { border-color: color-mix(in srgb, #00ADB5 15%, transparent); }
 .sv-result.error { border-color: color-mix(in srgb, #ff4757 15%, transparent); }
 .sv-result.partial { border-color: color-mix(in srgb, #ffa502 15%, transparent); }
 .result-label { font-size: 0.65rem; font-weight: 600; margin-bottom: 0.5rem; }
-.sv-result.success .result-label { color: #00e5ff; }
+.sv-result.success .result-label { color: #00ADB5; }
 .sv-result.error .result-label { color: #ff6b7a; }
 .sv-result.partial .result-label { color: #ffa502; }
 .result-content { font-size: 0.75rem; line-height: 1.7; color: var(--miya-text); white-space: pre-wrap; }

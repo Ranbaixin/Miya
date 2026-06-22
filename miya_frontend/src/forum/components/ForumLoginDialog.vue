@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, watch } from 'vue'
 import { communityLogin, getCaptcha, sendVerificationCode, communityRegister } from '../api'
 
@@ -297,7 +297,7 @@ function handleKeydown(e: KeyboardEvent) {
 
 .login-card {
   position: relative; width: 400px;
-  border: 1px solid color-mix(in srgb, var(--miya-accent, #d4af37) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--miya-accent, #00FFF5) 30%, transparent);
   border-radius: 12px;
   background: rgba(20,14,6,0.94);
   box-shadow: 0 0 60px rgba(212,175,55,0.08);
@@ -312,13 +312,13 @@ function handleKeydown(e: KeyboardEvent) {
 .login-close:hover { color: var(--miya-primary); }
 
 .login-header { text-align: center; margin-bottom: 1.2rem; }
-.login-icon { font-size: 1.8rem; color: var(--miya-accent, #d4af37); }
+.login-icon { font-size: 1.8rem; color: var(--miya-accent, #00FFF5); }
 .login-header h3 { margin: 0.4rem 0 0.2rem; font-size: 1rem; font-weight: 600; color: var(--miya-text); }
 .login-desc { margin: 0; font-size: 0.65rem; color: var(--miya-text-dim); }
 
 .mode-tabs {
   display: flex; gap: 0; margin-bottom: 1rem;
-  border: 1px solid color-mix(in srgb, var(--miya-accent, #d4af37) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--miya-accent, #00FFF5) 15%, transparent);
   border-radius: 6px; overflow: hidden;
 }
 .mode-tab {
@@ -328,8 +328,8 @@ function handleKeydown(e: KeyboardEvent) {
   transition: all 0.2s;
 }
 .mode-tab.active {
-  background: color-mix(in srgb, var(--miya-accent, #d4af37) 12%, transparent);
-  color: var(--miya-accent, #d4af37); font-weight: 500;
+  background: color-mix(in srgb, var(--miya-accent, #00FFF5) 12%, transparent);
+  color: var(--miya-accent, #00FFF5); font-weight: 500;
 }
 .mode-tab:hover:not(.active) { color: var(--miya-text); }
 
@@ -340,11 +340,11 @@ function handleKeydown(e: KeyboardEvent) {
 .field input {
   padding: 0.5rem 0.7rem; border-radius: 6px;
   background: rgba(255,255,255,0.04);
-  border: 1px solid color-mix(in srgb, var(--miya-accent, #d4af37) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--miya-accent, #00FFF5) 15%, transparent);
   color: var(--miya-text); font-size: 0.78rem; font-family: inherit; outline: none;
   transition: border-color 0.2s;
 }
-.field input:focus { border-color: var(--miya-accent, #d4af37); }
+.field input:focus { border-color: var(--miya-accent, #00FFF5); }
 .field input::placeholder { color: rgba(255,255,255,0.18); }
 
 .login-error {
@@ -366,23 +366,23 @@ function handleKeydown(e: KeyboardEvent) {
   background: rgba(100,149,237,0.06); border: 1px solid rgba(100,149,237,0.15);
   color: var(--miya-text-dim); font-size: 0.62rem; line-height: 1.4;
 }
-.hint-link { color: var(--miya-accent, #d4af37); text-decoration: underline; }
+.hint-link { color: var(--miya-accent, #00FFF5); text-decoration: underline; }
 .hint-link:hover { color: var(--miya-primary); }
 
 .login-btn {
   margin-top: 0.2rem; padding: 0.5rem; border-radius: 6px;
-  background: color-mix(in srgb, var(--miya-accent, #d4af37) 18%, transparent);
-  border: 1px solid color-mix(in srgb, var(--miya-accent, #d4af37) 25%, transparent);
-  color: var(--miya-accent, #d4af37); font-size: 0.78rem; font-family: inherit; cursor: pointer;
+  background: color-mix(in srgb, var(--miya-accent, #00FFF5) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--miya-accent, #00FFF5) 25%, transparent);
+  color: var(--miya-accent, #00FFF5); font-size: 0.78rem; font-family: inherit; cursor: pointer;
   display: flex; align-items: center; justify-content: center; gap: 0.4rem;
   transition: all 0.2s;
 }
-.login-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--miya-accent, #d4af37) 32%, transparent); }
+.login-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--miya-accent, #00FFF5) 32%, transparent); }
 .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .login-spinner {
   width: 0.8rem; height: 0.8rem;
-  border: 2px solid transparent; border-top-color: var(--miya-accent, #d4af37);
+  border: 2px solid transparent; border-top-color: var(--miya-accent, #00FFF5);
   border-radius: 50%; animation: login-spin 0.6s linear infinite;
 }
 @keyframes login-spin { to { transform: rotate(360deg); } }

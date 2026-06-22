@@ -214,3 +214,5 @@ data/last_form.json
 # Local models (bundled at build time from PaddleX cache)
 models/
 modelspaddle_ocrofficial_models/
+data/miya_birth.json
+data/soul_snapshot.json

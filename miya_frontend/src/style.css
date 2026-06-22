@@ -2,22 +2,22 @@
 
 :root {
   color-scheme: dark;
-  color: #e8d5f5;
-  background-color: var(--miya-chat-bg, #0a0815);
+  color: #E4ECF0;
+  background-color: var(--miya-chat-bg, #222831);
 
-  --miya-accent: #a78bfa;
-  --miya-home: #a78bfa;
-  --miya-chat-ai: #00e5ff;
-  --miya-chat-user: #b44dff;
-  --miya-chat-bg: #0a0815;
-  --miya-border: #00e5ff;
-  --miya-bg: #0a0815;
-  --miya-surface: rgba(20, 16, 35, 0.85);
+  --miya-accent: #00ADB5;
+  --miya-home: #00ADB5;
+  --miya-chat-ai: #00FFF5;
+  --miya-chat-user: #00ADB5;
+  --miya-chat-bg: #222831;
+  --miya-border: #00ADB5;
+  --miya-bg: #222831;
+  --miya-surface: rgba(57, 62, 70, 0.85);
   --miya-primary: var(--miya-accent);
   --miya-glow: color-mix(in srgb, var(--miya-accent) 30%, transparent);
-  --miya-gold: rgba(212, 175, 55, 0.5);
-  --miya-text: #e8d5f5;
-  --miya-text-dim: rgba(232, 213, 245, 0.5);
+  --miya-gold: rgba(0, 255, 245, 0.35);
+  --miya-text: #E4ECF0;
+  --miya-text-dim: rgba(228, 236, 240, 0.45);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -28,8 +28,17 @@
   --p-panel-content-padding: 0em !important;
 }
 
-body, #app {
+body {
   margin: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
@@ -41,12 +50,12 @@ img { -webkit-user-select: none; user-select: none; }
 
 .box {
   background: rgba(8, 16, 28, 0.92);
-  border: 1px solid color-mix(in srgb, var(--miya-border, #00e5ff) 25%, transparent);
+  border: 1px solid color-mix(in srgb, var(--miya-border, #00ADB5) 25%, transparent);
   box-shadow:
-    inset 0 0 40px color-mix(in srgb, var(--miya-border, #00e5ff) 6%, transparent),
-    0 0 30px color-mix(in srgb, var(--miya-border, #00e5ff) 10%, transparent),
-    3px 0 0 color-mix(in srgb, var(--miya-border, #00e5ff) 25%, transparent),
-    inset 3px 0 0 color-mix(in srgb, var(--miya-border, #00e5ff) 8%, transparent);
+    inset 0 0 40px color-mix(in srgb, var(--miya-border, #00ADB5) 6%, transparent),
+    0 0 30px color-mix(in srgb, var(--miya-border, #00ADB5) 10%, transparent),
+    3px 0 0 color-mix(in srgb, var(--miya-border, #00ADB5) 25%, transparent),
+    inset 3px 0 0 color-mix(in srgb, var(--miya-border, #00ADB5) 8%, transparent);
   padding: 0.5em;
   backdrop-filter: blur(8px);
 }
@@ -54,7 +63,7 @@ img { -webkit-user-select: none; user-select: none; }
 blockquote {
   margin: 1em 0;
   padding: 0.25em 1em;
-  background-color: rgba(167, 139, 250, 0.1);
+  background-color: rgba(0, 173, 181, 0.1);
   border-left: 0.25em solid var(--miya-primary);
 }
 

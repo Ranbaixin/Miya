@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, watch } from 'vue'
 import { createPost } from '../api'
 
@@ -110,7 +110,7 @@ function handleKeydown(e: KeyboardEvent) {
 }
 .cp-card {
   position: relative; width: 520px;
-  border: 1px solid color-mix(in srgb, var(--miya-accent, #d4af37) 25%, transparent);
+  border: 1px solid color-mix(in srgb, var(--miya-accent, #00FFF5) 25%, transparent);
   border-radius: 12px;
   background: rgba(20,14,6,0.94);
   box-shadow: 0 0 60px rgba(212,175,55,0.06);
@@ -134,11 +134,11 @@ function handleKeydown(e: KeyboardEvent) {
 .field input, .field textarea {
   padding: 0.5rem 0.7rem; border-radius: 6px;
   background: rgba(255,255,255,0.04);
-  border: 1px solid color-mix(in srgb, var(--miya-accent, #d4af37) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--miya-accent, #00FFF5) 15%, transparent);
   color: var(--miya-text); font-size: 0.78rem; font-family: inherit; outline: none;
   transition: border-color 0.2s; resize: vertical;
 }
-.field input:focus, .field textarea:focus { border-color: var(--miya-accent, #d4af37); }
+.field input:focus, .field textarea:focus { border-color: var(--miya-accent, #00FFF5); }
 .field input::placeholder, .field textarea::placeholder { color: rgba(255,255,255,0.18); }
 
 .cp-error {
@@ -158,16 +158,16 @@ function handleKeydown(e: KeyboardEvent) {
 }
 .cp-cancel:hover { border-color: var(--miya-text); color: var(--miya-text); }
 .cp-submit {
-  background: color-mix(in srgb, var(--miya-accent, #d4af37) 18%, transparent);
-  border: 1px solid color-mix(in srgb, var(--miya-accent, #d4af37) 25%, transparent);
-  color: var(--miya-accent, #d4af37); display: flex; align-items: center; gap: 0.4rem;
+  background: color-mix(in srgb, var(--miya-accent, #00FFF5) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--miya-accent, #00FFF5) 25%, transparent);
+  color: var(--miya-accent, #00FFF5); display: flex; align-items: center; gap: 0.4rem;
 }
-.cp-submit:hover:not(:disabled) { background: color-mix(in srgb, var(--miya-accent, #d4af37) 32%, transparent); }
+.cp-submit:hover:not(:disabled) { background: color-mix(in srgb, var(--miya-accent, #00FFF5) 32%, transparent); }
 .cp-submit:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .cp-spinner {
   width: 0.75rem; height: 0.75rem;
-  border: 2px solid transparent; border-top-color: var(--miya-accent, #d4af37);
+  border: 2px solid transparent; border-top-color: var(--miya-accent, #00FFF5);
   border-radius: 50%; animation: cp-spin 0.6s linear infinite;
 }
 @keyframes cp-spin { to { transform: rotate(360deg); } }
