@@ -388,7 +388,6 @@ class JsonBackend(MemoryBackend):
 
         # 文件锁保护索引读写
         self._index_lock = asyncio.Lock()
-        self._backup_lock = asyncio.Lock()
 
         self._load_index()
         self._load_tag_index()
