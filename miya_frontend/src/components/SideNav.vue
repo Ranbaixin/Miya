@@ -25,6 +25,7 @@ const moreItems: NavItem[] = [
   { id: 'config', label: '灵魂调谐', icon: '❖', path: '/config' },
   { id: 'community', label: '娜迦社区', icon: '✧', path: '/community' },
   { id: 'security', label: '安全中心', icon: '⬢', path: '/security' },
+  { id: 'hub', label: '弥娅中枢', icon: '⬡', path: '/hub' },
   { id: 'screen', label: '屏幕视觉', icon: '⊙', path: '/screen' },
 ]
 

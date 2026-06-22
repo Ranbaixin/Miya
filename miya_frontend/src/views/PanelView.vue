@@ -105,7 +105,7 @@ const rightLinks = [
   { id: 'config', label: '调谐', desc: '人格·模型', path: '/config' },
   { id: 'community', label: '社区', desc: '娜迦', path: '/community' },
   { id: 'security', label: '安全', desc: '扫描', path: '/security' },
-  { id: 'screen', label: '视觉', desc: '截图', path: '/screen' },
+  { id: 'hub', label: '中枢', desc: '功能聚合', path: '/hub' },
 ]
 
 // ═══ Banner 图片轮播 ═══
@@ -307,7 +307,7 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
       <!-- 底部4入口 -->
       <div class="cmd-bottom-nav">
         <button v-for="link in rightLinks" :key="link.id" class="cmd-bottom-item" @click="navigate(link.path)">
-          <span class="cmd-bottom-icon">{{ { config: '⚙', community: '◇', security: '⬡', screen: '□' }[link.id] }}</span>
+          <span class="cmd-bottom-icon">{{ { config: '⚙', community: '◇', security: '⬡', hub: '⬢' }[link.id] }}</span>
           <h1>{{ link.label }}</h1>
           <span>{{ link.desc }}</span>
         </button>

@@ -22,6 +22,7 @@ const router = createRouter({
     { path: '/live2d', component: () => import('@/views/Live2dConfigView.vue') },
     { path: '/artboard', component: () => import('@/views/ArtboardView.vue') },
     { path: '/security', component: () => import('@/views/SecurityView.vue') },
+    { path: '/hub', component: () => import('@/views/HubView.vue') },
     {
       path: '/community',
       children: [
