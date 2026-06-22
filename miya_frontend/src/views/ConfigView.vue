@@ -1,12 +1,12 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { useStorage } from '@vueuse/core'
-import { Slider, InputText, ToggleSwitch } from 'primevue'
-import { computed, onMounted, ref } from 'vue'
+import { InputText, Slider, ToggleSwitch } from 'primevue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import API from '@/api/core'
+import { audioSettings, bgmFileOptions, playBgm } from '@/composables/useAudio'
+import { COLOR_GROUPS, componentColors } from '@/composables/useComponentColors'
 import { CONFIG } from '@/utils/config'
-import { audioSettings, bgmFileOptions, playBgm, stopBgm } from '@/composables/useAudio'
-import { componentColors, COLOR_GROUPS } from '@/composables/useComponentColors'
 import { mascotCfg } from '@/utils/live2dMascotConfig'
 
 const router = useRouter()
@@ -37,31 +37,37 @@ const live2dCfg = useStorage('miya-live2d-window-config', {
 })
 
 function setLive2dBg(e?: Event) {
-  if (e) live2dCfg.value.bgColor = (e.target as HTMLInputElement).value
+  if (e)
+    live2dCfg.value.bgColor = (e.target as HTMLInputElement).value
   const api = window.live2dAPI
-  if (!api) return
+  if (!api)
+    return
   const hex = live2dCfg.value.bgColor.replace('#', '')
   api.setBackground?.(`0x${hex}`, live2dCfg.value.bgAlpha)
 }
 
 function setLive2dScale() {
   const api = window.live2dAPI
-  if (api) api.setWindowScale?.(live2dCfg.value.windowScale)
+  if (api)
+    api.setWindowScale?.(live2dCfg.value.windowScale)
 }
 
 function setLive2dAlwaysOnTop() {
   const api = window.live2dAPI
-  if (api) api.setAlwaysOnTop(live2dCfg.value.alwaysOnTop)
+  if (api)
+    api.setAlwaysOnTop(live2dCfg.value.alwaysOnTop)
 }
 
 function setLive2dVisibility() {
   const api = window.live2dAPI
-  if (api) api.toggleVisibility()
+  if (api)
+    api.toggleVisibility()
 }
 
 function resetLive2dPos() {
   const api = window.live2dAPI
-  if (api) api.resetPosition()
+  if (api)
+    api.resetPosition()
 }
 
 function resetLive2dSize() {
@@ -73,7 +79,8 @@ async function loadConfigFiles() {
   try {
     const res = await fetch(`http://localhost:${Number(import.meta.env.VITE_API_PORT) || 9800}/api/desktop/files/list?path=config`).then(r => r.json())
     configFiles.value = (res.files || []).filter((f: any) => !f.is_dir && (f.name.endsWith('.json') || f.name.endsWith('.yaml') || f.name.endsWith('.yml')))
-  } catch {}
+  }
+  catch {}
 }
 
 async function openConfigFile(filePath: string) {
@@ -82,7 +89,8 @@ async function openConfigFile(filePath: string) {
     editingFile.value = filePath
     editingContent.value = res.content || JSON.stringify(res.data || res, null, 2)
     editingSaved.value = false
-  } catch { editingContent.value = '读取失败' }
+  }
+  catch { editingContent.value = '读取失败' }
 }
 
 async function saveConfigFile() {
@@ -94,7 +102,8 @@ async function saveConfigFile() {
     })
     editingSaved.value = true
     setTimeout(() => editingSaved.value = false, 2000)
-  } catch { alert('保存失败') }
+  }
+  catch { alert('保存失败') }
 }
 
 onMounted(async () => {
@@ -102,7 +111,8 @@ onMounted(async () => {
   try {
     const health = await API.health()
     backendOnline.value = health.status === 'healthy'
-    if (!backendOnline.value) return
+    if (!backendOnline.value)
+      return
 
     const [status, persona, mem, providers] = await Promise.allSettled([
       API.systemStatus(),
@@ -119,7 +129,8 @@ onMounted(async () => {
     const plat = await fetch('http://localhost:${Number(import.meta.env.VITE_API_PORT) || 9800}/api/v1/platforms').then(r => r.json()).catch(() => ({}))
     platformData.value = plat.platforms || []
     loadConfigFiles()
-  } catch {}
+  }
+  catch {}
 })
 
 const tabs: { key: TabKey, label: string, icon: string }[] = [
@@ -139,6 +150,7 @@ const verseText = useStorage('miya-verse-text', '雪落无声 — 愿系铃中')
 const showStatus = useStorage('miya-show-status', true)
 const logoBrightness = useStorage('miya-logo-brightness', 1.0)
 const footerBrightness = useStorage('miya-footer-brightness', 1.0)
+const gyroEnabled = useStorage('miya-gyro-enabled', true)
 
 const hudColorMode = useStorage('miya-hud-color', 'mixed')
 const COLOR_MODES = [
@@ -162,15 +174,18 @@ async function loadBgManifest() {
     const res = await fetch('/backgrounds/manifest.json')
     if (res.ok) {
       const list = await res.json()
-      if (Array.isArray(list)) builtinBgs.value = [...new Set([...BUILTIN_BG, ...list])]
+      if (Array.isArray(list))
+        builtinBgs.value = [...new Set([...BUILTIN_BG, ...list])]
     }
-  } catch {}
+  }
+  catch {}
 }
 
 function pickBgFile() { bgFileInput.value?.click() }
 function onFileChange(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
-  if (!file) return
+  if (!file)
+    return
   const reader = new FileReader()
   reader.onload = () => { bgImage.value = reader.result as string }
   reader.readAsDataURL(file)
@@ -180,9 +195,15 @@ function selectNone() { bgImage.value = '' }
 
 // ── 辅助 ──
 const modelDefaults: Record<string, string> = {
-  simple_chat: '对话', complex_reasoning: '推理', code_analysis: '代码分析',
-  creative_writing: '创作', tool_calling: '工具调用', summarization: '摘要',
-  image_description: '图像', agent_mode: 'Agent', computer_use: '电脑操作',
+  simple_chat: '对话',
+  complex_reasoning: '推理',
+  code_analysis: '代码分析',
+  creative_writing: '创作',
+  tool_calling: '工具调用',
+  summarization: '摘要',
+  image_description: '图像',
+  agent_mode: 'Agent',
+  computer_use: '电脑操作',
 }
 
 // ── 声音 ──
@@ -209,7 +230,8 @@ function resetAllComponentColors() {
 }
 function resetComponentGroup(id: string) {
   const g = COLOR_GROUPS.find(x => x.id === id)
-  if (!g) return
+  if (!g)
+    return
   const updated = { ...(componentColors.value as Record<string, string>) }
   for (const c of g.colors) updated[c.key] = c.default
   componentColors.value = updated
@@ -217,10 +239,15 @@ function resetComponentGroup(id: string) {
 
 function getRouteModel(key: string): string {
   const names: Record<string, string> = {
-    simple_chat: 'deepseek-v4-flash', complex_reasoning: 'deepseek-v4-flash',
-    code_analysis: 'deepseek-v4-flash', creative_writing: 'deepseek-v4-flash',
-    tool_calling: 'deepseek-v4-flash', summarization: 'llama-3.1-8b',
-    image_description: 'glm-4.6v', agent_mode: 'claude-sonnet', computer_use: 'claude-sonnet',
+    simple_chat: 'deepseek-v4-flash',
+    complex_reasoning: 'deepseek-v4-flash',
+    code_analysis: 'deepseek-v4-flash',
+    creative_writing: 'deepseek-v4-flash',
+    tool_calling: 'deepseek-v4-flash',
+    summarization: 'llama-3.1-8b',
+    image_description: 'glm-4.6v',
+    agent_mode: 'claude-sonnet',
+    computer_use: 'claude-sonnet',
   }
   return names[key] || key
 }
@@ -231,7 +258,7 @@ function getRouteModel(key: string): string {
     <!-- 侧边 Tab 栏 -->
     <aside class="config-sidebar">
       <div class="sidebar-header">
-        <button class="back-btn" @click="router.push('/')" title="返回首页">
+        <button class="back-btn" title="返回首页" @click="router.push('/')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
         </button>
         <span class="sidebar-title">弥娅调谐</span>
@@ -246,7 +273,9 @@ function getRouteModel(key: string): string {
           <span class="tab-label">{{ tab.label }}</span>
         </button>
       </nav>
-      <div class="sidebar-version">v{{ CONFIG.system.version || '7.0' }}</div>
+      <div class="sidebar-version">
+        v{{ CONFIG.system.version || '7.0' }}
+      </div>
     </aside>
 
     <!-- 内容区 -->
@@ -257,20 +286,32 @@ function getRouteModel(key: string): string {
 
         <div class="config-section">
           <h3>背景图片</h3>
-          <p class="hint">将图片放入 public/backgrounds/ 文件夹</p>
+          <p class="hint">
+            将图片放入 public/backgrounds/ 文件夹
+          </p>
           <div class="bg-grid">
-            <div class="bg-thumb" :class="{ active: !bgImage }" @click="selectNone"><span class="bg-default">默认</span></div>
+            <div class="bg-thumb" :class="{ active: !bgImage }" @click="selectNone">
+              <span class="bg-default">默认</span>
+            </div>
             <div v-for="name in builtinBgs" :key="name" class="bg-thumb" :class="{ active: bgImage === `/backgrounds/${name}` }" @click="selectBg(name)">
               <img :src="`/backgrounds/${name}`" alt="">
             </div>
           </div>
           <div class="bg-actions">
-            <button class="action-btn" @click="pickBgFile">+ 添加图片</button>
+            <button class="action-btn" @click="pickBgFile">
+              + 添加图片
+            </button>
             <input ref="bgFileInput" type="file" accept="image/*" class="hidden" @change="onFileChange">
           </div>
           <div class="config-item" style="margin-top:0.6rem">
             <label>不透明度</label>
-            <div class="slider-row"><Slider v-model="bgOpacity" :min="0" :max="1" :step="0.01" /><span class="slider-val">{{ Math.round(bgOpacity * 100) }}%</span></div>
+            <div class="slider-row">
+              <Slider v-model="bgOpacity" :min="0" :max="1" :step="0.01" /><span class="slider-val">{{ Math.round(bgOpacity * 100) }}%</span>
+            </div>
+          </div>
+          <div class="config-item" style="margin-top:0.6rem">
+            <label>陀螺仪视差</label>
+            <ToggleSwitch v-model="gyroEnabled" />
           </div>
         </div>
 
@@ -315,7 +356,9 @@ function getRouteModel(key: string): string {
 
         <div class="config-section">
           <h3>HUD 色彩</h3>
-          <p class="hint">全局配色请至「调色」tab</p>
+          <p class="hint">
+            全局配色请至「调色」tab
+          </p>
           <div class="color-modes">
             <button v-for="m in COLOR_MODES" :key="m.key" class="color-btn" :class="{ active: hudColorMode === m.key }" @click="hudColorMode = m.key">
               <span class="color-dots"><span v-for="c in m.colors" :key="c" class="dot" :style="{ background: c }" /></span>
@@ -328,61 +371,89 @@ function getRouteModel(key: string): string {
       <!-- ═══ 模型 ═══ -->
       <div v-show="activeTab === 'model'" class="config-page">
         <h2>模型配置</h2>
-        <div v-if="!backendOnline" class="offline-hint">● 后端未连接</div>
+        <div v-if="!backendOnline" class="offline-hint">
+          ● 后端未连接
+        </div>
         <template v-else>
-        <div class="config-section">
-          <h3>默认路由</h3>
-          <div class="model-item" v-for="(label, key) in modelDefaults" :key="key">
-            <span class="model-name">{{ label }}</span>
-            <span class="model-val">{{ getRouteModel(key) }}</span>
+          <div class="config-section">
+            <h3>默认路由</h3>
+            <div v-for="(label, key) in modelDefaults" :key="key" class="model-item">
+              <span class="model-name">{{ label }}</span>
+              <span class="model-val">{{ getRouteModel(key) }}</span>
+            </div>
           </div>
-        </div>
-        <div class="config-section">
-          <h3>注册模型 ({{ providerList.length }})</h3>
-          <div class="model-item" v-for="p in providerList.slice(0, 8)" :key="p.id || p.name">
-            <span class="model-name">{{ p.name || p.id }}</span>
-            <span class="model-val status-on">{{ p.provider || 'API' }}</span>
+          <div class="config-section">
+            <h3>注册模型 ({{ providerList.length }})</h3>
+            <div v-for="p in providerList.slice(0, 8)" :key="p.id || p.name" class="model-item">
+              <span class="model-name">{{ p.name || p.id }}</span>
+              <span class="model-val status-on">{{ p.provider || 'API' }}</span>
+            </div>
           </div>
-        </div>
-        <div class="config-section">
-          <h3>协作模式</h3>
-          <div class="model-item"><span class="model-name">单模型</span><span class="model-val">复杂度 ≤ 2</span></div>
-          <div class="model-item"><span class="model-name">链式</span><span class="model-val">复杂度 ≤ 3</span></div>
-          <div class="model-item"><span class="model-name">并行</span><span class="model-val">复杂度 ≤ 4</span></div>
-        </div>
+          <div class="config-section">
+            <h3>协作模式</h3>
+            <div class="model-item">
+              <span class="model-name">单模型</span><span class="model-val">复杂度 ≤ 2</span>
+            </div>
+            <div class="model-item">
+              <span class="model-name">链式</span><span class="model-val">复杂度 ≤ 3</span>
+            </div>
+            <div class="model-item">
+              <span class="model-name">并行</span><span class="model-val">复杂度 ≤ 4</span>
+            </div>
+          </div>
         </template>
       </div>
 
       <!-- ═══ 灵魂 ═══ -->
       <div v-show="activeTab === 'soul'" class="config-page">
         <h2>灵魂 & 情绪</h2>
-        <div v-if="!backendOnline" class="offline-hint">● 后端未连接</div>
-        <template v-else>
-        <div class="config-section">
-          <h3>当前状态</h3>
-          <div class="model-item"><span class="model-name">人格</span><span class="model-val">{{ personaData?.persona?.name || personaData?.persona?.id || '默认' }}</span></div>
+        <div v-if="!backendOnline" class="offline-hint">
+          ● 后端未连接
         </div>
+        <template v-else>
+          <div class="config-section">
+            <h3>当前状态</h3>
+            <div class="model-item">
+              <span class="model-name">人格</span><span class="model-val">{{ personaData?.persona?.name || personaData?.persona?.id || '默认' }}</span>
+            </div>
+          </div>
         </template>
       </div>
 
       <!-- ═══ 记忆 ═══ -->
       <div v-show="activeTab === 'memory'" class="config-page">
         <h2>记忆系统</h2>
-        <div v-if="!backendOnline" class="offline-hint">● 后端未连接</div>
+        <div v-if="!backendOnline" class="offline-hint">
+          ● 后端未连接
+        </div>
         <template v-else>
-        <div class="config-section">
-          <h3>存储统计</h3>
-          <div class="model-item"><span class="model-name">记忆节点</span><span class="model-val">{{ memoryStats?.nodeCount || memoryStats?.node_count || 0 }}</span></div>
-          <div class="model-item"><span class="model-name">记忆边</span><span class="model-val">{{ memoryStats?.edgeCount || memoryStats?.edge_count || 0 }}</span></div>
-          <div class="model-item"><span class="model-name">存储大小</span><span class="model-val">{{ memoryStats?.memorySize || memoryStats?.memory_size || 'N/A' }}</span></div>
-        </div>
-        <div class="config-section">
-          <h3>记忆层级</h3>
-          <div class="model-item"><span class="model-name">短期记忆</span><span class="model-val">TTL 3600s</span></div>
-          <div class="model-item"><span class="model-name">对话记忆</span><span class="model-val">每会话 100 条</span></div>
-          <div class="model-item"><span class="model-name">长期记忆</span><span class="model-val">最多 10000 条</span></div>
-          <div class="model-item"><span class="model-name">语义记忆</span><span class="model-val status-on">SQLite / 1024维</span></div>
-        </div>
+          <div class="config-section">
+            <h3>存储统计</h3>
+            <div class="model-item">
+              <span class="model-name">记忆节点</span><span class="model-val">{{ memoryStats?.nodeCount || memoryStats?.node_count || 0 }}</span>
+            </div>
+            <div class="model-item">
+              <span class="model-name">记忆边</span><span class="model-val">{{ memoryStats?.edgeCount || memoryStats?.edge_count || 0 }}</span>
+            </div>
+            <div class="model-item">
+              <span class="model-name">存储大小</span><span class="model-val">{{ memoryStats?.memorySize || memoryStats?.memory_size || 'N/A' }}</span>
+            </div>
+          </div>
+          <div class="config-section">
+            <h3>记忆层级</h3>
+            <div class="model-item">
+              <span class="model-name">短期记忆</span><span class="model-val">TTL 3600s</span>
+            </div>
+            <div class="model-item">
+              <span class="model-name">对话记忆</span><span class="model-val">每会话 100 条</span>
+            </div>
+            <div class="model-item">
+              <span class="model-name">长期记忆</span><span class="model-val">最多 10000 条</span>
+            </div>
+            <div class="model-item">
+              <span class="model-name">语义记忆</span><span class="model-val status-on">SQLite / 1024维</span>
+            </div>
+          </div>
         </template>
       </div>
 
@@ -391,7 +462,9 @@ function getRouteModel(key: string): string {
         <h2>系统</h2>
         <div class="config-section">
           <h3>API 连接</h3>
-          <div class="model-item"><span class="model-name">后端状态</span><span class="model-val" :class="backendOnline ? 'status-on' : ''">{{ backendOnline ? '● 在线' : '○ 离线' }}</span></div>
+          <div class="model-item">
+            <span class="model-name">后端状态</span><span class="model-val" :class="backendOnline ? 'status-on' : ''">{{ backendOnline ? '● 在线' : '○ 离线' }}</span>
+          </div>
           <div class="config-item" style="margin-top:0.5rem">
             <label>API 地址</label>
             <InputText v-model="CONFIG.api.base_url" placeholder="http://localhost:${Number(import.meta.env.VITE_API_PORT) || 9800}" class="input-sm" />
@@ -399,21 +472,31 @@ function getRouteModel(key: string): string {
         </div>
         <div class="config-section">
           <h3>平台状态 ({{ platformData.length }})</h3>
-          <div class="model-item" v-for="p in platformData" :key="p.platform_id">
+          <div v-for="p in platformData" :key="p.platform_id" class="model-item">
             <span class="model-name">{{ p.platform_name }}</span>
             <span class="model-val" :class="p.status === 'online' ? 'status-on' : ''">{{ p.status === 'online' ? '在线' : p.status }}</span>
           </div>
-          <div v-if="!platformData.length && backendOnline" class="model-item"><span class="model-name">加载中...</span></div>
+          <div v-if="!platformData.length && backendOnline" class="model-item">
+            <span class="model-name">加载中...</span>
+          </div>
         </div>
         <div class="config-section">
           <h3>安全</h3>
-          <div class="model-item"><span class="model-name">权限管理</span><span class="model-val status-on">已启用</span></div>
-          <div class="model-item"><span class="model-name">注入检测</span><span class="model-val status-on">已启用</span></div>
-          <div class="model-item"><span class="model-name">审计日志</span><span class="model-val status-on">已启用</span></div>
+          <div class="model-item">
+            <span class="model-name">权限管理</span><span class="model-val status-on">已启用</span>
+          </div>
+          <div class="model-item">
+            <span class="model-name">注入检测</span><span class="model-val status-on">已启用</span>
+          </div>
+          <div class="model-item">
+            <span class="model-name">审计日志</span><span class="model-val status-on">已启用</span>
+          </div>
         </div>
         <div class="config-section">
           <h3>配置文件</h3>
-          <p class="hint">编辑 JSON/YAML 配置文件，保存后需重启生效</p>
+          <p class="hint">
+            编辑 JSON/YAML 配置文件，保存后需重启生效
+          </p>
           <div class="file-list">
             <button v-for="f in configFiles" :key="f.name" class="file-btn" :class="{ active: editingFile === f.path }" @click="openConfigFile(f.path)">
               <span class="file-name">{{ f.name }}</span>
@@ -425,8 +508,12 @@ function getRouteModel(key: string): string {
               <span class="editor-path">{{ editingFile }}</span>
               <div class="editor-actions">
                 <span v-if="editingSaved" class="saved-msg">✓ 已保存</span>
-                <button class="action-btn" @click="saveConfigFile">保存</button>
-                <button class="action-btn" @click="editingFile = ''">关闭</button>
+                <button class="action-btn" @click="saveConfigFile">
+                  保存
+                </button>
+                <button class="action-btn" @click="editingFile = ''">
+                  关闭
+                </button>
               </div>
             </div>
             <textarea v-model="editingContent" class="editor-text" rows="20" spellcheck="false" />
@@ -483,14 +570,18 @@ function getRouteModel(key: string): string {
       <!-- ═══ 调色 ═══ -->
       <div v-show="activeTab === 'color'" class="config-page">
         <h2>组件调色</h2>
-        <p class="hint" style="margin-top:-0.5rem">每个组件独立配色，点击色块即可调整</p>
+        <p class="hint" style="margin-top:-0.5rem">
+          每个组件独立配色，点击色块即可调整
+        </p>
         <button class="action-btn" style="margin-bottom:0.8rem" @click="resetAllComponentColors()">
           恢复全部默认
         </button>
         <div v-for="group in COLOR_GROUPS" :key="group.id" class="config-section color-group">
           <h3 class="color-group-header">
             <span>{{ group.icon }} {{ group.label }}</span>
-            <button class="action-btn ml-a" @click="resetComponentGroup(group.id)">恢复</button>
+            <button class="action-btn ml-a" @click="resetComponentGroup(group.id)">
+              恢复
+            </button>
           </h3>
           <div class="color-picker-grid">
             <div v-for="c in group.colors" :key="c.key" class="color-picker-item">
@@ -512,7 +603,9 @@ function getRouteModel(key: string): string {
       <!-- ═══ Live2D 独立窗口 ═══ -->
       <div v-show="activeTab === 'live2d'" class="config-page">
         <h2>Live2D 独立窗口</h2>
-        <p class="hint" style="margin-top:-0.5rem">控制独立弥娅渲染窗口的显示效果</p>
+        <p class="hint" style="margin-top:-0.5rem">
+          控制独立弥娅渲染窗口的显示效果
+        </p>
 
         <div class="config-section">
           <h3>窗口背景</h3>
@@ -559,14 +652,20 @@ function getRouteModel(key: string): string {
         <div class="config-section">
           <h3>窗口位置</h3>
           <div style="display:flex;gap:0.5rem">
-            <button class="action-btn" @click="resetLive2dPos()">重置位置</button>
-            <button class="action-btn" @click="resetLive2dSize()">重置大小</button>
+            <button class="action-btn" @click="resetLive2dPos()">
+              重置位置
+            </button>
+            <button class="action-btn" @click="resetLive2dSize()">
+              重置大小
+            </button>
           </div>
         </div>
 
         <div class="config-section" style="margin-top:1.5rem; padding-top:1rem; border-top:1px solid rgba(0,173,181,0.06)">
           <h3>看板娘（内嵌）</h3>
-          <p class="hint" style="margin-bottom:0.6rem">在主窗口中显示弥娅 Live2D 角色</p>
+          <p class="hint" style="margin-bottom:0.6rem">
+            在主窗口中显示弥娅 Live2D 角色
+          </p>
           <div class="toggle-row">
             <span>启用看板娘</span>
             <ToggleSwitch v-model="mascotCfg.enabled" />
