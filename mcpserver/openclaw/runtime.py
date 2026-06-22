@@ -84,9 +84,17 @@ def _find_vendor_root() -> Optional[Path]:
     if miya_vendor.exists():
         return miya_vendor
 
-    # 3. 娜迦（兼容旧环境）
+    # 3. 环境变量配置
+    env_path = os.getenv("OPENCLAW_VENDOR_PATH", "")
+    if env_path:
+        p = Path(env_path)
+        if p.exists():
+            return p
+
+    # 4. 旧环境兼容（仅路径存在时使用）
     naga_vendor = Path("D:/AI_MIYA_Facyory/NagaAgent/vendor/openclaw")
     if naga_vendor.exists():
+        logger.warning("[OpenClaw] 使用旧 D: 盘路径——建议设 OPENCLAW_VENDOR_PATH 环境变量")
         return naga_vendor
 
     return None

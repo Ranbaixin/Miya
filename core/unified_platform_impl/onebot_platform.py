@@ -31,9 +31,12 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         BasePlatform.__init__(self, config)
-        self._ws_url = self.config.get("ws_url", "ws://127.0.0.1:3001")
+        self._ws_url = self.config.get("ws_url", "")
+        self._ws_reverse_host = self.config.get("ws_reverse_host", "")
+        self._ws_reverse_port = self.config.get("ws_reverse_port", 0)
         self._bot_qq = self.config.get("bot_qq", "")
         self._ws: Optional[Any] = None
+        self._reverse_server = None  # 反向 WS 服务端
         self._connected = False
         self._pending_echoes: Dict[str, asyncio.Future] = {}
         self._loaded_config: dict = {}
@@ -220,7 +223,15 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 return True
 
             self._ws = None
-            self._connected = True  # 乐观标记，实际连接由后台任务管理
+
+            # 反向 WS 模式：启动 HTTP 服务器监听，等待 NapCat 连接
+            if self._ws_reverse_port:
+                return await self._start_reverse_server()
+
+            # 正向连接模式：需要 ws_url
+            if not self._ws_url:
+                logger.error(f"[{self.platform_id}] 未配置 ws_url 或 ws_reverse_port，无法连接")
+                return False
 
             async def listen_loop():
                 retry_delay = 1
@@ -267,6 +278,56 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         except Exception as e:
             logger.error(f"[{self.platform_id}] 连接异常: {e}", exc_info=True)
             return False
+
+    async def _start_reverse_server(self) -> bool:
+        """反向 WS 模式：启动 HTTP 服务器，等待 NapCat 主动连接"""
+        import aiohttp
+        from aiohttp import web
+
+        host = self._ws_reverse_host or "127.0.0.1"
+        port = self._ws_reverse_port
+
+        async def handle_ws(request):
+            ws = web.WebSocketResponse()
+            await ws.prepare(request)
+            peer = request.remote or "unknown"
+            logger.info(f"[{self.platform_id}] NapCat 已连接 (反向WS): {peer}")
+            self._ws = ws
+            self._connected = True
+
+            async for msg in ws:
+                if msg.type == aiohttp.WSMsgType.TEXT:
+                    try:
+                        data = json.loads(msg.data)
+                    except json.JSONDecodeError:
+                        logger.warning(f"[{self.platform_id}] JSON解析失败: {msg.data[:100]}...")
+                        continue
+                    echo = data.get("echo")
+                    if echo and echo in self._pending_echoes:
+                        self._pending_echoes.pop(echo).set_result(data)
+                        continue
+                    await self._handle_onebot_message(data)
+                elif msg.type in (aiohttp.WSMsgType.ERROR, aiohttp.WSMsgType.CLOSED):
+                    break
+
+            logger.warning(f"[{self.platform_id}] NapCat 断开 (反向WS)")
+            self._connected = False
+            self._ws = None
+            return ws
+
+        app = web.Application()
+        app.router.add_get("/", handle_ws)
+        app.router.add_get("/ws", handle_ws)
+        app.router.add_get("/onebot/v11/ws", handle_ws)
+
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, host, port)
+        await site.start()
+        self._reverse_server = runner
+
+        logger.info(f"[{self.platform_id}] 反向WS监听已启动: ws://{host}:{port} (等待NapCat连接)")
+        return True
 
     async def _handle_onebot_message(self, data: Dict):
         """处理 OneBot 消息"""
