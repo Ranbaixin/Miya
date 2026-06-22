@@ -22,8 +22,10 @@ const shortcuts: Shortcut[] = [
 ]
 
 function handleShortcut(s: Shortcut) {
-  if (s.path) router.push(s.path)
-  else if (s.action) s.action()
+  if (s.path)
+    router.push(s.path)
+  else if (s.action)
+    s.action()
 }
 </script>
 
@@ -51,8 +53,9 @@ function handleShortcut(s: Shortcut) {
   height: 40px;
   min-height: 40px;
   padding: 0 1rem;
-  background: transparent;
+  background: rgba(0, 0, 0, 0.35);
   border-top: 1px solid rgba(0, 173, 181, 0.04);
+  box-shadow: 0 -2px 8px rgba(0, 60, 70, 0.2);
   z-index: 60;
   user-select: none;
 }
@@ -68,13 +71,15 @@ function handleShortcut(s: Shortcut) {
   background: none;
   border: none;
   cursor: pointer;
-  color: rgba(0, 173, 181, 0.35);
-  transition: all 0.25s ease;
+  color: rgba(200, 200, 200, 0.4);
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
   position: relative;
 }
 
 .bottom-item:hover {
-  color: rgba(0, 255, 245, 0.75);
+  color: rgba(255, 255, 255, 0.85);
+  transform: skewX(-5deg);
+  background: rgba(0, 173, 181, 0.1);
 }
 
 .bottom-item::after {
@@ -85,17 +90,22 @@ function handleShortcut(s: Shortcut) {
   transform: translateX(-50%);
   width: 0;
   height: 1px;
-  background: rgba(0, 255, 245, 0.4);
+  background: rgba(0, 255, 245, 0.5);
   transition: width 0.3s ease;
 }
 
 .bottom-item:hover::after {
-  width: 40%;
+  width: 50%;
 }
 
 .bottom-icon {
   font-size: 0.85rem;
   line-height: 1;
+  transition: transform 0.3s ease;
+}
+
+.bottom-item:hover .bottom-icon {
+  transform: scale(1.1);
 }
 
 .bottom-label {

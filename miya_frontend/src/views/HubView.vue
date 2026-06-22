@@ -108,15 +108,16 @@ function navigate(path: string) {
   font-family: 'Noto Serif SC', serif;
   font-size: 1.1rem;
   font-weight: 700;
-  color: #E4ECF0;
+  color: #ffffff;
   letter-spacing: 0.1em;
   margin: 0;
+  text-shadow: 0 0 8px rgba(0, 255, 245, 0.15);
 }
 
 .hub-subtitle {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.55rem;
-  color: rgba(0, 173, 181, 0.45);
+  color: rgba(0, 255, 245, 0.4);
   letter-spacing: 0.12em;
 }
 
@@ -126,19 +127,20 @@ function navigate(path: string) {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(0, 173, 181, 0.15);
+  border: 1px solid rgba(0, 173, 181, 0.12);
   background: rgba(0, 173, 181, 0.06);
-  color: rgba(0, 173, 181, 0.6);
+  color: rgba(0, 173, 181, 0.5);
   cursor: pointer;
   clip-path: polygon(0 4px, 4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%);
-  transition: all 0.25s ease;
+  transition: all 0.3s ease;
 }
 
 .hub-back:hover {
-  background: rgba(0, 173, 181, 0.14);
+  background: rgba(0, 173, 181, 0.16);
   border-color: rgba(0, 255, 245, 0.4);
   color: rgba(0, 255, 245, 0.9);
-  box-shadow: 0 0 12px rgba(0, 173, 181, 0.15);
+  box-shadow: 0 0 14px rgba(0, 173, 181, 0.2);
+  transform: skewX(-4deg);
 }
 
 /* ── Grid ── */
@@ -151,20 +153,21 @@ function navigate(path: string) {
   align-content: start;
 }
 
-/* ── Card ── */
+/* ── Card — PGR 战双风格 ═─ */
 .hub-card {
   position: relative;
-  background: rgba(34, 40, 49, 0.55);
+  background: rgba(0, 0, 0, 0.5);
   border: 1px solid rgba(0, 173, 181, 0.08);
   cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: all 0.45s cubic-bezier(0.22, 1, 0.36, 1);
   overflow: hidden;
   font-family: inherit;
   color: inherit;
   text-align: left;
   transform: rotateX(2deg) rotateY(-3deg);
   box-shadow:
-    2px 3px 12px rgba(0, 0, 0, 0.3),
+    4px 4px 12px rgba(0, 60, 70, 0.4),
+    -3px -3px 8px rgba(0, 200, 210, 0.06),
     0 1px 0 rgba(0, 173, 181, 0.05);
 }
 
@@ -172,7 +175,7 @@ function navigate(path: string) {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--card-color) 8%, transparent), transparent 70%);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--card-color) 12%, transparent), transparent 70%);
   opacity: 0;
   transition: opacity 0.4s ease;
   pointer-events: none;
@@ -180,12 +183,13 @@ function navigate(path: string) {
 }
 
 .hub-card:hover {
-  background: rgba(34, 40, 49, 0.72);
-  transform: rotateX(1deg) rotateY(-6deg) translateY(-3px);
-  border-color: color-mix(in srgb, var(--card-color) 30%, rgba(0, 173, 181, 0.15));
+  background: rgba(0, 173, 181, 0.18);
+  transform: rotateX(1deg) rotateY(-6deg) skewX(-3deg) translateY(-4px);
+  border-color: color-mix(in srgb, var(--card-color) 35%, rgba(0, 173, 181, 0.2));
   box-shadow:
-    3px 6px 20px rgba(0, 0, 0, 0.35),
-    0 0 16px color-mix(in srgb, var(--card-color) 15%, transparent);
+    6px 6px 18px rgba(0, 60, 70, 0.5),
+    -3px -3px 10px rgba(0, 200, 210, 0.12),
+    0 0 20px color-mix(in srgb, var(--card-color) 18%, transparent);
 }
 
 .hub-card:hover::after {
@@ -193,7 +197,7 @@ function navigate(path: string) {
 }
 
 .hub-card:active {
-  transform: rotateX(2deg) rotateY(-3deg) scale(0.97);
+  transform: skewX(-5deg) scale(0.97);
   transition: transform 0.1s ease;
 }
 
@@ -206,7 +210,7 @@ function navigate(path: string) {
   grid-row: span 2;
 }
 
-/* ── Card Inner ── */
+/* ── Card Inner ═─ */
 .hub-card-inner {
   position: relative;
   z-index: 1;
@@ -226,26 +230,27 @@ function navigate(path: string) {
 }
 
 .hub-card:hover .hub-card-icon {
-  transform: scale(1.2);
+  transform: scale(1.25) skewX(-5deg);
   color: color-mix(in srgb, var(--card-color) 95%, white);
-  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--card-color) 30%, transparent));
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--card-color) 35%, transparent));
 }
 
 .hub-card-title {
   font-family: 'Noto Serif SC', serif;
   font-size: 0.95rem;
   font-weight: 700;
-  color: #E4ECF0;
+  color: #ffffff;
   margin: 0;
-  transition: color 0.3s, text-shadow 0.3s;
+  transition: color 0.3s, text-shadow 0.3s, letter-spacing 0.4s;
 }
 
 .hub-card:hover .hub-card-title {
-  text-shadow: 0 0 10px color-mix(in srgb, var(--card-color) 20%, transparent);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--card-color) 30%, transparent);
+  letter-spacing: 0.06em;
 }
 
 .hub-card-desc {
-  color: rgba(228, 236, 240, 0.35);
+  color: rgba(187, 182, 182, 0.55);
   font-size: 0.6rem;
   margin: 0;
   line-height: 1.4;
@@ -253,21 +258,21 @@ function navigate(path: string) {
 }
 
 .hub-card:hover .hub-card-desc {
-  color: rgba(228, 236, 240, 0.65);
+  color: rgba(255, 255, 255, 0.7);
 }
 
-/* ── Gloss (扫光) ── */
+/* ── Gloss (扫光) ═─ */
 .hub-card-gloss {
   position: absolute;
   top: -15%;
   left: -10%;
-  width: 4px;
+  width: 5px;
   height: 130%;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.15);
   transform: skewX(-20deg);
-  box-shadow: 0 0 16px rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
   z-index: 0;
-  filter: blur(3px);
+  filter: blur(4px);
   animation: gloss-sweep 3s ease-in-out infinite;
   opacity: 0;
   transition: opacity 0.4s ease;
@@ -284,30 +289,30 @@ function navigate(path: string) {
   100% { left: 130%; }
 }
 
-/* ── Corner brackets ── */
+/* ── Corner brackets ═─ */
 .hub-card-corner {
   position: absolute;
   pointer-events: none;
   z-index: 2;
-  transition: border-color 0.4s ease;
+  transition: all 0.4s ease;
 }
 
 .hub-card-corner.tl {
-  top: 3px; left: 3px;
-  width: 12px; height: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--card-color) 20%, transparent);
-  border-left: 1px solid color-mix(in srgb, var(--card-color) 20%, transparent);
+  top: 4px; left: 4px;
+  width: 14px; height: 14px;
+  border-top: 2px solid color-mix(in srgb, var(--card-color) 20%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--card-color) 20%, transparent);
 }
 
 .hub-card-corner.br {
-  bottom: 3px; right: 3px;
-  width: 8px; height: 8px;
-  border-bottom: 1px solid color-mix(in srgb, var(--card-color) 20%, transparent);
-  border-right: 1px solid color-mix(in srgb, var(--card-color) 20%, transparent);
+  bottom: 4px; right: 4px;
+  width: 10px; height: 10px;
+  border-bottom: 2px solid color-mix(in srgb, var(--card-color) 20%, transparent);
+  border-right: 2px solid color-mix(in srgb, var(--card-color) 20%, transparent);
 }
 
 .hub-card:hover .hub-card-corner.tl,
 .hub-card:hover .hub-card-corner.br {
-  border-color: color-mix(in srgb, var(--card-color) 50%, transparent);
+  border-color: color-mix(in srgb, var(--card-color) 55%, rgba(0, 255, 245, 0.4));
 }
 </style>

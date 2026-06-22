@@ -31,7 +31,7 @@ const customBg = useStorage('miya-bg-image', '')
 const customBgOpacity = useStorage('miya-bg-opacity', 0.35)
 
 const frameStyle = computed(() => {
-  const overlay = `rgba(34, 40, 49, ${1 - customBgOpacity.value})`
+  const overlay = `rgba(13, 17, 23, ${1 - customBgOpacity.value})`
   const img = customBg.value || `url('/assets/aims.jpg') center/cover no-repeat`
   const bg = img.startsWith('url(') ? img : `url(${img}) center/cover no-repeat`
   return `linear-gradient(${overlay},${overlay}),${bg}`

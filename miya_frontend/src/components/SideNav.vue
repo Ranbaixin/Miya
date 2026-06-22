@@ -127,8 +127,11 @@ function navigateTo(item: NavItem) {
   min-width: 64px;
   height: 100%;
   padding: 0.5rem 0;
-  background: transparent;
+  background: rgba(0, 0, 0, 0.45);
   border-right: 1px solid rgba(0, 173, 181, 0.06);
+  box-shadow:
+    3px 0 10px rgba(0, 60, 70, 0.35),
+    -1px 0 0 rgba(0, 200, 210, 0.06);
   perspective: 400px;
   -webkit-perspective: 400px;
   z-index: 50;
@@ -144,21 +147,26 @@ function navigateTo(item: NavItem) {
   padding: 0.4rem 0;
   width: 48px;
   margin: 0.3rem 0;
-  background: none;
+  background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(0, 173, 181, 0.1);
-  border-radius: 4px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow:
+    2px 2px 6px rgba(0, 60, 70, 0.3),
+    -1px -1px 4px rgba(0, 200, 210, 0.06);
 }
 
 .nav-logo:hover,
 .nav-logo.active {
-  border-color: rgba(0, 255, 245, 0.35);
-  box-shadow: 0 0 16px rgba(0, 173, 181, 0.15);
+  border-color: rgba(0, 255, 245, 0.4);
+  box-shadow:
+    3px 3px 10px rgba(0, 60, 70, 0.4),
+    -2px -2px 6px rgba(0, 200, 210, 0.1),
+    0 0 20px rgba(0, 173, 181, 0.2);
 }
 
 .nav-logo.active {
-  background: rgba(0, 173, 181, 0.08);
+  background: rgba(0, 173, 181, 0.12);
 }
 
 .nav-logo-icon {
@@ -167,6 +175,11 @@ function navigateTo(item: NavItem) {
   font-weight: 700;
   color: rgba(0, 255, 245, 0.85);
   line-height: 1;
+  transition: all 0.3s ease;
+}
+
+.nav-logo:hover .nav-logo-icon {
+  text-shadow: 0 0 12px rgba(0, 255, 245, 0.3);
 }
 
 .nav-logo-label {
@@ -202,18 +215,21 @@ function navigateTo(item: NavItem) {
   border: none;
   cursor: pointer;
   position: relative;
-  transition: all 0.25s ease;
-  color: rgba(0, 173, 181, 0.4);
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  color: rgba(200, 200, 200, 0.5);
 }
 
 .nav-item:hover {
-  color: rgba(0, 255, 245, 0.7);
+  color: rgba(255, 255, 255, 0.9);
   transform: skewX(-6deg);
-  background: rgba(0, 173, 181, 0.08);
+  background: rgba(0, 173, 181, 0.15);
+  box-shadow: 2px 2px 8px rgba(0, 60, 70, 0.3);
 }
 
 .nav-item.active {
-  color: rgba(0, 255, 245, 0.9);
+  color: #ffffff;
+  background: rgba(0, 173, 181, 0.12);
+  font-weight: 600;
 }
 
 .nav-icon {
@@ -223,11 +239,11 @@ function navigateTo(item: NavItem) {
 }
 
 .nav-item:hover .nav-icon {
-  transform: scale(1.12);
+  transform: scale(1.15);
 }
 
 .nav-item.active .nav-icon {
-  filter: drop-shadow(0 0 6px rgba(0, 255, 245, 0.4));
+  filter: drop-shadow(0 0 8px rgba(0, 255, 245, 0.5));
 }
 
 .nav-label {
@@ -248,11 +264,12 @@ function navigateTo(item: NavItem) {
   background: linear-gradient(
     180deg,
     transparent,
-    rgba(0, 255, 245, 0.6),
+    rgba(0, 255, 245, 0.7),
     transparent
   );
   opacity: 0;
   transition: opacity 0.3s ease;
+  box-shadow: 0 0 4px rgba(0, 255, 245, 0.3);
 }
 
 .nav-item.active .nav-active-bar {

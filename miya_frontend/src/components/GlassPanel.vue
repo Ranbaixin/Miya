@@ -84,13 +84,13 @@ const sizeClass = {
   flex-direction: column;
   background: linear-gradient(
     135deg,
-    rgba(34, 40, 49, 0.85) 0%,
-    rgba(57, 62, 70, 0.75) 50%,
-    rgba(34, 40, 49, 0.85) 100%
+    rgba(0, 0, 0, 0.5) 0%,
+    rgba(34, 40, 49, 0.6) 50%,
+    rgba(0, 0, 0, 0.5) 100%
   );
   backdrop-filter: blur(20px) saturate(120%);
   -webkit-backdrop-filter: blur(20px) saturate(120%);
-  border: 1px solid rgba(0, 173, 181, 0.15);
+  border: 1px solid rgba(0, 173, 181, 0.12);
   clip-path: polygon(
     0 10px, 8px 0, 100% 0,
     100% calc(100% - 8px), calc(100% - 8px) 100%,
@@ -98,18 +98,18 @@ const sizeClass = {
   );
   overflow: hidden;
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(0, 173, 181, 0.08),
+    4px 4px 16px rgba(0, 60, 70, 0.4),
+    -2px -2px 10px rgba(0, 200, 210, 0.06),
     inset 0 1px 0 rgba(0, 255, 245, 0.04);
   transition: border-color 0.4s ease, box-shadow 0.4s ease;
 }
 
 .glass-panel:hover {
-  border-color: rgba(0, 173, 181, 0.25);
+  border-color: rgba(0, 173, 181, 0.22);
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    0 0 20px rgba(0, 173, 181, 0.08),
-    0 0 0 1px rgba(0, 173, 181, 0.12),
+    4px 6px 20px rgba(0, 60, 70, 0.45),
+    -2px -2px 12px rgba(0, 200, 210, 0.08),
+    0 0 24px rgba(0, 173, 181, 0.08),
     inset 0 1px 0 rgba(0, 255, 245, 0.06);
 }
 
@@ -185,20 +185,21 @@ const sizeClass = {
   justify-content: center;
   width: 28px;
   height: 28px;
-  border: 1px solid rgba(0, 173, 181, 0.2);
+  border: 1px solid rgba(0, 173, 181, 0.15);
   background: rgba(0, 173, 181, 0.06);
-  color: rgba(0, 173, 181, 0.7);
+  color: rgba(0, 173, 181, 0.6);
   cursor: pointer;
   clip-path: polygon(0 4px, 4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%);
-  transition: all 0.25s ease;
+  transition: all 0.3s ease;
   flex-shrink: 0;
 }
 
 .panel-back-btn:hover {
-  background: rgba(0, 173, 181, 0.14);
+  background: rgba(0, 173, 181, 0.16);
   border-color: rgba(0, 173, 181, 0.45);
   color: rgba(0, 255, 245, 0.95);
-  box-shadow: 0 0 14px rgba(0, 173, 181, 0.2);
+  box-shadow: 0 0 16px rgba(0, 173, 181, 0.22);
+  transform: skewX(-4deg);
 }
 
 .panel-title-group {
@@ -212,7 +213,7 @@ const sizeClass = {
   font-family: 'Noto Serif SC', serif;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--miya-text, #E4ECF0);
+  color: #ffffff;
   letter-spacing: 0.08em;
 }
 

@@ -678,103 +678,212 @@ function getRouteModel(key: string): string {
 
 <style scoped>
 .config-layout { display: flex; height: 100%; }
+
+/* ═══ 侧边栏 — PGR 风格 ═══ */
 .config-sidebar {
   width: 140px; flex-shrink: 0;
-  background: rgba(8,14,24,0.6); border-right: 1px solid rgba(0, 173, 181, 0.08);
+  background: rgba(0, 0, 0, 0.55);
+  border-right: 1px solid rgba(0, 173, 181, 0.08);
+  box-shadow:
+    4px 0 12px rgba(0, 60, 70, 0.4),
+    -1px 0 0 rgba(0, 200, 210, 0.08);
   display: flex; flex-direction: column; padding: 0.8rem 0;
 }
-.sidebar-header { display: flex; align-items: center; gap: 0.5rem; padding: 0 0.8rem 0.6rem; border-bottom: 1px solid rgba(0, 173, 181, 0.06); }
-.sidebar-title { font-family: 'Noto Serif SC', serif; font-size: 0.9rem; color: var(--miya-accent); }
-.sidebar-version { margin-top: auto; padding: 0.6rem 0.8rem 0; font-size: 0.6rem; color: var(--miya-text-dim); border-top: 1px solid rgba(0, 173, 181, 0.04); }
+.sidebar-header { display: flex; align-items: center; gap: 0.5rem; padding: 0 0.8rem 0.6rem; border-bottom: 1px solid rgba(0, 173, 181, 0.08); }
+.sidebar-title { font-family: 'Noto Serif SC', serif; font-size: 0.9rem; color: #ffffff; font-weight: 700; letter-spacing: 0.1em; }
+.sidebar-version { margin-top: auto; padding: 0.6rem 0.8rem 0; font-size: 0.6rem; color: rgba(200, 200, 200, 0.5); border-top: 1px solid rgba(0, 173, 181, 0.06); }
 
 .sidebar-nav { display: flex; flex-direction: column; padding: 0.4rem; gap: 1px; }
 .tab-btn {
   display: flex; align-items: center; gap: 0.5rem;
-  padding: 0.5rem 0.6rem; border-radius: 0.3rem; cursor: pointer;
-  background: transparent; border: none; color: var(--miya-text-dim);
-  font-size: 0.78rem; transition: all 0.2s; text-align: left;
+  padding: 0.5rem 0.6rem; cursor: pointer;
+  background: transparent; border: none; color: rgba(200, 200, 200, 0.55);
+  font-size: 0.78rem; transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1); text-align: left;
 }
-.tab-btn:hover { background: rgba(0, 173, 181, 0.05); color: var(--miya-text); }
-.tab-btn.active { background: rgba(0, 173, 181, 0.08); color: var(--miya-accent); }
-.tab-icon { font-size: 0.8rem; width: 1.2rem; text-align: center; }
+.tab-btn:hover {
+  background: rgba(0, 173, 181, 0.15);
+  color: rgba(255, 255, 255, 0.9);
+  transform: skewX(-6deg);
+  box-shadow: 2px 2px 8px rgba(0, 60, 70, 0.3);
+}
+.tab-btn.active {
+  background: rgba(0, 173, 181, 0.18);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 2px 2px 8px rgba(0, 60, 70, 0.35), -1px -1px 4px rgba(0, 200, 210, 0.1);
+}
+.tab-icon { font-size: 0.8rem; width: 1.2rem; text-align: center; transition: transform 0.3s ease; }
+.tab-btn:hover .tab-icon { transform: scale(1.15); }
 
-.config-main { flex: 1; overflow-y: auto; padding: 1.2rem 1.5rem; color: var(--miya-text); font-size: 0.82rem; }
-.config-page h2 { font-family: 'Noto Serif SC', serif; font-size: 1.1rem; color: var(--miya-accent); margin: 0 0 1.2rem; }
-.config-section { margin-bottom: 1.4rem; }
-.config-section h3 { font-size: 0.72rem; font-weight: 600; color: var(--miya-primary); margin: 0 0 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; }
-.hint { font-size: 0.68rem; color: var(--miya-text-dim); margin-bottom: 0.6rem; }
+/* ═══ 主内容区 ═══ */
+.config-main { flex: 1; overflow-y: auto; padding: 1.2rem 1.8rem; color: var(--miya-text); font-size: 0.82rem; }
+.config-page h2 {
+  font-family: 'Noto Serif SC', serif; font-size: 1.3rem; font-weight: 700;
+  color: #ffffff; margin: 0 0 1.2rem; letter-spacing: 0.08em;
+  text-shadow: 0 0 12px rgba(0, 255, 245, 0.15);
+}
+
+/* ═══ 配置章节 — PGR 卡片风格 ═══ */
+.config-section {
+  margin-bottom: 1.4rem;
+  padding: 0.9rem 1rem;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(0, 173, 181, 0.06);
+  box-shadow:
+    3px 3px 10px rgba(0, 60, 70, 0.35),
+    -2px -2px 8px rgba(0, 200, 210, 0.08);
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.config-section:hover {
+  background: rgba(0, 0, 0, 0.55);
+  border-color: rgba(0, 255, 245, 0.12);
+  box-shadow:
+    4px 4px 14px rgba(0, 60, 70, 0.45),
+    -2px -2px 10px rgba(0, 200, 210, 0.12);
+}
+.config-section h3 {
+  font-size: 0.75rem; font-weight: 700; color: rgba(0, 255, 245, 0.55);
+  margin: 0 0 0.6rem; letter-spacing: 0.1em; text-transform: uppercase;
+}
+.hint { font-size: 0.68rem; color: rgba(200, 200, 200, 0.4); margin-bottom: 0.6rem; }
 
 .config-item { margin-bottom: 0.7rem; }
-.config-item label { display: block; font-size: 0.75rem; color: var(--miya-text); margin-bottom: 0.25rem; }
+.config-item label { display: block; font-size: 0.75rem; color: rgba(228, 236, 240, 0.7); margin-bottom: 0.25rem; }
 .slider-row { display: flex; align-items: center; gap: 0.6rem; }
 .slider-row :first-child { flex: 1; }
-.slider-val { font-size: 0.7rem; color: var(--miya-text-dim); min-width: 2.5rem; text-align: right; }
+.slider-val { font-size: 0.7rem; color: rgba(0, 255, 245, 0.45); min-width: 2.5rem; text-align: right; font-family: 'JetBrains Mono', monospace; }
 
-.input-sm { width: 100%; max-width: 280px; background: rgba(10,18,32,0.8) !important; border: 1px solid rgba(0, 173, 181, 0.15) !important; border-radius: 0.3rem !important; color: rgba(220,235,255,0.9) !important; padding: 0.3rem 0.5rem !important; font-size: 0.75rem; }
+.input-sm { width: 100%; max-width: 280px; background: rgba(0, 0, 0, 0.5) !important; border: 1px solid rgba(0, 173, 181, 0.15) !important; color: rgba(228, 236, 240, 0.9) !important; padding: 0.3rem 0.5rem !important; font-size: 0.75rem; }
 
-.back-btn { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 0.3rem; border: 1px solid rgba(0, 173, 181, 0.12); background: rgba(0, 173, 181, 0.04); color: rgba(0, 173, 181, 0.6); cursor: pointer; transition: all 0.2s; }
-.back-btn:hover { background: rgba(0, 173, 181, 0.1); border-color: rgba(0, 173, 181, 0.3); }
+.back-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px;
+  border: 1px solid rgba(0, 173, 181, 0.15); background: rgba(0, 173, 181, 0.06);
+  color: rgba(0, 173, 181, 0.6); cursor: pointer; transition: all 0.3s ease;
+}
+.back-btn:hover { background: rgba(0, 173, 181, 0.18); border-color: rgba(0, 255, 245, 0.35); color: rgba(0, 255, 245, 0.9); transform: skewX(-6deg); }
 
 /* 背景 */
 .bg-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.3rem; }
-.bg-thumb { aspect-ratio: 4/3; border-radius: 0.2rem; overflow: hidden; cursor: pointer; border: 2px solid transparent; background: var(--miya-surface); display: flex; align-items: center; justify-content: center; }
+.bg-thumb {
+  aspect-ratio: 4/3; overflow: hidden; cursor: pointer;
+  border: 2px solid transparent;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.3s ease;
+}
 .bg-thumb img { width: 100%; height: 100%; object-fit: cover; }
-.bg-thumb:hover { border-color: rgba(0, 173, 181, 0.15); }
-.bg-thumb.active { border-color: rgba(0, 173, 181, 0.4); }
-.bg-default { font-size: 0.6rem; color: var(--miya-text-dim); }
+.bg-thumb:hover { border-color: rgba(0, 255, 245, 0.25); transform: scale(1.04); }
+.bg-thumb.active { border-color: rgba(0, 255, 245, 0.5); box-shadow: 0 0 10px rgba(0, 255, 245, 0.15); }
+.bg-default { font-size: 0.6rem; color: rgba(200, 200, 200, 0.4); }
 .bg-actions { margin-top: 0.4rem; }
 
-.action-btn { padding: 0.2rem 0.6rem; font-size: 0.68rem; border: 1px dashed rgba(0, 173, 181, 0.15); border-radius: 0.2rem; background: transparent; color: rgba(0, 173, 181, 0.35); cursor: pointer; transition: all 0.2s; }
-.action-btn:hover { border-color: rgba(0, 173, 181, 0.4); color: rgba(0, 173, 181, 0.6); }
+.action-btn {
+  padding: 0.25rem 0.7rem; font-size: 0.68rem;
+  border: 1px solid rgba(0, 173, 181, 0.15); background: rgba(0, 173, 181, 0.04);
+  color: rgba(0, 173, 181, 0.45); cursor: pointer; transition: all 0.3s ease;
+}
+.action-btn:hover {
+  border-color: rgba(0, 255, 245, 0.3); background: rgba(0, 173, 181, 0.1);
+  color: rgba(0, 255, 245, 0.75); transform: skewX(-4deg);
+}
 .ml-a { margin-left: auto; }
 
 /* 颜色 */
 .color-modes { display: flex; gap: 0.3rem; flex-wrap: wrap; }
-.color-btn { display: flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.5rem; border-radius: 0.25rem; cursor: pointer; border: 1px solid rgba(0, 173, 181, 0.06); background: rgba(0, 173, 181, 0.02); color: var(--miya-text-dim); font-size: 0.7rem; transition: all 0.2s; }
-.color-btn:hover { border-color: rgba(0, 173, 181, 0.2); }
-.color-btn.active { border-color: rgba(0, 173, 181, 0.4); background: rgba(0, 173, 181, 0.06); color: var(--miya-accent); }
+.color-btn {
+  display: flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.6rem;
+  cursor: pointer; border: 1px solid rgba(0, 173, 181, 0.08);
+  background: rgba(0, 0, 0, 0.35); color: rgba(200, 200, 200, 0.5);
+  font-size: 0.7rem; transition: all 0.3s ease;
+}
+.color-btn:hover {
+  border-color: rgba(0, 255, 245, 0.2);
+  background: rgba(0, 173, 181, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+  transform: skewX(-4deg);
+}
+.color-btn.active {
+  border-color: rgba(0, 255, 245, 0.4);
+  background: rgba(0, 173, 181, 0.12);
+  color: #ffffff;
+  box-shadow: 0 0 8px rgba(0, 255, 245, 0.1);
+}
 .color-dots { display: flex; gap: 1px; }
 .dot { width: 6px; height: 6px; border-radius: 50%; }
 
-/* 模型/灵魂/记忆/系统信息项 */
-.model-item { display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0; border-bottom: 1px solid rgba(0, 173, 181, 0.04); font-size: 0.75rem; }
-.model-name { color: var(--miya-text-dim); }
-.model-val { color: var(--miya-text); font-size: 0.7rem; }
-.status-on { color: rgba(0, 173, 181, 0.6); }
+/* ═══ 模型/灵魂/记忆/系统信息项 — PGR 风格 ═══ */
+.model-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.45rem 0.4rem;
+  border-bottom: 1px solid rgba(0, 173, 181, 0.04);
+  font-size: 0.75rem;
+  cursor: default;
+  transition: all 0.3s ease;
+}
+.model-item:hover {
+  background: rgba(0, 173, 181, 0.08);
+}
+.model-name { color: rgba(200, 200, 200, 0.6); }
+.model-val { color: rgba(228, 236, 240, 0.85); font-size: 0.7rem; font-family: 'JetBrains Mono', monospace; }
+.status-on { color: rgba(0, 255, 245, 0.65); }
 
 .offline-hint {
-  padding: 1rem; text-align: center;
-  color: var(--miya-text-dim); font-size: 0.8rem;
-  border: 1px dashed rgba(0, 173, 181, 0.1); border-radius: 0.3rem;
-}
-
-.emotion-bar {
-  flex: 1; height: 6px; background: rgba(0, 173, 181, 0.06);
-  border-radius: 3px; overflow: hidden; margin-left: 0.5rem;
-  max-width: 120px;
-}
-.emotion-fill {
-  height: 100%; background: linear-gradient(90deg, rgba(0, 173, 181, 0.3), rgba(0, 173, 181, 0.6));
-  transition: width 0.5s ease;
+  padding: 1.5rem; text-align: center;
+  color: rgba(200, 200, 200, 0.35); font-size: 0.8rem;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px dashed rgba(0, 173, 181, 0.08);
 }
 
 /* 声音 */
-.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 0.35rem 0; border-bottom: 1px solid rgba(0, 173, 181, 0.04); }
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.4rem 0; border-bottom: 1px solid rgba(0, 173, 181, 0.04);
+  cursor: pointer;
+}
+.toggle-row:hover { background: rgba(0, 173, 181, 0.04); }
 .file-btn-audio { font-size: 0.68rem; }
 
 /* 调色 */
 .color-group-header { display: flex; align-items: center; gap: 0.4rem; }
 .color-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 0.4rem; }
-.color-picker-item { padding: 0.4rem; background: rgba(0,0,0,0.15); border-radius: 0.25rem; border: 1px solid rgba(0, 173, 181, 0.05); }
-.cp-label { display: block; font-size: 0.65rem; color: var(--miya-text-dim); margin-bottom: 0.3rem; }
+.color-picker-item {
+  padding: 0.4rem; background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 173, 181, 0.05);
+  transition: all 0.3s ease;
+}
+.color-picker-item:hover { border-color: rgba(0, 255, 245, 0.15); background: rgba(0, 0, 0, 0.45); }
+.cp-label { display: block; font-size: 0.65rem; color: rgba(200, 200, 200, 0.5); margin-bottom: 0.3rem; }
 .cp-row { display: flex; align-items: center; gap: 0.4rem; }
 .cp-input { width: 28px; height: 22px; border: 1px solid rgba(0, 173, 181, 0.15); border-radius: 0.2rem; background: transparent; cursor: pointer; padding: 1px; }
-.cp-val { font-size: 0.6rem; color: var(--miya-text-dim); font-family: 'JetBrains Mono', monospace; }
+.cp-val { font-size: 0.6rem; color: rgba(0, 255, 245, 0.4); font-family: 'JetBrains Mono', monospace; }
 
 /* Live2D 配置 */
 .live2d-color-row { display: flex; align-items: center; gap: 0.6rem; }
-.slider-row { display: flex; align-items: center; gap: 0.8rem; }
-.slider-row .p-slider { flex: 1; }
-.slider-val { font-size: 0.72rem; color: var(--miya-accent); min-width: 3rem; text-align: right; }
-.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 0.3rem 0; }
+
+/* 文件列表 */
+.file-list { display: flex; flex-direction: column; gap: 2px; }
+.file-btn {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.35rem 0.5rem; cursor: pointer;
+  background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(0, 173, 181, 0.04);
+  color: rgba(200, 200, 200, 0.55); font-size: 0.7rem; transition: all 0.3s ease;
+}
+.file-btn:hover { background: rgba(0, 173, 181, 0.08); color: rgba(255, 255, 255, 0.8); }
+.file-btn.active { background: rgba(0, 173, 181, 0.12); border-color: rgba(0, 255, 245, 0.25); color: #ffffff; }
+.file-size { font-size: 0.6rem; color: rgba(0, 255, 245, 0.3); font-family: 'JetBrains Mono', monospace; }
+
+.editor-area { border: 1px solid rgba(0, 173, 181, 0.08); background: rgba(0, 0, 0, 0.4); }
+.editor-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.3rem 0.6rem; border-bottom: 1px solid rgba(0, 173, 181, 0.06);
+}
+.editor-path { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: rgba(0, 255, 245, 0.4); }
+.editor-actions { display: flex; gap: 0.3rem; align-items: center; }
+.saved-msg { font-size: 0.6rem; color: rgba(0, 255, 245, 0.5); }
+.editor-text {
+  width: 100%; background: rgba(0, 0, 0, 0.6); border: none; outline: none;
+  color: rgba(228, 236, 240, 0.85); font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem; padding: 0.5rem; resize: vertical;
+}
 </style>

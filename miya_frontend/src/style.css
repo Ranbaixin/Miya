@@ -3,21 +3,21 @@
 :root {
   color-scheme: dark;
   color: #E4ECF0;
-  background-color: var(--miya-chat-bg, #222831);
+  background-color: var(--miya-chat-bg, #0d1117);
 
   --miya-accent: #00ADB5;
   --miya-home: #00ADB5;
   --miya-chat-ai: #00FFF5;
   --miya-chat-user: #00ADB5;
-  --miya-chat-bg: #222831;
+  --miya-chat-bg: #0d1117;
   --miya-border: #00ADB5;
-  --miya-bg: #222831;
-  --miya-surface: rgba(57, 62, 70, 0.85);
+  --miya-bg: #0d1117;
+  --miya-surface: rgba(0, 0, 0, 0.55);
   --miya-primary: var(--miya-accent);
   --miya-glow: color-mix(in srgb, var(--miya-accent) 30%, transparent);
   --miya-gold: rgba(0, 255, 245, 0.35);
   --miya-text: #E4ECF0;
-  --miya-text-dim: rgba(228, 236, 240, 0.45);
+  --miya-text-dim: rgba(200, 200, 200, 0.45);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;

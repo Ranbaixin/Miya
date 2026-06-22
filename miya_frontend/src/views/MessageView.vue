@@ -773,26 +773,27 @@ function getSupportedMimeType(): string {
   opacity: 0;
 }
 
-/* ── 展开按钮 ── */
+/* ── 展开按钮 ═─ */
 .msg-expand-btn {
   width: 28px;
   height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(0, 173, 181, 0.2);
-  border-radius: 4px;
+  border: 1px solid rgba(0, 173, 181, 0.15);
   background: rgba(0, 173, 181, 0.06);
-  color: rgba(0, 173, 181, 0.6);
+  color: rgba(0, 173, 181, 0.5);
   cursor: pointer;
-  transition: all 0.25s ease;
+  clip-path: polygon(0 4px, 4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%);
+  transition: all 0.3s ease;
 }
 
 .msg-expand-btn:hover {
-  background: rgba(0, 173, 181, 0.14);
+  background: rgba(0, 173, 181, 0.16);
   border-color: rgba(0, 255, 245, 0.4);
   color: rgba(0, 255, 245, 0.9);
-  box-shadow: 0 0 12px rgba(0, 173, 181, 0.15);
+  box-shadow: 0 0 14px rgba(0, 173, 181, 0.2);
+  transform: skewX(-4deg);
 }
 
 /* ── 展开浮层 ── */
@@ -806,15 +807,18 @@ function getSupportedMimeType(): string {
   height: 100%;
 }
 
-/* ── 会话历史面板 ── */
+/* ── 会话历史面板 — PGR 风格 ═─ */
 .history-panel {
   position: relative;
   margin: 0 0 0.5rem;
-  background: linear-gradient(135deg, rgba(34, 40, 49, 0.92), rgba(24, 28, 35, 0.95));
-  border: 1px solid rgba(0, 173, 181, 0.12);
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(0, 173, 181, 0.1);
   clip-path: polygon(0 6px, 6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%);
   backdrop-filter: blur(16px);
   overflow: hidden;
+  box-shadow:
+    3px 3px 12px rgba(0, 60, 70, 0.35),
+    -2px -2px 6px rgba(0, 200, 210, 0.06);
   animation: panel-in 0.25s ease;
 }
 
@@ -834,20 +838,20 @@ function getSupportedMimeType(): string {
 .history-title {
   font-family: 'Noto Serif SC', serif;
   font-size: 0.75rem;
-  color: rgba(0, 255, 245, 0.65);
+  color: rgba(255, 255, 255, 0.85);
   letter-spacing: 0.08em;
 }
 
 .history-close {
   background: none;
   border: none;
-  color: rgba(0, 173, 181, 0.3);
+  color: rgba(200, 200, 200, 0.35);
   cursor: pointer;
   font-size: 0.7rem;
-  transition: color 0.2s;
+  transition: all 0.2s ease;
 }
 
-.history-close:hover { color: rgba(0, 255, 245, 0.7); }
+.history-close:hover { color: rgba(0, 255, 245, 0.8); transform: skewX(-4deg); }
 
 .history-list {
   max-height: 200px;
@@ -876,11 +880,12 @@ function getSupportedMimeType(): string {
 
 .history-item:hover,
 .history-item.active {
-  background: rgba(0, 173, 181, 0.06);
+  background: rgba(0, 173, 181, 0.1);
 }
 
 .history-item.active {
-  border-left: 2px solid rgba(0, 255, 245, 0.4);
+  border-left: 2px solid rgba(0, 255, 245, 0.5);
+  box-shadow: inset 0 0 8px rgba(0, 255, 245, 0.04);
 }
 
 .history-item-main {
@@ -940,17 +945,22 @@ function getSupportedMimeType(): string {
 }
 
 .input-box {
-  background: linear-gradient(135deg, rgba(34, 40, 49, 0.85), rgba(24, 28, 35, 0.9));
-  border: 1px solid rgba(0, 173, 181, 0.1);
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 173, 181, 0.08);
   clip-path: polygon(0 4px, 4px 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 0 100%);
   padding: 0.35rem 0.5rem;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
   transition: border-color 0.3s, box-shadow 0.3s;
+  box-shadow:
+    2px 2px 8px rgba(0, 60, 70, 0.3),
+    -1px -1px 4px rgba(0, 200, 210, 0.05);
 }
 
 .input-box:focus-within {
   border-color: rgba(0, 173, 181, 0.35);
-  box-shadow: 0 0 20px rgba(0, 173, 181, 0.06);
+  box-shadow:
+    3px 3px 12px rgba(0, 60, 70, 0.4),
+    0 0 24px rgba(0, 173, 181, 0.08);
 }
 
 .input-main {
@@ -960,7 +970,7 @@ function getSupportedMimeType(): string {
 }
 
 .input-cursor {
-  color: rgba(0, 173, 181, 0.35);
+  color: rgba(0, 255, 245, 0.4);
   font-size: 0.85rem;
   font-family: 'JetBrains Mono', monospace;
   flex-shrink: 0;
@@ -1003,23 +1013,23 @@ function getSupportedMimeType(): string {
   height: 30px;
   background: transparent;
   border: none;
-  color: rgba(0, 173, 181, 0.35);
+  color: rgba(200, 200, 200, 0.4);
   cursor: pointer;
-  border-radius: 4px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.7rem;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
   flex-shrink: 0;
 }
 
 .input-btn:hover {
-  color: rgba(0, 255, 245, 0.7);
-  background: rgba(0, 173, 181, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(0, 173, 181, 0.12);
+  transform: skewX(-5deg);
 }
 
 .input-btn.active {
-  color: rgba(0, 255, 245, 0.65);
-  background: rgba(0, 173, 181, 0.1);
+  color: rgba(0, 255, 245, 0.75);
+  background: rgba(0, 173, 181, 0.14);
 }
 
 .input-btn.recording {
@@ -1042,10 +1052,10 @@ function getSupportedMimeType(): string {
   bottom: calc(100% - 2px);
   right: 1rem;
   min-width: 130px;
-  background: rgba(24, 28, 35, 0.95);
-  border: 1px solid rgba(0, 173, 181, 0.15);
-  border-radius: 4px;
-  backdrop-filter: blur(12px);
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(0, 173, 181, 0.12);
+  backdrop-filter: blur(16px);
+  box-shadow: 3px 3px 10px rgba(0, 60, 70, 0.4);
   overflow: hidden;
   z-index: 100;
 }
@@ -1056,17 +1066,18 @@ function getSupportedMimeType(): string {
   padding: 0.4rem 0.7rem;
   background: none;
   border: none;
-  color: rgba(0, 173, 181, 0.55);
+  color: rgba(200, 200, 200, 0.55);
   font-family: 'Noto Sans SC', sans-serif;
   font-size: 0.7rem;
   text-align: left;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .more-item:hover {
-  background: rgba(0, 173, 181, 0.1);
-  color: rgba(0, 255, 245, 0.8);
+  background: rgba(0, 173, 181, 0.14);
+  color: #ffffff;
+  transform: skewX(-4deg);
 }
 
 .more-pop-enter-active { transition: all 0.15s ease; }
@@ -1081,24 +1092,25 @@ function getSupportedMimeType(): string {
   justify-content: center;
   width: 34px;
   height: 34px;
-  border: 1px solid rgba(0, 173, 181, 0.2);
-  border-radius: 2px;
+  border: 1px solid rgba(0, 173, 181, 0.18);
   background: rgba(0, 173, 181, 0.06);
-  color: rgba(0, 173, 181, 0.6);
+  color: rgba(0, 173, 181, 0.5);
   cursor: pointer;
-  transition: all 0.25s ease;
+  clip-path: polygon(0 3px, 3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%);
+  transition: all 0.3s ease;
   flex-shrink: 0;
 }
 
 .send-btn:hover:not(:disabled) {
-  background: rgba(0, 173, 181, 0.15);
-  border-color: rgba(0, 255, 245, 0.45);
-  color: rgba(0, 255, 245, 0.9);
-  box-shadow: 0 0 16px rgba(0, 173, 181, 0.18);
+  background: rgba(0, 173, 181, 0.2);
+  border-color: rgba(0, 255, 245, 0.5);
+  color: rgba(0, 255, 245, 0.95);
+  box-shadow: 0 0 18px rgba(0, 173, 181, 0.22);
+  transform: skewX(-3deg);
 }
 
 .send-btn:disabled {
-  opacity: 0.2;
+  opacity: 0.15;
   cursor: default;
 }
 </style>
