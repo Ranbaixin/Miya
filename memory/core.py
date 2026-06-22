@@ -1035,7 +1035,7 @@ class MiyaMemoryCore:
         logger.info(f"[MiyaMemoryCore] 全量加载完成, 缓存: {len(self._cache)} 条")
 
     async def _load_memory_anchors(self):
-        """加载记忆锚点到 MiyaMemoryCore"""
+        """加载记忆锚点到 MiyaMemoryCore（每次启动与 JSON 文件同步）"""
         try:
             import json
             from pathlib import Path
@@ -1054,7 +1054,10 @@ class MiyaMemoryCore:
                 ),
             ]
 
+            total_anchors = 0
             loaded_count = 0
+            updated_count = 0
+
             for anchor_path, user_id, anchor_type in anchor_files:
                 if not anchor_path.exists():
                     continue
@@ -1062,20 +1065,33 @@ class MiyaMemoryCore:
                 with open(anchor_path, "r", encoding="utf-8") as f:
                     anchors = json.load(f)
 
+                file_mtime = int(anchor_path.stat().st_mtime)
+
                 for anchor in anchors:
                     fact = anchor.get("fact", "")
                     tags = anchor.get("tags", [])
                     priority = anchor.get("priority", 0.95)
+                    total_anchors += 1
 
                     if not fact:
                         continue
 
-                    # 检查是否已存在（避免重复加载）
+                    # 检查是否已存在
                     existing = await self.retrieve(
-                        query=fact[:20], user_id=user_id, limit=1
+                        query=fact[:20], user_id=user_id, limit=5
                     )
-                    if existing and any(fact[:30] in e.content for e in existing):
-                        continue
+                    matched = [e for e in existing if fact[:30] in e.content]
+
+                    if matched:
+                        # 已存在：检查是否需要更新（JSON 文件修改时间 > 记忆存储时间）
+                        mem = matched[0]
+                        stored_mtime = int(mem.metadata.get("anchor_mtime", 0) if mem.metadata else 0)
+                        if file_mtime <= stored_mtime:
+                            continue  # JSON 未变，跳过
+                        # JSON 已更新：删除旧版本，重新写入
+                        await self.delete(mem.id)
+                        logger.debug(f"[MiyaMemoryCore] 锚点已更新: {fact[:30]}...")
+                        updated_count += 1
 
                     await self.store(
                         content=fact,
@@ -1088,14 +1104,16 @@ class MiyaMemoryCore:
                             "source": "init_anchor",
                             "anchor_type": anchor_type,
                             "importance": "high",
+                            "anchor_mtime": file_mtime,
                         },
                     )
                     loaded_count += 1
 
             if loaded_count > 0:
-                logger.info(f"[MiyaMemoryCore] 记忆锚点加载完成: {loaded_count} 条")
+                status = f"新增 {loaded_count - updated_count} + 更新 {updated_count}"
+                logger.info(f"[MiyaMemoryCore] 记忆锚点同步完成: {status} / 共 {total_anchors} 条")
             else:
-                logger.info("[MiyaMemoryCore] 记忆锚点已存在，跳过")
+                logger.info("[MiyaMemoryCore] 记忆锚点无需更新")
 
         except Exception as e:
             logger.warning(f"[MiyaMemoryCore] 记忆锚点加载失败: {e}")
