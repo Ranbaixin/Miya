@@ -337,8 +337,8 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
   -webkit-perspective-origin: center;
   user-select: none;
   animation: cmd-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-  overflow: hidden;
-  padding: 0 5%;
+  overflow: visible;
+  padding: 0 3% 0;
   position: relative;
 }
 
@@ -349,7 +349,7 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
 
 /* ═══ 面板容器 ═══ */
 .cmd-panel {
-  height: 90%;
+  height: 92%;
   display: flex;
   flex-direction: column;
   transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s ease;
@@ -360,16 +360,18 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
 
 .cmd-left {
   width: 28%;
-  min-width: 200px;
+  min-width: 190px;
   transform: rotateY(30deg);
   padding: 0.5rem 0.5rem 0.2rem;
+  transform-origin: center left;
 }
 
 .cmd-right {
   width: 32%;
-  min-width: 240px;
+  min-width: 230px;
   transform: rotateY(-30deg);
   padding: 0.5rem 0.5rem 0.2rem;
+  transform-origin: center right;
 }
 
 /* ═══ 隐藏/显示 ═══ */

@@ -33,8 +33,14 @@ const frameStyle = computed(() => {
   const overlay = `rgba(34, 40, 49, ${1 - customBgOpacity.value})`
   const img = customBg.value || `url('/assets/aims.jpg') center/cover no-repeat`
   const bg = img.startsWith('url(') ? img : `url(${img}) center/cover no-repeat`
-  return `background:linear-gradient(${overlay},${overlay}),${bg}`
+  return `linear-gradient(${overlay},${overlay}),${bg}`
 })
+
+function applyBg() {
+  document.body.style.background = frameStyle.value
+  document.body.style.backgroundAttachment = 'fixed'
+}
+watch([customBg, customBgOpacity], applyBg, { immediate: true })
 
 onMounted(() => {
   playBgm('9.快乐的小曲.mp3')
@@ -96,7 +102,7 @@ const layoutPadTop = computed(() => isElectron ? (isMac ? '28px' : '32px') : '0p
     <TitleBar />
     <TopStatusBar :style="{ paddingTop: layoutPadTop }" />
 
-    <div class="miya-body" :style="frameStyle">
+    <div class="miya-body">
       <div v-if="showEmbeddedLive2d" class="live2d-container" :style="{ width: `${live2dW}px`, height: `${live2dH}px` }">
         <Live2dModel
           :source="CONFIG.web_live2d.model.source"
@@ -140,7 +146,7 @@ const layoutPadTop = computed(() => isElectron ? (isMac ? '28px' : '32px') : '0p
 }
 
 .content-home {
-  padding: 0;
+  padding: 0.5rem 0 0 0;
 }
 
 .page-slide-enter-active,

@@ -45,7 +45,7 @@ const { isElectron, isMaximized, isMac, minimize, maximize, close } = useElectro
   display: flex;
   align-items: center;
   z-index: 9999;
-  background: linear-gradient(to bottom, rgba(10, 8, 21, 0.92), rgba(10, 8, 21, 0.4));
+  background: transparent;
 }
 
 .drag-region {
@@ -105,7 +105,7 @@ const { isElectron, isMaximized, isMac, minimize, maximize, close } = useElectro
   height: 32px;
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;

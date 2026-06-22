@@ -74,14 +74,10 @@ const showStatus = useStorage('miya-show-status', true)
   height: 36px;
   min-height: 36px;
   padding: 0 1rem;
-  background: linear-gradient(
-    180deg,
-    rgba(34, 40, 49, 0.85) 0%,
-    rgba(34, 40, 49, 0.5) 100%
-  );
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(0, 173, 181, 0.08);
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom: 1px solid rgba(0, 173, 181, 0.04);
   z-index: 60;
   user-select: none;
 }
