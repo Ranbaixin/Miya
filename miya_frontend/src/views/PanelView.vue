@@ -1,9 +1,10 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { useStorage } from '@vueuse/core'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import API from '@/api/core'
-import { playBgm, stopBgm, bgmFileOptions, audioSettings } from '@/composables/useAudio'
+import { bgmFileOptions, playBgm, stopBgm } from '@/composables/useAudio'
+import { pX, pY } from '@/utils/parallax'
 
 const router = useRouter()
 
@@ -13,6 +14,7 @@ const soulActive = ref(87)
 const currentTime = ref('')
 const miyaThought = ref('佳，今天的星空很美呢...')
 const currentBgm = ref('快乐的小曲')
+const FILE_EXT_RE = /\.[^.]+$/
 const miyaPlatforms = ref(3)
 const memoryTotal = ref(0)
 const emotionName = ref('平静')
@@ -30,14 +32,16 @@ const bgmPlaying = ref(false)
 const bgmAvailable = computed(() => bgmFileOptions.length > 0)
 
 function toggleBgm() {
-  if (!bgmAvailable.value) return
+  if (!bgmAvailable.value)
+    return
   if (bgmPlaying.value) {
     stopBgm()
     bgmPlaying.value = false
-  } else {
+  }
+  else {
     const file = bgmFileOptions[0]!
     playBgm(file)
-    currentBgm.value = file.replace(/\.[^.]+$/, '')
+    currentBgm.value = file.replace(FILE_EXT_RE, '')
     bgmPlaying.value = true
   }
 }
@@ -73,7 +77,8 @@ async function loadSystemStatus() {
     if (personaRes?.soul) {
       soulActive.value = personaRes.soul.activity || soulActive.value
     }
-  } catch {
+  }
+  catch {
     backendOnline.value = false
   }
 }
@@ -86,8 +91,10 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  if (timer) clearInterval(timer)
-  if (statusTimer) clearInterval(statusTimer)
+  if (timer)
+    clearInterval(timer)
+  if (statusTimer)
+    clearInterval(statusTimer)
 })
 
 function updateTime() {
@@ -116,7 +123,7 @@ const bannerTexts = ['弥娅 v2.0 · 全新看板娘上线', '新增记忆星河
 let bannerTimer: ReturnType<typeof setInterval> | null = null
 
 const currentBannerImg = computed(() => `/backgrounds/${bannerImages[bannerIdx.value]}`)
-const nextBannerImg = computed(() => `/backgrounds/${bannerImages[(bannerIdx.value + 1) % bannerImages.length]}`)
+const _nextBannerImg = computed(() => `/backgrounds/${bannerImages[(bannerIdx.value + 1) % bannerImages.length]}`)
 
 onMounted(() => {
   bannerTimer = setInterval(() => {
@@ -124,19 +131,55 @@ onMounted(() => {
     bannerText.value = bannerTexts[bannerIdx.value]!
   }, 4000)
 })
-onUnmounted(() => { if (bannerTimer) clearInterval(bannerTimer) })
+onUnmounted(() => {
+  if (bannerTimer)
+    clearInterval(bannerTimer)
+})
 
-function navigate(path: string) { router.push(path) }
+// ═══ 陀螺仪效果 ═══
+// 面板级：鼠标位置动态调节 3D 旋转
+const gyroLeftPanel = computed(() => {
+  if (panelsHidden.value)
+    return ''
+  const ry = 30 + pX.value * 10
+  const rx = pY.value * -5
+  return `rotateY(${ry.toFixed(1)}deg) rotateX(${rx.toFixed(1)}deg)`
+})
+
+const gyroRightPanel = computed(() => {
+  if (panelsHidden.value)
+    return ''
+  const ry = -30 + pX.value * 10
+  const rx = pY.value * -5
+  return `rotateY(${ry.toFixed(1)}deg) rotateX(${rx.toFixed(1)}deg)`
+})
+
+// CSS 变量注入：传给子卡片做 calc() 叠加
+const gyroVarsRight = computed(() => ({
+  '--gyro-rx': `${(pY.value * -3).toFixed(1)}deg`,
+  '--gyro-ry': `${(pX.value * 5).toFixed(1)}deg`,
+}))
+
+const gyroVarsLeft = computed(() => ({
+  '--gyro-rx': `${(pY.value * -2).toFixed(1)}deg`,
+  '--gyro-ry': `${(pX.value * 3).toFixed(1)}deg`,
+}))
+
+function navigate(path: string) {
+  router.push(path)
+}
 
 const chatExpanded = ref(false)
 
-function toggleChat() { chatExpanded.value = !chatExpanded.value }
+function toggleChat() {
+  chatExpanded.value = !chatExpanded.value
+}
 </script>
 
 <template>
   <div class="command-center">
     <!-- ═══ 左面板 ═══ -->
-    <div class="cmd-panel cmd-left" :class="{ 'panel-hidden': panelsHidden }">
+    <div class="cmd-panel cmd-left" :class="{ 'panel-hidden': panelsHidden }" :style="{ transform: gyroLeftPanel, ...gyroVarsLeft }">
       <div class="cmd-top">
         <div class="cmd-level" @click="navigate('/chat')">
           <div class="cmd-level-head">
@@ -158,7 +201,7 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
           <button class="cmd-toggle-btn" title="隐藏面板" @click="togglePanels">
             <span class="cmd-toggle-icon">⊙</span>
           </button>
-          <div class="cmd-music" @click="toggleBgm" :title="bgmPlaying ? '暂停 BGM' : '播放 BGM'">
+          <div class="cmd-music" :title="bgmPlaying ? '暂停 BGM' : '播放 BGM'" @click="toggleBgm">
             <span class="cmd-music-icon" :class="{ playing: bgmPlaying }">♪</span>
             <div class="cmd-music-scroll">
               <span class="cmd-music-text">
@@ -185,8 +228,8 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
         <div class="cmd-banner" @click="navigate('/chat')">
           <div class="cmd-banner-track">
             <Transition name="banner-slide" mode="out-in">
-              <div class="cmd-banner-slide" :key="bannerIdx">
-                <img :src="currentBannerImg" class="cmd-banner-img" alt="banner" />
+              <div :key="bannerIdx" class="cmd-banner-slide">
+                <img :src="currentBannerImg" class="cmd-banner-img" alt="banner">
               </div>
             </Transition>
           </div>
@@ -197,7 +240,9 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
           </div>
         </div>
         <div class="cmd-chat" :class="{ expanded: chatExpanded }" @click="toggleChat">
-          <div class="cmd-chat-icon">💬</div>
+          <div class="cmd-chat-icon">
+            💬
+          </div>
           <div class="cmd-chat-text">
             <span class="cmd-chat-line">✦「{{ miyaThought }}」</span>
             <span class="cmd-chat-line">✨ 佳，有什么需要帮忙的吗？</span>
@@ -209,7 +254,7 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
     </div>
 
     <!-- ═══ 右面板 ═══ -->
-    <div class="cmd-panel cmd-right" :class="{ 'panel-hidden': panelsHidden }">
+    <div class="cmd-panel cmd-right" :class="{ 'panel-hidden': panelsHidden }" :style="{ transform: gyroRightPanel, ...gyroVarsRight }">
       <div class="cmd-resources">
         <div class="cmd-res-item" @click="navigate('/chat')">
           <span class="cmd-res-icon">◆</span>
@@ -257,7 +302,9 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
               </span>
             </div>
             <div class="cmd-battle-right">
-              <h2 class="cmd-battle-pct">∞</h2>
+              <h2 class="cmd-battle-pct">
+                ∞
+              </h2>
               <span>陪伴</span>
             </div>
           </div>
@@ -292,7 +339,9 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
           <button class="cmd-feat-card" @click="navigate('/terminal')">
             <h1>终端</h1>
             <span>CC 引擎</span>
-            <div class="cmd-feat-badge">新</div>
+            <div class="cmd-feat-badge">
+              新
+            </div>
           </button>
           <div class="cmd-feat-spacer" />
         </div>
@@ -316,7 +365,7 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
 
     <!-- 恢复面板按钮 -->
     <Transition name="show-btn">
-      <button v-if="panelsHidden" class="cmd-show-btn" @click="togglePanels" title="显示面板">
+      <button v-if="panelsHidden" class="cmd-show-btn" title="显示面板" @click="togglePanels">
         <span>⊙</span>
       </button>
     </Transition>
@@ -659,7 +708,7 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
   color: inherit;
   overflow: hidden;
   position: relative;
-  transform: rotateX(3deg) rotateY(-5deg);
+  transform: rotateX(calc(3deg + var(--gyro-rx, 0deg))) rotateY(calc(-5deg + var(--gyro-ry, 0deg)));
   box-shadow:
     2px 4px 12px rgba(0, 0, 0, 0.3),
     0 1px 0 rgba(0, 173, 181, 0.06);
@@ -677,7 +726,7 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
 
 .cmd-nav-card:hover {
   background: rgba(0, 173, 181, 0.18);
-  transform: rotateX(1deg) rotateY(-8deg) scale(1.04) translateY(-3px);
+  transform: rotateX(calc(1deg + var(--gyro-rx, 0deg))) rotateY(calc(-8deg + var(--gyro-ry, 0deg))) scale(1.04) translateY(-3px);
   border-color: rgba(0, 255, 245, 0.3);
   box-shadow:
     3px 6px 20px rgba(0, 173, 181, 0.15),
@@ -895,14 +944,14 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
   transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
   overflow: hidden;
   position: relative;
-  transform: rotateX(1deg) rotateY(-3deg);
+  transform: rotateX(calc(1deg + var(--gyro-rx, 0deg))) rotateY(calc(-3deg + var(--gyro-ry, 0deg)));
   box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 .cmd-res-item:hover {
   background: rgba(0, 173, 181, 0.14);
   border-color: rgba(0, 255, 245, 0.25);
-  transform: rotateX(0deg) rotateY(-5deg) scale(1.03);
+  transform: rotateX(calc(0deg + var(--gyro-rx, 0deg))) rotateY(calc(-5deg + var(--gyro-ry, 0deg))) scale(1.03);
   box-shadow: 1px 3px 12px rgba(0, 173, 181, 0.12);
 }
 
@@ -1142,7 +1191,7 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
   cursor: pointer;
   transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   overflow: hidden;
-  transform: rotateX(2deg) rotateY(-4deg);
+  transform: rotateX(calc(2deg + var(--gyro-rx, 0deg))) rotateY(calc(-4deg + var(--gyro-ry, 0deg)));
   box-shadow:
     2px 3px 10px rgba(0, 0, 0, 0.3),
     0 1px 0 rgba(0, 173, 181, 0.06);
@@ -1151,7 +1200,7 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
 .cmd-battle-info:hover {
   background: rgba(0, 173, 181, 0.14);
   border-color: rgba(0, 255, 245, 0.25);
-  transform: rotateX(1deg) rotateY(-7deg) scale(1.02);
+  transform: rotateX(calc(1deg + var(--gyro-rx, 0deg))) rotateY(calc(-7deg + var(--gyro-ry, 0deg))) scale(1.02);
   box-shadow:
     3px 5px 18px rgba(0, 173, 181, 0.12),
     0 2px 0 rgba(0, 255, 245, 0.12);
@@ -1300,13 +1349,13 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
   cursor: pointer;
   transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   overflow: hidden;
-  transform: rotateX(2deg) rotateY(-3deg);
+  transform: rotateX(calc(2deg + var(--gyro-rx, 0deg))) rotateY(calc(-3deg + var(--gyro-ry, 0deg)));
   box-shadow: 1px 2px 8px rgba(0, 0, 0, 0.25);
 }
 
 .cmd-quest:hover {
   background: rgba(0, 173, 181, 0.1);
-  transform: rotateX(1deg) rotateY(-6deg) scale(1.02);
+  transform: rotateX(calc(1deg + var(--gyro-rx, 0deg))) rotateY(calc(-6deg + var(--gyro-ry, 0deg))) scale(1.02);
   box-shadow: 2px 4px 14px rgba(0, 173, 181, 0.1);
 }
 
@@ -1424,7 +1473,7 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
   color: inherit;
   text-align: left;
   overflow: hidden;
-  transform: rotateX(3deg) rotateY(-4deg);
+  transform: rotateX(calc(3deg + var(--gyro-rx, 0deg))) rotateY(calc(-4deg + var(--gyro-ry, 0deg)));
   box-shadow:
     2px 4px 10px rgba(0, 0, 0, 0.3),
     0 1px 0 rgba(0, 173, 181, 0.06);
@@ -1442,7 +1491,7 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
 
 .cmd-feat-card:hover {
   background: rgba(0, 173, 181, 0.15);
-  transform: rotateX(1deg) rotateY(-7deg) scale(1.03) translateY(-3px);
+  transform: rotateX(calc(1deg + var(--gyro-rx, 0deg))) rotateY(calc(-7deg + var(--gyro-ry, 0deg))) scale(1.03) translateY(-3px);
   border-color: rgba(0, 255, 245, 0.28);
   box-shadow:
     3px 6px 18px rgba(0, 173, 181, 0.12),
@@ -1569,7 +1618,7 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
   color: inherit;
   overflow: hidden;
   gap: 0.08rem;
-  transform: rotateX(2deg) rotateY(-3deg);
+  transform: rotateX(calc(2deg + var(--gyro-rx, 0deg))) rotateY(calc(-3deg + var(--gyro-ry, 0deg)));
   box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.25);
 }
 
@@ -1577,7 +1626,7 @@ function toggleChat() { chatExpanded.value = !chatExpanded.value }
   background: rgba(0, 173, 181, 0.15);
   border-color: rgba(0, 255, 245, 0.2);
   box-shadow: 3px 5px 16px rgba(0, 0, 0, 0.35), 0 0 10px rgba(0, 173, 181, 0.1);
-  transform: rotateX(1deg) rotateY(-6deg) translateY(-3px);
+  transform: rotateX(calc(1deg + var(--gyro-rx, 0deg))) rotateY(calc(-6deg + var(--gyro-ry, 0deg))) translateY(-3px);
 }
 
 .cmd-bottom-item:active {

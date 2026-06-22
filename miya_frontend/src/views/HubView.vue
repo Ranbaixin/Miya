@@ -33,10 +33,12 @@ function navigate(path: string) {
   <div class="hub-view">
     <div class="hub-header">
       <div class="hub-title-group">
-        <h1 class="hub-title">弥娅中枢</h1>
+        <h1 class="hub-title">
+          弥娅中枢
+        </h1>
         <span class="hub-subtitle">COMMAND HUB · 功能聚合</span>
       </div>
-      <button class="hub-back" @click="router.push('/')" title="返回首页">
+      <button class="hub-back" title="返回首页" @click="router.push('/')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="15 18 9 12 15 6" />
         </svg>
@@ -54,8 +56,12 @@ function navigate(path: string) {
       >
         <div class="hub-card-inner">
           <span class="hub-card-icon">{{ card.icon }}</span>
-          <h2 class="hub-card-title">{{ card.title }}</h2>
-          <p class="hub-card-desc">{{ card.desc }}</p>
+          <h2 class="hub-card-title">
+            {{ card.title }}
+          </h2>
+          <p class="hub-card-desc">
+            {{ card.desc }}
+          </p>
           <div class="hub-card-gloss" />
           <div class="hub-card-corner tl" />
           <div class="hub-card-corner br" />

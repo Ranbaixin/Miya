@@ -3,23 +3,24 @@ import type { FloatingState } from '@/electron.d'
 import { useStorage, useWindowSize } from '@vueuse/core'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import BottomBar from '@/components/BottomBar.vue'
+import Live2dModel from '@/components/Live2dModel.vue'
+import SciFiOverlay from '@/components/SciFiOverlay.vue'
+import SideNav from '@/components/SideNav.vue'
 import TitleBar from '@/components/TitleBar.vue'
 import TopStatusBar from '@/components/TopStatusBar.vue'
-import SideNav from '@/components/SideNav.vue'
-import BottomBar from '@/components/BottomBar.vue'
 import { playBgm } from '@/composables/useAudio'
 import { useElectron } from '@/composables/useElectron'
 import { useMIYARealtime } from '@/composables/useMIYARealtime'
-import SciFiOverlay from '@/components/SciFiOverlay.vue'
-import Live2dModel from '@/components/Live2dModel.vue'
-import FloatingView from '@/views/FloatingView.vue'
 import { CONFIG } from '@/utils/config'
 import { mascotCfg } from '@/utils/live2dMascotConfig'
+import { destroyParallax, initParallax } from '@/utils/parallax'
+import FloatingView from '@/views/FloatingView.vue'
 
 const route = useRoute()
 const isElectron = !!window.electronAPI
 const { connect: connectWS, disconnect: disconnectWS } = useMIYARealtime()
-const { isMaximized } = useElectron()
+const { isMaximized: _isMaximized } = useElectron()
 const isMac = window.electronAPI?.platform === 'darwin'
 
 const floatingState = ref<FloatingState>('classic')
@@ -43,6 +44,7 @@ function applyBg() {
 watch([customBg, customBgOpacity], applyBg, { immediate: true })
 
 onMounted(() => {
+  initParallax()
   playBgm('9.快乐的小曲.mp3')
   connectWS()
   if (isElectron) {
@@ -55,7 +57,10 @@ onMounted(() => {
   }
 })
 
-onUnmounted(() => { disconnectWS() })
+onUnmounted(() => {
+  disconnectWS()
+  destroyParallax()
+})
 
 // ── 嵌入式 Live2D 看板娘 ──
 const { width: winW, height: winH } = useWindowSize()
@@ -68,20 +73,25 @@ let resizeDebounce: ReturnType<typeof setTimeout> | undefined
 function syncLive2dPosition() {
   clearTimeout(resizeDebounce)
   resizeDebounce = setTimeout(async () => {
-    if (!isHome.value || !isElectron) return
-    if (!window.live2dAPI?.positionRelative) return
+    if (!isHome.value || !isElectron)
+      return
+    if (!window.live2dAPI?.positionRelative)
+      return
     try {
       const bounds = await window.electronAPI!.getBounds()
-      console.log('[App] syncLive2d bounds:', bounds)
+      // Live2D position sync
       window.live2dAPI.positionRelative(bounds)
-    } catch (e) {
+    }
+    catch (e) {
       console.error('[App] syncLive2d failed:', e)
     }
   }, 300)
 }
 watch(isHome, (home) => {
-  if (!isElectron) return
-  if (home) syncLive2dPosition()
+  if (!isElectron)
+    return
+  if (home)
+    syncLive2dPosition()
   else window.live2dAPI?.resetPosition()
 }, { immediate: true })
 onMounted(() => window.addEventListener('resize', syncLive2dPosition))

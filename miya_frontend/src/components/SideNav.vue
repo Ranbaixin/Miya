@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 interface NavItem {
   id: string
@@ -29,16 +29,21 @@ const moreItems: NavItem[] = [
   { id: 'screen', label: '屏幕视觉', icon: '⊙', path: '/screen' },
 ]
 
-const isActive = (item: NavItem) => {
-  if (item.path === '/chat' && (route.path === '/chat' || route.path === '/')) return true
+function isActive(item: NavItem) {
+  if (item.path === '/chat' && (route.path === '/chat' || route.path === '/'))
+    return true
   return route.path.startsWith(item.path || '')
 }
 
 const homeActive = computed(() => route.path === '/' || route.path === '')
 
 function navigateTo(item: NavItem) {
-  if (item.action) { item.action(); return }
-  if (item.path) router.push(item.path)
+  if (item.action) {
+    item.action()
+    return
+  }
+  if (item.path)
+    router.push(item.path)
 }
 </script>
 
