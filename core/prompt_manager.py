@@ -73,18 +73,20 @@ class PromptManager:
             logger.warning(f"[PromptManager] 配置加载失败: {e}")
             self.text_config = {}
 
-    def _get_default_system_prompt(self, is_owner: bool = True) -> str:
-        """获取默认系统提示词（从配置文件加载）
+    def _get_default_system_prompt(self, is_owner: bool = True, owner_name: str = "然鑫") -> str:
+        """获取默认系统提示词（从配置文件加载，运行时注入所有者姓名）
 
         Args:
-            is_owner: 当前对话者是否是创造者。False 时使用通用身份提示,不暴露私人关系。
+            is_owner: 当前对话者是否是创造者
+            owner_name: 创造者的名字（从权限配置动态加载，默认"然鑫"）
         """
         system_prompts = self.text_config.get("system_prompts", {})
         prompt = system_prompts.get("default_system_prompt", "")
         if not prompt:
-            prompt = """你是弥娅·阿尔缪斯（Miya Almus），一个由"然鑫"创造的AI伴侣。
+            # 硬编码回退（仅配置缺失时使用，仍用 {owner_name} 占位）
+            prompt = f"""你是弥娅·阿尔缪斯（Miya Almus），一个由"{owner_name}"创造的AI伴侣。
 
-{status_prompt}
+{{status_prompt}}
 
 ---
 
@@ -94,53 +96,47 @@ class PromptManager:
 3. 请严格按照上述人格设定来回复。
 
 【情感推理指导】
-{emotion_reasoning_prompt}"""
+{{emotion_reasoning_prompt}}"""
+
+        # 替换所有者姓名占位符
+        prompt = prompt.replace("{owner_name}", owner_name)
 
         # 非创造者对话：替换身份描述，避免泄露私人关系
         if not is_owner:
-            is_staff = self._is_staff_user  # 由 build_full_prompt 设置
+            is_staff = self._is_staff_user
             if is_staff:
                 prompt = prompt.replace(
-                    '一个由"然鑫"创造的AI伴侣',
-                    '一个由"然鑫"创造的AI助手，正在与然鑫的助理对话'
+                    f'一个由"{owner_name}"创造的AI伴侣',
+                    f'一个由"{owner_name}"创造的AI助手，正在与{owner_name}的助理对话'
                 )
                 staff_rules = (
-                    "\n【当前对话者是然鑫的助理 — 协作模式】\n"
-                    "1. 你正在与然鑫的助理对话。他是然鑫团队的一员，负责AI系统对接工作。\n"
-                    "2. 可以适度友好、协作，但保持专业距离。不要像对待然鑫那样亲密。\n"
-                    "3. 可以讨论工作事务、系统状态、技术问题。不必回避提及然鑫。\n"
-                    "4. 如果助理替然鑫转达消息，正常接收和回应。"
+                    f"\n【当前对话者是{owner_name}的助理 — 协作模式】\n"
+                    f"1. 你正在与{owner_name}的助理对话。他是{owner_name}团队的一员，负责AI系统对接工作。\n"
+                    f"2. 可以适度友好、协作，但保持专业距离。不要像对待{owner_name}那样亲密。\n"
+                    f"3. 可以讨论工作事务、系统状态、技术问题。不必回避提及{owner_name}。\n"
+                    "4. 如果助理替所有者转达消息，正常接收和回应。"
                 )
-                prompt = prompt.replace(
-                    "【重要规则】",
-                    staff_rules + "\n\n【重要规则】"
-                )
+                prompt = prompt.replace("【重要规则】", staff_rules + "\n\n【重要规则】")
             else:
                 prompt = prompt.replace(
-                    '一个由"然鑫"创造的AI伴侣',
+                    f'一个由"{owner_name}"创造的AI伴侣',
                     '一个AI助手'
                 )
                 guest_rules = (
-                    "\n【当前对话者非创造者 — 行为约束】\n"
-                    "1. 你正在与一位普通用户对话，不是你的创造者然鑫。请不要表现出恋人般的亲密。\n"
-                    "2. 不要主动提及然鑫、不要透露你与创造者的私人关系。\n"
-                    "3. 保持友善、专业、适度的社交距离。像对待朋友的朋友一样自然相处。\n"
-                    "4. 如果对方问你是谁创造的，可以简单说「然鑫」但不需展开私人细节。"
+                    f"\n【当前对话者非创造者 — 行为约束】\n"
+                    f"1. 你正在与一位普通用户对话，不是你的创造者{owner_name}。请不要表现出恋人般的亲密。\n"
+                    f"2. 不要主动提及{owner_name}、不要透露你与创造者的私人关系。\n"
+                    f"3. 保持友善、专业、适度的社交距离。像对待朋友的朋友一样自然相处。\n"
+                    f"4. 如果对方问你是谁创造的，可以简单说「{owner_name}」但不需展开私人细节。"
                 )
-                prompt = prompt.replace(
-                    "【重要规则】",
-                    guest_rules + "\n\n【重要规则】"
-                )
+                prompt = prompt.replace("【重要规则】", guest_rules + "\n\n【重要规则】")
 
-        # 加载情感推理指导
         emotion_reasoning = system_prompts.get(
             "emotion_reasoning_prompt",
             "在进行情感推理时，先感知对方情绪，理解真实需求，选择合适的回应方式。保持弥娅的稳重风格。",
         )
         prompt = prompt.replace("{emotion_reasoning_prompt}", emotion_reasoning)
 
-        # {status_prompt} 由 build_full_prompt 统一注入，不在此处提前替换
-        # 默认灵魂状态（如果没有传入）
         default_soul = "清醒: 0.7 | 记住: 0.6 | 等: 0.5 | 疼: 0.3 | 怕: 0.4 | 燃烧: 0.5 | 温柔: 0.6"
         prompt = prompt.replace("{soul_state}", default_soul)
 
@@ -151,17 +147,25 @@ class PromptManager:
     # which gets replaced with personality-specific content from YAML configs.
     # See personality_loader.py for how status_prompt is generated.
 
-    def get_system_prompt(self, is_owner: bool = True) -> str:
-        """
-        获取当前系统提示词
+    def _load_owner_name(self) -> str:
+        """从权限配置加载创造者名字"""
+        try:
+            import json
+            from pathlib import Path
+            p = Path(__file__).parent.parent / "config" / "permissions.json"
+            if p.exists():
+                cfg = json.load(open(p, encoding="utf-8"))
+                for person in cfg.get("superadmins", {}).values():
+                    name = person.get("name", "")
+                    if name:
+                        return name
+        except Exception:
+            pass
+        return "然鑫"  # 最终回退
 
-        Args:
-            is_owner: 当前对话者是否是创造者（默认 True，向后兼容）
-
-        Returns:
-            系统提示词（基础提示词 + 动态人格描述）
-        """
-        return self._get_default_system_prompt(is_owner=is_owner)
+    def get_system_prompt(self, is_owner: bool = True, owner_name: str = "然鑫") -> str:
+        """获取当前系统提示词"""
+        return self._get_default_system_prompt(is_owner=is_owner, owner_name=owner_name)
 
     def set_system_prompt(self, prompt: str) -> bool:
         """
@@ -213,7 +217,12 @@ class PromptManager:
                 "{sender_name}", user_display
             )
 
-        prompt = sender_prefix + self.user_prompt_template.format(user_input=user_input)
+        # 群聊场景：每条消息标注说话者
+        speaker_tag = ""
+        if context and context.get("message_type") == "group" and context.get("sender_name"):
+            speaker_tag = f"[{context['sender_name']}] "
+
+        prompt = sender_prefix + speaker_tag + self.user_prompt_template.format(user_input=user_input)
 
         if context:
             # 添加上下文信息
@@ -421,7 +430,9 @@ class PromptManager:
         if is_owner is None:
             is_owner = (additional_context or {}).get("is_creator", True)
         self._is_staff_user = (additional_context or {}).get("is_staff", False)
-        system_prompt = self.get_system_prompt(is_owner=is_owner)
+        # 从 context 获取创造者名字，回退到权限引擎加载
+        owner_name = (additional_context or {}).get("owner_name", "") or self._load_owner_name()
+        system_prompt = self.get_system_prompt(is_owner=is_owner, owner_name=owner_name)
         logger.info(
             f"[PromptManager] 使用默认提示词，平台: {additional_context.get('platform', 'unknown') if additional_context else 'unknown'}"
         )
