@@ -91,7 +91,6 @@ const COLOR_GROUPS: ColorGroup[] = [
     colors: [
       { key: 'primary', label: '主色调', cssVar: '--miya-comp-hud-primary', default: '#00FFF5' },
       { key: 'secondary', label: '辅色调', cssVar: '--miya-comp-hud-secondary', default: '#00ADB5' },
-      { key: 'particle', label: '粒子色', cssVar: '--miya-comp-hud-particle', default: '#00FFF5' },
     ],
   },
   {
@@ -102,26 +101,6 @@ const COLOR_GROUPS: ColorGroup[] = [
       { key: 'ballPrimary', label: '球体主色', cssVar: '--miya-comp-floating-ball', default: '#00FFF5' },
       { key: 'ringColor', label: '光环色', cssVar: '--miya-comp-floating-ring', default: '#00ADB5' },
       { key: 'bgColor', label: '背景色', cssVar: '--miya-comp-floating-bg', default: '#222831' },
-    ],
-  },
-  {
-    id: 'panel',
-    label: '首页面板',
-    icon: '✦',
-    colors: [
-      { key: 'cardBorder', label: '卡片边框', cssVar: '--miya-comp-panel-border', default: '#00ADB5' },
-      { key: 'buttonPrimary', label: '按钮主色', cssVar: '--miya-comp-panel-btn', default: '#00ADB5' },
-      { key: 'iconColor', label: '图标色', cssVar: '--miya-comp-panel-icon', default: '#00ADB5' },
-      { key: 'card1', label: '轨道卡 1', cssVar: '--miya-comp-panel-card-1', default: '#ff77aa' },
-      { key: 'card2', label: '轨道卡 2', cssVar: '--miya-comp-panel-card-2', default: '#ff9944' },
-      { key: 'card3', label: '轨道卡 3', cssVar: '--miya-comp-panel-card-3', default: '#00e88f' },
-      { key: 'card4', label: '轨道卡 4', cssVar: '--miya-comp-panel-card-4', default: '#ff5577' },
-      { key: 'card5', label: '轨道卡 5', cssVar: '--miya-comp-panel-card-5', default: '#00FFF5' },
-      { key: 'card6', label: '轨道卡 6', cssVar: '--miya-comp-panel-card-6', default: '#00ADB5' },
-      { key: 'card7', label: '轨道卡 7', cssVar: '--miya-comp-panel-card-7', default: '#00FFF5' },
-      { key: 'card8', label: '轨道卡 8', cssVar: '--miya-comp-panel-card-8', default: '#4da6ff' },
-      { key: 'card9', label: '轨道卡 9', cssVar: '--miya-comp-panel-card-9', default: '#ff5555' },
-      { key: 'card10', label: '轨道卡 10', cssVar: '--miya-comp-panel-card-10', default: '#f59e0b' },
     ],
   },
   {
@@ -166,16 +145,6 @@ const COLOR_GROUPS: ColorGroup[] = [
       { key: 'brightWhite', label: '亮白', cssVar: '--miya-comp-terminal-bright-white', default: '#f8fafc' },
     ],
   },
-  {
-    id: 'splash',
-    label: '启动画面',
-    icon: '◇',
-    colors: [
-      { key: 'particle', label: '粒子色', cssVar: '--miya-comp-splash-particle', default: '#00FFF5' },
-      { key: 'progressBar', label: '进度条色', cssVar: '--miya-comp-splash-progress', default: '#00FFF5' },
-      { key: 'titleGold', label: '标题金色', cssVar: '--miya-comp-splash-title', default: '#00FFF5' },
-    ],
-  },
 ]
 
 // 扁平化 colors → key→default 映射（供 storage）
@@ -196,7 +165,7 @@ export const componentColors = useStorage<Record<string, string>>(
 )
 
 // ─── 注入 CSS custom properties ────────────────────────
-function applyComponentColors(colors: Record<string, string>) {
+export function applyComponentColors(colors: Record<string, string>) {
   const root = document.documentElement
   for (const group of COLOR_GROUPS) {
     for (const c of group.colors) {
@@ -207,6 +176,17 @@ function applyComponentColors(colors: Record<string, string>) {
   const accent = colors.accent || '#00ADB5'
   root.style.setProperty('--miya-primary', accent)
   root.style.setProperty('--miya-glow', `color-mix(in srgb, ${accent} 30%, transparent)`)
+}
+
+// 启动时从 localStorage 读取并注入 CSS 变量（不依赖 Vue 组件上下文）
+export function initComponentColors() {
+  try {
+    const raw = localStorage.getItem('miya-component-colors')
+    const colors: Record<string, string> = raw ? JSON.parse(raw) : buildDefaults()
+    applyComponentColors(colors)
+  } catch {
+    applyComponentColors(buildDefaults())
+  }
 }
 
 watch(componentColors, applyComponentColors, { deep: true, immediate: true })

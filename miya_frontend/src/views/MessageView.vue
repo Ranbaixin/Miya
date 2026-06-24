@@ -8,6 +8,7 @@ import MessageItem from '@/components/MessageItem.vue'
 import { CONFIG } from '@/utils/config'
 import { proxySetSoulEmotion, proxySetState } from '@/utils/live2dProxy'
 import { activeTabId, CURRENT_SESSION_ID, formatRelativeTime, getActiveTab, IS_TEMPORARY_SESSION, latestEmotion, loadCurrentSession, MESSAGES, newSession, saveMessages, switchSession, tabs } from '@/utils/session'
+import { buildEmotionColorMap } from '@/utils/emotionColors'
 import { clearSpeakQueue, isPlaying, queueSpeak, stop as stopTTS } from '@/utils/tts'
 import { setMessageViewExpanded } from '@/utils/uiState'
 
@@ -398,28 +399,7 @@ const latestSoulData = computed(() => {
   return null
 })
 
-function buildEmotionColors(): Record<string, string> {
-  const root = getComputedStyle(document.documentElement)
-  const c = (v: string, d: string) => root.getPropertyValue(v).trim() || d
-  return {
-    '喜悦': c('--miya-comp-emotion-joy', '#ffd700'),
-    '爱': c('--miya-comp-emotion-love', '#ff6b9d'), '心动': c('--miya-comp-emotion-love', '#ff6b9d'),
-    '温暖': c('--miya-comp-emotion-warm', '#ff8c69'), '幸福': c('--miya-comp-emotion-warm', '#ff8c69'),
-    '安心': c('--miya-comp-emotion-calm', '#7dd3fc'), '满足': c('--miya-comp-emotion-calm', '#7dd3fc'),
-    '平静': c('--miya-comp-emotion-calm', '#7dd3fc'),
-    '挂念': c('--miya-comp-emotion-attachment', '#00ADB5'), '思念': c('--miya-comp-emotion-attachment', '#c084fc'),
-    '依恋': c('--miya-comp-emotion-attachment', '#e879f9'),
-    '期待': c('--miya-comp-emotion-anticipation', '#facc15'),
-    '忧伤': c('--miya-comp-emotion-sadness', '#38bdf8'),
-    '甜蜜': c('--miya-comp-emotion-sweet', '#f472b6'),
-    '温柔': c('--miya-comp-emotion-tender', '#a5b4fc'),
-    '感动': c('--miya-comp-emotion-moved', '#c4b5fd'),
-    '好奇': c('--miya-comp-emotion-curious', '#67e8f9'),
-    '怀旧': c('--miya-comp-emotion-nostalgic', '#d8b4fe'),
-    '舒适': c('--miya-comp-emotion-calm', '#a5b4fc'),
-    '戒备': c('--miya-comp-emotion-fear', '#fbbf24'),
-  }
-}
+function getEmotionColorMap() { return buildEmotionColorMap() }
 </script>
 
 <template>
@@ -491,7 +471,7 @@ function buildEmotionColors(): Record<string, string> {
                 class="soul-em-fill"
                 :style="{
                   width: `${Math.min(e.intensity, 100)}%`,
-                  background: buildEmotionColors()[e.name] || '#00ADB5',
+                  background: getEmotionColorMap()[e.name] || '#00ADB5',
                 }"
               />
             </div>

@@ -77,7 +77,7 @@ const showStatus = useStorage('miya-show-status', true)
   background: transparent;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  border-bottom: 1px solid rgba(0, 173, 181, 0.04);
+  border-bottom: 1px solid color-mix(in srgb, var(--miya-border) 4%, transparent);
   z-index: 60;
   user-select: none;
 }
@@ -93,7 +93,7 @@ const showStatus = useStorage('miya-show-status', true)
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.15em;
-  background: linear-gradient(135deg, #00FFF5, #00ADB5);
+  background: linear-gradient(135deg, var(--miya-chat-ai), var(--miya-accent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -102,13 +102,13 @@ const showStatus = useStorage('miya-show-status', true)
 .top-sep {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.55rem;
-  color: rgba(0, 173, 181, 0.25);
+  color: color-mix(in srgb, var(--miya-border) 25%, transparent);
 }
 
 .top-version {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.5rem;
-  color: rgba(0, 173, 181, 0.35);
+  color: color-mix(in srgb, var(--miya-border) 35%, transparent);
   letter-spacing: 0.1em;
 }
 
@@ -130,12 +130,12 @@ const showStatus = useStorage('miya-show-status', true)
 }
 
 .top-dot.online {
-  background: rgba(0, 255, 245, 0.6);
-  box-shadow: 0 0 8px rgba(0, 255, 245, 0.4);
+  background: color-mix(in srgb, var(--miya-chat-ai) 60%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--miya-chat-ai) 40%, transparent);
 }
 
 .top-status-text {
-  color: rgba(0, 173, 181, 0.5);
+  color: color-mix(in srgb, var(--miya-border) 50%, transparent);
   letter-spacing: 0.05em;
 }
 
@@ -147,6 +147,6 @@ const showStatus = useStorage('miya-show-status', true)
 .top-time {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.6rem;
-  color: rgba(0, 255, 245, 0.45);
+  color: color-mix(in srgb, var(--miya-chat-ai) 45%, transparent);
 }
 </style>

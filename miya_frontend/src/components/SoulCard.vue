@@ -1,5 +1,6 @@
-﻿<script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
+import { emotionColor, emotionGradient } from '@/utils/emotionColors'
 
 const props = defineProps<{
   emotions?: Array<{ name: string, intensity: number }>
@@ -17,75 +18,11 @@ onMounted(() => {
   requestAnimationFrame(() => { visible.value = true })
 })
 
-function buildEmotionColors(): Record<string, string> {
-  const root = getComputedStyle(document.documentElement)
-  const c = (v: string, d: string) => root.getPropertyValue(v).trim() || d
-  return {
-    joy: c('--miya-comp-emotion-joy', '#ffd700'),
-    sadness: c('--miya-comp-emotion-sadness', '#7dd3fc'),
-    anger: c('--miya-comp-emotion-anger', '#ef4444'),
-    fear: c('--miya-comp-emotion-fear', '#00ADB5'),
-    love: c('--miya-comp-emotion-love', '#ff6b9d'),
-    surprise: c('--miya-comp-emotion-surprise', '#fbbf24'),
-    neutral: c('--miya-comp-emotion-neutral', '#94a3b8'),
-  }
-}
-
-function buildEmotionGradients(): Record<string, string> {
-  const root = getComputedStyle(document.documentElement)
-  const c = (v: string, d: string) => root.getPropertyValue(v).trim() || d
-  const j = c('--miya-comp-emotion-joy', '#ffd700')
-  const l = c('--miya-comp-emotion-love', '#ff6b9d')
-  const w = c('--miya-comp-emotion-warm', '#ff8c69')
-  const cm = c('--miya-comp-emotion-calm', '#7dd3fc')
-  const sd = c('--miya-comp-emotion-sadness', '#7dd3fc')
-  const at = c('--miya-comp-emotion-attachment', '#c084fc')
-  const an = c('--miya-comp-emotion-anticipation', '#facc15')
-  const sw = c('--miya-comp-emotion-sweet', '#f472b6')
-  const sh = c('--miya-comp-emotion-shy', '#fbcfe8')
-  const tn = c('--miya-comp-emotion-tender', '#a5b4fc')
-  const no = c('--miya-comp-emotion-nostalgic', '#d8b4fe')
-  const mv = c('--miya-comp-emotion-moved', '#c4b5fd')
-  const cu = c('--miya-comp-emotion-curious', '#67e8f9')
-  const ag = c('--miya-comp-emotion-anger', '#ef4444')
-  const fe = c('--miya-comp-emotion-fear', '#00ADB5')
-  const su = c('--miya-comp-emotion-surprise', '#facc15')
-  const nt = c('--miya-comp-emotion-neutral', '#94a3b8')
-
-  return {
-    '喜悦': `linear-gradient(90deg, ${j}, color-mix(in srgb, ${j} 70%, #ff8c00))`,
-    '爱': `linear-gradient(90deg, ${l}, color-mix(in srgb, ${l} 70%, #ff4488))`,
-    '温暖': `linear-gradient(90deg, ${w}, color-mix(in srgb, ${w} 80%, #ff6b9d))`,
-    '满足': `linear-gradient(90deg, ${cm}, color-mix(in srgb, ${cm} 80%, #00ADB5))`,
-    '思念': `linear-gradient(90deg, ${at}, color-mix(in srgb, ${at} 80%, #c084fc))`,
-    '忧伤': `linear-gradient(90deg, ${sd}, color-mix(in srgb, ${sd} 80%, #38bdf8))`,
-    '烦躁': `linear-gradient(90deg, ${ag}, color-mix(in srgb, ${ag} 80%, #fb923c))`,
-    '无奈': `linear-gradient(90deg, ${nt}, color-mix(in srgb, ${nt} 80%, #cbd5e1))`,
-    '依恋': `linear-gradient(90deg, ${at}, color-mix(in srgb, ${at} 80%, #e879f9))`,
-    '期待': `linear-gradient(90deg, ${an}, color-mix(in srgb, ${an} 80%, #f59e0b))`,
-    '甜蜜': `linear-gradient(90deg, ${sw}, color-mix(in srgb, ${sw} 80%, #ec4899))`,
-    '心动': `linear-gradient(90deg, ${l}, color-mix(in srgb, ${l} 80%, #ff8c69))`,
-    '安心': `linear-gradient(90deg, ${cu}, color-mix(in srgb, ${cu} 80%, #22d3ee))`,
-    '害羞': `linear-gradient(90deg, ${sh}, color-mix(in srgb, ${sh} 80%, #f9a8d4))`,
-    '愧疚': `linear-gradient(90deg, ${tn}, color-mix(in srgb, ${tn} 80%, #818cf8))`,
-    '释然': `linear-gradient(90deg, #86efac, #4ade80)`,
-    '挂念': `linear-gradient(90deg, ${mv}, color-mix(in srgb, ${mv} 70%, #00ADB5))`,
-    '感动': `linear-gradient(90deg, #fde68a, color-mix(in srgb, #fde68a 70%, #fcd34d))`,
-    '好奇': `linear-gradient(90deg, ${cu}, color-mix(in srgb, ${cu} 80%, #06b6d4))`,
-    '怀旧': `linear-gradient(90deg, ${no}, color-mix(in srgb, ${no} 70%, #00ADB5))`,
-    '心疼': `linear-gradient(90deg, #fb7185, #e11d48)`,
-    'anger': `linear-gradient(90deg, ${ag}, color-mix(in srgb, ${ag} 80%, #f87171))`,
-    'fear': `linear-gradient(90deg, ${fe}, color-mix(in srgb, ${fe} 80%, #7c3aed))`,
-    'surprise': `linear-gradient(90deg, ${su}, color-mix(in srgb, ${su} 80%, #fbbf24))`,
-    'sadness': `linear-gradient(90deg, ${sd}, color-mix(in srgb, ${sd} 80%, #38bdf8))`,
-  }
-}
-
 const dominantColor = computed(() => {
   const top = props.emotions?.[0]
-  if (!top) return '#00ADB5'
-  const ec = buildEmotionColors()
-  return ec[top.name] || '#00ADB5'
+  if (!top)
+    return '#00ADB5'
+  return emotionColor(top.name, '#00ADB5')
 })
 
 const accentGlow = computed(() => `0 0 18px ${dominantColor.value}22, 0 0 4px ${dominantColor.value}11`)
@@ -114,7 +51,7 @@ const accentGlow = computed(() => `0 0 18px ${dominantColor.value}22, 0 0 4px ${
               class="soul-emotion-fill"
               :style="{
                 width: `${e.intensity}%`,
-                background: buildEmotionGradients()[e.name] || `linear-gradient(90deg, ${dominantColor}, ${dominantColor}88)`,
+                background: emotionGradient(e.name) || `linear-gradient(90deg, ${dominantColor}, ${dominantColor}88)`,
               }"
             />
           </div>
@@ -151,7 +88,9 @@ const accentGlow = computed(() => `0 0 18px ${dominantColor.value}22, 0 0 4px ${
           <span>{{ thinkingExpanded ? '收起思考' : '展开思考' }}</span>
           <span class="thinking-len">{{ thinking.length }}ch</span>
         </div>
-        <div v-if="thinkingExpanded" class="thinking-body">{{ thinking }}</div>
+        <div v-if="thinkingExpanded" class="thinking-body">
+          {{ thinking }}
+        </div>
       </div>
     </div>
   </Transition>

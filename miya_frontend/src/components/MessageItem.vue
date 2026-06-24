@@ -1,7 +1,8 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import type { Message, ToolEvent } from '@/utils/session'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { CONFIG } from '@/utils/config'
+import { buildEmotionColorMap } from '@/utils/emotionColors'
 import Markdown from './Markdown.vue'
 import SoulCard from './SoulCard.vue'
 
@@ -29,78 +30,60 @@ const ROLE_COLOR_VAR: Record<string, string> = {
 const reasoningExpanded = ref(true)
 const detailOpen = ref(false)
 
-function buildEmotionColors(): Record<string, string> {
-  const root = getComputedStyle(document.documentElement)
-  const c = (v: string, d: string) => root.getPropertyValue(v).trim() || d
-  return {
-    'joy': c('--miya-comp-emotion-joy', '#ffd700'), '喜悦': c('--miya-comp-emotion-joy', '#ffd700'),
-    '爱': c('--miya-comp-emotion-love', '#ff6b9d'), '心动': c('--miya-comp-emotion-love', '#ff6b9d'),
-    '温暖': c('--miya-comp-emotion-warm', '#ff8c69'), '幸福': c('--miya-comp-emotion-warm', '#ff8c69'),
-    '安心': c('--miya-comp-emotion-calm', '#7dd3fc'), '满足': c('--miya-comp-emotion-calm', '#7dd3fc'),
-    '挂念': c('--miya-comp-emotion-attachment', '#00ADB5'), '思念': c('--miya-comp-emotion-attachment', '#c084fc'),
-    '害羞': c('--miya-comp-emotion-shy', '#fbbfca'),
-    '期待': c('--miya-comp-emotion-anticipation', '#facc15'),
-    '依恋': c('--miya-comp-emotion-attachment', '#e879f9'),
-    '忧伤': c('--miya-comp-emotion-sadness', '#38bdf8'), 'sadness': c('--miya-comp-emotion-sadness', '#38bdf8'),
-    'anger': c('--miya-comp-emotion-anger', '#ef4444'),
-    'fear': c('--miya-comp-emotion-fear', '#7c3aed'),
-    'surprise': c('--miya-comp-emotion-surprise', '#fbbf24'),
-    'disgust': c('--miya-comp-emotion-neutral', '#94a3b8'),
-    '甜蜜': c('--miya-comp-emotion-sweet', '#f472b6'),
-    '温柔': c('--miya-comp-emotion-tender', '#a5b4fc'),
-    '感动': c('--miya-comp-emotion-moved', '#c4b5fd'),
-    '好奇': c('--miya-comp-emotion-curious', '#67e8f9'),
-    '怀旧': c('--miya-comp-emotion-nostalgic', '#d8b4fe'),
-    '心疼': c('--miya-comp-emotion-warm', '#fb7185'),
-  }
-}
-
-const EMOTION_COLORS = buildEmotionColors()
-
 const soulBars = computed(() => {
-  const ec = buildEmotionColors()
+  const ec = buildEmotionColorMap()
   const emos = props.soulData?.emotions
-  if (!emos?.length) return []
+  if (!emos?.length)
+    return []
   const total = emos.reduce((s, e) => s + e.intensity, 1) || 1
   return emos.slice(0, 5).map(e => ({
-    name: e.name, intensity: e.intensity,
+    name: e.name,
+    intensity: e.intensity,
     color: ec[e.name] || '#00ADB5',
     width: Math.round((e.intensity / total) * 100),
   }))
 })
 
 const emotionList = computed(() => {
-  const ec = buildEmotionColors()
+  const ec = buildEmotionColorMap()
   const emos = props.soulData?.emotions
-  if (emos?.length) return emos.slice(0, 5).map(e => ({ name: e.name, pct: e.intensity, color: ec[e.name] || '#00ADB5' }))
+  if (emos?.length)
+    return emos.slice(0, 5).map(e => ({ name: e.name, pct: e.intensity, color: ec[e.name] || '#00ADB5' }))
   return []
 })
 
 const emotionText = computed(() => {
   const emos = props.soulData?.emotions
-  if (!emos?.length) return ''
+  if (!emos?.length)
+    return ''
   return emos.slice(0, 6).map(e => `${e.name} ${e.intensity}%`).join(' · ')
 })
 
 const soulDetail = computed(() => props.soulData || null)
 
 const displaySource = computed(() => {
-  if (typeof props.content === 'string') return props.content
+  if (typeof props.content === 'string')
+    return props.content
   return JSON.stringify(props.content, null, 2)
 })
 
 function formatToolPayload(value: any): string {
-  if (value === null || value === undefined) return ''
-  if (typeof value === 'string') return value
-  try { return JSON.stringify(value, null, 2) } catch { return String(value) }
+  if (value === null || value === undefined)
+    return ''
+  if (typeof value === 'string')
+    return value
+  try { return JSON.stringify(value, null, 2) }
+  catch { return String(value) }
 }
 function toolSummary(event: ToolEvent): string {
   const name = event.name || '工具'
-  if (event.type === 'tool_call') return `▸ ${name}`
+  if (event.type === 'tool_call')
+    return `▸ ${name}`
   return `${event.isError ? '✕' : '✓'} ${name}`
 }
 function toolBody(event: ToolEvent): string {
-  if (event.type === 'tool_call') return formatToolPayload(event.args)
+  if (event.type === 'tool_call')
+    return formatToolPayload(event.args)
   return formatToolPayload(event.result)
 }
 
@@ -110,14 +93,17 @@ let scanTimer: ReturnType<typeof setInterval> | null = null
 let glossTimer: ReturnType<typeof setInterval> | null = null
 
 const soulData = computed(() => {
-  if (props.role !== 'assistant') return null
+  if (props.role !== 'assistant')
+    return null
   const sd = (props as any).soulData
-  if (sd?.emotions?.length) return sd
+  if (sd?.emotions?.length)
+    return sd
   const emo = (props as any).emotionDataRaw || (props as any).soulRaw || {}
   const emotions = Object.entries(emo.current || emo)
     .filter(([k]) => !['dominant', 'intensity'].includes(k))
     .map(([name, val]: any) => ({ name, intensity: typeof val === 'number' ? Math.round(val * 100) : 50 }))
-  if (emotions.length) return { emotions }
+  if (emotions.length)
+    return { emotions }
   return null
 })
 
@@ -131,12 +117,16 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  if (scanTimer) clearInterval(scanTimer)
-  if (glossTimer) clearInterval(glossTimer)
+  if (scanTimer)
+    clearInterval(scanTimer)
+  if (glossTimer)
+    clearInterval(glossTimer)
 })
 
 watch(() => props.generating, (v) => {
-  if (v && !scanTimer) scanTimer = setInterval(() => { scanLine.value = !scanLine.value }, 600)
+  if (v && !scanTimer) {
+    scanTimer = setInterval(() => { scanLine.value = !scanLine.value }, 600)
+  }
   else if (!v && scanTimer) { clearInterval(scanTimer); scanTimer = null }
 })
 </script>
@@ -180,9 +170,11 @@ watch(() => props.generating, (v) => {
     <button
       v-if="role === 'assistant' && !generating"
       class="bar-expand-btn"
-      @click="detailOpen = !detailOpen"
       :title="detailOpen ? '收起灵魂' : '查看灵魂'"
-    >{{ detailOpen ? '▲' : '▼' }}</button>
+      @click="detailOpen = !detailOpen"
+    >
+      {{ detailOpen ? '▲' : '▼' }}
+    </button>
 
     <!-- 扫描线 (生成中) -->
     <div v-if="generating" class="card-scan" :class="{ flicker: scanLine }" />
@@ -219,7 +211,9 @@ watch(() => props.generating, (v) => {
     <!-- 灵魂内联面板（默认展开，可收起） -->
     <div v-if="role === 'assistant' && detailOpen && (soulDetail?.emotions?.length || soulDetail?.innerThought || soulDetail?.attribution || soulDetail?.reflection || soulDetail?.thinking)" class="soul-detail">
       <div v-if="emotionList.length" class="soul-section emotion-section">
-        <div class="soul-section-title">♥ 情绪</div>
+        <div class="soul-section-title">
+          ♥ 情绪
+        </div>
         <div class="soul-emotion-list">
           <div v-for="e in emotionList" :key="e.name" class="soul-emotion-row">
             <span class="soul-em-name">{{ e.name }}</span>
@@ -231,20 +225,36 @@ watch(() => props.generating, (v) => {
         </div>
       </div>
       <div v-if="soulDetail?.innerThought && soulDetail.innerThought !== '正常对话互动'" class="soul-section thought-section">
-        <div class="soul-section-title">✦ 内心独白</div>
-        <div class="soul-section-text thought-text">{{ soulDetail.innerThought }}</div>
+        <div class="soul-section-title">
+          ✦ 内心独白
+        </div>
+        <div class="soul-section-text thought-text">
+          {{ soulDetail.innerThought }}
+        </div>
       </div>
       <div v-if="soulDetail?.attribution && soulDetail.attribution !== '正常对话互动'" class="soul-section attrib-section">
-        <div class="soul-section-title">→ 归因</div>
-        <div class="soul-section-text dim">{{ soulDetail.attribution }}</div>
+        <div class="soul-section-title">
+          → 归因
+        </div>
+        <div class="soul-section-text dim">
+          {{ soulDetail.attribution }}
+        </div>
       </div>
       <div v-if="soulDetail?.reflection" class="soul-section reflection-section">
-        <div class="soul-section-title">↻ 反思</div>
-        <div class="soul-section-text dim">{{ soulDetail.reflection }}</div>
+        <div class="soul-section-title">
+          ↻ 反思
+        </div>
+        <div class="soul-section-text dim">
+          {{ soulDetail.reflection }}
+        </div>
       </div>
       <div v-if="soulDetail?.thinking" class="soul-section thinking-section">
-        <div class="soul-section-title">◇ 思考</div>
-        <div class="soul-section-text code">{{ soulDetail.thinking }}</div>
+        <div class="soul-section-title">
+          ◇ 思考
+        </div>
+        <div class="soul-section-text code">
+          {{ soulDetail.thinking }}
+        </div>
       </div>
 
       <SoulCard

@@ -225,14 +225,17 @@ onMounted(() => {
 })
 
 // 球态下让 Electron 透明窗口无方形背景，展开态恢复不透明
+function getFloatingBg(): string {
+  const v = getComputedStyle(document.documentElement).getPropertyValue('--miya-comp-floating-bg').trim()
+  return v || '#222831'
+}
 watch(floatingState, (state) => {
-  const bg = state === 'ball' ? 'transparent' : '#110901'
+  const bg = state === 'ball' ? 'transparent' : getFloatingBg()
   document.documentElement.style.backgroundColor = bg
 }, { immediate: true })
 
 onUnmounted(() => {
-  // 恢复经典模式背景
-  document.documentElement.style.backgroundColor = '#110901'
+  document.documentElement.style.backgroundColor = getFloatingBg()
   unsubStateChange?.()
   unsubBlur?.()
   stopFrameAnimation()

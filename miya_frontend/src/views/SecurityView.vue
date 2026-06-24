@@ -159,7 +159,7 @@ function createKaliTerm() {
   if (!kaliTermEl.value || kaliTerm) return
   kaliFitAddon = new FitAddon()
   kaliTerm = new Terminal({
-    theme: { background: '#080618', foreground: '#d0c8f0', cursor: '#00ADB5',
+    theme: { background: 'var(--miya-comp-terminal-bg, #0a0a14)', foreground: 'var(--miya-comp-terminal-fg, #d4d4e8)', cursor: 'var(--miya-accent)',
       selectionBackground: '#3730a340', black: '#1a1635', red: '#f87171',
       green: '#6ee7b7', yellow: '#fbbf24', blue: '#93c5fd', magenta: '#c084fc',
       cyan: '#67e8f9', white: '#e2e8f0', brightBlack: '#4a4560',
@@ -921,7 +921,7 @@ onUnmounted(() => { destroyKaliTerm() })
 .sec-header { display: flex; align-items: center; gap: 12px; flex-shrink: 0; margin-bottom: 8px;
   padding: 0.5rem 0.8rem;
   background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(0, 173, 181, 0.06);
+  border: 1px solid color-mix(in srgb, var(--miya-accent) 6%, transparent);
   box-shadow:
     3px 3px 8px rgba(0, 40, 50, 0.3),
     -2px -2px 6px rgba(0, 180, 200, 0.04);
@@ -934,11 +934,11 @@ onUnmounted(() => { destroyKaliTerm() })
   transform: rotateY(1deg);
 }
 .back-btn {
-  width: 32px; height: 32px; border-radius: 6px; border: 1px solid rgba(0, 173, 181, 0.1); background: rgba(0, 173, 181, 0.04);
+  width: 32px; height: 32px; border-radius: 6px; border: 1px solid color-mix(in srgb, var(--miya-accent) 10%, transparent); background: color-mix(in srgb, var(--miya-accent) 4%, transparent);
   color: var(--miya-text-dim); cursor: pointer; display: flex; align-items: center; justify-content: center;
   transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
   svg { width: 16px; height: 16px; }
-  &:hover { border-color: rgba(0, 255, 245, 0.3); color: rgba(0, 255, 245, 0.8); background: rgba(0, 173, 181, 0.1); transform: skewX(-4deg); }
+  &:hover { border-color: rgba(0, 255, 245, 0.3); color: rgba(0, 255, 245, 0.8); background: color-mix(in srgb, var(--miya-accent) 10%, transparent); transform: skewX(-4deg); }
 }
 .sec-title { font-family: 'Noto Serif SC', serif; font-size: 1.1rem; font-weight: 700; letter-spacing: 0.06em; margin: 0; }
 .sec-sub { font-family: 'JetBrains Mono', monospace; font-size: 0.55rem; color: var(--miya-text-dim); letter-spacing: 0.1em; }
@@ -958,7 +958,7 @@ onUnmounted(() => { destroyKaliTerm() })
 .phase-icon { font-size: 0.7rem; }
 .phase-label { font-size: 0.55rem; color: var(--miya-text-dim); letter-spacing: 0.04em; }
 .phase-line {
-  width: 32px; height: 1px; background: rgba(0, 173, 181,0.2); margin: 0 6px;
+  width: 32px; height: 1px; background: color-mix(in srgb, var(--miya-accent) 20%, transparent); margin: 0 6px;
   transition: background 0.4s;
   &.filled { background: var(--miya-accent); }
 }
@@ -973,14 +973,14 @@ onUnmounted(() => { destroyKaliTerm() })
   &.collapsed { width: 28px; padding-right: 0; overflow: hidden; }
 }
 .sec-left::-webkit-scrollbar { width: 3px; }
-.sec-left::-webkit-scrollbar-thumb { background: rgba(0, 173, 181, 0.1); border-radius: 2px; }
+.sec-left::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--miya-accent) 10%, transparent); border-radius: 2px; }
 .sec-left-inner { display: flex; flex-direction: column; gap: 10px; }
 .panel-collapse-btn {
-  width: 24px; height: 24px; border-radius: 4px; border: 1px solid rgba(0, 173, 181, 0.1);
+  width: 24px; height: 24px; border-radius: 4px; border: 1px solid color-mix(in srgb, var(--miya-accent) 10%, transparent);
   background: rgba(0, 0, 0, 0.3); color: var(--miya-text-dim); cursor: pointer;
   font-size: 0.55rem; display: flex; align-items: center; justify-content: center;
   transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1); flex-shrink: 0;
-  &:hover { border-color: rgba(0, 255, 245, 0.3); color: var(--miya-accent); background: rgba(0, 173, 181, 0.1); }
+  &:hover { border-color: rgba(0, 255, 245, 0.3); color: var(--miya-accent); background: color-mix(in srgb, var(--miya-accent) 10%, transparent); }
 }
 .sec-right {
   flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden;
@@ -990,7 +990,7 @@ onUnmounted(() => { destroyKaliTerm() })
 .target-card {
   display: flex; gap: 6px; padding: 12px; border-radius: 6px;
   background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(0, 173, 181, 0.06);
+  border: 1px solid color-mix(in srgb, var(--miya-accent) 6%, transparent);
   box-shadow:
     2px 2px 6px rgba(0, 40, 50, 0.3),
     -1px -1px 3px rgba(0, 180, 200, 0.03);
@@ -1000,22 +1000,22 @@ onUnmounted(() => { destroyKaliTerm() })
   border-color: rgba(0, 255, 245, 0.2);
 }
 .target-input {
-  flex: 1; background: rgba(0,0,0,0.3); border: 1px solid rgba(0, 173, 181, 0.08);
+  flex: 1; background: rgba(0,0,0,0.3); border: 1px solid color-mix(in srgb, var(--miya-accent) 8%, transparent);
   border-radius: 5px; padding: 9px 12px; color: var(--miya-text); font-size: 0.8rem;
   outline: none; transition: border-color 0.2s; min-width: 0;
-  &::placeholder { color: rgba(0, 173, 181, 0.15); }
+  &::placeholder { color: color-mix(in srgb, var(--miya-accent) 15%, transparent); }
   &:focus { border-color: rgba(0, 255, 245, 0.25); }
 }
 .strategy-select {
-  width: 84px; background: rgba(0,0,0,0.3); border: 1px solid rgba(0, 173, 181, 0.08);
+  width: 84px; background: rgba(0,0,0,0.3); border: 1px solid color-mix(in srgb, var(--miya-accent) 8%, transparent);
   border-radius: 5px; padding: 7px 4px; color: var(--miya-text); font-size: 0.7rem; outline: none; cursor: pointer;
 }
 .scan-btn {
   padding: 9px 16px; border-radius: 5px; border: none;
-  background: linear-gradient(135deg, rgba(0, 173, 181, 0.8), rgba(0, 200, 210, 0.6));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--miya-accent) 80%, transparent), rgba(0, 200, 210, 0.6));
   color: #fff; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
   white-space: nowrap; font-family: 'Noto Sans SC', sans-serif;
-  &:hover:not(:disabled) { transform: translateY(-1px) skewX(-2deg); box-shadow: 0 3px 16px rgba(0, 173, 181, 0.25); }
+  &:hover:not(:disabled) { transform: translateY(-1px) skewX(-2deg); box-shadow: 0 3px 16px color-mix(in srgb, var(--miya-accent) 25%, transparent); }
   &:disabled { opacity: 0.35; cursor: not-allowed; }
   &.scanning { animation: scan-pulse 1.5s infinite; }
 }
@@ -1029,7 +1029,7 @@ onUnmounted(() => { destroyKaliTerm() })
 
 /* ── Progress ── */
 .progress-wrap { display: flex; align-items: center; gap: 6px; }
-.progress-bar { flex: 1; height: 3px; background: rgba(0, 173, 181, 0.06); border-radius: 2px; overflow: hidden; }
+.progress-bar { flex: 1; height: 3px; background: color-mix(in srgb, var(--miya-accent) 6%, transparent); border-radius: 2px; overflow: hidden; }
 .progress-fill { height: 100%; background: linear-gradient(90deg, var(--miya-accent), rgba(0, 255, 245, 0.6)); border-radius: 2px; transition: width 0.5s ease; }
 .progress-pct { font-size: 0.58rem; color: var(--miya-text-dim); font-family: 'JetBrains Mono', monospace; }
 .scan-status-msg { font-size: 0.6rem; color: var(--miya-accent); }
@@ -1040,10 +1040,10 @@ onUnmounted(() => { destroyKaliTerm() })
   display: flex; align-items: center; gap: 8px; padding: 4px 0 8px;
 }
 .tool-search-input {
-  flex: 1; background: rgba(0,0,0,0.3); border: 1px solid rgba(0, 173, 181, 0.08);
+  flex: 1; background: rgba(0,0,0,0.3); border: 1px solid color-mix(in srgb, var(--miya-accent) 8%, transparent);
   border-radius: 5px; padding: 6px 10px; color: var(--miya-text); font-size: 0.65rem;
   outline: none; transition: border-color 0.2s;
-  &::placeholder { color: rgba(0, 173, 181, 0.15); font-size: 0.6rem; }
+  &::placeholder { color: color-mix(in srgb, var(--miya-accent) 15%, transparent); font-size: 0.6rem; }
   &:focus { border-color: rgba(0, 255, 245, 0.25); }
 }
 .tool-total { font-size: 0.53rem; color: var(--miya-text-dim); white-space: nowrap; font-family: 'JetBrains Mono', monospace; }
@@ -1062,7 +1062,7 @@ onUnmounted(() => { destroyKaliTerm() })
 .tool-grid { display: flex; flex-direction: column; gap: 3px; padding: 3px 4px 6px 22px; }
 .tool-chip {
   display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; border-radius: 5px;
-  border: 1px solid rgba(0, 173, 181, 0.06); background: rgba(0, 0, 0, 0.3);
+  border: 1px solid color-mix(in srgb, var(--miya-accent) 6%, transparent); background: rgba(0, 0, 0, 0.3);
   color: var(--miya-text-dim); cursor: pointer; transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1); text-align: left;
   &:hover:not(:disabled) { border-color: rgba(0, 255, 245, 0.2); color: var(--miya-text); background: rgba(129, 191, 241, 0.1); transform: skewX(-3deg); }
   &:disabled { opacity: 0.25; }
@@ -1101,7 +1101,7 @@ onUnmounted(() => { destroyKaliTerm() })
 
 /* ── Scan Terminal ── */
 .scan-terminal {
-  flex: 1; background: rgba(0,0,0,0.25); border: 0.5px solid rgba(0, 173, 181,0.08);
+  flex: 1; background: rgba(0,0,0,0.25); border: 0.5px solid color-mix(in srgb, var(--miya-accent) 8%, transparent);
   border-radius: 10px; padding: 12px 16px; overflow-y: auto;
   font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 0.65rem; line-height: 1.6;
 }
@@ -1110,10 +1110,10 @@ onUnmounted(() => { destroyKaliTerm() })
   &.phase .log-text { color: var(--miya-accent); font-weight: 500; }
   &.ok .log-text { color: rgba(68, 204, 68, 0.8); }
   &.warn .log-text { color: rgba(255, 200, 60, 0.8); }
-  &.error .log-text { color: rgba(255, 80, 80, 0.8); }
+  &.error .log-text { color: color-mix(in srgb, var(--miya-comp-terminal-red, #f87171) 80%, transparent); }
   &.info .log-text { color: var(--miya-text-dim); }
 }
-.log-time { color: rgba(0, 173, 181,0.3); flex-shrink: 0; font-size: 0.6rem; }
+.log-time { color: color-mix(in srgb, var(--miya-accent) 30%, transparent); flex-shrink: 0; font-size: 0.6rem; }
 .log-cursor {
   color: var(--miya-accent); animation: blink 1s step-end infinite; font-size: 0.7rem;
 }
@@ -1128,7 +1128,7 @@ onUnmounted(() => { destroyKaliTerm() })
 .score-card {
   display: flex; align-items: center; gap: 16px; padding: 16px;
   background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(0, 173, 181, 0.06);
+  border: 1px solid color-mix(in srgb, var(--miya-accent) 6%, transparent);
   box-shadow:
     2px 2px 8px rgba(0, 40, 50, 0.3),
     -1px -1px 4px rgba(0, 180, 200, 0.03);
@@ -1149,10 +1149,10 @@ onUnmounted(() => { destroyKaliTerm() })
 .score-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .action-btn {
   padding: 6px 12px; border-radius: 5px; font-size: 0.62rem; cursor: pointer;
-  border: 1px solid rgba(0, 173, 181, 0.1); background: rgba(0, 0, 0, 0.3); color: var(--miya-text-dim);
+  border: 1px solid color-mix(in srgb, var(--miya-accent) 10%, transparent); background: rgba(0, 0, 0, 0.3); color: var(--miya-text-dim);
   transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1); white-space: nowrap;
   &:hover { border-color: rgba(0, 255, 245, 0.2); color: var(--miya-accent); background: rgba(129, 191, 241, 0.1); transform: skewX(-3deg); }
-  &.primary { background: rgba(248, 113, 113, 0.1); border-color: rgba(248, 113, 113, 0.2); color: #ff6666; }
+  &.primary { background: rgba(248, 113, 113, 0.1); border-color: rgba(248, 113, 113, 0.2); color: var(--miya-comp-terminal-red, #f87171); }
 }
 
 /* Findings */
@@ -1160,7 +1160,7 @@ onUnmounted(() => { destroyKaliTerm() })
 .section-label { font-size: 0.68rem; color: var(--miya-text-dim); letter-spacing: 0.06em; margin: 0; }
 .finding-card {
   background: rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(0, 173, 181, 0.06);
+  border: 1px solid color-mix(in srgb, var(--miya-accent) 6%, transparent);
   box-shadow:
     2px 2px 6px rgba(0, 40, 50, 0.25),
     -1px -1px 3px rgba(0, 180, 200, 0.03);
@@ -1171,7 +1171,7 @@ onUnmounted(() => { destroyKaliTerm() })
 .finding-header {
   display: flex; align-items: center; gap: 8px; padding: 10px 12px;
   cursor: pointer; transition: background 0.15s;
-  &:hover { background: rgba(0, 173, 181,0.04); }
+  &:hover { background: color-mix(in srgb, var(--miya-accent) 4%, transparent); }
 }
 .finding-sev {
   padding: 2px 6px; border-radius: 3px; font-size: 0.5rem; font-weight: 600; color: #000;
@@ -1191,7 +1191,7 @@ onUnmounted(() => { destroyKaliTerm() })
 .rec-label { font-size: 0.6rem; color: var(--miya-text-dim); opacity: 0.7; }
 .rec-chip {
   padding: 2px 8px; border-radius: 4px; font-size: 0.58rem;
-  background: rgba(0, 173, 181,0.1); color: var(--miya-accent);
+  background: color-mix(in srgb, var(--miya-accent) 10%, transparent); color: var(--miya-accent);
 }
 
 .no-findings {
@@ -1202,7 +1202,7 @@ onUnmounted(() => { destroyKaliTerm() })
 
 /* ── Security Chat ── */
 .sec-chat {
-  border: 1px solid rgba(0, 173, 181, 0.06); border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--miya-accent) 6%, transparent); border-radius: 8px;
   background: rgba(0, 0, 0, 0.5);
   box-shadow:
     3px 3px 10px rgba(0, 40, 50, 0.35),
@@ -1227,7 +1227,7 @@ onUnmounted(() => { destroyKaliTerm() })
 .sec-chat-quick { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; justify-content: center; }
 .sec-chat-qbtn {
   padding: 6px 14px; border-radius: 5px; font-size: 0.68rem; cursor: pointer;
-  border: 1px solid rgba(0, 173, 181, 0.12); background: rgba(0, 173, 181, 0.04);
+  border: 1px solid color-mix(in srgb, var(--miya-accent) 12%, transparent); background: color-mix(in srgb, var(--miya-accent) 4%, transparent);
   color: var(--miya-accent); display: flex; align-items: center; gap: 5px;
   transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
   &:hover { background: rgba(129, 191, 241, 0.12); border-color: rgba(0, 255, 245, 0.2); transform: skewX(-3deg); }
@@ -1237,22 +1237,22 @@ onUnmounted(() => { destroyKaliTerm() })
 }
 .sec-chat-bar {
   display: flex; align-items: center; gap: 6px; padding: 10px 14px;
-  border-top: 0.5px solid rgba(0, 173, 181,0.08); background: rgba(0,0,0,0.12);
+  border-top: 0.5px solid color-mix(in srgb, var(--miya-accent) 8%, transparent); background: rgba(0,0,0,0.12);
   border-radius: 0 0 10px 10px;
 }
 .sec-chat-actions { display: flex; gap: 4px; flex-shrink: 0; }
 .sec-chat-qsm {
   width: 28px; height: 28px; border-radius: 6px; font-size: 0.75rem; cursor: pointer;
-  border: 0.5px solid rgba(0, 173, 181,0.1); background: transparent;
+  border: 0.5px solid color-mix(in srgb, var(--miya-accent) 10%, transparent); background: transparent;
   color: var(--miya-text-dim); display: flex; align-items: center; justify-content: center;
   transition: all 0.15s;
-  &:hover { border-color: var(--miya-accent); color: var(--miya-accent); background: rgba(0, 173, 181,0.06); }
+  &:hover { border-color: var(--miya-accent); color: var(--miya-accent); background: color-mix(in srgb, var(--miya-accent) 6%, transparent); }
 }
 .sec-chat-input {
-  flex: 1; background: rgba(0,0,0,0.3); border: 1px solid rgba(0, 173, 181, 0.08);
+  flex: 1; background: rgba(0,0,0,0.3); border: 1px solid color-mix(in srgb, var(--miya-accent) 8%, transparent);
   border-radius: 5px; padding: 8px 12px; color: var(--miya-text); font-size: 0.78rem;
   outline: none; transition: border-color 0.2s;
-  &::placeholder { color: rgba(0, 173, 181, 0.15); font-size: 0.7rem; }
+  &::placeholder { color: color-mix(in srgb, var(--miya-accent) 15%, transparent); font-size: 0.7rem; }
   &:focus { border-color: rgba(0, 255, 245, 0.25); }
   &:disabled { opacity: 0.3; }
 }
@@ -1269,26 +1269,26 @@ onUnmounted(() => { destroyKaliTerm() })
   margin-left: auto; padding: 4px 12px; border-radius: 5px; font-size: 0.65rem; cursor: pointer;
   font-family: 'JetBrains Mono', monospace; white-space: nowrap; display: flex; align-items: center; gap: 4px;
   transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-  &.term { border: 1px solid rgba(0, 173, 181, 0.15); background: rgba(0, 173, 181, 0.06); color: var(--miya-accent); }
+  &.term { border: 1px solid color-mix(in srgb, var(--miya-accent) 15%, transparent); background: color-mix(in srgb, var(--miya-accent) 6%, transparent); color: var(--miya-accent); }
   &.term:hover { background: rgba(129, 191, 241, 0.12); border-color: rgba(0, 255, 245, 0.25); transform: skewX(-4deg); }
-  &.term.active { background: rgba(0, 173, 181, 0.15); border-color: rgba(0, 255, 245, 0.3); color: rgba(0, 255, 245, 0.8); }
+  &.term.active { background: color-mix(in srgb, var(--miya-accent) 15%, transparent); border-color: rgba(0, 255, 245, 0.3); color: rgba(0, 255, 245, 0.8); }
 }
 .kali-icon { font-size: 0.7rem; }
 
-.kali-term-wrap { position:fixed; inset:56px 0 0 0; z-index:51; display:flex; flex-direction:column; background:#080618; }
-.kali-toolbar { display:flex; align-items:center; gap:12px; padding:6px 16px; border-bottom:.5px solid rgba(0, 173, 181,.2); background:rgba(0,0,0,.5); }
+.kali-term-wrap { position:fixed; inset:56px 0 0 0; z-index:51; display:flex; flex-direction:column; background:var(--miya-comp-terminal-bg, #0a0a14); }
+.kali-toolbar { display:flex; align-items:center; gap:12px; padding:6px 16px; border-bottom:.5px solid color-mix(in srgb, var(--miya-accent) 20%, transparent); background:rgba(0,0,0,.5); }
 .kali-label { font-size:.7rem; color:var(--miya-accent); font-family:'JetBrains Mono',monospace; }
 .kali-status { font-size:.55rem; color:var(--miya-text-dim); }
 .kali-hint { margin-left:auto; font-size:.55rem; color:var(--miya-text-dim); opacity:0.5; }
-.kali-btn-minimize { padding:2px 8px; border-radius:4px; font-size:.65rem; cursor:pointer; border:.5px solid rgba(0, 173, 181,.2); background:transparent; color:var(--miya-text-dim); margin-left:8px; &:hover{background:rgba(0, 173, 181,.15);color:var(--miya-accent);} }
-.kali-btn-close { padding:2px 8px; border-radius:4px; font-size:.65rem; cursor:pointer; border:.5px solid rgba(255,80,80,.2); background:transparent; color:#ff6666; &:hover{background:rgba(255,80,80,.1)} }
-.kali-xterm-box { flex:1; padding:6px 4px 4px 10px; :deep(.xterm){height:100%} :deep(.xterm-viewport){overflow-y:auto} :deep(.xterm-viewport::-webkit-scrollbar){width:6px} :deep(.xterm-viewport::-webkit-scrollbar-thumb){background:rgba(0, 173, 181,.2);border-radius:3px} }
+.kali-btn-minimize { padding:2px 8px; border-radius:4px; font-size:.65rem; cursor:pointer; border:.5px solid color-mix(in srgb, var(--miya-accent) 20%, transparent); background:transparent; color:var(--miya-text-dim); margin-left:8px; &:hover{background:color-mix(in srgb, var(--miya-accent) 15%, transparent);color:var(--miya-accent);} }
+.kali-btn-close { padding:2px 8px; border-radius:4px; font-size:.65rem; cursor:pointer; border:.5px solid color-mix(in srgb, var(--miya-comp-terminal-red, #f87171) 20%, transparent); background:transparent; color:var(--miya-comp-terminal-red, #f87171); &:hover{background:color-mix(in srgb, var(--miya-comp-terminal-red, #f87171) 10%, transparent)} }
+.kali-xterm-box { flex:1; padding:6px 4px 4px 10px; :deep(.xterm){height:100%} :deep(.xterm-viewport){overflow-y:auto} :deep(.xterm-viewport::-webkit-scrollbar){width:6px} :deep(.xterm-viewport::-webkit-scrollbar-thumb){background:color-mix(in srgb, var(--miya-accent) 20%, transparent);border-radius:3px} }
 
 /* ── Modal ── */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; }
 .modal-card {
   background: rgba(0, 0, 0, 0.92);
-  border: 1px solid rgba(0, 173, 181, 0.12);
+  border: 1px solid color-mix(in srgb, var(--miya-accent) 12%, transparent);
   box-shadow:
     3px 3px 20px rgba(0, 40, 50, 0.5),
     -2px -2px 10px rgba(0, 180, 200, 0.08);

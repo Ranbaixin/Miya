@@ -128,10 +128,10 @@ function navigateTo(item: NavItem) {
   height: 100%;
   padding: 0.5rem 0;
   background: rgba(0, 0, 0, 0.45);
-  border-right: 1px solid rgba(0, 173, 181, 0.06);
+  border-right: 1px solid color-mix(in srgb, var(--miya-border) 6%, transparent);
   box-shadow:
-    3px 0 10px rgba(0, 60, 70, 0.35),
-    -1px 0 0 rgba(0, 200, 210, 0.06);
+    3px 0 10px rgba(0, 0, 0, 0.35),
+    -1px 0 0 color-mix(in srgb, var(--miya-border) 6%, transparent);
   perspective: 400px;
   -webkit-perspective: 400px;
   z-index: 50;
@@ -148,44 +148,44 @@ function navigateTo(item: NavItem) {
   width: 48px;
   margin: 0.3rem 0;
   background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(0, 173, 181, 0.1);
+  border: 1px solid color-mix(in srgb, var(--miya-border) 10%, transparent);
   cursor: pointer;
   transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
   box-shadow:
-    2px 2px 6px rgba(0, 60, 70, 0.3),
-    -1px -1px 4px rgba(0, 200, 210, 0.06);
+    2px 2px 6px rgba(0, 0, 0, 0.3),
+    -1px -1px 4px color-mix(in srgb, var(--miya-border) 6%, transparent);
 }
 
 .nav-logo:hover,
 .nav-logo.active {
-  border-color: rgba(0, 255, 245, 0.4);
+  border-color: color-mix(in srgb, var(--miya-chat-ai) 40%, transparent);
   box-shadow:
-    3px 3px 10px rgba(0, 60, 70, 0.4),
-    -2px -2px 6px rgba(0, 200, 210, 0.1),
-    0 0 20px rgba(0, 173, 181, 0.2);
+    3px 3px 10px rgba(0, 0, 0, 0.4),
+    -2px -2px 6px color-mix(in srgb, var(--miya-border) 10%, transparent),
+    0 0 20px color-mix(in srgb, var(--miya-border) 20%, transparent);
 }
 
 .nav-logo.active {
-  background: rgba(0, 173, 181, 0.12);
+  background: color-mix(in srgb, var(--miya-border) 12%, transparent);
 }
 
 .nav-logo-icon {
   font-family: 'Noto Serif SC', serif;
   font-size: 1.1rem;
   font-weight: 700;
-  color: rgba(0, 255, 245, 0.85);
+  color: color-mix(in srgb, var(--miya-home, #00ADB5) 85%, transparent);
   line-height: 1;
   transition: all 0.3s ease;
 }
 
 .nav-logo:hover .nav-logo-icon {
-  text-shadow: 0 0 12px rgba(0, 255, 245, 0.3);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--miya-home, #00ADB5) 30%, transparent);
 }
 
 .nav-logo-label {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.4rem;
-  color: rgba(0, 173, 181, 0.5);
+  color: color-mix(in srgb, var(--miya-border) 50%, transparent);
   letter-spacing: 0.2em;
 }
 
@@ -196,7 +196,7 @@ function navigateTo(item: NavItem) {
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(0, 173, 181, 0.15),
+    color-mix(in srgb, var(--miya-border) 15%, transparent),
     transparent
   );
   margin: 0.25rem 0;
@@ -216,19 +216,19 @@ function navigateTo(item: NavItem) {
   cursor: pointer;
   position: relative;
   transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-  color: rgba(200, 200, 200, 0.5);
+  color: var(--miya-text-dim);
 }
 
 .nav-item:hover {
-  color: rgba(255, 255, 255, 0.9);
+  color: color-mix(in srgb, var(--miya-text) 90%, transparent);
   transform: skewX(-6deg);
-  background: rgba(0, 173, 181, 0.15);
-  box-shadow: 2px 2px 8px rgba(0, 60, 70, 0.3);
+  background: color-mix(in srgb, var(--miya-border) 15%, transparent);
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .nav-item.active {
-  color: #ffffff;
-  background: rgba(0, 173, 181, 0.12);
+  color: var(--miya-text);
+  background: color-mix(in srgb, var(--miya-border) 12%, transparent);
   font-weight: 600;
 }
 
@@ -243,7 +243,7 @@ function navigateTo(item: NavItem) {
 }
 
 .nav-item.active .nav-icon {
-  filter: drop-shadow(0 0 8px rgba(0, 255, 245, 0.5));
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--miya-chat-ai) 50%, transparent));
 }
 
 .nav-label {
@@ -264,12 +264,12 @@ function navigateTo(item: NavItem) {
   background: linear-gradient(
     180deg,
     transparent,
-    rgba(0, 255, 245, 0.7),
+    color-mix(in srgb, var(--miya-chat-ai) 70%, transparent),
     transparent
   );
   opacity: 0;
   transition: opacity 0.3s ease;
-  box-shadow: 0 0 4px rgba(0, 255, 245, 0.3);
+  box-shadow: 0 0 4px color-mix(in srgb, var(--miya-chat-ai) 30%, transparent);
 }
 
 .nav-item.active .nav-active-bar {

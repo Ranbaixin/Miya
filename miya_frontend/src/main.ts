@@ -7,6 +7,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import App from './App.vue'
 import './style.css'
 import 'virtual:uno.css'
+import { initComponentColors } from '@/composables/useComponentColors'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -44,3 +45,5 @@ createApp(App)
   })
   .use(router)
   .mount('#app')
+
+initComponentColors()
