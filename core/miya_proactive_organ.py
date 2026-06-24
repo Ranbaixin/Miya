@@ -49,7 +49,7 @@ class MiyaProactiveOrgan(MiyaOrgan):
         await super().on_start()
         logger.info("弥娅主动表达器官已就绪")
 
-    def on_lifecycle_change(self, old_phase: "LifecyclePhase", new_phase: "LifecyclePhase") -> None:
+    def on_lifecycle_change(self, old_phase: LifecyclePhase, new_phase: LifecyclePhase) -> None:
         from core.miya_soul_state import LifecyclePhase
 
         if new_phase in (LifecyclePhase.SLEEP, LifecyclePhase.DROWSY):
@@ -61,7 +61,7 @@ class MiyaProactiveOrgan(MiyaOrgan):
 
     # ── 核心：接收灵魂状态 ──
 
-    def on_soul_state(self, state: "MiyaSoulState") -> None:
+    def on_soul_state(self, state: MiyaSoulState) -> None:
         """
         收到 AP 引擎的灵魂状态快照。
 

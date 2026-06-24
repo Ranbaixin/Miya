@@ -35,7 +35,7 @@ class MiyaDecisionHubOrgan(MiyaOrgan):
 
     def __init__(self):
         super().__init__(name="decision_hub", priority=30)
-        self._cached_state: "MiyaSoulState | None" = None
+        self._cached_state: MiyaSoulState | None = None
         self._hub = None
 
     def bind_decision_hub(self, hub) -> None:
@@ -47,7 +47,7 @@ class MiyaDecisionHubOrgan(MiyaOrgan):
         await super().on_start()
         logger.info("决策中枢器官已接入脊柱")
 
-    def on_lifecycle_change(self, old_phase: "LifecyclePhase", new_phase: "LifecyclePhase") -> None:
+    def on_lifecycle_change(self, old_phase: LifecyclePhase, new_phase: LifecyclePhase) -> None:
         from core.miya_soul_state import LifecyclePhase
 
         if new_phase == LifecyclePhase.IDLE:
@@ -59,7 +59,7 @@ class MiyaDecisionHubOrgan(MiyaOrgan):
         elif new_phase == LifecyclePhase.WAKE:
             logger.info("脊柱唤醒——决策层恢复全功能")
 
-    def on_soul_state(self, state: "MiyaSoulState") -> None:
+    def on_soul_state(self, state: MiyaSoulState) -> None:
         """缓存最新灵魂状态，供决策层快速访问"""
         self._cached_state = state
 
@@ -71,7 +71,7 @@ class MiyaDecisionHubOrgan(MiyaOrgan):
             except Exception:
                 pass
 
-    def get_cached_state(self) -> "MiyaSoulState | None":
+    def get_cached_state(self) -> MiyaSoulState | None:
         """获取缓存的灵魂状态快照"""
         return self._cached_state
 

@@ -55,7 +55,7 @@ class MiyaAutonomyOrgan(MiyaOrgan):
         except Exception as e:
             logger.info(f"自主进化器官休眠 (AutonomyManager 不可用): {e}")
 
-    def on_soul_state(self, state: "MiyaSoulState") -> None:
+    def on_soul_state(self, state: MiyaSoulState) -> None:
         """
         收到灵魂状态快照。
 
@@ -85,7 +85,7 @@ class MiyaAutonomyOrgan(MiyaOrgan):
         self._last_check_time = now
         self._maybe_trigger_improvement(state)
 
-    def _maybe_trigger_improvement(self, state: "MiyaSoulState") -> None:
+    def _maybe_trigger_improvement(self, state: MiyaSoulState) -> None:
         """尝试触发一次自主改进"""
         try:
             if not self._autonomy_manager:
@@ -110,8 +110,7 @@ class MiyaAutonomyOrgan(MiyaOrgan):
                     import asyncio
                     coro = engine.improvement_cycle()
                     if self._spine and self._spine._loop:
-                        future = asyncio.run_coroutine_threadsafe(coro, self._spine._loop)
-                        # 不等待结果，让它在后台完成
+                        asyncio.run_coroutine_threadsafe(coro, self._spine._loop)
                         self._improvement_count += 1
                         logger.info(f"自主进化 #{self._improvement_count} 已调度")
                     else:

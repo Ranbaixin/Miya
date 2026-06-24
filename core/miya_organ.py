@@ -72,7 +72,7 @@ class MiyaOrgan(ABC):
         self._started = False
         logger.debug(f"Organ [{self.name}] shutdown")
 
-    def on_lifecycle_change(self, old_phase: "LifecyclePhase", new_phase: "LifecyclePhase") -> None:
+    def on_lifecycle_change(self, old_phase: LifecyclePhase, new_phase: LifecyclePhase) -> None:
         """
         弥娅生命周期阶段变更通知。
 
@@ -85,7 +85,7 @@ class MiyaOrgan(ABC):
 
     # ── 核心钩子：接收灵魂状态广播 ──
 
-    def on_soul_state(self, state: "MiyaSoulState") -> None:
+    def on_soul_state(self, state: MiyaSoulState) -> None:
         """
         收到弥娅的灵魂状态快照。
 
