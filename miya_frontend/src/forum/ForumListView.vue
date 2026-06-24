@@ -121,7 +121,7 @@ function openPost(id: string) { router.push(`/community/${id}`) }
 <template>
   <div class="flv-root">
     <header class="flv-header">
-      <button class="back-btn" @click="router.push('/')">
+      <button class="flv-back-btn" @click="router.push('/')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
       </button>
       <div class="flv-title-group">
@@ -132,8 +132,8 @@ function openPost(id: string) { router.push(`/community/${id}`) }
         <span class="flv-user">{{ currentUser.username }}</span>
         <button class="flv-logout-btn" @click="isLoggedIn = false; currentUser = null; posts = []; visiblePosts = []; postsError = '已退出登录'; showLogin = true">退出</button>
       </template>
-      <button v-if="!isLoggedIn" class="new-post-btn login-trigger" @click="showLogin = true">登录</button>
-      <button v-else class="new-post-btn" @click="showCreatePost = true">+ 发帖</button>
+      <button v-if="!isLoggedIn" class="flv-new-btn login-trigger" @click="showLogin = true">登录</button>
+      <button v-else class="flv-new-btn" @click="showCreatePost = true">+ 发帖</button>
     </header>
 
     <div class="flv-body">
@@ -172,59 +172,115 @@ function openPost(id: string) { router.push(`/community/${id}`) }
 </template>
 
 <style scoped>
-.flv-root { display: flex; flex-direction: column; height: 100%; background: var(--miya-bg); color: var(--miya-text); font-family: 'Noto Sans SC', sans-serif; }
+.flv-root {
+  display: flex; flex-direction: column; height: 100%;
+  padding: 1rem 1.2rem; gap: 0.8rem;
+  perspective: 800px; -webkit-perspective: 800px;
+  overflow: hidden;
+  color: var(--miya-text, #E4ECF0);
+  font-family: 'Noto Sans SC', sans-serif;
+}
 
+/* ── Header ── */
 .flv-header {
-  display: flex; align-items: center; gap: 1rem; padding: 0.6rem 1.2rem; flex-shrink: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--miya-accent) 10%, transparent);
-  background: var(--miya-surface);
+  display: flex; align-items: center; gap: 0.8rem;
+  padding: 0.5rem 0.8rem; flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 173, 181, 0.06);
+  box-shadow:
+    3px 3px 8px rgba(0, 40, 50, 0.3),
+    -2px -2px 6px rgba(0, 180, 200, 0.04);
+  border-radius: 4px;
+  transform: rotateY(2deg);
+  transition: border-color 0.3s ease, transform 0.5s ease;
 }
-.back-btn {
-  width: 2rem; height: 2rem; display: flex; align-items: center; justify-content: center;
-  background: transparent; border: 1px solid color-mix(in srgb, var(--miya-accent) 15%, transparent);
-  border-radius: 0.5rem; color: var(--miya-text-dim); cursor: pointer; padding: 0;
+.flv-header:hover { border-color: rgba(0, 255, 245, 0.15); transform: rotateY(1deg); }
+
+.flv-back-btn {
+  width: 28px; height: 28px; border-radius: 5px;
+  border: 1px solid rgba(0, 173, 181, 0.1);
+  background: rgba(0, 173, 181, 0.04);
+  color: rgba(0, 173, 181, 0.5); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.back-btn:hover { border-color: var(--miya-primary); color: var(--miya-primary); }
-.back-btn svg { width: 1rem; height: 1rem; }
+.flv-back-btn:hover {
+  background: rgba(0, 173, 181, 0.1); border-color: rgba(0, 255, 245, 0.3);
+  color: rgba(0, 255, 245, 0.8); transform: skewX(-4deg);
+}
+.flv-back-btn svg { width: 14px; height: 14px; }
 
 .flv-title-group { display: flex; flex-direction: column; }
-.flv-title { font-size: 0.95rem; font-weight: 600; letter-spacing: 0.05em; }
-.flv-sub { font-size: 0.6rem; color: var(--miya-text-dim); letter-spacing: 0.1em; }
-
-.new-post-btn {
-  margin-left: auto; padding: 0.35rem 0.9rem; border-radius: 0.35rem; cursor: pointer; font-size: 0.7rem; font-family: inherit;
-  background: color-mix(in srgb, var(--miya-accent) 18%, transparent); color: var(--miya-accent);
-  border: 1px solid color-mix(in srgb, var(--miya-accent) 22%, transparent);
-  transition: all 0.2s;
+.flv-title {
+  font-family: 'Noto Serif SC', serif; font-size: 0.9rem;
+  font-weight: 700; letter-spacing: 0.05em; color: #ffffff;
 }
-.new-post-btn:hover { background: color-mix(in srgb, var(--miya-accent) 32%, transparent); box-shadow: 0 0 10px var(--miya-glow); }
+.flv-sub {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.5rem;
+  color: rgba(0, 173, 181, 0.3); letter-spacing: 0.1em;
+}
+
+.flv-new-btn {
+  margin-left: auto; padding: 0.4rem 1rem; border-radius: 5px; cursor: pointer;
+  font-size: 0.7rem; font-family: inherit;
+  background: rgba(0, 173, 181, 0.1); color: rgba(0, 255, 245, 0.7);
+  border: 1px solid rgba(0, 173, 181, 0.15);
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.flv-new-btn:hover {
+  background: rgba(129, 191, 241, 0.12); border-color: rgba(0, 255, 245, 0.3);
+  transform: skewX(-4deg); box-shadow: 0 0 12px rgba(0, 173, 181, 0.1);
+}
 .login-trigger { margin-left: auto; }
 
-.flv-user { font-size: 0.75rem; color: var(--miya-accent); margin-left: auto; }
+.flv-user { font-size: 0.72rem; color: var(--miya-accent); margin-left: auto; font-family: 'JetBrains Mono', monospace; }
 
 .flv-logout-btn {
-  padding: 0.25rem 0.6rem; border-radius: 0.3rem; cursor: pointer; font-size: 0.6rem; font-family: inherit;
+  padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.6rem; font-family: inherit;
   background: transparent; color: var(--miya-text-dim);
-  border: 1px solid color-mix(in srgb, var(--miya-text-dim) 20%, transparent);
-  transition: all 0.2s;
+  border: 1px solid rgba(200, 200, 200, 0.12);
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.flv-logout-btn:hover { border-color: #ff6b7a; color: #ff6b7a; }
+.flv-logout-btn:hover { border-color: rgba(248, 113, 113, 0.4); color: #ff6b7a; transform: skewX(-3deg); }
 
-.flv-body { flex: 1; display: flex; gap: 0.8rem; padding: 0.8rem; overflow: hidden; }
+/* ── Body ── */
+.flv-body { flex: 1; display: flex; gap: 0.8rem; min-height: 0; overflow: hidden; }
+
 .flv-main {
   flex: 1; min-width: 0; overflow-y: auto;
-  background: color-mix(in srgb, var(--miya-surface) 60%, transparent);
-  border-radius: 8px; padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(0, 173, 181, 0.06);
+  box-shadow:
+    3px 3px 10px rgba(0, 40, 50, 0.35),
+    -1px -1px 4px rgba(0, 180, 200, 0.04);
+  border-radius: 4px; padding: 0.6rem;
+  transform: rotateY(-3deg);
+  transition: transform 0.5s ease;
 }
+.flv-main:hover { transform: rotateY(-2deg); }
+.flv-main::-webkit-scrollbar { width: 3px; }
+.flv-main::-webkit-scrollbar-thumb { background: rgba(0, 173, 181, 0.1); border-radius: 2px; }
+
 .post-list { display: flex; flex-direction: column; gap: 0.5rem; }
 
-.flv-msg { text-align: center; padding: 2rem; font-size: 0.7rem; color: var(--miya-text-dim); }
-.flv-msg.error { color: #ff6b7a; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+.flv-msg { text-align: center; padding: 2rem; font-size: 0.7rem; color: rgba(200, 200, 200, 0.3); }
+.flv-msg.error { color: rgba(248, 113, 113, 0.6); display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+
 .flv-login-inline {
-  padding: 0.3rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.65rem; font-family: inherit;
-  background: color-mix(in srgb, var(--miya-accent) 18%, transparent);
-  color: var(--miya-accent);
-  border: 1px solid color-mix(in srgb, var(--miya-accent) 22%, transparent);
+  padding: 0.3rem 0.8rem; border-radius: 5px; cursor: pointer; font-size: 0.65rem; font-family: inherit;
+  background: rgba(0, 173, 181, 0.1); color: rgba(0, 255, 245, 0.7);
+  border: 1px solid rgba(0, 173, 181, 0.15);
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.flv-login-inline:hover { background: color-mix(in srgb, var(--miya-accent) 32%, transparent); }
+.flv-login-inline:hover { background: rgba(129, 191, 241, 0.12); border-color: rgba(0, 255, 245, 0.3); transform: skewX(-3deg); }
+
+/* ── Deep override for PostCard / Sidebar ── */
+:deep(.forum-sidebar-left) { background: rgba(0, 0, 0, 0.5) !important; border: 1px solid rgba(0, 173, 181, 0.06) !important; }
+:deep(.border-gray-800) { border-color: rgba(0, 173, 181, 0.06) !important; }
+:deep(.bg-gray-800) { background: rgba(0, 0, 0, 0.3) !important; }
+:deep(.bg-gray-900) { background: rgba(0, 0, 0, 0.45) !important; }
+:deep(.text-gray-400) { color: rgba(200, 200, 200, 0.4) !important; }
+:deep(.text-gray-500) { color: rgba(200, 200, 200, 0.35) !important; }
+:deep(.bg-blue-600) { background: rgba(0, 173, 181, 0.15) !important; }
+:deep(.text-blue-400) { color: rgba(0, 255, 245, 0.6) !important; }
 </style>

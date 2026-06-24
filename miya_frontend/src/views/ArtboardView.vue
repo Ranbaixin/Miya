@@ -110,84 +110,55 @@ function handleWheel(e: WheelEvent) {
 </script>
 
 <template>
-  <div class="artboard-layout h-screen flex bg-gray-950 text-gray-100 overflow-hidden">
+  <div class="art-layout">
     <!-- Left Panel: Prompt Input -->
-    <div class="left-panel w-72 shrink-0 border-r border-gray-800 flex flex-col">
-      <div class="p-3 border-b border-gray-800 flex items-center gap-2">
-        <button
-          class="w-6 h-6 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
-          title="返回"
-          @click="router.push('/')"
-        >
-          ←
+    <div class="art-left">
+      <div class="art-left-head">
+        <button class="art-back-btn" title="返回" @click="router.push('/')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
         </button>
-        <div class="w-3 h-3 rounded-full bg-blue-500" />
-        <span class="text-sm font-medium">弥娅画板</span>
-        <div class="flex-1" />
-        <button
-          class="w-7 h-7 rounded-md flex items-center justify-center text-gray-500 hover:text-white hover:bg-gray-800 text-xs transition-colors"
-          :class="{ 'text-blue-400 bg-gray-800': showDoodle }"
-          title="涂鸦模式"
-          @click="showDoodle = !showDoodle"
-        >
-          ✏
-        </button>
-        <button
-          class="w-7 h-7 rounded-md flex items-center justify-center text-gray-500 hover:text-white hover:bg-gray-800 text-xs transition-colors"
-          :class="{ 'text-blue-400 bg-gray-800': !showGallery }"
-          title="切换画廊"
-          @click="showGallery = !showGallery"
-        >
-          {{ showGallery ? '⊟' : '⊞' }}
-        </button>
+        <span class="art-left-dot" />
+        <span class="art-left-title">弥娅画板</span>
+        <div class="art-left-actions">
+          <button class="art-icon-btn" :class="{ active: showDoodle }" title="涂鸦模式" @click="showDoodle = !showDoodle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
+          </button>
+          <button class="art-icon-btn" :class="{ active: !showGallery }" title="切换画廊" @click="showGallery = !showGallery">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>
+          </button>
+        </div>
       </div>
 
-      <div class="flex-1 overflow-y-auto">
-        <PromptPanel
-          :generating="generating"
-          @generate="handleGenerate"
-        />
+      <div class="art-left-body">
+        <PromptPanel :generating="generating" @generate="handleGenerate" />
       </div>
 
-      <div class="p-2 border-t border-gray-800 text-xs text-gray-600 flex items-center justify-between">
+      <div class="art-left-foot">
         <span>{{ gallery.length }} 张作品</span>
-        <button
-          v-if="gallery.length > 0"
-          class="text-red-700 hover:text-red-500 transition-colors"
-          title="清空画廊"
-          @click="clearGallery"
-        >
-          清空
-        </button>
+        <button v-if="gallery.length > 0" class="art-clear-btn" title="清空画廊" @click="clearGallery">清空</button>
       </div>
     </div>
 
     <!-- Center: Canvas / Doodle -->
-    <div class="flex-1 flex flex-col min-w-0">
-      <div
-        v-if="showDoodle"
-        class="flex-1 flex items-center justify-center"
-      >
+    <div class="art-center">
+      <!-- Toolbar -->
+      <div v-if="selectedImage && !showDoodle" class="art-toolbar">
+        <button class="art-zoom-btn" @click="zoom = Math.max(0.1, zoom - 0.2)">−</button>
+        <span class="art-zoom-label">{{ Math.round(zoom * 100) }}%</span>
+        <button class="art-zoom-btn" @click="zoom = Math.min(5, zoom + 0.2)">+</button>
+        <button class="art-zoom-btn" @click="fitCanvas">适应</button>
+        <button class="art-zoom-btn" @click="zoom = 1">1:1</button>
+      </div>
+
+      <div v-if="showDoodle" class="art-canvas-wrap">
         <DoodleCanvas
           :reference-image="selectedImage ? getImageSrc(selectedImage) : ''"
           @close="showDoodle = false"
         />
       </div>
 
-      <div
-        v-else-if="selectedImage"
-        class="flex-1 flex flex-col items-center justify-center p-4 overflow-auto"
-        @wheel="handleWheel"
-      >
-        <div class="flex items-center gap-2 mb-3 shrink-0">
-          <button class="art-btn-sm" @click="zoom = Math.max(0.1, zoom - 0.2)">−</button>
-          <span class="text-xs text-gray-500 w-12 text-center">{{ Math.round(zoom * 100) }}%</span>
-          <button class="art-btn-sm" @click="zoom = Math.min(5, zoom + 0.2)">+</button>
-          <button class="art-btn-sm" @click="fitCanvas">适应</button>
-          <button class="art-btn-sm" @click="zoom = 1">1:1</button>
-        </div>
-
-        <div id="art-canvas" class="flex-1 flex items-center justify-center min-h-0 w-full">
+      <div v-else-if="selectedImage" class="art-canvas-wrap" @wheel="handleWheel">
+        <div id="art-canvas" class="art-image-stage">
           <img
             :src="getImageSrc(selectedImage)"
             :style="{
@@ -195,42 +166,29 @@ function handleWheel(e: WheelEvent) {
               maxWidth: `${100 / zoom}%`,
               maxHeight: `${100 / zoom}%`,
             }"
-            class="rounded-lg shadow-2xl transition-transform duration-150 object-contain"
+            class="art-image"
             draggable="false"
           >
         </div>
-
-        <div class="text-xs text-gray-600 mt-2 shrink-0 text-center">
+        <div class="art-image-info">
           {{ selectedImage.prompt?.slice(0, 100) || '' }}
-          <span class="text-gray-700"> · {{ selectedImage.width }}x{{ selectedImage.height }}</span>
-          <span v-if="selectedImage.provider" class="text-gray-700"> · {{ selectedImage.provider }}</span>
+          <span class="art-image-meta"> · {{ selectedImage.width }}x{{ selectedImage.height }}</span>
+          <span v-if="selectedImage.provider" class="art-image-meta"> · {{ selectedImage.provider }}</span>
         </div>
       </div>
 
-      <!-- Generating state -->
-      <div
-        v-else-if="generating"
-        class="flex-1 flex flex-col items-center justify-center gap-4"
-      >
-        <div class="w-12 h-12 border-3 border-blue-500 border-t-transparent rounded-full animate-spin" />
-        <span class="text-gray-400">弥娅正在创作中...</span>
+      <div v-else-if="generating" class="art-empty">
+        <div class="art-spinner" />
+        <span>弥娅正在创作中...</span>
       </div>
 
-      <!-- Error -->
-      <div
-        v-else-if="error"
-        class="flex-1 flex flex-col items-center justify-center gap-3"
-      >
-        <span class="text-red-400">{{ error }}</span>
-        <button class="art-btn" @click="error = ''">关闭</button>
+      <div v-else-if="error" class="art-empty">
+        <span class="art-error-text">{{ error }}</span>
+        <button class="art-zoom-btn" @click="error = ''">关闭</button>
       </div>
 
-      <!-- Empty -->
-      <div
-        v-else
-        class="flex-1 flex flex-col items-center justify-center gap-3 text-gray-600"
-      >
-        <svg class="w-16 h-16 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div v-else class="art-empty">
+        <svg class="art-empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
         <span>在左侧输入 prompt，让弥娅为你创作</span>
@@ -238,10 +196,7 @@ function handleWheel(e: WheelEvent) {
     </div>
 
     <!-- Right Panel: Gallery -->
-    <div
-      v-if="showGallery"
-      class="right-panel w-64 shrink-0 border-l border-gray-800"
-    >
+    <div v-if="showGallery" class="art-right">
       <GallerySidebar
         :images="gallery"
         :selected-id="selectedImage?.id"
@@ -253,68 +208,221 @@ function handleWheel(e: WheelEvent) {
 </template>
 
 <style scoped>
-.artboard-layout {
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+.art-layout {
+  height: 100%; display: flex; gap: 0.8rem; padding: 0.8rem 1rem;
+  overflow: hidden;
+  perspective: 800px;
+  -webkit-perspective: 800px;
 }
 
-.art-btn {
-  padding: 6px 14px;
-  border-radius: 6px;
-  font-size: 13px;
-  background: #1e293b;
-  color: #e2e8f0;
-  border: 1px solid #334155;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.art-btn:hover {
-  background: #334155;
-  border-color: #475569;
-}
-.art-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.art-btn-sm {
-  padding: 3px 10px;
+/* ── Left Panel ── */
+.art-left {
+  width: 260px; flex-shrink: 0; display: flex; flex-direction: column;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 173, 181, 0.06);
+  box-shadow:
+    3px 3px 10px rgba(0, 40, 50, 0.35),
+    -1px -1px 4px rgba(0, 180, 200, 0.04);
   border-radius: 4px;
-  font-size: 12px;
-  background: #1e293b;
-  color: #cbd5e1;
-  border: 1px solid #334155;
-  cursor: pointer;
-  transition: all 0.15s;
+  transform: rotateY(5deg);
+  transition: transform 0.5s ease;
+  overflow: hidden;
 }
-.art-btn-sm:hover {
-  background: #334155;
-  color: #f1f5f9;
+.art-left:hover { transform: rotateY(3deg); }
+
+.art-left-head {
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid rgba(0, 173, 181, 0.06);
+  flex-shrink: 0;
 }
 
-.art-input {
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: 6px;
-  background: #1a1f2e;
-  border: 1px solid #334155;
-  color: #e2e8f0;
-  font-size: 13px;
-  outline: none;
-  transition: border-color 0.15s;
+.art-back-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 4px;
+  border: 1px solid rgba(0, 173, 181, 0.1);
+  background: rgba(0, 173, 181, 0.04);
+  color: rgba(0, 173, 181, 0.5); cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.art-input:focus {
-  border-color: #3b82f6;
+.art-back-btn:hover {
+  background: rgba(0, 173, 181, 0.1); border-color: rgba(0, 255, 245, 0.3); color: rgba(0, 255, 245, 0.8);
 }
 
-.art-select {
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: 6px;
-  background: #1a1f2e;
-  border: 1px solid #334155;
-  color: #e2e8f0;
-  font-size: 13px;
-  outline: none;
-  cursor: pointer;
+.art-left-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: rgba(0, 255, 245, 0.6);
+  box-shadow: 0 0 6px rgba(0, 255, 245, 0.4);
+  animation: art-dot-breath 2s ease-in-out infinite;
 }
+@keyframes art-dot-breath { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+.art-left-title {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 0.75rem; font-weight: 700; color: #ffffff;
+  letter-spacing: 0.04em; flex: 1;
+}
+.art-left-actions { display: flex; gap: 0.2rem; }
+
+.art-icon-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 4px;
+  border: 1px solid rgba(0, 173, 181, 0.08);
+  background: transparent; color: rgba(200, 200, 200, 0.35);
+  cursor: pointer; transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.art-icon-btn:hover, .art-icon-btn.active {
+  background: rgba(0, 173, 181, 0.1); border-color: rgba(0, 255, 245, 0.25); color: rgba(0, 255, 245, 0.7);
+}
+.art-icon-btn:hover { transform: skewX(-4deg); }
+
+.art-left-body {
+  flex: 1; overflow-y: auto;
+}
+.art-left-body::-webkit-scrollbar { width: 3px; }
+.art-left-body::-webkit-scrollbar-thumb { background: rgba(0, 173, 181, 0.1); border-radius: 2px; }
+
+.art-left-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.4rem 0.6rem; border-top: 1px solid rgba(0, 173, 181, 0.06);
+  font-size: 0.55rem; color: rgba(200, 200, 200, 0.3); flex-shrink: 0;
+}
+
+.art-clear-btn {
+  background: none; border: none; color: rgba(248, 113, 113, 0.4);
+  font-size: 0.55rem; cursor: pointer; transition: color 0.2s;
+}
+.art-clear-btn:hover { color: rgba(248, 113, 113, 0.8); }
+
+/* ── Center ── */
+.art-center {
+  flex: 1; min-width: 0; display: flex; flex-direction: column;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(0, 173, 181, 0.06);
+  box-shadow:
+    3px 3px 10px rgba(0, 40, 50, 0.35),
+    -1px -1px 4px rgba(0, 180, 200, 0.04);
+  border-radius: 4px; overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+
+.art-toolbar {
+  display: flex; align-items: center; gap: 0.3rem;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid rgba(0, 173, 181, 0.06);
+  background: rgba(0, 0, 0, 0.3); flex-shrink: 0;
+}
+
+.art-zoom-btn {
+  padding: 3px 10px; border-radius: 4px; font-size: 0.6rem; cursor: pointer;
+  background: transparent; color: rgba(200, 200, 200, 0.4);
+  border: 1px solid rgba(0, 173, 181, 0.08);
+  font-family: 'JetBrains Mono', monospace;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.art-zoom-btn:hover {
+  background: rgba(129, 191, 241, 0.12); color: rgba(255, 255, 255, 0.85);
+  border-color: rgba(0, 255, 245, 0.2); transform: skewX(-4deg);
+}
+
+.art-zoom-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.58rem;
+  color: rgba(0, 173, 181, 0.4); min-width: 40px; text-align: center;
+}
+
+.art-canvas-wrap {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 0; overflow: auto; padding: 0.6rem;
+}
+
+.art-image-stage {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  min-height: 0; width: 100%;
+}
+
+.art-image {
+  border-radius: 4px;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+  transition: transform 0.15s ease; object-fit: contain;
+}
+
+.art-image-info {
+  font-size: 0.58rem; color: rgba(200, 200, 200, 0.4);
+  margin-top: 0.4rem; text-align: center; flex-shrink: 0; padding: 0 1rem;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.art-image-meta { color: rgba(0, 173, 181, 0.25); }
+
+/* ── Empty / Loading ── */
+.art-empty {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 0.8rem; color: rgba(200, 200, 200, 0.2);
+}
+
+.art-empty-icon { width: 3rem; height: 3rem; opacity: 0.15; }
+
+.art-error-text { color: rgba(248, 113, 113, 0.6); font-size: 0.75rem; }
+
+.art-spinner {
+  width: 36px; height: 36px; border: 2px solid rgba(0, 173, 181, 0.15);
+  border-top-color: rgba(0, 173, 181, 0.8); border-radius: 50%;
+  animation: art-spin 0.8s linear infinite;
+}
+@keyframes art-spin { to { transform: rotate(360deg); } }
+
+/* ── Right Panel ── */
+.art-right {
+  width: 220px; flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 173, 181, 0.06);
+  box-shadow:
+    3px 3px 10px rgba(0, 40, 50, 0.35),
+    -1px -1px 4px rgba(0, 180, 200, 0.04);
+  border-radius: 4px;
+  transform: rotateY(-5deg);
+  transition: transform 0.5s ease;
+  overflow: hidden;
+}
+.art-right:hover { transform: rotateY(-3deg); }
+
+/* Override PromptPanel inner styles */
+:deep(.art-input) {
+  background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(0, 173, 181, 0.08);
+  border-radius: 4px; color: rgba(228, 236, 240, 0.88); font-size: 0.72rem;
+  outline: none; transition: border-color 0.2s;
+}
+:deep(.art-input:focus) { border-color: rgba(0, 255, 245, 0.25); }
+:deep(.art-input::placeholder) { color: rgba(0, 173, 181, 0.3); }
+
+:deep(.art-select) {
+  background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(0, 173, 181, 0.08);
+  border-radius: 4px; color: rgba(228, 236, 240, 0.88); font-size: 0.72rem; outline: none; cursor: pointer;
+}
+
+:deep(label) {
+  color: rgba(228, 236, 240, 0.65) !important; font-size: 0.62rem !important; font-weight: 500;
+}
+
+:deep(.bg-gray-800) { background: rgba(0, 0, 0, 0.45) !important; }
+:deep(.bg-gray-700) { background: rgba(0, 173, 181, 0.12) !important; }
+:deep(.bg-blue-600) { background: rgba(0, 173, 181, 0.2) !important; }
+:deep(.text-gray-400) { color: rgba(228, 236, 240, 0.6) !important; }
+:deep(.text-white) { color: rgba(0, 255, 245, 0.85) !important; }
+:deep(.text-gray-500) { color: rgba(228, 236, 240, 0.65) !important; }
+:deep(.text-gray-300) { color: rgba(0, 255, 245, 0.7) !important; }
+:deep(.text-gray-600) { color: rgba(228, 236, 240, 0.3) !important; }
+:deep(.border-gray-800) { border-color: rgba(0, 173, 181, 0.06) !important; }
+:deep(.border-blue-500) { border-color: rgba(0, 255, 245, 0.3) !important; }
+:deep(.border-gray-600) { border-color: rgba(0, 173, 181, 0.12) !important; }
+:deep(.accent-blue-500) { accent-color: #00ADB5; }
+:deep(.bg-blue-600.text-white) { background: rgba(0, 173, 181, 0.2) !important; color: rgba(0, 255, 245, 0.8) !important; }
+:deep(.hover\:bg-blue-500:hover) { background: rgba(0, 173, 181, 0.25) !important; }
+:deep(.bg-gray-700.text-gray-400) { cursor: wait !important; }
+:deep(.border-b.border-gray-800) { border-color: rgba(0, 173, 181, 0.06) !important; }
+:deep(.from-black\/80) { --tw-gradient-from: rgba(0, 0, 0, 0.7); }
+:deep(.bg-red-600\/80) { background: rgba(248, 113, 113, 0.6) !important; }
+:deep(.border-transparent) { border-color: transparent !important; }
+:deep(.p-3.space-y-3) { padding: 0.5rem 0.6rem !important; }
+:deep(.h-24) { height: 5rem !important; }
 </style>

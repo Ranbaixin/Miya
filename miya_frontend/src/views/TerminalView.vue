@@ -137,7 +137,6 @@ async function initTerminal() {
         } catch (_) { /* ignore */ }
       })
 
-      // Replay buffer
       const buffer = await window.electronAPI?.terminal.getBuffer()
       if (buffer) term?.write(buffer)
     }
@@ -161,7 +160,6 @@ async function initTerminal() {
 }
 
 function goHome() {
-  // Detach xterm but keep the process alive
   detachFromRunning()
   term?.dispose()
   term = null
@@ -182,28 +180,28 @@ onMounted(() => {
 
 onUnmounted(() => {
   destroyXterm()
-  // DO NOT stop the terminal process - keep alive for when user returns
 })
 </script>
 
 <template>
   <div class="terminal-view">
-    <div class="terminal-header">
-      <div class="header-left">
-        <span class="header-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M12 8v8M8 12h8" /></svg>
+    <div class="term-header">
+      <div class="term-header-left">
+        <button class="term-back-btn" title="返回主页 (进程保持运行)" @click="goHome">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+        </button>
+        <span class="term-header-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="15" height="15"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M12 8v8M8 12h8" /></svg>
         </span>
-        <span class="header-title">CCE · 弥娅终端 v2.2.1</span>
-        <span class="header-status" :class="{ running: exitCode === null && statusText.includes('运行'), error: statusText.includes('失败'), exited: exitCode !== null }">
-          {{ statusText }}
+        <span class="term-header-title">CCE · 弥娅终端</span>
+        <span class="term-header-ver">v2.2.1</span>
+        <span class="term-status" :class="{ running: exitCode === null && statusText.includes('运行'), error: statusText.includes('失败'), exited: exitCode !== null }">
+          <span class="term-status-dot" />{{ statusText }}
         </span>
       </div>
-      <div class="header-right">
-        <button class="header-btn" title="返回主页 (进程保持运行)" @click="goHome">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
-        </button>
-        <button class="header-btn" title="重启终端" @click="restartTerminal">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><path d="M1 4v6h6M23 20v-6h-6" /><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" /></svg>
+      <div class="term-header-right">
+        <button class="term-hdr-btn" title="重启终端" @click="restartTerminal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13"><path d="M1 4v6h6M23 20v-6h-6" /><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" /></svg>
         </button>
       </div>
     </div>
@@ -216,93 +214,162 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #0a0a14;
-  border-radius: 8px;
+  padding: 1rem 1.2rem;
+  gap: 0.6rem;
+  perspective: 600px;
+  -webkit-perspective: 600px;
   overflow: hidden;
 }
 
-.terminal-header {
+/* ── Header ── */
+.term-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 1rem;
-  background: rgba(167, 139, 250, 0.06);
-  border-bottom: 1px solid rgba(167, 139, 250, 0.12);
+  padding: 0.5rem 0.8rem;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 173, 181, 0.06);
+  box-shadow:
+    3px 3px 8px rgba(0, 40, 50, 0.3),
+    -2px -2px 6px rgba(0, 180, 200, 0.04);
   flex-shrink: 0;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.term-header:hover {
+  border-color: rgba(0, 255, 245, 0.2);
+  box-shadow:
+    3px 3px 12px rgba(0, 40, 50, 0.4),
+    -2px -2px 8px rgba(0, 180, 200, 0.06);
 }
 
-.header-left {
+.term-header-left {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
-.header-icon {
+.term-back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 173, 181, 0.1);
+  background: rgba(0, 173, 181, 0.04);
+  color: rgba(0, 173, 181, 0.5);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.term-back-btn:hover {
+  background: rgba(0, 173, 181, 0.1);
+  border-color: rgba(0, 255, 245, 0.3);
+  color: rgba(0, 255, 245, 0.8);
+  transform: skewX(-4deg);
+}
+
+.term-header-icon {
   color: var(--miya-primary, #00ADB5);
   display: flex;
 }
 
-.header-title {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  color: #d4d4e8;
+.term-header-title {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #ffffff;
   letter-spacing: 0.05em;
 }
 
-.header-status {
+.term-header-ver {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
-  color: #64748b;
+  font-size: 0.5rem;
+  color: rgba(0, 173, 181, 0.3);
 }
 
-.header-status.running {
-  color: rgba(34, 211, 238, 0.8);
+.term-status {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  color: rgba(200, 200, 200, 0.4);
 }
 
-.header-status.error {
-  color: rgba(248, 113, 113, 0.8);
+.term-status-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: rgba(0, 173, 181, 0.15);
+  flex-shrink: 0;
 }
 
-.header-status.exited {
-  color: rgba(251, 191, 36, 0.8);
+.term-status.running .term-status-dot {
+  background: rgba(34, 211, 238, 0.6);
+  box-shadow: 0 0 6px rgba(34, 211, 238, 0.4);
+  animation: term-dot-breath 2s ease-in-out infinite;
 }
 
-.header-right {
+.term-status.error .term-status-dot {
+  background: rgba(248, 113, 113, 0.6);
+  box-shadow: 0 0 6px rgba(248, 113, 113, 0.4);
+}
+
+.term-status.exited .term-status-dot {
+  background: rgba(251, 191, 36, 0.6);
+  box-shadow: 0 0 6px rgba(251, 191, 36, 0.4);
+}
+
+@keyframes term-dot-breath {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.term-header-right {
   display: flex;
   align-items: center;
   gap: 0.3rem;
 }
 
-.header-btn {
+.term-hdr-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 28px; height: 28px;
   border-radius: 6px;
-  border: 1px solid rgba(167, 139, 250, 0.15);
+  border: 1px solid rgba(0, 173, 181, 0.1);
   background: transparent;
-  color: var(--miya-text-dim, #94a3b8);
+  color: rgba(200, 200, 200, 0.4);
   cursor: pointer;
-  transition: all 0.2s;
-  text-decoration: none;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.term-hdr-btn:hover {
+  background: rgba(129, 191, 241, 0.12);
+  border-color: rgba(0, 255, 245, 0.25);
+  color: rgba(255, 255, 255, 0.85);
+  transform: skewX(-4deg);
 }
 
-.header-btn:hover {
-  background: rgba(167, 139, 250, 0.12);
-  color: #d4d4e8;
-  border-color: rgba(167, 139, 250, 0.3);
-}
-
+/* ── Terminal Container ── */
 .terminal-container {
   flex: 1;
   min-height: 0;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(0, 173, 181, 0.06);
+  border-radius: 6px;
+  box-shadow:
+    3px 3px 10px rgba(0, 40, 50, 0.35),
+    -1px -1px 4px rgba(0, 180, 200, 0.04);
   overflow: hidden;
+  transition: border-color 0.3s ease;
+  backdrop-filter: blur(8px);
+}
+.terminal-container:focus-within {
+  border-color: rgba(0, 255, 245, 0.15);
 }
 
 :deep(.xterm) {
   width: 100%;
   height: 100%;
+  padding: 6px 8px;
 }
 
 :deep(.xterm-screen) {
@@ -312,11 +379,11 @@ onUnmounted(() => {
 
 :deep(.xterm-viewport) {
   scrollbar-width: thin;
-  scrollbar-color: rgba(167, 139, 250, 0.2) transparent;
+  scrollbar-color: rgba(0, 173, 181, 0.12) transparent;
 }
 
 :deep(.xterm-viewport::-webkit-scrollbar) {
-  width: 6px;
+  width: 4px;
 }
 
 :deep(.xterm-viewport::-webkit-scrollbar-track) {
@@ -324,11 +391,11 @@ onUnmounted(() => {
 }
 
 :deep(.xterm-viewport::-webkit-scrollbar-thumb) {
-  background: rgba(167, 139, 250, 0.2);
-  border-radius: 3px;
+  background: rgba(0, 173, 181, 0.12);
+  border-radius: 2px;
 }
 
 :deep(.xterm-viewport::-webkit-scrollbar-thumb:hover) {
-  background: rgba(167, 139, 250, 0.4);
+  background: rgba(0, 173, 181, 0.25);
 }
 </style>

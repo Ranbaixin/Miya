@@ -911,21 +911,37 @@ onUnmounted(() => { destroyKaliTerm() })
 
 <style scoped>
 .security-view {
-  height: 100%; display: flex; flex-direction: column; padding: 28px 28px 16px;
+  height: 100%; display: flex; flex-direction: column; padding: 1rem 1.2rem;
   overflow: hidden; color: var(--miya-text, #E4ECF0);
-  font-family: 'Noto Serif SC', 'Inter', system-ui, sans-serif;
+  font-family: 'Noto Sans SC', 'Inter', system-ui, sans-serif;
+  perspective: 800px; -webkit-perspective: 800px;
 }
 
 /* ── Header ── */
-.sec-header { display: flex; align-items: center; gap: 12px; flex-shrink: 0; margin-bottom: 8px; }
-.back-btn {
-  width: 32px; height: 32px; border-radius: 8px; border: 0.5px solid var(--miya-border); background: rgba(10,8,21,0.3);
-  color: var(--miya-text-dim); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;
-  svg { width: 16px; height: 16px; }
-  &:hover { border-color: var(--miya-accent); color: var(--miya-accent); }
+.sec-header { display: flex; align-items: center; gap: 12px; flex-shrink: 0; margin-bottom: 8px;
+  padding: 0.5rem 0.8rem;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 173, 181, 0.06);
+  box-shadow:
+    3px 3px 8px rgba(0, 40, 50, 0.3),
+    -2px -2px 6px rgba(0, 180, 200, 0.04);
+  border-radius: 4px;
+  transform: rotateY(2deg);
+  transition: border-color 0.3s ease, transform 0.5s ease;
 }
-.sec-title { font-size: 1.5rem; font-weight: 600; letter-spacing: 0.08em; margin: 0; }
-.sec-sub { font-size: 0.6rem; color: var(--miya-text-dim); letter-spacing: 0.12em; }
+.sec-header:hover {
+  border-color: rgba(0, 255, 245, 0.2);
+  transform: rotateY(1deg);
+}
+.back-btn {
+  width: 32px; height: 32px; border-radius: 6px; border: 1px solid rgba(0, 173, 181, 0.1); background: rgba(0, 173, 181, 0.04);
+  color: var(--miya-text-dim); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  svg { width: 16px; height: 16px; }
+  &:hover { border-color: rgba(0, 255, 245, 0.3); color: rgba(0, 255, 245, 0.8); background: rgba(0, 173, 181, 0.1); transform: skewX(-4deg); }
+}
+.sec-title { font-family: 'Noto Serif SC', serif; font-size: 1.1rem; font-weight: 700; letter-spacing: 0.06em; margin: 0; }
+.sec-sub { font-family: 'JetBrains Mono', monospace; font-size: 0.55rem; color: var(--miya-text-dim); letter-spacing: 0.1em; }
 
 /* ── Phase Bar ── */
 .phase-bar {
@@ -942,7 +958,7 @@ onUnmounted(() => { destroyKaliTerm() })
 .phase-icon { font-size: 0.7rem; }
 .phase-label { font-size: 0.55rem; color: var(--miya-text-dim); letter-spacing: 0.04em; }
 .phase-line {
-  width: 32px; height: 1px; background: rgba(167,139,250,0.2); margin: 0 6px;
+  width: 32px; height: 1px; background: rgba(0, 173, 181,0.2); margin: 0 6px;
   transition: background 0.4s;
   &.filled { background: var(--miya-accent); }
 }
@@ -956,13 +972,15 @@ onUnmounted(() => { destroyKaliTerm() })
   overflow-y: auto; padding-right: 6px; transition: width 0.25s ease;
   &.collapsed { width: 28px; padding-right: 0; overflow: hidden; }
 }
+.sec-left::-webkit-scrollbar { width: 3px; }
+.sec-left::-webkit-scrollbar-thumb { background: rgba(0, 173, 181, 0.1); border-radius: 2px; }
 .sec-left-inner { display: flex; flex-direction: column; gap: 10px; }
 .panel-collapse-btn {
-  width: 24px; height: 24px; border-radius: 5px; border: 0.5px solid rgba(167,139,250,0.15);
-  background: rgba(10,8,21,0.2); color: var(--miya-text-dim); cursor: pointer;
+  width: 24px; height: 24px; border-radius: 4px; border: 1px solid rgba(0, 173, 181, 0.1);
+  background: rgba(0, 0, 0, 0.3); color: var(--miya-text-dim); cursor: pointer;
   font-size: 0.55rem; display: flex; align-items: center; justify-content: center;
-  transition: all 0.15s; flex-shrink: 0;
-  &:hover { border-color: var(--miya-accent); color: var(--miya-accent); }
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1); flex-shrink: 0;
+  &:hover { border-color: rgba(0, 255, 245, 0.3); color: var(--miya-accent); background: rgba(0, 173, 181, 0.1); }
 }
 .sec-right {
   flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden;
@@ -970,27 +988,35 @@ onUnmounted(() => { destroyKaliTerm() })
 
 /* ── Target Card ── */
 .target-card {
-  display: flex; gap: 6px; padding: 12px; border-radius: 10px;
-  background: rgba(10,8,21,0.15); border: 0.5px solid var(--miya-border, rgba(167,139,250,0.08));
+  display: flex; gap: 6px; padding: 12px; border-radius: 6px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 173, 181, 0.06);
+  box-shadow:
+    2px 2px 6px rgba(0, 40, 50, 0.3),
+    -1px -1px 3px rgba(0, 180, 200, 0.03);
+  transition: border-color 0.3s ease;
+}
+.target-card:focus-within {
+  border-color: rgba(0, 255, 245, 0.2);
 }
 .target-input {
-  flex: 1; background: rgba(0,0,0,0.25); border: 0.5px solid rgba(167,139,250,0.15);
-  border-radius: 7px; padding: 9px 12px; color: var(--miya-text); font-size: 0.8rem;
+  flex: 1; background: rgba(0,0,0,0.3); border: 1px solid rgba(0, 173, 181, 0.08);
+  border-radius: 5px; padding: 9px 12px; color: var(--miya-text); font-size: 0.8rem;
   outline: none; transition: border-color 0.2s; min-width: 0;
-  &::placeholder { color: rgba(167,139,250,0.25); }
-  &:focus { border-color: var(--miya-accent); }
+  &::placeholder { color: rgba(0, 173, 181, 0.15); }
+  &:focus { border-color: rgba(0, 255, 245, 0.25); }
 }
 .strategy-select {
-  width: 84px; background: rgba(0,0,0,0.25); border: 0.5px solid rgba(167,139,250,0.15);
-  border-radius: 7px; padding: 7px 4px; color: var(--miya-text); font-size: 0.7rem; outline: none; cursor: pointer;
+  width: 84px; background: rgba(0,0,0,0.3); border: 1px solid rgba(0, 173, 181, 0.08);
+  border-radius: 5px; padding: 7px 4px; color: var(--miya-text); font-size: 0.7rem; outline: none; cursor: pointer;
 }
 .scan-btn {
-  padding: 9px 16px; border-radius: 7px; border: none;
-  background: linear-gradient(135deg, var(--miya-accent), color-mix(in srgb, var(--miya-accent) 70%, #ff4444));
-  color: #fff; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.25s;
-  white-space: nowrap;
-  &:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 3px 16px rgba(255,80,80,0.25); }
-  &:disabled { opacity: 0.4; cursor: not-allowed; }
+  padding: 9px 16px; border-radius: 5px; border: none;
+  background: linear-gradient(135deg, rgba(0, 173, 181, 0.8), rgba(0, 200, 210, 0.6));
+  color: #fff; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  white-space: nowrap; font-family: 'Noto Sans SC', sans-serif;
+  &:hover:not(:disabled) { transform: translateY(-1px) skewX(-2deg); box-shadow: 0 3px 16px rgba(0, 173, 181, 0.25); }
+  &:disabled { opacity: 0.35; cursor: not-allowed; }
   &.scanning { animation: scan-pulse 1.5s infinite; }
 }
 @keyframes scan-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.65; } }
@@ -1003,8 +1029,8 @@ onUnmounted(() => { destroyKaliTerm() })
 
 /* ── Progress ── */
 .progress-wrap { display: flex; align-items: center; gap: 6px; }
-.progress-bar { flex: 1; height: 3px; background: rgba(167,139,250,0.08); border-radius: 2px; overflow: hidden; }
-.progress-fill { height: 100%; background: var(--miya-accent); border-radius: 2px; transition: width 0.5s ease; }
+.progress-bar { flex: 1; height: 3px; background: rgba(0, 173, 181, 0.06); border-radius: 2px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--miya-accent), rgba(0, 255, 245, 0.6)); border-radius: 2px; transition: width 0.5s ease; }
 .progress-pct { font-size: 0.58rem; color: var(--miya-text-dim); font-family: 'JetBrains Mono', monospace; }
 .scan-status-msg { font-size: 0.6rem; color: var(--miya-accent); }
 
@@ -1014,20 +1040,20 @@ onUnmounted(() => { destroyKaliTerm() })
   display: flex; align-items: center; gap: 8px; padding: 4px 0 8px;
 }
 .tool-search-input {
-  flex: 1; background: rgba(0,0,0,0.25); border: 0.5px solid rgba(167,139,250,0.12);
-  border-radius: 6px; padding: 6px 10px; color: var(--miya-text); font-size: 0.65rem;
+  flex: 1; background: rgba(0,0,0,0.3); border: 1px solid rgba(0, 173, 181, 0.08);
+  border-radius: 5px; padding: 6px 10px; color: var(--miya-text); font-size: 0.65rem;
   outline: none; transition: border-color 0.2s;
-  &::placeholder { color: rgba(167,139,250,0.2); font-size: 0.6rem; }
-  &:focus { border-color: var(--miya-accent); }
+  &::placeholder { color: rgba(0, 173, 181, 0.15); font-size: 0.6rem; }
+  &:focus { border-color: rgba(0, 255, 245, 0.25); }
 }
 .tool-total { font-size: 0.53rem; color: var(--miya-text-dim); white-space: nowrap; font-family: 'JetBrains Mono', monospace; }
 .tool-loading { font-size: 0.55rem; color: var(--miya-accent); animation: blink 0.8s step-end infinite; }
 .tool-empty { font-size: 0.6rem; color: var(--miya-text-dim); padding: 12px 0; text-align: center; opacity: 0.5; }
 .tool-cat-btn {
   display: flex; align-items: center; gap: 7px; width: 100%; padding: 7px 8px;
-  border: none; border-radius: 6px; background: transparent; color: var(--miya-text-dim);
-  font-size: 0.7rem; cursor: pointer; transition: all 0.15s;
-  &:hover { background: rgba(167,139,250,0.06); color: var(--miya-text); }
+  border: none; border-radius: 5px; background: transparent; color: var(--miya-text-dim);
+  font-size: 0.7rem; cursor: pointer; transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  &:hover { background: rgba(129, 191, 241, 0.1); color: var(--miya-text); transform: skewX(-2deg); }
 }
 .cat-arrow { font-size: 0.45rem; width: 10px; }
 .cat-icon { font-size: 0.7rem; }
@@ -1035,10 +1061,10 @@ onUnmounted(() => { destroyKaliTerm() })
 .cat-count { font-size: 0.53rem; opacity: 0.5; font-family: 'JetBrains Mono', monospace; }
 .tool-grid { display: flex; flex-direction: column; gap: 3px; padding: 3px 4px 6px 22px; }
 .tool-chip {
-  display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; border-radius: 6px;
-  border: 0.5px solid rgba(167,139,250,0.06); background: rgba(10,8,21,0.1);
-  color: var(--miya-text-dim); cursor: pointer; transition: all 0.15s; text-align: left;
-  &:hover:not(:disabled) { border-color: var(--miya-accent); color: var(--miya-text); background: rgba(167,139,250,0.06); }
+  display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; border-radius: 5px;
+  border: 1px solid rgba(0, 173, 181, 0.06); background: rgba(0, 0, 0, 0.3);
+  color: var(--miya-text-dim); cursor: pointer; transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1); text-align: left;
+  &:hover:not(:disabled) { border-color: rgba(0, 255, 245, 0.2); color: var(--miya-text); background: rgba(129, 191, 241, 0.1); transform: skewX(-3deg); }
   &:disabled { opacity: 0.25; }
   &.running { border-color: var(--miya-accent); color: var(--miya-accent); animation: scan-pulse 1s infinite; }
 }
@@ -1056,8 +1082,9 @@ onUnmounted(() => { destroyKaliTerm() })
 .history-list { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
 .history-item {
   display: flex; gap: 6px; align-items: center; padding: 5px 8px; border-radius: 5px;
-  background: rgba(10,8,21,0.08); cursor: pointer; transition: all 0.15s; font-size: 0.62rem;
-  &:hover { background: rgba(167,139,250,0.06); }
+  background: rgba(0, 0, 0, 0.3); cursor: pointer; transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1); font-size: 0.62rem;
+  border: 1px solid transparent;
+  &:hover { background: rgba(129, 191, 241, 0.1); border-color: rgba(0, 255, 245, 0.15); transform: skewX(-2deg); }
 }
 .hist-target { flex: 1; color: var(--miya-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hist-grade { font-weight: 600; font-family: 'JetBrains Mono', monospace; }
@@ -1074,7 +1101,7 @@ onUnmounted(() => { destroyKaliTerm() })
 
 /* ── Scan Terminal ── */
 .scan-terminal {
-  flex: 1; background: rgba(0,0,0,0.25); border: 0.5px solid rgba(167,139,250,0.08);
+  flex: 1; background: rgba(0,0,0,0.25); border: 0.5px solid rgba(0, 173, 181,0.08);
   border-radius: 10px; padding: 12px 16px; overflow-y: auto;
   font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 0.65rem; line-height: 1.6;
 }
@@ -1086,7 +1113,7 @@ onUnmounted(() => { destroyKaliTerm() })
   &.error .log-text { color: rgba(255, 80, 80, 0.8); }
   &.info .log-text { color: var(--miya-text-dim); }
 }
-.log-time { color: rgba(167,139,250,0.3); flex-shrink: 0; font-size: 0.6rem; }
+.log-time { color: rgba(0, 173, 181,0.3); flex-shrink: 0; font-size: 0.6rem; }
 .log-cursor {
   color: var(--miya-accent); animation: blink 1s step-end infinite; font-size: 0.7rem;
 }
@@ -1100,8 +1127,12 @@ onUnmounted(() => { destroyKaliTerm() })
 /* Score Card */
 .score-card {
   display: flex; align-items: center; gap: 16px; padding: 16px;
-  background: rgba(10,8,21,0.15); border: 0.5px solid rgba(167,139,250,0.08);
-  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 173, 181, 0.06);
+  box-shadow:
+    2px 2px 8px rgba(0, 40, 50, 0.3),
+    -1px -1px 4px rgba(0, 180, 200, 0.03);
+  border-radius: 8px;
 }
 .score-circle {
   width: 64px; height: 64px; border-radius: 50%; border: 3px solid;
@@ -1117,24 +1148,30 @@ onUnmounted(() => { destroyKaliTerm() })
 }
 .score-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .action-btn {
-  padding: 6px 12px; border-radius: 6px; font-size: 0.62rem; cursor: pointer;
-  border: 0.5px solid rgba(167,139,250,0.2); background: rgba(10,8,21,0.2); color: var(--miya-text-dim);
-  transition: all 0.15s; white-space: nowrap;
-  &:hover { border-color: var(--miya-accent); color: var(--miya-accent); }
-  &.primary { background: rgba(255,80,80,0.15); border-color: rgba(255,80,80,0.3); color: #ff6666; }
+  padding: 6px 12px; border-radius: 5px; font-size: 0.62rem; cursor: pointer;
+  border: 1px solid rgba(0, 173, 181, 0.1); background: rgba(0, 0, 0, 0.3); color: var(--miya-text-dim);
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1); white-space: nowrap;
+  &:hover { border-color: rgba(0, 255, 245, 0.2); color: var(--miya-accent); background: rgba(129, 191, 241, 0.1); transform: skewX(-3deg); }
+  &.primary { background: rgba(248, 113, 113, 0.1); border-color: rgba(248, 113, 113, 0.2); color: #ff6666; }
 }
 
 /* Findings */
 .findings-section { display: flex; flex-direction: column; gap: 6px; }
 .section-label { font-size: 0.68rem; color: var(--miya-text-dim); letter-spacing: 0.06em; margin: 0; }
 .finding-card {
-  background: rgba(10,8,21,0.12); border: 0.5px solid rgba(167,139,250,0.06);
-  border-radius: 8px; border-left: 3px solid; overflow: hidden;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(0, 173, 181, 0.06);
+  box-shadow:
+    2px 2px 6px rgba(0, 40, 50, 0.25),
+    -1px -1px 3px rgba(0, 180, 200, 0.03);
+  border-radius: 6px; border-left: 3px solid; overflow: hidden;
+  transition: border-color 0.3s ease;
 }
+.finding-card:hover { border-color: rgba(0, 255, 245, 0.1); }
 .finding-header {
   display: flex; align-items: center; gap: 8px; padding: 10px 12px;
   cursor: pointer; transition: background 0.15s;
-  &:hover { background: rgba(167,139,250,0.04); }
+  &:hover { background: rgba(0, 173, 181,0.04); }
 }
 .finding-sev {
   padding: 2px 6px; border-radius: 3px; font-size: 0.5rem; font-weight: 600; color: #000;
@@ -1154,7 +1191,7 @@ onUnmounted(() => { destroyKaliTerm() })
 .rec-label { font-size: 0.6rem; color: var(--miya-text-dim); opacity: 0.7; }
 .rec-chip {
   padding: 2px 8px; border-radius: 4px; font-size: 0.58rem;
-  background: rgba(167,139,250,0.1); color: var(--miya-accent);
+  background: rgba(0, 173, 181,0.1); color: var(--miya-accent);
 }
 
 .no-findings {
@@ -1165,9 +1202,15 @@ onUnmounted(() => { destroyKaliTerm() })
 
 /* ── Security Chat ── */
 .sec-chat {
-  border: 0.5px solid rgba(167,139,250,0.08); border-radius: 10px;
-  background: rgba(10,8,21,0.15);
+  border: 1px solid rgba(0, 173, 181, 0.06); border-radius: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  box-shadow:
+    3px 3px 10px rgba(0, 40, 50, 0.35),
+    -1px -1px 4px rgba(0, 180, 200, 0.04);
+  transition: border-color 0.3s ease;
+  transform: rotateY(-3deg);
 }
+.sec-chat:hover { border-color: rgba(0, 255, 245, 0.12); transform: rotateY(-2deg); }
 .sec-chat-messages {
   flex: 1; overflow-y: auto; padding: 12px 16px 0;
   display: flex; flex-direction: column; gap: 8px;
@@ -1183,34 +1226,34 @@ onUnmounted(() => { destroyKaliTerm() })
 }
 .sec-chat-quick { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; justify-content: center; }
 .sec-chat-qbtn {
-  padding: 6px 14px; border-radius: 7px; font-size: 0.68rem; cursor: pointer;
-  border: 0.5px solid rgba(167,139,250,0.2); background: rgba(167,139,250,0.06);
+  padding: 6px 14px; border-radius: 5px; font-size: 0.68rem; cursor: pointer;
+  border: 1px solid rgba(0, 173, 181, 0.12); background: rgba(0, 173, 181, 0.04);
   color: var(--miya-accent); display: flex; align-items: center; gap: 5px;
-  transition: all 0.15s;
-  &:hover { background: rgba(167,139,250,0.14); border-color: var(--miya-accent); }
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  &:hover { background: rgba(129, 191, 241, 0.12); border-color: rgba(0, 255, 245, 0.2); transform: skewX(-3deg); }
 }
 .sec-chat-cursor {
   color: var(--miya-accent); font-size: 0.7rem; animation: blink 1s step-end infinite; padding-left: 4px;
 }
 .sec-chat-bar {
   display: flex; align-items: center; gap: 6px; padding: 10px 14px;
-  border-top: 0.5px solid rgba(167,139,250,0.08); background: rgba(0,0,0,0.12);
+  border-top: 0.5px solid rgba(0, 173, 181,0.08); background: rgba(0,0,0,0.12);
   border-radius: 0 0 10px 10px;
 }
 .sec-chat-actions { display: flex; gap: 4px; flex-shrink: 0; }
 .sec-chat-qsm {
   width: 28px; height: 28px; border-radius: 6px; font-size: 0.75rem; cursor: pointer;
-  border: 0.5px solid rgba(167,139,250,0.1); background: transparent;
+  border: 0.5px solid rgba(0, 173, 181,0.1); background: transparent;
   color: var(--miya-text-dim); display: flex; align-items: center; justify-content: center;
   transition: all 0.15s;
-  &:hover { border-color: var(--miya-accent); color: var(--miya-accent); background: rgba(167,139,250,0.06); }
+  &:hover { border-color: var(--miya-accent); color: var(--miya-accent); background: rgba(0, 173, 181,0.06); }
 }
 .sec-chat-input {
-  flex: 1; background: rgba(0,0,0,0.25); border: 0.5px solid rgba(167,139,250,0.12);
-  border-radius: 7px; padding: 8px 12px; color: var(--miya-text); font-size: 0.78rem;
+  flex: 1; background: rgba(0,0,0,0.3); border: 1px solid rgba(0, 173, 181, 0.08);
+  border-radius: 5px; padding: 8px 12px; color: var(--miya-text); font-size: 0.78rem;
   outline: none; transition: border-color 0.2s;
-  &::placeholder { color: rgba(167,139,250,0.2); font-size: 0.7rem; }
-  &:focus { border-color: var(--miya-accent); }
+  &::placeholder { color: rgba(0, 173, 181, 0.15); font-size: 0.7rem; }
+  &:focus { border-color: rgba(0, 255, 245, 0.25); }
   &:disabled { opacity: 0.3; }
 }
 .sec-chat-send {
@@ -1223,29 +1266,34 @@ onUnmounted(() => { destroyKaliTerm() })
 
 /* ── Kali Terminal ── */
 .kali-btn {
-  margin-left: auto; padding: 4px 12px; border-radius: 8px; font-size: 0.65rem; cursor: pointer;
+  margin-left: auto; padding: 4px 12px; border-radius: 5px; font-size: 0.65rem; cursor: pointer;
   font-family: 'JetBrains Mono', monospace; white-space: nowrap; display: flex; align-items: center; gap: 4px;
-  transition: all 0.15s;
-  &.term { border: .5px solid rgba(167,139,250,.3); background: rgba(167,139,250,.08); color: var(--miya-accent); }
-  &.term:hover { background: rgba(167,139,250,.18); border-color: var(--miya-accent); }
-  &.term.active { background: rgba(167,139,250,.2); border-color: rgba(180,120,255,.6); color: #b488ff; }
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  &.term { border: 1px solid rgba(0, 173, 181, 0.15); background: rgba(0, 173, 181, 0.06); color: var(--miya-accent); }
+  &.term:hover { background: rgba(129, 191, 241, 0.12); border-color: rgba(0, 255, 245, 0.25); transform: skewX(-4deg); }
+  &.term.active { background: rgba(0, 173, 181, 0.15); border-color: rgba(0, 255, 245, 0.3); color: rgba(0, 255, 245, 0.8); }
 }
 .kali-icon { font-size: 0.7rem; }
 
 .kali-term-wrap { position:fixed; inset:56px 0 0 0; z-index:51; display:flex; flex-direction:column; background:#080618; }
-.kali-toolbar { display:flex; align-items:center; gap:12px; padding:6px 16px; border-bottom:.5px solid rgba(167,139,250,.2); background:rgba(0,0,0,.5); }
+.kali-toolbar { display:flex; align-items:center; gap:12px; padding:6px 16px; border-bottom:.5px solid rgba(0, 173, 181,.2); background:rgba(0,0,0,.5); }
 .kali-label { font-size:.7rem; color:var(--miya-accent); font-family:'JetBrains Mono',monospace; }
 .kali-status { font-size:.55rem; color:var(--miya-text-dim); }
 .kali-hint { margin-left:auto; font-size:.55rem; color:var(--miya-text-dim); opacity:0.5; }
-.kali-btn-minimize { padding:2px 8px; border-radius:4px; font-size:.65rem; cursor:pointer; border:.5px solid rgba(167,139,250,.2); background:transparent; color:var(--miya-text-dim); margin-left:8px; &:hover{background:rgba(167,139,250,.15);color:var(--miya-accent);} }
+.kali-btn-minimize { padding:2px 8px; border-radius:4px; font-size:.65rem; cursor:pointer; border:.5px solid rgba(0, 173, 181,.2); background:transparent; color:var(--miya-text-dim); margin-left:8px; &:hover{background:rgba(0, 173, 181,.15);color:var(--miya-accent);} }
 .kali-btn-close { padding:2px 8px; border-radius:4px; font-size:.65rem; cursor:pointer; border:.5px solid rgba(255,80,80,.2); background:transparent; color:#ff6666; &:hover{background:rgba(255,80,80,.1)} }
-.kali-xterm-box { flex:1; padding:6px 4px 4px 10px; :deep(.xterm){height:100%} :deep(.xterm-viewport){overflow-y:auto} :deep(.xterm-viewport::-webkit-scrollbar){width:6px} :deep(.xterm-viewport::-webkit-scrollbar-thumb){background:rgba(167,139,250,.2);border-radius:3px} }
+.kali-xterm-box { flex:1; padding:6px 4px 4px 10px; :deep(.xterm){height:100%} :deep(.xterm-viewport){overflow-y:auto} :deep(.xterm-viewport::-webkit-scrollbar){width:6px} :deep(.xterm-viewport::-webkit-scrollbar-thumb){background:rgba(0, 173, 181,.2);border-radius:3px} }
 
 /* ── Modal ── */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; }
 .modal-card {
-  background: rgba(10,8,21,0.95); border: 0.5px solid rgba(167,139,250,0.2); border-radius: 16px;
+  background: rgba(0, 0, 0, 0.92);
+  border: 1px solid rgba(0, 173, 181, 0.12);
+  box-shadow:
+    3px 3px 20px rgba(0, 40, 50, 0.5),
+    -2px -2px 10px rgba(0, 180, 200, 0.08);
+  border-radius: 10px;
   padding: 24px; display: flex; flex-direction: column; gap: 12px; min-width: 300px;
-  h3 { margin: 0; font-size: 0.9rem; color: var(--miya-text); }
+  h3 { margin: 0; font-family: 'Noto Serif SC', serif; font-size: 0.9rem; color: var(--miya-text); }
 }
 </style>
