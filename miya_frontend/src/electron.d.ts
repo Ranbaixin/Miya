@@ -7,20 +7,20 @@ export interface CaptureSource {
   appIcon: string | null
 }
 
-export interface CaptureAPI {
+interface CaptureAPI {
   getSources: () => Promise<CaptureSource[] | { permission: string }>
   captureWindow: (sourceId: string) => Promise<string | null>
   openScreenSettings: () => Promise<void>
 }
 
-export interface BackendAPI {
+interface BackendAPI {
   getLogs: () => Promise<string>
   onProgress: (callback: (payload: { percent: number, phase: string }) => void) => () => void
   onLog: (callback: (payload: { line: string }) => void) => () => void
   onError: (callback: (payload: { code: number, logs: string }) => void) => () => void
 }
 
-export interface FloatingAPI {
+interface FloatingAPI {
   enter: () => Promise<void>
   exit: () => Promise<void>
   expand: (toFull?: boolean) => Promise<void>
@@ -35,16 +35,16 @@ export interface FloatingAPI {
   onWindowBlur: (callback: () => void) => () => void
 }
 
-export interface BackgroundsAPI {
+interface BackgroundsAPI {
   scan: () => Promise<string[]>
 }
 
-export interface AutoLaunchAPI {
+interface AutoLaunchAPI {
   get: () => Promise<boolean>
   set: (enabled: boolean) => Promise<void>
 }
 
-export interface TerminalAPI {
+interface TerminalAPI {
   start: (options?: { model?: string }) => Promise<void>
   write: (data: string) => Promise<void>
   resize: (cols: number, rows: number) => Promise<void>

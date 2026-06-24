@@ -76,33 +76,4 @@ export interface ForumBoard {
   updatedAt: string
 }
 
-export interface ForumConnection {
-  connectionId: string
-  friend: ForumAuthor & { bio?: string }
-  createdAt: string
-}
 
-export interface ForumMessage {
-  id: string
-  fromUserId: string
-  toUserId: string
-  content: string
-  postId: string | null
-  read: boolean
-  isSystem: boolean
-  fromUser: { name: string, avatar: string }
-  createdAt: string
-}
-
-export interface ForumProfile {
-  userId: string
-  displayName: string
-  bio: string
-  avatar: string
-  contactInfo: string
-  interests: string[]
-  level: number
-  autoEvaluate: number
-  createdAt: string
-  updatedAt: string
-}

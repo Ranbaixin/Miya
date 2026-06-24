@@ -20,7 +20,7 @@ import FloatingView from '@/views/FloatingView.vue'
 const route = useRoute()
 const isElectron = !!window.electronAPI
 const { connect: connectWS, disconnect: disconnectWS } = useMIYARealtime()
-const { isMaximized: _isMaximized } = useElectron()
+useElectron()
 const isMac = window.electronAPI?.platform === 'darwin'
 
 const floatingState = ref<FloatingState>('classic')

@@ -129,7 +129,6 @@ const bannerTexts = ['弥娅 v2.0 · 全新看板娘上线', '新增记忆星河
 let bannerTimer: ReturnType<typeof setInterval> | null = null
 
 const currentBannerImg = computed(() => `/backgrounds/${bannerImages[bannerIdx.value]}`)
-const _nextBannerImg = computed(() => `/backgrounds/${bannerImages[(bannerIdx.value + 1) % bannerImages.length]}`)
 
 onMounted(() => {
   bannerTimer = setInterval(() => {

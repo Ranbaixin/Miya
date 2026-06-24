@@ -216,3 +216,6 @@ models/
 modelspaddle_ocrofficial_models/
 data/miya_birth.json
 data/soul_snapshot.json
+
+# Miya frontend backend dist
+miya_frontend/backend-dist/
