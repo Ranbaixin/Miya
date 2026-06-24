@@ -2052,16 +2052,32 @@ class ProactiveChatSystem:
             return None
 
     async def _check_ap_boredom_trigger(self, target_id: int, context: ChatContext) -> Optional[ProactiveResult]:
-        """AP 无聊度触发 — AP 引擎内心无聊时，弥娅主动开口"""
+        """AP 无聊度触发 — AP 引擎内心无聊时，弥娅主动开口
+        
+        v8.0: 优先从脊柱读取状态，回退到直接查询 bridge。
+        """
         try:
-            from core.miya_psyarch_bridge import get_psyarch_bridge
+            boredom = 0
+            oxy = 0
 
-            bridge = get_psyarch_bridge()
-            if not bridge or not bridge._initialized:
-                return None
+            # v8.0: 优先从脊柱读取
+            from core.miya_spine import get_spine
+            spine = get_spine()
+            if spine and spine.is_running():
+                state = spine.current_state
+                boredom = state.boredom
+                oxy = state.nt_channels.get("OXY", 0)
+            else:
+                # 回退：直接查询 bridge
+                from core.miya_psyarch_bridge import get_psyarch_bridge
+                bridge = get_psyarch_bridge()
+                if not bridge or not bridge._initialized:
+                    return None
+                snap = bridge.emotion_snapshot()
+                boredom = snap.get("cognitive", {}).get("boredom", 0)
+                nt = snap.get("nt_channels", {})
+                oxy = nt.get("OXY", 0)
 
-            snap = bridge.emotion_snapshot()
-            boredom = snap.get("cognitive", {}).get("boredom", 0)
             if boredom < 0.45:
                 return None
 
@@ -2071,9 +2087,6 @@ class ProactiveChatSystem:
             # 无聊度越高，消息越密集
             if boredom < 0.6 and random.random() > 0.2:
                 return None
-
-            nt = snap.get("nt_channels", {})
-            oxy = nt.get("OXY", 0)
 
             message = await self._generate_and_fallback(
                 "ap_boredom",

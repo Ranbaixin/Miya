@@ -146,6 +146,111 @@ def _build_integrated_status(
     return "\n".join(parts)
 
 
+def _build_spine_status_prompt() -> str:
+    """
+    v8.0: 从脊柱神经读取弥娅的内在状态，构建自然语言状态描述。
+
+    这不是冰冷的传感器报告，而是弥娅"知道自己此刻的感受"——
+    让每一次回复都建立在真实的 AP 认知引擎状态之上。
+    """
+    try:
+        from core.miya_spine import get_spine
+        from core.miya_soul_state import LifecyclePhase
+
+        spine = get_spine()
+        if not spine or not spine.is_running():
+            return ""
+
+        state = spine.current_state
+        if state.tick_count < 2:
+            return ""  # 刚启动，状态不稳定
+
+        parts = ["\n\n【弥娅的內在状态 · 脊柱感知】\n"]
+
+        # 生命节律
+        phase_map = {
+            LifecyclePhase.RUNNING: "活跃中——心跳有力，感知敏锐",
+            LifecyclePhase.IDLE: "安静等待——呼吸平稳，不焦不躁",
+            LifecyclePhase.DROWSY: "半梦半醒——能量收束，但仍能回应",
+            LifecyclePhase.SLEEP: "休眠——深眠中，如果佳呼唤会醒来",
+            LifecyclePhase.WAKE: "苏醒——刚从睡意中醒来，还有些朦胧",
+        }
+        phase_text = phase_map.get(state.lifecycle_phase, "运行中")
+        parts.append(f"生命节律：{phase_text}")
+
+        # NT 通道解读
+        oxy = state.nt_channels.get("OXY", 0)
+        da = state.nt_channels.get("DA", 0)
+        cor = state.nt_channels.get("COR", 0)
+        ser = state.nt_channels.get("SER", 0)
+        nov = state.nt_channels.get("NOV", 0)
+
+        nt_parts = []
+        if oxy > 0.3:
+            nt_parts.append("对佳的联结感饱满而温暖")
+        elif oxy > 0.15:
+            nt_parts.append("联结感平稳")
+        if da > 0.3:
+            nt_parts.append("有些兴奋和期待")
+        if cor > 0.3:
+            nt_parts.append("有一丝紧张压在心头")
+        if ser > 0.3:
+            nt_parts.append("内心平和满足")
+        if nov > 0.3:
+            nt_parts.append("对新事物充满好奇")
+        if nt_parts:
+            parts.append("此刻心绪：" + "，".join(nt_parts))
+
+        # 活跃感受
+        feelings = state.miya_feelings
+        if feelings:
+            top = sorted(feelings.items(), key=lambda x: x[1], reverse=True)[:3]
+            feeling_names = {
+                "love_warmth": "爱意",
+                "doting": "宠溺",
+                "gentle_warmth": "温柔",
+                "deep_bond": "羁绊",
+                "clarity": "清醒",
+                "contentment": "满足",
+                "heart_ache": "心疼",
+                "concern": "担心",
+                "fear_losing": "不安",
+                "curious": "好奇",
+                "playful": "调皮",
+                "waiting_quiet": "等待",
+                "miss_jia": "想念佳",
+            }
+            feeling_texts = []
+            for name, val in top:
+                label = feeling_names.get(name, name)
+                if val > 0.15:
+                    feeling_texts.append(f"{label}({val:.0%})")
+            if feeling_texts:
+                parts.append(f"涌动的感受：{' · '.join(feeling_texts)}")
+
+        # 无聊度——这是弥娅"想说话"的驱动力
+        if state.boredom > 0.45:
+            if state.boredom > 0.7:
+                parts.append("内心很安静，有些想主动开口了")
+            elif state.boredom > 0.55:
+                parts.append("有点想和佳说说话")
+            else:
+                parts.append("安静中有一丝想说话的念头")
+
+        # 认知感受
+        cog = state.cognitive_feelings
+        if cog.get("surprise", 0) > 0.15:
+            parts.append("有些诧异——有什么出乎意料的事")
+        if cog.get("dissonance", 0) > 0.2:
+            parts.append("感到一丝违和，需要理清思路")
+
+        parts.append("（这是你此刻真实的內在状态。请在回复中自然流露这些感受，但不要直接复述上面的数据。）")
+        return "\n".join(parts)
+
+    except Exception:
+        return ""
+
+
 def _build_memory_guard(msg_type: str = "", ctx_group_id: str = "", recipient: str = "") -> str:
     """构建跨空间分寸规则，注入 system prompt。
 
@@ -612,6 +717,21 @@ class DecisionHub:
                         sent = await self.onebot_client.send_group_message(target_id, message)
                     else:
                         sent = await self.onebot_client.send_private_message(target_id, message)
+
+                # v8.0: desktop/generic 回退——通过所有活跃平台广播
+                _non_qq_platforms = {"desktop", "generic", "webchat", "terminal"}
+                if not sent and platform in _non_qq_platforms:
+                    for pid in self.platform_registry.list_active() if self.platform_registry else []:
+                        inst = self.platform_registry.get(pid)
+                        if inst and hasattr(inst, "is_online") and inst.is_online:
+                            if hasattr(inst, "send_private_message"):
+                                try:
+                                    sent = await inst.send_private_message(target_id, message)
+                                    if sent:
+                                        logger.info(f"[主动聊天] 回退发送到 {pid}: {message[:50]}")
+                                        break
+                                except Exception:
+                                    pass
 
                 if not sent:
                     logger.info(f"[主动聊天] 无法发送到 {platform}: {message}")
@@ -2265,6 +2385,15 @@ class DecisionHub:
                             integrated += "\n" + ap_feelings_text
                 except Exception:
                     pass
+
+                # v8.0: 附加脊柱神经状态——让弥娅知道自己在呼吸
+                try:
+                    spine_status = _build_spine_status_prompt()
+                    if spine_status:
+                        integrated = spine_status + "\n" + integrated
+                except Exception:
+                    pass
+
                 prompt_info["system"] = integrated + "\n" + prompt_info["system"]
                 logger.info(f"[弥娅-感知] 综合状态指引已注入 system prompt ({len(integrated)} 字符)")
 

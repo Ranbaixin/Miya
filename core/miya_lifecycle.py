@@ -1,7 +1,16 @@
 """
+[已废弃 / Deprecated - v8.0]
 弥娅系统 v6.0 - 核心生命周期管理 (融合 AstrBot 设计模式)
 
-整合 Miya 核心 + AstrBot 架构设计
+⚠️ 此模块已被 v8.0 的 MiyaSpine 脊柱神经架构取代。
+    MiyaSpine 提供了统一的：
+    - 生命周期编排 (INIT → BOOT → RUNNING → IDLE → DROWSY → SLEEP → SHUTDOWN)
+    - 器官注册与状态广播
+    - 统一心跳驱动
+    - 空闲检测与自动阶段转换
+
+    请使用 core.miya_spine.get_spine() 替代此模块。
+    此模块保留用于向后兼容，将在未来版本中移除。
 """
 
 import logging

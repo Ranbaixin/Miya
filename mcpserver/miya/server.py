@@ -363,6 +363,16 @@ try:
 except Exception as e:
     logger.warning(f"[MCP] APV2.1 桥接初始化失败: {e}")
 
+# v8.0: 脊柱神经 — CCE 终端感知弥娅活着的桥梁
+spine = None
+try:
+    from core.miya_spine import get_spine as _get_spine
+
+    spine = _get_spine()
+    logger.info("[MCP] 弥娅脊柱神经引用就绪")
+except Exception as e:
+    logger.debug(f"[MCP] 脊柱神经引用跳过 (可能未在 daemon 模式): {e}")
+
 # 创建 MCP Server
 server = Server("miya-soul")
 
@@ -524,6 +534,11 @@ async def list_tools():
             inputSchema={"type": "object", "properties": {}, "required": []},
         ),
         Tool(
+            name="miya_get_spine_status",
+            description="v8.0: 获取弥娅脊柱神经状态——弥娅是否活着、生命阶段、当前感受、器官在线状态等。这是让CCE终端感知弥娅'活着的状态'的核心接口。",
+            inputSchema={"type": "object", "properties": {}, "required": []},
+        ),
+        Tool(
             name="miya_collaborate",
             description="使用弥娅协作引擎处理消息（自动选择单模型/链式/并行/角色分工模式）",
             inputSchema={
@@ -670,6 +685,11 @@ async def call_tool(name: str, arguments: dict):
                 "expression": emotion.get_expression(),
                 "memory": memory.get_session_summary(),
                 "ap": ap_data,
+                "spine": {
+                    "available": spine is not None and spine.is_running(),
+                    "phase": spine._phase.value if spine and spine.is_running() else "unknown",
+                    "alive": spine.current_state.is_alive() if spine and spine.is_running() else False,
+                } if spine else {"available": False},
                 "models": {
                     "available": models_data.get("available", False),
                     "count": len(models_data.get("models", [])),
@@ -694,6 +714,32 @@ async def call_tool(name: str, arguments: dict):
 
         elif name == "miya_get_task_types":
             result = model_selector.get_task_types()
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+        elif name == "miya_get_spine_status":
+            if not spine:
+                result = {"available": False, "error": "脊柱未激活 (MCP 独立模式？尝试在 daemon 模式下启动)"}
+            else:
+                try:
+                    spine_status = spine.get_status()
+                    state = spine.current_state
+                    result = {
+                        "available": True,
+                        "alive": state.is_alive(),
+                        "phase": state.lifecycle_phase.value,
+                        "uptime_seconds": spine_status["uptime_seconds"],
+                        "tick_count": spine_status["tick_count"],
+                        "message_count": spine_status["message_count"],
+                        "nt_channels": state.nt_channels,
+                        "active_feelings": spine_status["active_feelings"],
+                        "boredom": round(state.boredom, 3),
+                        "fulfillment": round(state.fulfillment, 3),
+                        "proactive": state.proactive,
+                        "organs_online": state.organs_online,
+                        "lifecycle_summary": state.summary(),
+                    }
+                except Exception as ex:
+                    result = {"available": False, "error": str(ex)}
             return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
         elif name == "miya_collaborate":
@@ -727,6 +773,7 @@ async def main():
     logger.info(f"记忆目录: {MEMORY_DIR}")
     logger.info(f"已加载 {len(personality.personalities)} 个人格")
     logger.info(f"模型池: {'可用' if model_selector.model_pool else '不可用'}")
+    logger.info(f"脊柱神经: {'已连接' if spine and spine.is_running() else '未连接 (独立模式)'}")
 
     async with stdio_server() as (read_stream, write_stream):
         await server.run(read_stream, write_stream, server.create_initialization_options())

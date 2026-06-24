@@ -1,17 +1,14 @@
 """
+[空壳 / Placeholder - v8.0]
 弥娅 v9.0 统一 MCP 服务定义
 
-将服务层 (Perception / Cognition / Decision / Memory / Generation)
-暴露为统一的 MCP 协议工具集。
+⚠️ 此 MCP 服务当前是设计残留——定义了 18 个工具的 JSON Schema
+    但没有实际执行逻辑（未使用 MCP SDK 的 server.run()）。
 
-使用方式:
-    mcpserver/miya_core/unified_server.py
+    实际可用的 MCP 服务是 miya-soul (mcpserver/miya/server.py)，
+    它提供了 17 个工具（含 v8.0 新增的 miya_get_spine_status）。
 
-或通过 .mcp.json 配置:
-    "miya-core": {
-        "command": "python",
-        "args": ["mcpserver/miya_core/unified_server.py"]
-    }
+    此文件保留用于未来 v9.0 统一服务层的设计参考。
 """
 
 import json

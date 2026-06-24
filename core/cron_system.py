@@ -1,5 +1,13 @@
 """
+[已废弃 / Deprecated - v8.0]
 弥娅定时任务系统 (Cron System)
+
+⚠️ 此模块已被 v8.0 的 MiyaSpine 脊柱神经架构取代。
+    MiyaSpine 提供了统一的心跳驱动，配合 hub/scheduler.py 的 Scheduler
+    实现所有定时任务需求。此 CronScheduler 与 hub/Scheduler 功能重叠。
+
+    定时任务请使用 hub/scheduler.py 的 Scheduler 类。
+    此模块保留用于向后兼容，将在未来版本中移除。
 
 功能：
 1. 定时任务执行
@@ -8,9 +16,6 @@
 4. 任务历史记录
 
 参考 AstrBot Cron 实现
-
-作者: MIYA
-日期: 2026-04-28
 """
 
 import asyncio
