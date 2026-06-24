@@ -1,0 +1,3 @@
+[submodule "claude-code-engine"]
+	path = claude-code-engine
+	url = https://github.com/claude-code-best/claude-code.git

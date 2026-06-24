@@ -198,8 +198,8 @@ nul
 # API keys example
 config/api_keys.example.json
 
-# Claude Code Engine (Miya)
-claude-code-engine/
+# Claude Code Engine (managed as git submodule)
+# see .gitmodules
 
 # Vendor
 vendor/
