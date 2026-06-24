@@ -6,10 +6,9 @@ title MIYA v8.0 - Build
 :: ============================================================
 ::  MIYA v8.0 - Frontend Build
 ::
-::  build.bat             build all (CCE + Desktop + Web)
+::  build.bat             build all (CCE + Desktop)
 ::  build.bat cce         CCE terminal only
 ::  build.bat desktop     Electron desktop app only
-::  build.bat web         Web Ops Center only
 :: ============================================================
 
 :: check python
@@ -75,7 +74,7 @@ if /i "%MODE%"=="cce" goto :done
 :check_desktop
 if /i "%MODE%"=="desktop" goto :build_desktop
 if /i "%MODE%"=="all" goto :build_desktop
-goto :check_web
+goto :done
 
 :build_desktop
 echo.
@@ -103,38 +102,6 @@ if exist "miya_frontend\package.json" (
     echo [WARN] miya_frontend not found, skipping...
 )
 if /i "%MODE%"=="desktop" goto :done
-
-:: ==================== Web ====================
-:check_web
-if /i "%MODE%"=="web" goto :build_web
-if /i "%MODE%"=="all" goto :build_web
-goto :done
-
-:build_web
-echo.
-echo ================================================================================
-echo   Building Web Ops Center...
-echo ================================================================================
-echo.
-if exist "frontend\ui\package.json" (
-    cd frontend\ui
-    if not exist "node_modules\" (
-        echo [INFO] Installing web dependencies...
-        call npm install
-    )
-    echo [INFO] Building web frontend...
-    call npm run build
-    if errorlevel 1 (
-        echo [ERROR] Web build failed!
-        cd ..\..
-        pause
-        exit /b 1
-    )
-    cd ..\..
-    echo [OK] Web build complete
-) else (
-    echo [WARN] frontend/ui not found, skipping...
-)
 
 :done
 echo.

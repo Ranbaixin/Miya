@@ -2,10 +2,9 @@
 # ============================================================
 #  MIYA v8.0 - Frontend Build
 #
-#  ./build.sh             build all (CCE + Desktop + Web)
+#  ./build.sh             build all (CCE + Desktop)
 #  ./build.sh cce         CCE terminal only
 #  ./build.sh desktop     Electron desktop app only
-#  ./build.sh web         Web Ops Center only
 # ============================================================
 
 set -e
@@ -83,28 +82,6 @@ build_desktop() {
     fi
 }
 
-# ==================== Web ====================
-build_web() {
-    echo ""
-    echo -e "${BLUE}========================================${NC}"
-    echo -e "${BLUE}  Building Web Ops Center...${NC}"
-    echo -e "${BLUE}========================================${NC}"
-    echo ""
-    if [ -f "frontend/ui/package.json" ]; then
-        cd frontend/ui
-        if [ ! -d "node_modules" ]; then
-            echo -e "${YELLOW}[INFO] Installing web dependencies...${NC}"
-            npm install
-        fi
-        echo -e "${YELLOW}[INFO] Building web frontend...${NC}"
-        npm run build
-        cd ../..
-        echo -e "${GREEN}[OK] Web build complete${NC}"
-    else
-        echo -e "${YELLOW}[WARN] frontend/ui not found, skipping...${NC}"
-    fi
-}
-
 case "$MODE" in
     cce)
         build_cce
@@ -112,13 +89,9 @@ case "$MODE" in
     desktop)
         build_desktop
         ;;
-    web)
-        build_web
-        ;;
     all|*)
         build_cce
         build_desktop
-        build_web
         ;;
 esac
 

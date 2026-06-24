@@ -135,24 +135,13 @@ Cache/
 *.vtube.json
 *.exp3.json
 
-# Old frontend (deprecated - use frontend/ instead)
-miya-desktop/
-miya-pc-ui/
-
-# New frontend
-frontend/node_modules/
-frontend/*/node_modules/
-frontend/*/dist/
-frontend/*/.vite/
+# Old frontend artifacts (deprecated)
 
 # Git
 .git/
 
 # npm
 package-lock.json
-
-# Rust build (Tauri)
-frontend/packages/web/src-tauri/target/
 
 # Temporary files
 $null
