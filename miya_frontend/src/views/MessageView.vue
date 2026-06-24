@@ -2,7 +2,6 @@
 import type { ChatTab, Message } from '@/utils/session'
 import { useEventListener } from '@vueuse/core'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import API from '@/api/core'
 import Markdown from '@/components/Markdown.vue'
 import MessageItem from '@/components/MessageItem.vue'
@@ -11,8 +10,6 @@ import { proxySetSoulEmotion, proxySetState } from '@/utils/live2dProxy'
 import { activeTabId, CURRENT_SESSION_ID, formatRelativeTime, getActiveTab, IS_TEMPORARY_SESSION, latestEmotion, loadCurrentSession, MESSAGES, newSession, saveMessages, switchSession, tabs } from '@/utils/session'
 import { clearSpeakQueue, isPlaying, queueSpeak, stop as stopTTS } from '@/utils/tts'
 import { setMessageViewExpanded } from '@/utils/uiState'
-
-const router = useRouter()
 
 const isSending = ref(false)
 const messageQueue: Array<{ content: string, options?: any }> = []
@@ -181,6 +178,9 @@ async function chatStreamInternal(content: string, options?: { skill?: string, i
 </script>
 
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 const input = defineModel<string>()
 const scrollPanelRef = useTemplateRef<{ scrollTop: (scrollTop: number) => void }>('scrollPanelRef')
 
