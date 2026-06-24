@@ -29,7 +29,6 @@ Miya/
 ├── evolve/        # 演化层
 ├── trust/         # 信任系统
 ├── config/        # 配置文件
-├── frontend/      # 前端 (React + Vue)
 ├── miya_frontend/ # Electron 桌面应用
 ├── claude-code-engine/ # Claude Code 引擎
 ├── data/          # 运行时数据

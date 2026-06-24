@@ -16,7 +16,7 @@ if /i "%1"=="t" goto :terminal
 if /i "%1"=="2" goto :daemon
 if /i "%1"=="d" goto :daemon
 if /i "%1"=="3" goto :desktop
-if /i "%1"=="4" goto :web
+if /i "%1"=="4" goto :ap_engine
 if /i "%1"=="a" goto :all
 
 :menu
@@ -30,8 +30,7 @@ echo   [1] Terminal    Claude Code + DeepSeek V4
 echo   [2] Daemon      Backend (core + platforms + API :9800)
 echo   [2p] Daemon AP   Daemon + APV2.1 cognitive engine
 echo   [3] Desktop     Electron desktop app
-echo   [4] Web         Browser frontend
-echo   [5] AP Engine    Miya interact terminal (APV2.1 + LLM cortex)
+echo   [4] AP Engine    Miya interact terminal (APV2.1 + LLM cortex)
 echo.
 echo   [A] All         Start everything
 echo   [0] Exit
@@ -48,8 +47,7 @@ if "%choice%"=="2" goto :daemon
 if /i "%choice%"=="2p" goto :daemon_ap
 if /i "%choice%"=="d" goto :daemon
 if "%choice%"=="3" goto :desktop
-if "%choice%"=="4" goto :web
-if "%choice%"=="5" goto :ap_engine
+if "%choice%"=="4" goto :ap_engine
 if /i "%choice%"=="a" goto :all
 
 echo [ERROR] Invalid choice
@@ -186,43 +184,6 @@ timeout /t 2 >nul
 goto :restart
 
 :: ============================================================
-:web
-cls
-echo.
-echo ================================================================================
-echo   MIYA Web Frontend (Ops Center)
-echo ================================================================================
-echo.
-
-if not exist "frontend\ui\package.json" (
-    echo [ERROR] frontend/ui not found
-    pause
-    goto :menu
-)
-
-if not exist "frontend\ui\node_modules\" (
-    echo [WARN] Dependencies not installed, running npm install...
-    cd frontend\ui
-    call npm install
-    cd ..\..
-)
-
-echo Cleaning up existing Vite instances...
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr /C:":5173 " ^| findstr "LISTENING"') do (
-    taskkill /F /PID %%a >nul 2>&1
-    echo   Killed PID %%a on port 5173
-)
-
-echo Starting Ops Center on port 5173...
-echo.
-echo   ➜  http://localhost:5173
-echo.
-start "MIYA Web" cmd /c "cd frontend\ui && npm run dev"
-timeout /t 4 >nul
-echo [OK] Ops Center launched
-goto :restart
-
-:: ============================================================
 :all
 cls
 echo.
@@ -232,34 +193,23 @@ echo ===========================================================================
 echo.
 
 :: Daemon (background)
-echo [1/4] Starting Daemon (background)...
+echo [1/3] Starting Daemon (background)...
 start "MIYA Daemon" /B cmd /c "python run/daemon.py --api-port 9800"
 timeout /t 3 >nul
 echo [OK] Daemon started
 
 :: Desktop (background)
 if exist "miya_frontend\package.json" (
-    echo [2/4] Starting Desktop app...
+    echo [2/3] Starting Desktop app...
     start "MIYA Desktop" /B cmd /c "cd miya_frontend && npm run dev"
     timeout /t 2 >nul
     echo [OK] Desktop launched
 ) else (
-    echo [2/4] Desktop app not found, skipped
-)
-
-:: Web (background)
-if exist "frontend\ui\package.json" (
-    echo [3/4] Starting Ops Center (port 5173)...
-    for /f "tokens=5" %%a in ('netstat -ano ^| findstr /C:":5173 " ^| findstr "LISTENING"') do taskkill /F /PID %%a >nul 2>&1
-    start "MIYA Web" /B cmd /c "cd frontend\ui && npm run dev"
-    timeout /t 3 >nul
-    echo [OK] http://localhost:5173
-) else (
-    echo [3/4] Web frontend not found, skipped
+    echo [2/3] Desktop app not found, skipped
 )
 
 :: Terminal (foreground)
-echo [4/4] Starting Terminal (foreground)...
+echo [3/3] Starting Terminal (foreground)...
 echo.
 
 start "MIYA Terminal" wt node claude-code-engine\dist\cli-node.js
@@ -267,7 +217,7 @@ timeout /t 2 >nul
 
 echo.
 echo [OK] All-in-One session ended
-echo (Close Daemon/Desktop/Web windows with Ctrl+C)
+echo (Close Daemon/Desktop windows with Ctrl+C)
 goto :restart
 
 :: ============================================================

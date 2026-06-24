@@ -325,10 +325,7 @@ Miya/
 │   ├── src/                # 渲染进程 (Vue 3, 13 视图, 16 组件)
 │   └── package.json        # electron-builder 打包配置
 │
-├── frontend/               # 独立前端
-│   ├── ui/                 # Vue 3 HUD
-│   └── packages/           # Vue 3 控制面板
-│
+
 ├── config/                 # 配置文件
 │   ├── .env.example        # 环境变量模板
 │   ├── settings.py         # Settings 配置类
