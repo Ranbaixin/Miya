@@ -9,6 +9,7 @@ import asyncio
 import logging
 import os
 import shutil
+import sys
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple
 
@@ -172,27 +173,12 @@ class UVR5Separator(VocalSeparator):
         self.timeout: int = 600
 
     def initialize(self, config: dict) -> bool:
-        self.python_exe = config.get(
-            "uvr5_python",
-            r"D:\AIvoice\GPT-SoVITS-v2pro-20250604-nvidia50\GPT-SoVITS-v2pro-20250604-nvidia50\runtime\python.exe",
-        )
+        self.python_exe = config.get("uvr5_python", sys.executable)
         self.cli_script = config.get(
             "uvr5_cli",
             os.path.join(os.path.dirname(os.path.abspath(__file__)), "uvr5_cli.py"),
         )
-        self.models = config.get(
-            "uvr5_models",
-            [
-                {
-                    "type": "bs_roformer",
-                    "path": r"D:\AIvoice\GPT-SoVITS-v2pro-20250604-nvidia50\GPT-SoVITS-v2pro-20250604-nvidia50\tools\uvr5\uvr5_weights\model_bs_roformer_ep_317_sdr_12.9755.ckpt",
-                },
-                {
-                    "type": "vr",
-                    "path": r"D:\AIvoice\GPT-SoVITS-v2pro-20250604-nvidia50\GPT-SoVITS-v2pro-20250604-nvidia50\tools\uvr5\uvr5_weights\HP5_only_main_vocal.pth",
-                },
-            ],
-        )
+        self.models = config.get("uvr5_models", [])
         self.device = config.get("uvr5_device", "cuda")
         self.timeout = config.get("uvr5_timeout", 600)
         self.is_initialized = True

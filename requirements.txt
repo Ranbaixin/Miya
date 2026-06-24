@@ -1,5 +1,5 @@
 # Miya - All Dependencies (Everything)
-# Main entry point — installs production + dev + platform extras
+# Main entry point - installs production + dev + platform extras
 #
 # Quick install:
 #   All:         pip install -r requirements.txt

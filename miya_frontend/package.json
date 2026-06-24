@@ -7,8 +7,9 @@
   "scripts": {
     "lint": "node scripts/run-eslint.mjs",
     "lint:fix": "node scripts/run-eslint.mjs --fix",
-    "dev": "vite",
-    "dev:web": "npx cross-env WEB_ONLY=1 vite",
+    "dev": "node scripts/esbuild-electron.mjs && cross-env ESBUILD_ELECTRON=1 vite",
+    "dev:web": "cross-env WEB_ONLY=1 vite",
+    "dev:all": "node scripts/esbuild-electron.mjs && cross-env ESBUILD_ELECTRON=1 MIYA_START_BACKEND=1 vite",
     "build": "node scripts/run-build.mjs",
     "preview": "vite preview",
     "dist": "npm run build && electron-builder",

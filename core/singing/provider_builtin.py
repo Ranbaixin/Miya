@@ -10,6 +10,7 @@ import asyncio
 import logging
 import os
 import shutil
+import sys
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -101,10 +102,7 @@ class BuiltinSingingEngine(SingingEngine):
             self.mix_chord_enabled = config.get("mix_chord_enabled", True)
             self.mix_chord_volume = config.get("mix_chord_volume", 50)
 
-            self.uvr5_python = config.get(
-                "uvr5_python",
-                r"D:\AIvoice\GPT-SoVITS-v2pro-20250604-nvidia50\GPT-SoVITS-v2pro-20250604-nvidia50\runtime\python.exe",
-            )
+            self.uvr5_python = config.get("uvr5_python", sys.executable)
             self.uvr5_cli = config.get(
                 "uvr5_cli",
                 os.path.join(os.path.dirname(os.path.abspath(__file__)), "uvr5_cli.py"),
@@ -152,10 +150,7 @@ class BuiltinSingingEngine(SingingEngine):
                     if config.get(k) is not None
                 }
                 demucs_cfg = {
-                    "demucs_python": config.get(
-                        "demucs_python",
-                        r"D:\AIvoice\RVC20240604Nvidia50x0\RVC20240604Nvidia50x0\runtime\python.exe",
-                    ),
+                    "demucs_python": config.get("demucs_python", sys.executable),
                     "demucs_models": config.get("demucs_models", ["htdemucs_ft", "htdemucs"]),
                     "demucs_timeout": config.get("demucs_timeout", 300),
                 }

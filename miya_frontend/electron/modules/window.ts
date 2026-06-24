@@ -112,7 +112,7 @@ export function createWindow(): BrowserWindow {
     resizable: true,
     hasShadow: true,
     transparent: false,
-    show: true,
+    show: false,
     icon: iconPath,
     webPreferences: {
       preload: join(__dirname, 'preload.cjs'),

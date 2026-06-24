@@ -12,6 +12,7 @@ import asyncio
 import logging
 import os
 import shutil
+import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List, Optional
@@ -179,10 +180,7 @@ class BilibiliMusicSource(MusicSource):
 
     def initialize(self, config: dict) -> bool:
         self.timeout = config.get("timeout", 30)
-        self.python_exe = config.get(
-            "bilibili_python",
-            r"D:\AIvoice\RVC20240604Nvidia50x0\RVC20240604Nvidia50x0\runtime\python.exe",
-        )
+        self.python_exe = config.get("bilibili_python", sys.executable)
         self.download_dir = config.get("download_dir", "data/singing_bili_dl")
         os.makedirs(self.download_dir, exist_ok=True)
         self.is_initialized = True

@@ -1,6 +1,6 @@
 import type { Buffer } from 'node:buffer'
 import type { ChildProcess } from 'node:child_process'
-import { spawn } from 'node:child_process'
+import { execSync, spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import process from 'node:process'
@@ -76,6 +76,38 @@ function resolveVenvPython(cwd: string): string {
     : join(cwd, '.venv', 'bin', 'python')
 }
 
+function findPythonExe(): string | null {
+  try {
+    if (process.platform === 'win32') {
+      const result = execSync('where python 2>nul', { timeout: 5000, encoding: 'utf-8' })
+      const lines = result.trim().split('\r\n').filter(Boolean)
+      // Skip Windows Store stub (AppData\Local\Microsoft\WindowsApps)
+      for (const p of lines) {
+        if (existsSync(p) && !p.includes('WindowsApps')) return p
+      }
+    }
+    else {
+      const result = execSync('which python3 || which python', { timeout: 5000, encoding: 'utf-8', shell: '/bin/sh' })
+      const lines = result.trim().split('\n').filter(Boolean)
+      for (const p of lines) {
+        if (existsSync(p)) return p
+      }
+    }
+  }
+  catch { /* fall through */ }
+
+  if (process.platform === 'win32') {
+    // Try py launcher (Python Launcher for Windows)
+    try {
+      execSync('py --version', { timeout: 5000 })
+      return 'py'
+    }
+    catch { /* fall through */ }
+  }
+
+  return null
+}
+
 export function startBackend(): void {
   let cmd: string
   let args: string[]
@@ -95,19 +127,11 @@ export function startBackend(): void {
     cwd = join(__dirname, '..', '..')
     let pythonPath = resolveVenvPython(cwd)
     if (!existsSync(pythonPath)) {
-      const pythonFallbacks = process.platform === 'win32'
-        ? [
-          join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python311', 'python.exe'),
-          'C:/Python/python3.11.9/python.exe',
-          'D:/Python/python3.11.9/python.exe',
-          'C:/Python311/python.exe',
-          'python',
-        ]
-        : ['python3', 'python']
+      // Try to find Python on the system
+      pythonPath = findPythonExe() || ''
 
-      pythonPath = pythonFallbacks.find(p => existsSync(p)) || ''
       if (pythonPath) {
-        console.log('[Backend] 使用 Python:', pythonPath)
+        console.log('[Backend] 使用系统 Python:', pythonPath)
       }
       else {
         console.warn('[Backend] 未找到 Python 解释器，跳过后端启动')
