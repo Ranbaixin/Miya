@@ -54,10 +54,10 @@ function fastElectronPlugin() {
         try {
           await startup()
           started = true
-          console.log('  [electron-fast] Electron 已启动')
+          console.log('  [electron-fast] Electron started')
         }
         catch (err) {
-          console.error('  [electron-fast] Electron 启动失败:', err)
+          console.error('  [electron-fast] Electron start failed:', err)
         }
       })
     },

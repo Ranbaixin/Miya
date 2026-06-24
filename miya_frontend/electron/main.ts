@@ -568,7 +568,7 @@ app.whenReady().then(async () => {
     startBackend()
   }
   else {
-    console.log('[Main] MIYA_NO_BACKEND=1, 跳过自动启动后端')
+    console.log('[Main] MIYA_NO_BACKEND=1, skipping backend auto-start')
   }
 })
 

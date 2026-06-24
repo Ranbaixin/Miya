@@ -131,10 +131,10 @@ export function startBackend(): void {
       pythonPath = findPythonExe() || ''
 
       if (pythonPath) {
-        console.log('[Backend] 使用系统 Python:', pythonPath)
+        console.log('[Backend] Using system Python:', pythonPath)
       }
       else {
-        console.warn('[Backend] 未找到 Python 解释器，跳过后端启动')
+        console.warn('[Backend] Python interpreter not found, skipping backend start')
         appendBackendLog('[Backend] Python not found, skipping backend start')
         return
       }
