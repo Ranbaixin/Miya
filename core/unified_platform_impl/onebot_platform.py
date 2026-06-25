@@ -1645,4 +1645,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         self._ws = None
 
     async def _do_health_check(self) -> bool:
+        # 反向 WS 模式：server 运行即为健康，等待 NapCat 连接
+        if self._reverse_server is not None:
+            return True
         return self._connected and self._ws is not None
