@@ -401,6 +401,33 @@ def _ensure_local_models():
     print(f"  [OK] 本地模型已就绪: {local_models}\n")
 
 
+def _ensure_icons():
+    """从 miya_frontend/public/icon.png 生成编译所需图标"""
+    source_png = PROJECT_ROOT / "miya_frontend" / "public" / "icon.png"
+    if not source_png.exists():
+        print(f"  [WARN] 图标源文件不存在: {source_png}，使用默认图标")
+        return
+
+    targets = [
+        PROJECT_ROOT / "build_assets" / "miya.ico",
+        PROJECT_ROOT / "miya_frontend" / "build" / "icon.ico",
+    ]
+    sizes = [256, 128, 64, 48, 32, 16]
+
+    for dst in targets:
+        if dst.exists():
+            continue
+        try:
+            from PIL import Image
+
+            img = Image.open(source_png)
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            img.save(str(dst), format="ICO", sizes=[(s, s) for s in sizes])
+            print(f"  [OK] 图标已生成: {dst.name}")
+        except Exception as e:
+            print(f"  [WARN] 图标生成失败 {dst}: {e}")
+
+
 def _format_size(size_bytes: int) -> str:
     size = float(size_bytes)
     for unit in ["B", "KB", "MB", "GB"]:
@@ -501,9 +528,7 @@ def build_electron_app():
         shutil.copytree(ws_src, ws_dst)
         print(f"  ws 依赖已就绪")
     # 同步 dist 文件
-    import distutils.dir_util
-
-    distutils.dir_util.copy_tree(str(cce_src / "dist"), str(cce_dist))
+    shutil.copytree(str(cce_src / "dist"), str(cce_dist), dirs_exist_ok=True)
     print(f"  Claude Code Engine 文件已同步\n")
 
     # 2. 构建前端 (Vite build)
@@ -561,6 +586,8 @@ def main():
         print("\n  跳过编译，使用已有 release/Miya/")
     else:
         print("\n[1/4] 编译...")
+        print("\n  → 同步图标...")
+        _ensure_icons()
         print("\n  → 同步本地模型...")
         _ensure_local_models()
         run_pyinstaller()

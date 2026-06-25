@@ -147,7 +147,7 @@ datas = [
 excludes = [
     'tkinter', 'tcl', 'tk',
     'test',
-    'setuptools', 'distutils', 'pip', 'pkg_resources',
+    'setuptools', 'pip', 'pkg_resources',
     'matplotlib.tests', 'pandas.tests',
     'scipy.tests', 'numpy.tests',
     'torch.tests', 'torch.testing',
