@@ -817,32 +817,6 @@ class WebAPI:
                 request = {}
             return {"success": True, "message": "deleted"}
 
-        # ==================== Memory API ====================
-
-        @self.router.get("/api/memory/list")
-        async def list_memories(level: str = "", limit: int = 20, offset: int = 0):
-            return {"success": True, "data": {"items": []}}
-
-        @self.router.post("/api/memory/add")
-        async def add_memory(request: Dict = None):
-            if request is None:
-                request = {}
-            return {"success": True, "message": "added"}
-
-        @self.router.post("/api/memory/delete")
-        async def delete_memory(request: Dict = None):
-            if request is None:
-                request = {}
-            return {"success": True, "message": "deleted"}
-
-        @self.router.get("/api/memory/search")
-        async def search_memories(query: str = "", level: str = "", limit: int = 20):
-            return {"success": True, "data": {"items": []}}
-
-        @self.router.get("/api/memory/stats")
-        async def get_memory_stats():
-            return {"success": True, "data": {}}
-
         # ========== OpenAI 兼容 /v1/chat/completions（供 OpenClaw 等调用） ==========
         @self.router.post("/v1/chat/completions")
         async def openai_chat_completions(request: dict):
