@@ -3,17 +3,80 @@ package ai.miya.shared.model
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+enum class ContentType {
+    @SerialName("text") TEXT,
+    @SerialName("image") IMAGE,
+    @SerialName("sticker") STICKER,
+    @SerialName("voice") VOICE,
+    @SerialName("file") FILE,
+    @SerialName("system") SYSTEM,
+}
+
+@Serializable
+data class ImagePayload(
+    val url: String,
+    @SerialName("thumbnail_url")
+    val thumbnailUrl: String? = null,
+    val width: Int = 0,
+    val height: Int = 0,
+    @SerialName("file_size")
+    val fileSize: Long = 0,
+)
+
+@Serializable
+data class StickerPayload(
+    @SerialName("sticker_id")
+    val stickerId: String,
+    val url: String,
+    val category: String? = null,
+    @SerialName("is_external")
+    val isExternal: Boolean = false,
+)
+
+@Serializable
+data class VoicePayload(
+    val url: String,
+    val duration: Int = 0,
+    @SerialName("file_size")
+    val fileSize: Long = 0,
+)
+
+@Serializable
+data class QuotePayload(
+    @SerialName("message_id")
+    val messageId: String? = null,
+    val content: String = "",
+    val sender: String? = null,
+)
+
 @Serializable
 data class Message(
-    val role: String,
-    val content: String,
+    val id: String? = null,
+    @SerialName("content_type")
+    val contentType: ContentType = ContentType.TEXT,
+    val content: String = "",
+    val role: String = "user",
     val sender: String? = null,
     val timestamp: Long = 0L,
+    val image: ImagePayload? = null,
+    val sticker: StickerPayload? = null,
+    val voice: VoicePayload? = null,
+    val quote: QuotePayload? = null,
 )
 
 @Serializable
 data class ChatSendRequest(
-    val message: String,
+    val message: String? = null,
+    @SerialName("content_type")
+    val contentType: ContentType = ContentType.TEXT,
+    @SerialName("image_url")
+    val imageUrl: String? = null,
+    @SerialName("sticker_id")
+    val stickerId: String? = null,
+    @SerialName("voice_url")
+    val voiceUrl: String? = null,
+    @SerialName("quoted_message_id")
+    val quotedMessageId: String? = null,
     @SerialName("session_id")
     val sessionId: String = "default",
     val platform: String = "mobile",
@@ -28,6 +91,12 @@ data class ChatResponse(
     @SerialName("session_id")
     val sessionId: String? = null,
     val error: String? = null,
+    @SerialName("content_type")
+    val contentType: ContentType = ContentType.TEXT,
+    val image: ImagePayload? = null,
+    val sticker: StickerPayload? = null,
+    val voice: VoicePayload? = null,
+    val quote: QuotePayload? = null,
 )
 
 @Serializable

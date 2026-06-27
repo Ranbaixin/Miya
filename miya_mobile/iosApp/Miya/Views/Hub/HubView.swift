@@ -1,5 +1,9 @@
 import SwiftUI
 
+// ═══════════════════════════════════════════════
+// 中枢面板 (PGR 风格)
+// ═══════════════════════════════════════════════
+
 struct HubView: View {
     @EnvironmentObject var appState: AppState
 
@@ -15,7 +19,7 @@ struct HubView: View {
                     if isLoading {
                         ProgressView()
                             .padding(.top, 100)
-                            .tint(Color("MiyaPrimary"))
+                            .tint(MiyaColors.primary)
                     } else if let error = errorMessage {
                         ErrorCard(message: error) {
                             await loadData()
@@ -31,10 +35,9 @@ struct HubView: View {
                 }
                 .padding(16)
             }
-            .background(Color("MiyaBackground"))
+            .background(MiyaColors.background)
             .navigationTitle("中枢")
             .navigationBarTitleDisplayMode(.large)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .refreshable { await loadData() }
         }
         .task { await loadData() }
@@ -54,48 +57,45 @@ struct HubView: View {
 
     @ViewBuilder
     private func statusSection(_ status: SystemStatusInfo) -> some View {
-        // 系统状态卡片
         HubCard(title: "系统状态") {
             HubRow(label: "运行状态", value: status.running ? "在线" : "离线",
-                   color: status.running ? "MiyaEmotionHappy" : "MiyaEmotionAngry")
+                   color: status.running ? MiyaColors.emotionJoy : MiyaColors.emotionAnger)
             if let version = status.version {
-                HubRow(label: "版本", value: version, color: "MiyaAccent")
+                HubRow(label: "版本", value: version, color: MiyaColors.accent)
             }
             if let uptime = status.uptime {
                 HubRow(label: "运行时间", value: uptime, color: nil)
             }
             HubRow(label: "连接平台",
                    value: "\(status.platformsActive ?? 0)/\(status.platforms ?? 0)",
-                   color: "MiyaAccent")
+                   color: MiyaColors.accent)
             if let providers = status.providersLoaded {
-                HubRow(label: "AI 提供者", value: "\(providers) 个", color: "MiyaPrimary")
+                HubRow(label: "AI 提供者", value: "\(providers) 个", color: MiyaColors.primary)
             }
         }
 
-        // 人格卡片
         HubCard(title: "当前人格") {
             HStack(spacing: 12) {
                 Image(systemName: "face.smiling")
                     .font(.title)
-                    .foregroundColor(Color("MiyaPrimary"))
+                    .foregroundColor(MiyaColors.primary)
                 Text(status.personality ?? "default")
                     .font(.title3)
                     .fontWeight(.medium)
-                    .foregroundColor(.white)
+                    .foregroundColor(MiyaColors.textPrimary)
                 Spacer()
             }
             .padding(.vertical, 4)
         }
 
-        // 连接状态
         HubCard(title: "连接") {
             HStack(spacing: 10) {
                 Circle()
-                    .fill(appState.isConnected ? Color("MiyaEmotionHappy") : Color("MiyaEmotionAngry"))
+                    .fill(appState.isConnected ? MiyaColors.emotionJoy : MiyaColors.emotionAnger)
                     .frame(width: 10, height: 10)
                 Text(appState.isConnected ? "已连接 \(appState.baseURL)" : "未连接")
                     .font(.caption)
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(MiyaColors.textSecondary)
             }
         }
     }
@@ -118,8 +118,6 @@ struct HubView: View {
     }
 }
 
-// MARK: - 复用组件
-
 struct HubCard<Content: View>: View {
     let title: String
     @ViewBuilder let content: () -> Content
@@ -128,30 +126,36 @@ struct HubCard<Content: View>: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundColor(MiyaColors.textPrimary)
             content()
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color("MiyaSurface")))
+        .background(RoundedRectangle(cornerRadius: 16).fill(MiyaColors.surface))
     }
 }
 
 struct HubRow: View {
     let label: String
     let value: String
-    let color: String?
+    let color: Color?
+
+    init(label: String, value: String, color: Color?) {
+        self.label = label
+        self.value = value
+        self.color = color
+    }
 
     var body: some View {
         HStack {
             Text(label)
                 .font(.subheadline)
-                .foregroundColor(.white.opacity(0.6))
+                .foregroundColor(MiyaColors.textSecondary)
             Spacer()
             Text(value)
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundColor(color != nil ? Color(color!) : .white)
+                .foregroundColor(color ?? MiyaColors.textPrimary)
         }
     }
 }
@@ -165,10 +169,10 @@ struct StatItem: View {
             Text("\(value)")
                 .font(.title2)
                 .fontWeight(.bold)
-                .foregroundColor(Color("MiyaPrimary"))
+                .foregroundColor(MiyaColors.primary)
             Text(label)
                 .font(.caption2)
-                .foregroundColor(.white.opacity(0.5))
+                .foregroundColor(MiyaColors.textSecondary)
         }
     }
 }
@@ -181,24 +185,24 @@ struct ErrorCard: View {
         VStack(spacing: 12) {
             Image(systemName: "wifi.slash")
                 .font(.largeTitle)
-                .foregroundColor(Color("MiyaEmotionAngry"))
+                .foregroundColor(MiyaColors.emotionAnger)
             Text("连接失败")
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundColor(MiyaColors.textPrimary)
             Text(message)
                 .font(.caption)
-                .foregroundColor(.white.opacity(0.6))
+                .foregroundColor(MiyaColors.textSecondary)
                 .multilineTextAlignment(.center)
             Button(action: { Task { await onRetry() } }) {
                 Label("重试", systemImage: "arrow.clockwise")
                     .font(.subheadline)
             }
             .buttonStyle(.bordered)
-            .tint(Color("MiyaPrimary"))
+            .tint(MiyaColors.primary)
         }
         .padding(24)
         .frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color("MiyaSurface")))
+        .background(RoundedRectangle(cornerRadius: 16).fill(MiyaColors.surface))
         .padding(.top, 60)
     }
 }

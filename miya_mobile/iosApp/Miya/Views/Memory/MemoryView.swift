@@ -1,5 +1,9 @@
 import SwiftUI
 
+// ═══════════════════════════════════════════════
+// 记忆视图 (PGR 风格)
+// ═══════════════════════════════════════════════
+
 struct MemoryView: View {
     @EnvironmentObject var appState: AppState
 
@@ -10,12 +14,11 @@ struct MemoryView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // 搜索栏
                 HStack {
                     Image(systemName: "magnifyingglass")
-                        .foregroundColor(.white.opacity(0.5))
+                        .foregroundColor(MiyaColors.textSecondary)
                     TextField("搜索记忆...", text: $searchQuery)
-                        .foregroundColor(.white)
+                        .foregroundColor(MiyaColors.textPrimary)
                         .onSubmit { performSearch() }
                     if !searchQuery.isEmpty {
                         Button(action: {
@@ -23,29 +26,27 @@ struct MemoryView: View {
                             performSearch()
                         }) {
                             Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.white.opacity(0.5))
+                                .foregroundColor(MiyaColors.textSecondary)
                         }
                     }
                 }
                 .padding(12)
-                .background(RoundedRectangle(cornerRadius: 14).fill(Color("MiyaSurface")))
+                .background(RoundedRectangle(cornerRadius: 14).fill(MiyaColors.surface))
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
 
-                // 记忆列表
                 if isLoading {
                     Spacer()
-                    ProgressView()
-                        .tint(Color("MiyaPrimary"))
+                    ProgressView().tint(MiyaColors.primary)
                     Spacer()
                 } else if memories.isEmpty {
                     Spacer()
                     VStack(spacing: 8) {
                         Image(systemName: "brain.head.profile")
                             .font(.system(size: 48))
-                            .foregroundColor(.white.opacity(0.3))
+                            .foregroundColor(MiyaColors.textDim)
                         Text("没有找到记忆")
-                            .foregroundColor(.white.opacity(0.5))
+                            .foregroundColor(MiyaColors.textSecondary)
                     }
                     Spacer()
                 } else {
@@ -58,7 +59,7 @@ struct MemoryView: View {
                     .scrollContentBackground(.hidden)
                 }
             }
-            .background(Color("MiyaBackground"))
+            .background(MiyaColors.background)
             .navigationTitle("记忆")
             .navigationBarTitleDisplayMode(.large)
         }
@@ -79,11 +80,9 @@ struct MemoryView: View {
         Task {
             isLoading = true
             do {
-                if searchQuery.isEmpty {
-                    memories = try await appState.apiService.getMemoryList()
-                } else {
-                    memories = try await appState.apiService.searchMemory(searchQuery)
-                }
+                memories = searchQuery.isEmpty
+                    ? try await appState.apiService.getMemoryList()
+                    : try await appState.apiService.searchMemory(searchQuery)
             } catch {
                 memories = []
             }
@@ -100,28 +99,27 @@ struct MemoryCardView: View {
             HStack {
                 Image(systemName: "memorychip")
                     .font(.caption)
-                    .foregroundColor(Color("MiyaPrimary"))
+                    .foregroundColor(MiyaColors.primary)
                 Text(memory.level)
                     .font(.caption)
-                    .foregroundColor(Color("MiyaAccent"))
+                    .foregroundColor(MiyaColors.accent)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 2)
-                    .background(Capsule().fill(Color("MiyaAccent").opacity(0.15)))
+                    .background(Capsule().fill(MiyaColors.accent.opacity(0.15)))
                 if let priority = memory.priority {
                     Spacer()
                     HStack(spacing: 2) {
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 8))
+                        Image(systemName: "star.fill").font(.system(size: 8))
                         Text(String(format: "%.1f", priority))
                     }
                     .font(.caption2)
-                    .foregroundColor(.white.opacity(0.4))
+                    .foregroundColor(MiyaColors.textDim)
                 }
             }
 
             Text(memory.content)
                 .font(.subheadline)
-                .foregroundColor(.white)
+                .foregroundColor(MiyaColors.textPrimary)
                 .lineLimit(3)
 
             if let tags = memory.tags, !tags.isEmpty {
@@ -130,10 +128,10 @@ struct MemoryCardView: View {
                         ForEach(tags, id: \.self) { tag in
                             Text("#\(tag)")
                                 .font(.caption2)
-                                .foregroundColor(Color("MiyaPrimary"))
+                                .foregroundColor(MiyaColors.primary)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background(RoundedRectangle(cornerRadius: 4).fill(Color("MiyaPrimary").opacity(0.12)))
+                                .background(RoundedRectangle(cornerRadius: 4).fill(MiyaColors.primary.opacity(0.12)))
                         }
                     }
                 }
@@ -142,11 +140,11 @@ struct MemoryCardView: View {
             if let date = memory.createdAt {
                 Text(date)
                     .font(.caption2)
-                    .foregroundColor(.white.opacity(0.3))
+                    .foregroundColor(MiyaColors.textDim)
             }
         }
         .padding(14)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color("MiyaSurface")))
+        .background(RoundedRectangle(cornerRadius: 12).fill(MiyaColors.surface))
     }
 }
 

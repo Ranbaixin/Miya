@@ -1,6 +1,7 @@
 import SwiftUI
 
 enum MiyaTab: String, CaseIterable {
+    case miya = "弥娅"
     case chat = "聊天"
     case hub = "中枢"
     case memory = "记忆"
@@ -8,6 +9,7 @@ enum MiyaTab: String, CaseIterable {
 
     var icon: String {
         switch self {
+        case .miya: return "face.smiling"
         case .chat: return "message.fill"
         case .hub: return "circle.hexagongrid.fill"
         case .memory: return "brain.head.profile"
@@ -17,10 +19,16 @@ enum MiyaTab: String, CaseIterable {
 }
 
 struct ContentView: View {
-    @State private var selectedTab: MiyaTab = .chat
+    @State private var selectedTab: MiyaTab = .miya
 
     var body: some View {
         TabView(selection: $selectedTab) {
+            MiyaCharacterView()
+                .tabItem {
+                    Label(MiyaTab.miya.rawValue, systemImage: MiyaTab.miya.icon)
+                }
+                .tag(MiyaTab.miya)
+
             ChatView()
                 .tabItem {
                     Label(MiyaTab.chat.rawValue, systemImage: MiyaTab.chat.icon)
@@ -45,7 +53,7 @@ struct ContentView: View {
                 }
                 .tag(MiyaTab.settings)
         }
-        .tint(Color("MiyaPrimary"))
+        .tint(MiyaColors.primary)
         .preferredColorScheme(.dark)
     }
 }

@@ -209,10 +209,10 @@ final class CubismMetalView: MTKView {
 
 #Preview("Idle") {
     Live2DCharacterView(emotion: .happy, state: .idle)
-        .background(Color("MiyaBackground"))
+        .background(MiyaColors.background)
 }
 
 #Preview("Talking") {
     Live2DCharacterView(emotion: .surprise, state: .talking)
-        .background(Color("MiyaBackground"))
+        .background(MiyaColors.background)
 }

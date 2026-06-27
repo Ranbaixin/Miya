@@ -1,5 +1,9 @@
 import SwiftUI
 
+// ═══════════════════════════════════════════════
+// 设置视图 (PGR 风格)
+// ═══════════════════════════════════════════════
+
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
 
@@ -11,59 +15,51 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
-                // ── 连接设置 ──
                 Section {
                     HStack {
-                        Text("主机")
-                            .foregroundColor(.white.opacity(0.7))
+                        Text("主机").foregroundColor(MiyaColors.textSecondary)
                         TextField("localhost", text: $hostInput)
                             .multilineTextAlignment(.trailing)
-                            .foregroundColor(.white)
+                            .foregroundColor(MiyaColors.textPrimary)
                             .keyboardType(.URL)
                     }
                     HStack {
-                        Text("端口")
-                            .foregroundColor(.white.opacity(0.7))
+                        Text("端口").foregroundColor(MiyaColors.textSecondary)
                         TextField("9800", text: $portInput)
                             .multilineTextAlignment(.trailing)
-                            .foregroundColor(.white)
+                            .foregroundColor(MiyaColors.textPrimary)
                             .keyboardType(.numberPad)
                     }
                     Button(action: reconnect) {
                         HStack {
                             Spacer()
                             Label("重新连接", systemImage: "wifi")
+                                .foregroundColor(MiyaColors.primary)
                             Spacer()
                         }
                     }
-                    .tint(Color("MiyaPrimary"))
                 } header: {
-                    Text("连接设置")
+                    Text("连接设置").foregroundColor(MiyaColors.accent)
                 }
 
-                // ── 连接状态 ──
                 Section {
                     HStack {
                         Circle()
-                            .fill(appState.isConnected ? Color.green : Color.red)
+                            .fill(appState.isConnected ? MiyaColors.emotionJoy : MiyaColors.emotionAnger)
                             .frame(width: 10, height: 10)
                         Text(appState.isConnected ? "已连接 \(appState.baseURL)" : "未连接")
                             .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.7))
+                            .foregroundColor(MiyaColors.textSecondary)
                     }
                 } header: {
-                    Text("连接状态")
+                    Text("连接状态").foregroundColor(MiyaColors.accent)
                 }
 
-                // ── 人格切换 ──
                 Section {
                     if personas.isEmpty {
                         HStack {
-                            ProgressView()
-                                .tint(Color("MiyaPrimary"))
-                            Text("加载中...")
-                                .foregroundColor(.white.opacity(0.5))
-                                .padding(.leading, 8)
+                            ProgressView().tint(MiyaColors.primary)
+                            Text("加载中...").foregroundColor(MiyaColors.textSecondary).padding(.leading, 8)
                         }
                     } else {
                         ForEach(personas) { persona in
@@ -73,49 +69,45 @@ struct SettingsView: View {
                                           ? "checkmark.circle.fill"
                                           : "circle")
                                         .foregroundColor(currentPersonaId == persona.id
-                                            ? Color("MiyaPrimary")
-                                            : .white.opacity(0.3))
+                                            ? MiyaColors.primary
+                                            : MiyaColors.textDim)
                                     VStack(alignment: .leading) {
                                         Text(persona.displayName ?? persona.name)
-                                            .foregroundColor(.white)
+                                            .foregroundColor(MiyaColors.textPrimary)
                                         Text(persona.id)
                                             .font(.caption)
-                                            .foregroundColor(.white.opacity(0.5))
+                                            .foregroundColor(MiyaColors.textSecondary)
                                     }
                                 }
                             }
                         }
                     }
                 } header: {
-                    Text("切换人格")
+                    Text("切换人格").foregroundColor(MiyaColors.accent)
                 }
 
-                // ── 关于 ──
                 Section {
                     HStack {
                         Text("弥娅版本")
                         Spacer()
-                        Text("v8.0")
-                            .foregroundColor(.white.opacity(0.5))
+                        Text("v8.0").foregroundColor(MiyaColors.textSecondary)
                     }
                     HStack {
                         Text("客户端版本")
                         Spacer()
-                        Text("v1.0.0")
-                            .foregroundColor(.white.opacity(0.5))
+                        Text("v1.0.0").foregroundColor(MiyaColors.textSecondary)
                     }
                     HStack {
                         Text("类型")
                         Spacer()
-                        Text("AI 虚拟化身")
-                            .foregroundColor(.white.opacity(0.5))
+                        Text("AI 虚拟化身").foregroundColor(MiyaColors.textSecondary)
                     }
                 } header: {
-                    Text("关于")
+                    Text("关于").foregroundColor(MiyaColors.accent)
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(Color("MiyaBackground"))
+            .background(MiyaColors.background)
             .navigationTitle("设置")
             .navigationBarTitleDisplayMode(.large)
         }

@@ -15,14 +15,15 @@ import ai.miya.android.ui.chat.ChatScreen
 import ai.miya.android.ui.hub.HubScreen
 import ai.miya.android.ui.memory.MemoryScreen
 import ai.miya.android.ui.settings.SettingsScreen
+import ai.miya.android.ui.live2d.MiyaLive2DScreen
 import ai.miya.android.ui.theme.*
-import ai.miya.shared.ServiceLocator
 
 enum class MiyaTab(
     val label: String,
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector,
 ) {
+    MIYA("弥娅", Icons.Filled.Face, Icons.Outlined.Face),
     CHAT("聊天", Icons.Filled.Chat, Icons.Outlined.Chat),
     HUB("中枢", Icons.Filled.Hub, Icons.Outlined.Hub),
     MEMORY("记忆", Icons.Filled.Memory, Icons.Outlined.Memory),
@@ -64,6 +65,7 @@ fun MiyaMainScreen() {
                     .padding(padding)
             ) {
                 when (selectedTab) {
+                    MiyaTab.MIYA -> MiyaLive2DScreen()
                     MiyaTab.CHAT -> ChatScreen()
                     MiyaTab.HUB -> HubScreen()
                     MiyaTab.MEMORY -> MemoryScreen()

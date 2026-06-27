@@ -51,5 +51,11 @@ dependencies {
     implementation(libs.navigation.compose)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.koin.compose)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
     debugImplementation(libs.compose.ui.tooling)
+
+    // Live2D Cubism SDK
+    val cubismAar = fileTree("libs") { include("*.aar") }
+    implementation(cubismAar)
 }
