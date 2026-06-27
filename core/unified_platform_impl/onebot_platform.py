@@ -817,6 +817,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
         msg_type = original.get("message_type", "private")
         target_id = original.get("sender", {}).get("user_id") if msg_type == "private" else original.get("group_id")
+        logger.info(f"[{self.platform_id}] 发送回复: {text[:50]}... -> {msg_type}/{target_id}")
 
         use_voice = self._should_use_voice()
 
