@@ -39,7 +39,6 @@ fun MiyaLive2DComposeView(
             }
             MiyaLive2DGLView.Live2DState.IDLE -> {
                 glView.setMouthOpen(0f)
-                glView.startRandomMotion()
             }
             MiyaLive2DGLView.Live2DState.THINKING -> {
                 glView.setMouthOpen(0f)
@@ -51,12 +50,9 @@ fun MiyaLive2DComposeView(
         factory = { glView },
         modifier = modifier.fillMaxSize(),
         update = { view ->
-            // 模型路径：assets 或本地文件
-            // 部署模型到 android assets: miya_frontend/public/models/弥娅/Miya/
-            val modelPath = "models/miya-model/01.model3.json"
-            if (view.tag != modelPath) {
-                view.tag = modelPath
-                view.loadModel(modelPath)
+            if (view.tag == null) {
+                view.tag = true
+                view.loadModel()
             }
         }
     )

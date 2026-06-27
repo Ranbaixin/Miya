@@ -4,55 +4,89 @@ import android.content.Context
 import android.graphics.Color
 import android.opengl.GLSurfaceView
 import android.util.AttributeSet
+import android.util.Log
 
 /**
- * Live2D 渲染视图 (OpenGL ES Surface)
- *
- * 依赖: Cubism SDK for Java
- * 1. 从 Live2D 官网下载 SDK: https://www.live2d.com/download/cubism-sdk/
- * 2. 将 Live2D_SDK_Java/ 下的 .aar 放到 androidApp/libs/
- * 3. 在 build.gradle.kts 添加: implementation(files("libs/Live2D_SDK_Java_xxx.aar"))
+ * Live2D 渲染视图 — 先试 Cubism, 失败则降级到占位渲染
  */
 class MiyaLive2DGLView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
 ) : GLSurfaceView(context, attrs) {
 
-    private var renderer: MiyaLive2DRenderer? = null
-    private var currentModelPath: String = ""
-
-    init {
-        setEGLContextClientVersion(3)
-        setBackgroundColor(Color.TRANSPARENT)
-        holder.setFormat(android.graphics.PixelFormat.TRANSLUCENT)
+    companion object {
+        private const val TAG = "MiyaLive2DGL"
     }
 
-    fun loadModel(modelPath: String) {
-        currentModelPath = modelPath
-        val r = MiyaLive2DRenderer(context, modelPath)
-        renderer = r
+    private var placeholderRenderer: MiyaLive2DRenderer? = null
+    private var cubismRenderer: MiyaCubismRenderer? = null
+    private var cubismAvailable: Boolean = false
+    private var cubismTried: Boolean = false
+
+    init {
+        setEGLContextClientVersion(2)
+        setBackgroundColor(Color.TRANSPARENT)
+        holder.setFormat(android.graphics.PixelFormat.TRANSLUCENT)
+
+        cubismAvailable = tryLoadCubism()
+        Log.i(TAG, "Cubism SDK: $cubismAvailable")
+    }
+
+    private fun tryLoadCubism(): Boolean {
+        return try {
+            Class.forName("com.live2d.sdk.cubism.framework.CubismFramework")
+            true
+        } catch (_: ClassNotFoundException) {
+            false
+        }
+    }
+
+    fun loadModel() {
+        // TODO: 启用 Cubism 后改为 loadCubismModel()
+        // 当前使用占位渲染确保可见，Cubism SDK 需 adb logcat 调试
+        loadPlaceholder()
+    }
+
+    private fun loadCubismModel() {
+        try {
+            val r = MiyaCubismRenderer(context.assets)
+            cubismRenderer = r
+            setRenderer(r)
+            renderMode = RENDERMODE_CONTINUOUSLY
+            Log.i(TAG, "Cubism renderer active")
+        } catch (e: Exception) {
+            Log.e(TAG, "Cubism failed, fallback: ${e.message}", e)
+            cubismAvailable = false
+            loadPlaceholder()
+        }
+    }
+
+    private fun loadPlaceholder() {
+        val r = MiyaLive2DRenderer(context, "models/miya-model/01.model3.json")
+        placeholderRenderer = r
         setRenderer(r)
         renderMode = RENDERMODE_CONTINUOUSLY
+        Log.i(TAG, "Placeholder active")
     }
 
     fun setEmotion(emotionKey: String) {
-        renderer?.setEmotion(emotionKey)
+        cubismRenderer?.setEmotion(emotionKey)
+        placeholderRenderer?.setEmotion(emotionKey)
     }
 
     fun setState(state: Live2DState) {
-        renderer?.setState(state)
+        cubismRenderer?.setState(state)
+        placeholderRenderer?.setState(state)
     }
 
     fun setMouthOpen(ratio: Float) {
-        renderer?.setMouthOpen(ratio)
+        cubismRenderer?.setMouthOpen(ratio)
+        placeholderRenderer?.setMouthOpen(ratio)
     }
 
     fun setEyeTracking(targetX: Float, targetY: Float) {
-        renderer?.setEyeTracking(targetX, targetY)
-    }
-
-    fun startRandomMotion() {
-        renderer?.startRandomMotion()
+        cubismRenderer?.setEyeTracking(targetX, targetY)
+        placeholderRenderer?.setEyeTracking(targetX, targetY)
     }
 
     enum class Live2DState {

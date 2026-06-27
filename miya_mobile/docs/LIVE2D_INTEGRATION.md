@@ -1,167 +1,84 @@
 # Live2D Cubism SDK 集成指南
 
-## 概述
+## 当前状态
 
-弥娅手机APP 当前使用占位渲染（彩色光晕 + SF Symbol / Vector Drawable）。
-接入 Live2D Cubism SDK 后，将渲染真正的弥娅 Live2D 角色。
-
-## 模型资源
+代码已全部就绪，采用**自动降级架构**：
 
 ```
-miya_frontend/public/models/弥娅/Miya/
-├── 01.model3.json      ← 模型描述文件 (入口)
-├── 01.moc3             ← 模型二进制数据
-├── 01.physics3.json    ← 物理模拟
-├── 01.cdi3.json        ← 碰撞检测
-├── 01.vtube.json       ← VTube Studio 配置
-├── 11.exp3.json        ← 表情 1
-├── 22.exp3.json        ← 表情 2
-└── 01.8192/            ← 纹理贴图目录
-    └── ...
+MiyaLive2DGLView.kt (入口)
+  ├── 检测 CubismFramework 类是否存在
+  │   ├── 存在 → MiyaCubismRenderer.kt (真·Live2D)
+  │   └── 不存在 → MiyaLive2DRenderer.kt (光晕占位)
 ```
 
-## 步骤
+当前编译使用光晕占位。接入 SDK 后自动切换为真正的弥娅 Live2D 渲染。
 
-### 1. 获取 Cubism SDK
+## 三步接入
 
-从 Live2D 官网下载 SDK（需注册并同意许可协议）：
+### 第一步：下载 SDK
 
-- **Cubism SDK for Java** (Android)
-  - https://www.live2d.com/download/cubism-sdk/download-native/
-  - 选择 "Cubism SDK for Java"
-  
-- **Cubism SDK for Native** (iOS)
-  - https://www.live2d.com/download/cubism-sdk/download-native/
-  - 选择 "Cubism SDK for Native"
+从 Live2D 官网获取 **Cubism SDK for Java**：
+https://www.live2d.com/download/cubism-sdk/
 
-### 2. Android 集成
+需要注册账号并同意许可协议。
 
-#### 2.1 导入 SDK
+### 第二步：放入 AAR
 
-```bash
-# 解压下载的 SDK
-# 将 Live2D_SDK_Java_xxx/ 目录下的 .aar 放入:
-miya_mobile/androidApp/libs/Live2D_SDK_Java.aar
+解压下载的 ZIP，找到 `.aar` 文件（类似 `Live2D_SDK_Java_*.aar`），放入：
+
+```
+miya_mobile/androidApp/libs/
 ```
 
-#### 2.2 修改 build.gradle.kts
+### 第三步：启用依赖
+
+编辑 `miya_mobile/androidApp/build.gradle.kts`，取消注释这两行：
 
 ```kotlin
-// androidApp/build.gradle.kts
-dependencies {
-    implementation(files("libs/Live2D_SDK_Java.aar"))
-    // ...
-}
+val cubismAar = fileTree("libs") { include("*.aar") }
+implementation(cubismAar)
 ```
 
-#### 2.3 部署模型资源
+### 第四步：启用渲染代码
+
+编辑 `miya_mobile/androidApp/src/main/kotlin/ai/miya/android/ui/live2d/MiyaCubismRenderer.kt`，
+逐个取消注释标记为 `/* ... */` 的代码块。
+
+然后编辑 `miya_mobile/androidApp/src/main/kotlin/ai/miya/android/ui/live2d/MiyaLive2DGLView.kt`，
+在 `loadCubismModel()` 方法中取消注释 Cubism 初始化代码。
+
+### 第五步：编译安装
 
 ```bash
-# 模型文件已自动部署到:
-androidApp/src/main/assets/models/miya-model/
-# 入口文件: 01.model3.json
+gradlew :androidApp:assembleDebug
 ```
 
-#### 2.4 启用 Cubism 渲染
+安装 APK，打开 APP 即可看到真正的弥娅 Live2D 角色。
 
-在 `MiyaLive2DRenderer.kt` 中取消注释 Cubism SDK 相关代码块，
-替换 `drawPlaceholderGlow()` 为 Cubism 渲染管线。
+## 关键文件
 
-关键 API：
+| 文件 | 作用 |
+|------|------|
+| `MiyaLive2DGLView.kt` | GLSurfaceView，自动检测 SDK |
+| `MiyaLive2DRenderer.kt` | 光晕占位渲染（当前使用） |
+| `MiyaCubismRenderer.kt` | Cubism 原生渲染（SDK 接入后启用） |
+| `MiyaLive2DCompose.kt` | Compose 包装组件 |
+| `assets/models/miya-model/` | 弥娅 Live2D 模型文件 |
 
-```kotlin
-// 初始化
-CubismFramework.initialize()
+## 表情映射
 
-// 加载模型
-val model = CubismNativeModel("models/弥娅/Miya")
-model.loadModel()       // 读取 .model3.json
-model.createRenderer()  // 创建 GL 渲染器
+弥娅 6 种情感 → Live2D 参数的映射已在 `MiyaCubismRenderer.applyEmotionParameters()` 中定义：
 
-// 每帧渲染
-model.update(deltaTime)
-model.draw(cubismMatrix)
+| 情感 | 眉毛 | 眼睛 | 嘴巴 |
+|------|------|------|------|
+| happy | 放松 | 微眯 | 嘴角上扬 |
+| sad | 下垂 | 半闭 | 嘴角下压 |
+| angry | 紧锁 | 睁大 | 默认 |
+| surprise | 上挑 | 大睁 | 微张 |
+| neutral | 默认 | 默认 | 默认 |
 
-// 表情控制
-model.setExpression("happy")  // 加载 .exp3.json
-model.setParameterValue("ParamMouthOpenY", 0.6f)
-model.setParameterValue("ParamEyeBallX", 0.2f)
-model.setParameterValue("ParamEyeBallY", 0.1f)
+## 眼球追踪 + 口型同步
 
-// 动作
-motionManager.startMotion("idle_01", priority = 2)
-```
-
-### 3. iOS 集成
-
-#### 3.1 导入 SDK
-
-将 SDK 中的 `Cubism.xcframework` 拖入 Xcode 项目：
-
-```
-iosApp/
-├── Frameworks/
-│   └── Cubism.xcframework/
-```
-
-在 Xcode → Target → General → Frameworks, Libraries, and Embedded Content 中
-添加 `Cubism.xcframework`，设为 "Embed & Sign"。
-
-#### 3.2 配置 Bridging Header
-
-创建 `iosApp/Miya/Miya-Bridging-Header.h`：
-
-```objc
-#import <CubismFramework/CubismFramework.hpp>
-```
-
-在 Xcode → Build Settings → Swift Compiler - General → Objective-C Bridging Header 中设置路径为 `Miya/Miya-Bridging-Header.h`。
-
-#### 3.3 部署模型资源
-
-将 `miya_frontend/public/models/弥娅/Miya/` 文件夹拖入 Xcode 项目，
-确保在 Build Phases → Copy Bundle Resources 中。
-
-#### 3.4 启用 Cubism 渲染
-
-在 `Live2D/Live2DView.swift` 中取消注释 `CubismLive2DView` 代码，
-实现 `CubismMetalView` 使用 Metal + Cubism SDK 渲染管线。
-
-### 4. 表情映射
-
-弥娅模型的表情 (.exp3.json) 与情感状态的对应关系：
-
-| 情感 | 表情文件 | Live2D Key |
-|------|---------|------------|
-| 开心 | 11.exp3.json (推测) | happy |
-| 喜悦 | 11.exp3.json | happy |
-| 悲伤 | 22.exp3.json (推测) | sad |
-| 愤怒 | 自定义参数 | angry |
-| 惊讶 | 自定义参数 | surprise |
-| 平静 | 默认 | neutral |
-
-> **注意**：实际表情文件名称可能不同，需要检查 `.exp3.json` 文件内容确认。
-> 可以通过 `CubismViewer` 或 Live2D Cubism Editor 查看模型结构。
-
-### 5. 眼球追踪
-
-手机端支持触摸点追踪（手指触摸屏幕位置映射到眼球方向）：
-
-- Android: 监听 `onTouchEvent` → 转换为模型坐标 → `ParamEyeBallX/Y`
-- iOS: 监听手势 → `DragGesture` → 转换坐标 → 更新模型参数
-
-当前代码中 `setEyeTracking(x, y)` 已预留接口。
-
-### 6. 口型同步
-
-TTS 输出时驱动口型动画：
-- 从音频流获取音量包络
-- 映射到 `ParamMouthOpenY` (0.0 - 1.0)
-- 已在 `MiyaLive2DRenderer.setMouthOpen()` 预留接口
-
-## 注意事项
-
-1. **许可协议**：Cubism SDK 有特定的许可条款，发布应用前请确认合规。
-2. **模型版权**：确保拥有弥娅 Live2D 模型的使用权。
-3. **性能**：手机端渲染 Live2D 对 GPU 有一定要求，建议在低端机型上降低纹理分辨率。
-4. **内存**：模型文件约 2-5MB，加载后在内存中占用 10-30MB。
+- 触摸屏幕 → `setEyeTracking(x, y)` → ParamEyeBallX/Y
+- TTS 音量 → `setMouthOpen(ratio)` → ParamMouthOpenY
+- 接口已预留，接入音频/触摸输入即可启用
