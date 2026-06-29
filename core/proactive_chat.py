@@ -1865,6 +1865,7 @@ class ProactiveChatSystem:
         meta = self._build_memory_context(intent.target_id)
         rich = await self._build_rich_context(intent.target_id)
         memory = f"{rich}\n{meta}".strip() if rich else meta
+        persona = self._build_persona_context()
         fallback = self._actional_fallback_prompt
         if not fallback:
             return None
@@ -1874,7 +1875,10 @@ class ProactiveChatSystem:
             turn_number=intent.turns_taken + 1,
             max_turns=intent.max_extra_turns,
         )
-        parts = [fallback]
+        parts = []
+        if persona:
+            parts.append(f"【当前人设】\n{persona}\n")
+        parts.append(fallback)
         if intent.continuation_history:
             parts.append("")
             parts.append("【已发送的持续推进消息】")

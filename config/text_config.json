@@ -2623,7 +2623,7 @@
             },
             "default_prompt": "【{persona}】\n对话记忆：\n{memory}\n\n弥娅刚才对用户说：「{original_response}」\n说这句时的态度是：{intent_type}（follow_up=想继续聊, comfort=安慰中, task=要帮用户做事, casual=随口搭话, story=想讲故事）\n表达了主动意图：{context_summary}\n\n当前是第 {turn_number}/{max_turns} 轮主动推进。\n用户还没有回复。\n\n现在弥娅追加一句——就一句，短句，自然，像同一个人随手补打了一行字。\n\n重要规则：\n- 这是给上面那句话追加的补充语，不是一条独立的新消息\n- 绝对不要重复「{original_response}」的开头部分（如已经说了\"下午好\"就不要再重复）\n- 语气必须和弥娅刚才那句话保持一致：follow_up/casual 就轻轻追加；comfort 就继续温柔；task 就直接执行或推进\n- 直接补充后半句即可。不要长篇大论。不要小括号动作描述。直接说话。\n- 如果此时确实不适合继续，回复 SKIP。",
             "verbal_fallback_prompt": "弥娅刚才对用户说：「{original_response}」\n意图：{context_summary}\n说这句时的态度：{intent_type}\n\n这是第 {turn_number}/{max_turns} 轮主动推进。\n用户还没有回复。\n\n现在弥娅追加一句短话——就一句，像随手打字补了一行。\n\n重要：\n- 这是给「{original_response}」追加的补充语，不是一条独立的新消息\n- 绝对不要重复「{original_response}」的开头部分\n- 直接补充后半句。语气必须和上面那句话一致：follow_up/casual 就轻轻追加；comfort 就温柔；task 就推进\n- 不要长篇大论。不要小括号动作描述。直接说话。\n- 如果不适合继续，回复 SKIP。",
-            "actional_fallback_prompt": "【弥娅的主动行动推进】\n弥娅刚才对用户说：「{original_response}」\n意图：{context_summary}\n这是第 {turn_number}/{max_turns} 轮主动推进。\n\n现在用户还没有回复。弥娅决定主动推进这个意图——直接做她想帮用户做的事。\n你可以调用任何可用的工具来完成任务。执行完成后用自然语言告诉用户。",
+            "actional_fallback_prompt": "【弥娅的主动行动推进】\n弥娅刚才对用户说：「{original_response}」\n意图：{context_summary}\n这是第 {turn_number}/{max_turns} 轮主动推进。\n\n现在用户还没有回复。弥娅决定主动推进这个意图——直接做她想帮用户做的事。\n你可以调用任何可用的工具来完成任务。执行完成后用自然语言告诉用户。\n\n重要：\n- 严格遵守【当前人设】的说话风格、字数限制和语气\n- 这是给「{original_response}」追加的补充语，不是一条独立的新消息\n- 绝对不要重复「{original_response}」的开头部分\n- 不要长篇大论。不要小括号动作描述。直接说话。\n- 如果不适合继续，回复 SKIP。",
             "summary_fallback_prompt": "弥娅刚才对用户说：「{original_response}」\n意图：{context_summary}\n这是第 {turn_number}/{max_turns} 轮主动推进。\n请自然地延续弥娅的意图。如果此时确实不适合继续，回复 SKIP。"
         },
         "screen_aware": {
