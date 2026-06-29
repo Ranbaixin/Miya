@@ -289,8 +289,9 @@ class Personality:
 
         return None
 
-    def get_status_for_prompt(self) -> str:
-        form_info = self.get_current_form()
+    def get_status_for_prompt(self, user_id: str = "", group_id: str = "") -> str:
+        form_name = self.get_form_for_chat(user_id, group_id)
+        form_info = self.get_form_config(form_name)
         if self._use_yaml and self._loader and form_info:
             return self._loader.get_status_for_prompt(form_info)
         return form_info.get("status_prompt", "")

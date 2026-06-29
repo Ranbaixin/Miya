@@ -9,6 +9,8 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List
 
+from core.token_utils import count_message_tokens
+
 logger = logging.getLogger(__name__)
 
 
@@ -310,7 +312,7 @@ class ConversationContextManager:
                     logger.debug(f"[对话上下文] 加载对话历史: {len(recent_messages)} 条")
 
                     for msg in recent_messages:
-                        token_estimate = len(msg.content) // 4
+                        token_estimate = count_message_tokens(msg.content)
                         if total_tokens + token_estimate > self.conversation_context_max_tokens:
                             break
                         context.append(

@@ -22,6 +22,7 @@ from core.text_loader import get_text
 from core.model_pool_manager import TaskType
 
 # 导入辅助模块
+from hub.context_builder import ContextBuilder, ConsumerRequest
 from hub.conversation_context import ConversationContextManager
 from hub.memory_manager import MemoryManager
 
@@ -428,13 +429,16 @@ class DecisionHub:
             identity=self.identity,
         )
 
-        # 5. 对话上下文管理器
+        # 5. 对话上下文管理器（保留 topic tracking 功能）
         self.conversation_context_manager = ConversationContextManager(
             memory_net=self.memory_net,
             enable_conversation_context=self.enable_conversation_context,
             conversation_context_max_count=self.conversation_context_max_count,
             conversation_context_max_tokens=self.conversation_context_max_tokens,
         )
+
+        # 5b. 统一上下文管道 (v8.0+): 一次读取，多组件共享
+        self.context_builder = ContextBuilder(memory_net=self.memory_net)
 
         # 6. 平台工具管理器
         self.platform_tools_manager = PlatformToolsManager(tool_subnet=self.tool_subnet)
@@ -452,6 +456,15 @@ class DecisionHub:
         self._deferred_init_complete = False
         self.proactive_chat = None
         self._start_deferred_init()
+
+    @staticmethod
+    def _calc_cognitive_limit(conversation_context: list, needs_recall: bool = False) -> int:
+        conv_len = len(conversation_context) if conversation_context else 0
+        if needs_recall or conv_len > 15:
+            return 30
+        elif conv_len > 5:
+            return 15
+        return 5
 
     def _init_soul_snapshot(self):
         """启动时加载 soul 缓存快照，避免冷启动等待"""
@@ -1717,10 +1730,41 @@ class DecisionHub:
                 session_id = f"{platform}_{user_id}"
             user_id_str = str(user_id)
 
+            _needs_recall = self.conversation_context_manager.check_needs_recall(content)
+            _is_deep = self.conversation_context_manager._is_deep_discussion(content)
+
             async def fetch_conversation_context():
-                return await self.conversation_context_manager.get_conversation_context(
-                    session_id, current_input=content
+                self.conversation_context_manager._update_topic_tracking(session_id, content)
+                base_limit = self.conversation_context_manager.conversation_context_max_count
+                max_tokens = self.conversation_context_manager.conversation_context_max_tokens
+
+                if _needs_recall:
+                    main_msgs = max(base_limit * 2, 80)
+                elif _is_deep:
+                    main_msgs = max(base_limit * 2, 60)
+                else:
+                    main_msgs = base_limit
+
+                allocation = await self.context_builder.build(
+                    session_id=session_id,
+                    current_input=content,
+                    consumers=[
+                        ConsumerRequest("main_prompt", max_messages=main_msgs, max_tokens=max_tokens, priority=1),
+                        ConsumerRequest("soul_analysis", max_messages=24, max_tokens=3000, priority=2, per_message_max_chars=300),
+                    ],
+                    needs_recall=_needs_recall,
+                    is_deep_discussion=_is_deep,
                 )
+
+                self._last_context_allocation = allocation
+
+                context = allocation.get("main_prompt")
+                logger.info(
+                    f"[对话上下文] 统一管道: {allocation.total_messages}条 -> "
+                    f"main={len(context)}条/{allocation.slices.get('main_prompt').token_count if 'main_prompt' in allocation.slices else 0}t, "
+                    f"soul={len(allocation.get('soul_analysis'))}条"
+                )
+                return context
 
             async def fetch_knowledge_context():
                 if self.knowledge_graph:
@@ -1943,7 +1987,7 @@ class DecisionHub:
                     cmc = await cognitive_engine.build_context(
                         user_input=content,
                         conversation_history=conversation_context,
-                        limit=5,
+                        limit=self._calc_cognitive_limit(conversation_context, _needs_recall),
                         user_id=query_user_id,
                         group_id=query_group_id,
                     )
@@ -1957,7 +2001,8 @@ class DecisionHub:
                 sr = None
                 try:
                     if self._soul_generator:
-                        history = conversation_context if conversation_context else []
+                        allocation = getattr(self, '_last_context_allocation', None)
+                        history = allocation.get("soul_analysis") if allocation else (conversation_context if conversation_context else [])
                         ai_client_for_soul = None
                         if self.model_pool:
                             try:
@@ -2201,7 +2246,11 @@ class DecisionHub:
             # ============================================================
             # 构建提示词所需变量（status_prompt, protection_prompt, message_type）
             # ============================================================
-            status_prompt = self.personality.get_status_for_prompt()
+            group_id_extra = context.get("group_id", "0") if context else "0"
+            status_prompt = self.personality.get_status_for_prompt(
+                user_id=str(user_id) if user_id else "",
+                group_id=str(group_id_extra) if group_id_extra and group_id_extra != 0 else "",
+            )
             protection_prompt = context.get("_protection_prompt", "")
             message_type = context.get("message_type", "unknown")
 
@@ -2442,7 +2491,6 @@ class DecisionHub:
                     f"[决策层] tool_context中 onebot_client={tool_context.get('onebot_client')}, send_like_callback={tool_context.get('send_like_callback')}"
                 )
                 self.ai_client.set_tool_context(tool_context)
-                self._temp_tool_context = tool_context
 
             # 调用 AI（带工具）
             # 【修改】使用 auto 让 AI 自行决定是否调用工具
@@ -2494,11 +2542,7 @@ class DecisionHub:
                         from core.ai_client import AIClientFactory
 
                         # 使用正确的tool_context，包含onebot_client和send_like_callback
-                        tool_ctx_for_collab = (
-                            self._temp_tool_context
-                            if hasattr(self, "_temp_tool_context") and self._temp_tool_context
-                            else tool_context
-                        )
+                        tool_ctx_for_collab = tool_context
                         logger.warning(
                             f"[决策层] 传递给协作引擎的tool_context keys: {list(tool_ctx_for_collab.keys()) if tool_ctx_for_collab else 'None'}"
                         )

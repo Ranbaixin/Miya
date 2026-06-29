@@ -964,17 +964,35 @@ class MemoryNet:
             )
 
             if len(messages) <= recent_count:
-                return  # 对话不够长，无需压缩
+                return
 
-            # 最近的对话保留
-            messages[-recent_count:]
+            # 检查消息重要性，高重要性消息优先保留
+            importance_threshold = 0.7
+            protected_count = 0
+            for msg in messages[:-recent_count]:
+                meta = getattr(msg, "metadata", None) or {}
+                if isinstance(meta, dict) and meta.get("importance", 0) >= importance_threshold:
+                    protected_count += 1
 
-            # 早期对话压缩
-            old_messages = messages[:-recent_count]
+            effective_recent = max(recent_count, recent_count - protected_count)
+            messages[-effective_recent:]
 
-            # 生成摘要
+            old_messages = messages[:-effective_recent]
 
-            summary = self._generate_conversation_summary(old_messages)
+            # 高重要性旧消息保留原文不压缩
+            summary_parts = []
+            important_kept = []
+            for msg in old_messages:
+                meta = getattr(msg, "metadata", None) or {}
+                if isinstance(meta, dict) and meta.get("importance", 0) >= importance_threshold:
+                    role_label = "用户" if getattr(msg, "role", "") == "user" else "弥娅"
+                    important_kept.append(f"[重要·保留] {role_label}: {getattr(msg, 'content', '')[:200]}")
+                else:
+                    summary_parts.append(msg)
+
+            summary = self._generate_conversation_summary(summary_parts)
+            if important_kept:
+                summary = "【重要记忆·保留原文】\n" + "\n".join(important_kept) + "\n\n【压缩摘要】\n" + summary
 
             # 存储到潮汐记忆
             memory_id = f"{session_id}_{int(datetime.now().timestamp())}"
@@ -987,8 +1005,8 @@ class MemoryNet:
                         "original_count": len(old_messages),
                         "compression_time": datetime.now().isoformat(),
                     },
-                    "priority": 0.3,  # 压缩记忆优先级较低
-                    "ttl": 7200,  # 2小时TTL
+                    "priority": 0.3,
+                    "ttl": 86400,
                 },
                 memory_type="tide",
             )
@@ -1017,9 +1035,10 @@ class MemoryNet:
             # 简单摘要：提取关键信息
             summary_parts = []
 
-            for msg in messages[:20]:  # 最多分析前20条
-                if msg.role == "user" and len(msg.content) > 10:
-                    summary_parts.append(f"用户说: {msg.content[:50]}")
+            for msg in messages[:20]:
+                if len(msg.content) > 10:
+                    role_label = "用户" if msg.role == "user" else "弥娅"
+                    summary_parts.append(f"{role_label}: {msg.content[:50]}")
 
             return "\n".join(summary_parts) if summary_parts else "对话历史"
 

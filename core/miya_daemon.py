@@ -208,7 +208,16 @@ class MiyaDaemon:
 
     async def wait(self):
         """阻塞等待直到收到停止信号"""
-        await self._shutdown_event.wait()
+        logger.debug("daemon.wait() 开始等待...")
+        try:
+            await self._shutdown_event.wait()
+            logger.info("daemon.wait() 收到退出信号，开始关闭")
+        except asyncio.CancelledError:
+            logger.warning("daemon.wait() 被取消 (CancelledError)，主动设置退出信号")
+            self._shutdown_event.set()
+        except Exception as e:
+            logger.error(f"daemon.wait() 异常退出: {type(e).__name__}: {e}", exc_info=True)
+            self._shutdown_event.set()
 
     async def stop(self):
         """停止守护进程（收到信号时调用）"""
@@ -278,13 +287,28 @@ class MiyaDaemon:
     # ==================== 信号处理 ====================
 
     def _setup_signal_handlers(self):
-        """注册系统信号处理器"""
+        """注册系统信号处理器（线程安全）"""
+        loop = asyncio.get_event_loop()
         for sig in (signal.SIGINT, signal.SIGTERM):
             try:
-                asyncio.get_event_loop().add_signal_handler(sig, lambda: asyncio.create_task(self.stop()))
+                loop.add_signal_handler(sig, self._signal_stop)
             except NotImplementedError:
-                # Windows 不支持 add_signal_handler，使用传统方式
-                signal.signal(sig, lambda s, f: asyncio.create_task(self.stop()))
+                signal.signal(sig, self._signal_handler_sync)
+
+    def _signal_stop(self):
+        """信号回调（运行在事件循环线程中，安全）"""
+        asyncio.create_task(self.stop())
+
+    def _signal_handler_sync(self, sig_num, frame):
+        """Windows 信号回调（运行在任意线程中，使用 call_soon_threadsafe）"""
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.call_soon_threadsafe(lambda: asyncio.ensure_future(self.stop()))
+            else:
+                self._shutdown_event.set()
+        except Exception:
+            self._shutdown_event.set()
 
     # ==================== 事件处理 ====================
 

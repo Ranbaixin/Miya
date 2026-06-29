@@ -1339,15 +1339,14 @@ class SoulGenerator:
             # ========== 构建对话上文字符串 ==========
             conversation_context_str = ""
             if history and isinstance(history, list):
-                max_history = min(len(history), 8)
+                max_history = min(len(history), 24)
                 context_parts = []
                 for _i, msg in enumerate(history[-max_history:]):
                     role = msg.get("role", "unknown")
                     content = msg.get("content", "")
                     if not content:
                         continue
-                    # 限制每条消息最多150字
-                    content = content[:150]
+                    content = content[:300]
                     if role.lower() in ("user", "human"):
                         # v8.0: 从 metadata 获取实际发送者，不再硬编码为"佳"
                         metadata = msg.get("metadata", {})

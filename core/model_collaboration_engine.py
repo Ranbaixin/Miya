@@ -1417,8 +1417,8 @@ class ModelCollaborationEngine:
         return result if result else response.strip()
 
     def _estimate_tokens(self, *texts: str) -> int:
-        total_chars = sum(len(t) for t in texts if t)
-        return total_chars // self.token_estimate_divisor
+        from core.token_utils import count_tokens
+        return sum(count_tokens(t) for t in texts if t)
 
     def _similarity(self, text1: str, text2: str) -> float:
         if not text1 or not text2:

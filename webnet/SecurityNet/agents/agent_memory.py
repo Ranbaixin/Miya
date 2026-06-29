@@ -377,7 +377,8 @@ class AgentMemory:
     # ─── 记忆压缩 (BUUCTF_Agent 移植) ────────────
 
     def _estimate_tokens(self, text: str) -> int:
-        return max(1, len(text) // 4)
+        from core.token_utils import count_tokens
+        return count_tokens(text)
 
     def compress_memory(
         self,

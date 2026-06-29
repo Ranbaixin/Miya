@@ -39,7 +39,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         self._shutting_down = False
         self._pending_echoes: Dict[str, asyncio.Future] = {}
         self._loaded_config: dict = {}
-        self._process_lock = asyncio.Lock()
+        self._process_locks: Dict[str, asyncio.Lock] = {}
         self._poke_cooldown: Dict[str, float] = {}  # user_id → last_poke_time
         self._hub_refs_set = False
         self._queue_initialized = False
@@ -821,8 +821,11 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
         logger.debug(f"[{self.platform_id}] 收到消息: {content[:50]}, reply_id={reply_id}, is_at={is_at_bot}")
 
-        # === 16. 路由到决策中心（加锁防并发） ===
-        async with self._process_lock:
+        # === 16. 路由到决策中心（按会话加锁，私聊与群聊可并发处理） ===
+        conv_key = f"private_{user_id}" if msg_type == "private" else f"group_{group_id_str}"
+        if conv_key not in self._process_locks:
+            self._process_locks[conv_key] = asyncio.Lock()
+        async with self._process_locks[conv_key]:
             response = await self.route_to_decision_hub(
                 content=content,
                 user_id=user_id,

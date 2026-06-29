@@ -14,6 +14,7 @@ import logging
 import re
 from typing import Any, Dict, List, Optional
 
+from core.token_utils import count_message_tokens
 from memory import (
     get_memory_core,
     store_dialogue,
@@ -79,6 +80,29 @@ class MemoryManager:
 
             logger.info(f"[记忆管理器] 收到消息: {content[:50]}...")
 
+            # 自动检测重要信息（提前计算，用于注入 metadata）
+            important_patterns = [
+                (r"生日", "生日", 0.9),
+                (r"我喜欢", "喜好", 0.7),
+                (r"喜欢(.+)", "喜好", 0.7),
+                (r"我叫", "名字", 0.7),
+                (r"讨厌", "厌恶", 0.7),
+                (r"星座", "星座", 0.7),
+                (r"电话", "电话", 0.9),
+                (r"邮箱", "邮箱", 0.9),
+                (r"记住", "明确要求", 0.9),
+                (r"你记着", "明确要求", 0.9),
+                (r"帮我记住", "明确要求", 0.9),
+            ]
+
+            detected_importance = 0.0
+            detected_info_type = None
+            for pattern, info_type, priority in important_patterns:
+                if re.search(pattern, content):
+                    detected_importance = priority
+                    detected_info_type = info_type
+                    break
+
             # 存储到 MemoryNet 对话历史
             if self.memory_net and self.memory_net.conversation_history:
                 metadata = {
@@ -88,6 +112,9 @@ class MemoryManager:
                     "sender": sender_name,
                     "chat_label": f"群聊_{group_id}" if message_type == "group" and group_id else "私聊",
                 }
+                if detected_importance > 0:
+                    metadata["importance"] = detected_importance
+                    metadata["importance_tags"] = [detected_info_type] if detected_info_type else []
                 await self.memory_net.conversation_history.add_message(
                     session_id=session_id,
                     role="user",
@@ -115,36 +142,18 @@ class MemoryManager:
                 },
             )
 
-            # 自动检测重要信息并存储
-            important_patterns = [
-                (r"生日", "生日"),
-                (r"我喜欢", "喜好"),
-                (r"喜欢(.+)", "喜好"),
-                (r"我叫", "名字"),
-                (r"讨厌", "厌恶"),
-                (r"星座", "星座"),
-                (r"电话", "电话"),
-                (r"邮箱", "邮箱"),
-                (r"记住", "明确要求"),
-                (r"你记着", "明确要求"),
-                (r"帮我记住", "明确要求"),
-            ]
-
-            for pattern, info_type in important_patterns:
-                if re.search(pattern, content):
-                    priority = 0.9 if info_type in ["生日", "电话", "邮箱", "明确要求"] else 0.7
-                    await store_important(
-                        content=content,
-                        user_id=user_id,
-                        tags=[info_type],
-                        priority=priority,
-                        metadata={
-                            "source": "auto_extract",
-                            "info_type": info_type,
-                        },
-                    )
-                    logger.info(f"[记忆管理器] 已自动存储重要信息: {info_type}")
-                    break
+            if detected_importance > 0 and detected_info_type:
+                await store_important(
+                    content=content,
+                    user_id=user_id,
+                    tags=[detected_info_type],
+                    priority=detected_importance,
+                    metadata={
+                        "source": "auto_extract",
+                        "info_type": detected_info_type,
+                    },
+                )
+                logger.info(f"[记忆管理器] 已自动存储重要信息: {detected_info_type}")
 
         except Exception as e:
             logger.error(f"[记忆管理器] 存储用户消息失败: {e}", exc_info=True)
@@ -169,6 +178,9 @@ class MemoryManager:
             platform = perception.get("platform", "qq")
             session_id = self._build_session_id(platform, user_id, group_id, message_type)
 
+            # 快速计算弥娅回复的重要性（用于压缩保护标记）
+            assistant_importance = self._calc_assistant_importance(response)
+
             # 存储到 MemoryNet
             if self.memory_net and self.memory_net.conversation_history:
                 metadata = {
@@ -178,6 +190,8 @@ class MemoryManager:
                     "sender": "弥娅",
                     "chat_label": f"群聊_{group_id}" if message_type == "group" and group_id else "私聊",
                 }
+                if assistant_importance > 0:
+                    metadata["importance"] = assistant_importance
                 await self.memory_net.conversation_history.add_message(
                     session_id=session_id,
                     role="assistant",
@@ -483,7 +497,7 @@ class MemoryManager:
             total_tokens = 0
 
             for msg in recent_messages:
-                token_estimate = len(msg.content) // 4
+                token_estimate = count_message_tokens(msg.content)
                 if total_tokens + token_estimate > max_tokens:
                     break
 
@@ -501,6 +515,30 @@ class MemoryManager:
         except Exception as e:
             logger.error(f"[记忆管理器] 获取对话历史失败: {e}")
             return []
+
+    def _calc_assistant_importance(self, response: str) -> float:
+        import json
+        import re
+        from pathlib import Path
+
+        try:
+            config_path = Path(__file__).parent.parent / "config" / "text_config.json"
+            if not config_path.exists():
+                return 0.0
+            with open(config_path, "r", encoding="utf-8") as f:
+                full_config = json.load(f)
+            self_config = full_config.get("assistant_self", {})
+            patterns = self_config.get("patterns", {})
+            base_importance = self_config.get("base_importance", {})
+            for category, pattern_list in patterns.items():
+                imp = base_importance.get(category, 0.5)
+                for item in pattern_list:
+                    pattern_regex = item[0] if isinstance(item, list) and len(item) >= 2 else item
+                    if re.search(pattern_regex, response):
+                        return imp
+        except Exception:
+            pass
+        return 0.0
 
     def _check_needs_recall(self, user_input: str) -> bool:
         """检测用户是否在问关于过去的问题"""

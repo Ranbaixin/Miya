@@ -279,8 +279,28 @@ async def run_daemon_spine(
     print("\n  弥娅已就绪 — 脊柱神经律动中 · 按 Ctrl+C 进入休眠...\n")
 
     # 8) 等待退出信号
-    with contextlib.suppress(KeyboardInterrupt):
+    try:
         await daemon.wait()
+    except KeyboardInterrupt:
+        pass
+    except asyncio.CancelledError:
+        logger.warning("daemon.wait() 被 CancelledError 打断，设置退出信号")
+        daemon._shutdown_event.set()
+    except Exception as e:
+        logger.error(f"daemon.wait() 异常: {type(e).__name__}: {e}", exc_info=True)
+        daemon._shutdown_event.set()
+
+    # 8.5) 保持事件循环存活——防止因 daemon.wait() 异常返回导致进程退出
+    if not daemon._shutdown_event.is_set():
+        logger.warning("daemon.wait() 在未收到退出信号时返回，启用保活模式...")
+        try:
+            while True:
+                await asyncio.sleep(5)
+        except (KeyboardInterrupt, asyncio.CancelledError):
+            pass
+
+    if not daemon._shutdown_event.is_set():
+        daemon._shutdown_event.set()
 
     # 9) 优雅关闭
     print("\n弥娅正在进入休眠...")
@@ -375,8 +395,27 @@ async def run_daemon_legacy(
     _print_platform_status(daemon)
     print("\n  弥娅已就绪，按 Ctrl+C 退出...\n")
 
-    with contextlib.suppress(KeyboardInterrupt):
+    try:
         await daemon.wait()
+    except KeyboardInterrupt:
+        pass
+    except asyncio.CancelledError:
+        logger.warning("daemon.wait() 被 CancelledError 打断 (legacy)，设置退出信号")
+        daemon._shutdown_event.set()
+    except Exception as e:
+        logger.error(f"daemon.wait() 异常 (legacy): {type(e).__name__}: {e}", exc_info=True)
+        daemon._shutdown_event.set()
+
+    if not daemon._shutdown_event.is_set():
+        logger.warning("daemon.wait() 在未收到退出信号时返回 (legacy)，启用保活模式...")
+        try:
+            while True:
+                await asyncio.sleep(5)
+        except (KeyboardInterrupt, asyncio.CancelledError):
+            pass
+
+    if not daemon._shutdown_event.is_set():
+        daemon._shutdown_event.set()
 
     print("\n正在关闭...")
     try:
@@ -586,8 +625,15 @@ def main():
         )
     except KeyboardInterrupt:
         pass
+    except asyncio.CancelledError:
+        logging.getLogger("Miya.Bootstrap").warning("守护进程被异步取消 (CancelledError)")
     except Exception as e:
         logging.getLogger("Miya.Bootstrap").error(f"守护进程异常: {e}", exc_info=True)
+        return 1
+    except BaseException as e:
+        logging.getLogger("Miya.Bootstrap").critical(
+            f"守护进程致命错误 ({type(e).__name__}): {e}", exc_info=True
+        )
         return 1
 
     return 0
