@@ -1,7 +1,11 @@
 import type { StreamChunk } from '@/utils/encoding'
 import { aiter } from 'iterator-helper'
 import { decodeStreamChunk, readerToMessageStream } from '@/utils/encoding'
+import { apiPort, startApiPortPolling } from '@/utils/api-port'
 import { ApiClient } from './index'
+
+// Start polling for dynamic port from Electron
+startApiPortPolling()
 
 export interface MemoryStats {
   nodeCount: number
@@ -350,6 +354,4 @@ export class CoreApiClient extends ApiClient {
   }
 }
 
-const API_PORT = Number(import.meta.env.VITE_API_PORT) || 9800
-
-export default new CoreApiClient(API_PORT)
+export default new CoreApiClient(apiPort)

@@ -167,8 +167,8 @@ class MiyaDaemon:
             self._miya = Miya()
             logger.info("✅ Miya 核心初始化完成")
 
-            # Start Web API server on port 8000 (for frontend)
-            self._start_web_api()
+            # Web API 已由 Miya.__init__() → _init_web_api() → _start_api_server() 启动
+            # 不再重复启动，避免端口冲突
 
             if self._miya.memory_net:
                 try:

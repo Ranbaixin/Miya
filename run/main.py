@@ -728,10 +728,14 @@ class Miya:
             api_port, port_changed = check_and_get_port(8000, port_name="Web API")
             Path(__file__).parent.parent
 
-            # 如果端口改变了，更新前端 .env 配置（已移除旧的前端配置更新逻辑）
-            # 新架构中，前端通过共享包自动检测端口，无需手动更新配置文件
+            # 将实际端口写入配置文件供前端读取
             if port_changed:
                 self.logger.info(f"API 端口已切换到 {api_port}，前端将自动检测该端口")
+            try:
+                from utils.port_utils import write_runtime_ports
+                write_runtime_ports({"web_api": api_port})
+            except Exception:
+                pass
 
             def run_server(current_api_port):
                 max_retries = 3

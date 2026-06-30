@@ -1,8 +1,45 @@
 """
 端口工具模块 - 提供统一的端口检测和自动切换功能
 """
+import json
 import socket
+from pathlib import Path
 from typing import Tuple
+
+
+# 运行时端口信息文件路径（供前端读取实际端口）
+def _get_runtime_ports_path() -> Path:
+    """获取运行时端口配置文件的路径"""
+    return Path(__file__).parent.parent / "config" / "runtime_ports.json"
+
+
+def write_runtime_ports(ports: dict) -> None:
+    """将实际运行时端口写入配置文件，供前端/Electron 读取"""
+    try:
+        ports_path = _get_runtime_ports_path()
+        ports_path.parent.mkdir(parents=True, exist_ok=True)
+        existing = {}
+        if ports_path.exists():
+            try:
+                existing = json.loads(ports_path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                pass
+        existing.update(ports)
+        ports_path.write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"##MIYA_PORTS##{json.dumps(existing, ensure_ascii=False)}##")
+    except Exception:
+        pass  # 非关键路径，静默失败
+
+
+def read_runtime_ports() -> dict:
+    """读取运行时端口配置"""
+    try:
+        ports_path = _get_runtime_ports_path()
+        if ports_path.exists():
+            return json.loads(ports_path.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return {}
 
 
 def is_port_in_use(port: int, host: str = "0.0.0.0") -> bool:
