@@ -6,20 +6,23 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
+from core.path_resolver import get_config_dir, get_data_dir, get_project_root
+
 
 def get_miya_root() -> Path:
-    """获取 Miya 根目录"""
-    return Path(__file__).parent.parent
+    return get_project_root()
 
 
-def get_data_dir() -> Path:
-    """获取数据目录"""
-    return get_miya_root() / "data"
+def get_miya_data_dir() -> Path:
+    return get_data_dir()
 
 
-def get_config_path() -> Path:
-    """获取配置路径"""
+def get_miya_config_path() -> Path:
     return get_data_dir() / "config"
+
+
+# 向后兼容别名
+get_config_path = get_miya_config_path
 
 
 # 默认配置

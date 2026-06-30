@@ -1,5 +1,6 @@
 import { ref, watch } from 'vue'
 import API from '@/api/core'
+import { apiPort, discoverApiPort } from '@/utils/api-port'
 
 export const DEFAULT_CONFIG = {
   system: {
@@ -27,7 +28,7 @@ export const DEFAULT_CONFIG = {
   api_server: {
     enabled: true,
     host: '127.0.0.1',
-    port: Number(import.meta.env.VITE_API_PORT) || 9800,
+    port: (typeof window !== 'undefined' && (window as any).__MIYA_API_PORT__) || Number(import.meta.env.VITE_API_PORT) || 9800,
     auto_start: true,
     docs_enabled: true,
   },
@@ -249,30 +250,53 @@ let connectRetries = 0
 const MAX_RETRIES = 5
 
 function connectBackend() {
-  fetch(`http://localhost:${Number(import.meta.env.VITE_API_PORT) || 9800}/health`)
-    .then(r => r.json())
-    .then((res) => {
-      if (res.status === 'healthy') {
-        backendConnected.value = true
-        connectRetryDelay = 300
-        console.log('[MIYA] 后端已连接')
-        if (!configWatchStop) {
-          configWatchStop = watch(CONFIG, (nextConfig) => {
-            if (!backendConnected.value) return
-            scheduleConfigSync(nextConfig)
-          }, { deep: true })
-        }
+  const tryConnect = async () => {
+    let port = apiPort.value
+    let healthOk = false
+    const doHealthCheck = async (p: number) => {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 2000)
+      try {
+        const r = await fetch(`http://localhost:${p}/health`, { signal: controller.signal })
+        clearTimeout(timer)
+        const res = await r.json()
+        return res.status === 'healthy'
       }
-    })
-    .catch(() => {
+      catch {
+        clearTimeout(timer)
+        return false
+      }
+    }
+    healthOk = await doHealthCheck(port)
+    if (!healthOk) {
+      port = await discoverApiPort()
+      if (port !== apiPort.value) {
+        healthOk = await doHealthCheck(port)
+      }
+    }
+    if (healthOk) {
+      backendConnected.value = true
+      connectRetryDelay = 300
+      console.log('[MIYA] 后端已连接')
+      if (!configWatchStop) {
+        configWatchStop = watch(CONFIG, (nextConfig) => {
+          if (!backendConnected.value) return
+          scheduleConfigSync(nextConfig)
+        }, { deep: true })
+      }
+    }
+    else {
       connectRetries++
       if (connectRetries <= MAX_RETRIES) {
         setTimeout(connectBackend, connectRetryDelay)
         connectRetryDelay = Math.min(connectRetryDelay * 2, 5000)
-      } else {
+      }
+      else {
         console.log('[MIYA] 后端未检测到，进入离线模式')
       }
-    })
+    }
+  }
+  tryConnect()
 }
 
 connectBackend()

@@ -208,3 +208,6 @@ data/soul_snapshot.json
 
 # Miya frontend backend dist
 miya_frontend/backend-dist/
+
+# Runtime-generated port info
+config/runtime_ports.json

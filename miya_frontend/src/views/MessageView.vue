@@ -164,6 +164,7 @@ async function chatStreamInternal(content: string, options?: { skill?: string, i
       fetchSoulData()
     }
 
+    // @ts-expect-error msgListRef declared in <script setup>, merged at runtime
     nextTick(() => { const el = msgListRef.value; if (el) el.scrollTop = el.scrollHeight })
     isSending.value = false
     saveMessages()

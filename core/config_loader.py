@@ -16,15 +16,18 @@ from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
 
+from core.path_resolver import get_config_dir
+
 logger = logging.getLogger(__name__)
 
-# 项目根目录
-PROJECT_ROOT = Path(__file__).parent.parent
-CONFIG_DIR = PROJECT_ROOT / "config"
+CONFIG_DIR = get_config_dir()
 
 # 加载 .env
 if not os.environ.get("_MIYA_DOTENV_LOADED"):
-    load_dotenv(CONFIG_DIR / ".env")
+    env_path = get_config_dir() / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+        os.environ["_MIYA_DOTENV_LOADED"] = "1"
 
 
 # ==================== 配置加载器 ====================

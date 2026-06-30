@@ -7,12 +7,17 @@ from typing import Any, Dict
 
 from dotenv import load_dotenv
 
+from core.path_resolver import get_config_dir
+
 
 class Settings:
     """配置管理类"""
 
-    def __init__(self, env_file: str = "config/.env"):
-        self.env_file = env_file
+    def __init__(self, env_file: str = ""):
+        if env_file:
+            self.env_file = env_file
+        else:
+            self.env_file = str(get_config_dir() / ".env")
         self._config = {}
         self._load_env()
 

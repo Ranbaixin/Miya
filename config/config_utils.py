@@ -7,10 +7,12 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from core.path_resolver import get_config_dir
+
 logger = logging.getLogger(__name__)
 
 _CONFIG_CACHE: dict[str, Any] | None = None
-_CONFIG_PATH = Path("config/text_config.json")
+_CONFIG_PATH = get_config_dir() / "text_config.json"
 _JSON_CACHE: dict[str, Any] = {}
 
 
@@ -68,7 +70,7 @@ def load_json_config(filename: str, section: str | None = None) -> dict[str, Any
     if cache_key in _JSON_CACHE:
         return _JSON_CACHE[cache_key]
 
-    path = Path("config") / filename
+    path = get_config_dir() / filename
     try:
         if path.exists():
             config = json.loads(path.read_text(encoding="utf-8"))

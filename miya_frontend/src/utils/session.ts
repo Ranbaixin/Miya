@@ -2,6 +2,7 @@ import type { StreamChunk } from '@/utils/encoding'
 import { useStorage } from '@vueuse/core'
 import { ref, watch } from 'vue'
 import API from '@/api/core'
+import { apiPort } from '@/utils/api-port'
 
 export const proactiveNotifier = ref<null | ((source: string, content: string) => void)>(null)
 
@@ -40,6 +41,7 @@ export interface ChatTab {
   name: string
   messages: Message[]
   unread: number
+  conversationRounds?: number
 }
 
 export const tabs = ref<ChatTab[]>(
@@ -340,7 +342,7 @@ async function backfillSoulDataForSession() {
   if (!lastAi || (lastAi as any).soulData?.emotions?.length) return
 
   try {
-    const res = await fetch(`http://localhost:${Number(import.meta.env.VITE_API_PORT) || 9800}/api/soul/current`)
+    const res = await fetch(`http://localhost:${apiPort.value}/api/soul/current`)
     const soul = await res.json()
     if (soul && ((soul.emotions && (Array.isArray(soul.emotions) ? soul.emotions.length : Object.keys(soul.emotions).length)) || soul.inner_thought || soul.thinking)) {
       const existing = (lastAi as any).soulData || {}

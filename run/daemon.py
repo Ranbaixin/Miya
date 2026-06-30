@@ -38,6 +38,8 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
+
+from core.path_resolver import get_config_dir, get_data_dir, get_logs_dir
 os.environ["MIYA_DAEMON_MODE"] = "1"
 
 # 本地 OCR 模型全局配置
@@ -254,20 +256,31 @@ async def run_daemon_spine(
     # 6) 启动管理 API
     api = None
     if api_enabled:
-        api = ManagementAPI(daemon, host=api_host, port=api_port)
+        from utils.port_utils import check_and_get_port
+
+        actual_port, port_changed = check_and_get_port(api_port, port_name="管理 API")
+        if port_changed:
+            logger.warning(f"管理 API 端口已切换: {api_port} → {actual_port}")
+        api = ManagementAPI(daemon, host=api_host, port=actual_port)
         await api.serve(block=False)
-        logger.info(f"管理 API 已启动: http://{api_host}:{api_port}")
+        logger.info(f"管理 API 已启动: http://{api_host}:{actual_port}")
         daemon.registry.on_broadcast(api.broadcast_event)
         api.register_webhook_platforms()
+
+        try:
+            from utils.port_utils import write_runtime_ports
+            write_runtime_ports({"management_api": actual_port})
+        except Exception:
+            pass
 
         print(f"""
 +==============================================================+
 |  * 管理 API 就绪                                            |
 |----------------------------------------------------------  |
-|  REST:  http://{api_host}:{api_port}/api/v1/health              |
-|  WS:    ws://{api_host}:{api_port}/api/v1/ws                    |
-|  Docs:  http://{api_host}:{api_port}/docs                       |
-|  Spine: http://{api_host}:{api_port}/api/v1/spine/status        |
+|  REST:  http://{api_host}:{actual_port}/api/v1/health              |
+|  WS:    ws://{api_host}:{actual_port}/api/v1/ws                    |
+|  Docs:  http://{api_host}:{actual_port}/docs                       |
+|  Spine: http://{api_host}:{actual_port}/api/v1/spine/status        |
 +==============================================================+
         """)
     else:
@@ -374,19 +387,30 @@ async def run_daemon_legacy(
     # 管理 API
     api = None
     if api_enabled:
-        api = ManagementAPI(daemon, host=api_host, port=api_port)
+        from utils.port_utils import check_and_get_port
+
+        actual_port, port_changed = check_and_get_port(api_port, port_name="管理 API")
+        if port_changed:
+            logger.warning(f"管理 API 端口已切换: {api_port} → {actual_port}")
+        api = ManagementAPI(daemon, host=api_host, port=actual_port)
         await api.serve(block=False)
-        logger.info(f"管理 API 已启动: http://{api_host}:{api_port}")
+        logger.info(f"管理 API 已启动: http://{api_host}:{actual_port}")
         daemon.registry.on_broadcast(api.broadcast_event)
         api.register_webhook_platforms()
+
+        try:
+            from utils.port_utils import write_runtime_ports
+            write_runtime_ports({"management_api": actual_port})
+        except Exception:
+            pass
 
         print(f"""
 +==============================================================+
 |  * 管理 API 就绪                                            |
 |----------------------------------------------------------  |
-|  REST:  http://{api_host}:{api_port}/api/v1/health              |
-|  WS:    ws://{api_host}:{api_port}/api/v1/ws                    |
-|  Docs:  http://{api_host}:{api_port}/docs                       |
+|  REST:  http://{api_host}:{actual_port}/api/v1/health              |
+|  WS:    ws://{api_host}:{actual_port}/api/v1/ws                    |
+|  Docs:  http://{api_host}:{actual_port}/docs                       |
 +==============================================================+
         """)
     else:
@@ -481,13 +505,34 @@ def _wire_ap_proactive_routing_legacy(bridge, daemon) -> None:
 
 
 async def _start_kali_proxy():
-    """在本地 8008 端口启动 Kali 终端 WebSocket 代理（后台任务）"""
+    """在本地启动 Kali 终端 WebSocket 代理（后台任务），端口自动切换"""
     try:
         from core.kali_term_proxy import websocket_handler
+        from utils.port_utils import check_and_get_port, find_available_port
 
-        server = await asyncio.start_server(websocket_handler, "127.0.0.1", 8008)
-        logging.getLogger("Miya.Bootstrap").info("Kali 终端代理已启动: ws://127.0.0.1:8008")
-        return server
+        DEFAULT_KALI_PORT = 8008
+        port, port_changed = check_and_get_port(DEFAULT_KALI_PORT, host="127.0.0.1", port_name="Kali 终端代理")
+        kali_logger = logging.getLogger("Miya.Bootstrap")
+
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                server = await asyncio.start_server(websocket_handler, "127.0.0.1", port)
+                if port_changed:
+                    kali_logger.info(f"Kali 终端代理端口已切换: {DEFAULT_KALI_PORT} → {port}")
+                kali_logger.info(f"Kali 终端代理已启动: ws://127.0.0.1:{port}")
+                try:
+                    from utils.port_utils import write_runtime_ports
+                    write_runtime_ports({"kali_proxy": port})
+                except Exception:
+                    pass
+                return server
+            except OSError:
+                if attempt < max_retries - 1:
+                    port = find_available_port(port + 1, host="127.0.0.1")
+                    kali_logger.warning(f"Kali 终端代理端口绑定失败，尝试端口: {port}")
+                else:
+                    raise
     except Exception as e:
         logging.getLogger("Miya.Bootstrap").debug(f"Kali 终端代理启动跳过: {e}")
         return None

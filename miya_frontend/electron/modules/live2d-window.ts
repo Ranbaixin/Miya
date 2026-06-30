@@ -91,10 +91,24 @@ export function createLive2dWindow(
   })
 
   live2dWindow.webContents.on('did-finish-load', () => {
-    live2dWindow?.webContents.executeJavaScript(
-      `window.__MIYA_API_PORT__ = ${process.env.VITE_API_PORT || 9800}`
-    ).catch(() => {})
+    injectApiPort()
+    const portInterval = setInterval(injectApiPort, 3000)
+    live2dWindow?.on('closed', () => clearInterval(portInterval))
   })
+
+  function injectApiPort() {
+    try {
+      const portsFile = join(process.resourcesPath, 'backend', '_internal', 'config', 'runtime_ports.json')
+      if (fs.existsSync(portsFile)) {
+        const ports = JSON.parse(fs.readFileSync(portsFile, 'utf-8'))
+        const apiPort = ports.web_api || ports.management_api || 9800
+        live2dWindow?.webContents.executeJavaScript(
+          `window.__MIYA_API_PORT__ = ${apiPort}`
+        ).catch(() => {})
+      }
+    }
+    catch { /* ignore */ }
+  }
 
   live2dWindow.on('closed', () => {
     live2dWindow = null

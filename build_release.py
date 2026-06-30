@@ -105,12 +105,6 @@ def assemble_release():
 
     shutil.copytree(dist_dir, RELEASE_DIR)
 
-    # 确保 data/ 和 logs/ 目录存在
-    for sub in ["data", "logs"]:
-        internal_path = RELEASE_DIR / "_internal" / sub
-        internal_path.mkdir(exist_ok=True)
-        print(f"  创建目录: _internal/{sub}/")
-
     # 复制 .env 模板 (始终从 .env.example 创建，防止真实 .env 泄露)
     env_example = RELEASE_DIR / "_internal" / "config" / ".env.example"
     env_target = RELEASE_DIR / "_internal" / "config" / ".env"
@@ -123,8 +117,17 @@ def assemble_release():
     # 清理 config 中的敏感模板文件（仅保留可分发的内容）
     _clean_config_for_release()
 
-    # 创建外层 config/data/logs 真实目录，_internal/ 下创建 junction 指向外层
-    _create_access_dirs()
+    # 创建 data/ 和 logs/ 目录（_internal/ 下，PyInstaller 未打包的运行时目录）
+    for sub in ["data", "logs"]:
+        internal_path = RELEASE_DIR / "_internal" / sub
+        internal_path.mkdir(exist_ok=True)
+        print(f"  创建目录: _internal/{sub}/")
+
+    # 创建外层便捷目录及说明文件（不依赖 junction，跨机器分发安全）
+    _create_user_dirs()
+
+    # 将 Claude Code Engine (CCE) 复制到 _internal/ 供守护进程调用
+    _copy_cce_to(RELEASE_DIR / "_internal")
 
     # 创建启动脚本
     _create_launcher_bat()
@@ -149,83 +152,32 @@ def _clean_config_for_release():
             shutil.rmtree(p, ignore_errors=True)
 
 
-def _create_access_dirs():
-    """创建外层 config/ data/ logs/ 真实目录，并在 _internal/ 下创建目录联结（junction）指向外层
+def _create_user_dirs():
+    """创建外层便捷目录（纯说明文件，不依赖 junction，跨机器分发安全）
 
     编译后结构：
-      release/Miya/
-      ├── Miya.exe               主程序
-      ├── 启动弥娅.bat             启动脚本
-      ├── config/                 ← 真实目录（用户可编辑）
-      ├── data/                   ← 真实目录（运行时数据）
-      ├── logs/                   ← 真实目录（日志）
-      ├── models/                 ← 真实目录（本地模型）
-      └── _internal/
-          ├── config  → ../config   (junction → 外层)
-          ├── data    → ../data     (junction → 外层)
-          ├── logs    → ../logs     (junction → 外层)
-          └── models  → ../models   (junction → 外层)
-
-    注意：目录联结（junction）仅适用于本地构建。若需 zip 分发，请使用
-    --portable-zip 参数回退到复制模式。
+       release/Miya/
+       ├── Miya.exe               主程序
+       ├── 启动弥娅.bat             启动脚本
+       ├── config/                 ← 说明文件（实际配置在 _internal/config/）
+       ├── data/                   ← 说明文件（实际数据在 _internal/data/）
+       ├── logs/                   ← 说明文件（实际日志在 _internal/logs/）
+       └── _internal/
+           ├── config/             ← 真实目录（PyInstaller 打包，所有配置文件在此）
+           ├── data/               ← 真实目录（运行时数据）
+           ├── logs/               ← 真实目录（日志）
+           └── models/             ← 真实目录（PyInstaller 打包，本地模型）
     """
-    directories = ["config", "data", "logs", "models"]
-    for dir_name in directories:
-        internal_path = RELEASE_DIR / "_internal" / dir_name
-        outer_path = RELEASE_DIR / dir_name
-
-        # 1. 确保外层目录存在
-        outer_path.mkdir(exist_ok=True)
-
-        # 2. 若 _internal 下有该目录且有内容，先迁移到外层
-        if internal_path.exists():
-            _migrate_directory(internal_path, outer_path)
-            # 删除 _internal 下的原始目录
-            shutil.rmtree(internal_path, ignore_errors=True)
-
-        # 3. 创建 junction: _internal/{dir} → 外层 {dir}
-        _create_junction(
-            link=internal_path,
-            target=outer_path,
-        )
-
-
-def _migrate_directory(src: Path, dst: Path):
-    """将 src 目录下所有内容移动到 dst，保留文件时间戳"""
-    for item in src.iterdir():
-        src_item = src / item.name
-        dst_item = dst / item.name
-        if src_item.is_dir() and not src_item.is_symlink():
-            if dst_item.exists():
-                shutil.rmtree(dst_item, ignore_errors=True)
-            shutil.copytree(src_item, dst_item)
-        elif src_item.is_file():
-            shutil.copy2(src_item, dst_item)
-        # 跳过 junction/symlink
-
-
-def _create_junction(link: Path, target: Path):
-    """在 Windows 上创建目录联结（junction）
-
-    使用绝对路径确保 mklink /J 可靠创建。
-    注意：junction 存储绝对路径，移动 release/ 文件夹后需重新构建。
-    """
-    link_abs = str(link.resolve())
-    target_abs = str(target.resolve())
-    result = subprocess.run(
-        ["cmd", "/c", "mklink", "/J", link_abs, target_abs],
-        capture_output=True,
-        text=True,
+    user_dir_guide = (
+        "此目录为便捷入口，实际文件位于 _internal\\{name}\\ 目录中。\r\n"
+        "启动脚本会自动切换工作目录到 _internal\\，所有配置和数据操作请到该目录下进行。\r\n"
     )
-    name = link.name
-    if result.returncode == 0:
-        print(f"  联结: _internal/{name}/ → ../{name}/")
-    else:
-        err = result.stderr.strip()
-        print(f"  [WARN] 联结创建失败 _internal/{name}/: {err}")
-        print(f"         回退: 复制目录 _internal/{name}/ ← {name}/")
-        if target.exists():
-            shutil.copytree(target, link, dirs_exist_ok=True)
+    for name in ["config", "data", "logs"]:
+        outer_path = RELEASE_DIR / name
+        outer_path.mkdir(exist_ok=True)
+        guide_file = outer_path / "请到_internal目录.txt"
+        guide_file.write_text(user_dir_guide.format(name=name), encoding="utf-8")
+        print(f"  创建便捷目录: {name}/ (含说明文件)")
 
 
 def _create_launcher_bat():
@@ -236,8 +188,7 @@ def _create_launcher_bat():
 chcp 65001 >nul
 title MiYA v8.0 - Daemon
 
-:: Switch working directory to _internal for correct path resolution
-:: config/ data/ logs/ 位于外层，通过 _internal/ 下的目录联结透明访问
+:: 切换到 _internal 工作目录，确保 Python 代码路径解析正确
 cd /d "%~dp0_internal"
 
 echo.
@@ -245,9 +196,10 @@ echo ===========================================================================
 echo   MiYA v8.0 - Daemon
 echo ================================================================================
 echo.
-echo   Config:  config\\   (edit .env, personality, TTS, etc.)
-echo   Data:    data\\     (view memory, conversations, lifebook)
-echo   Logs:    logs\\     (runtime logs)
+echo   所有配置文件和数据位于 _internal\\ 目录下:
+echo     Config:  _internal\\config\\   (edit .env, personality, TTS, etc.)
+echo     Data:    _internal\\data\\     (view memory, conversations, lifebook)
+echo     Logs:    _internal\\logs\\     (runtime logs)
 echo.
 echo   API will be at: http://localhost:9800
 echo   Press Ctrl+C to exit
@@ -278,7 +230,7 @@ pause
 
 二、配置文件
 ---------------
-  配置文件位于程序目录下的 config\\ 文件夹中（与 Miya.exe 同级）。
+  配置文件位于 _internal\\config\\ 目录下。
   
   重要文件：
   - .env               环境变量 (API密钥、数据库等)，从 .env.example 复制并编辑
@@ -286,11 +238,11 @@ pause
   - memory_config.json        记忆系统配置
   - tts_config.json           TTS 语音配置
   
-  编辑方式：用任意文本编辑器打开 config\\ 下的文件即可修改，重启后生效。
+  编辑方式：用任意文本编辑器打开 _internal\\config\\ 下的文件即可修改，重启后生效。
 
 三、数据 & 记忆文件
 ---------------
-  数据文件位于程序目录下的 data\\ 文件夹中（与 Miya.exe 同级）。
+  数据文件位于 _internal\\data\\ 目录下。
   
   重要目录/文件：
   - memory\\              记忆数据库 (miya_memory.db)
@@ -300,17 +252,19 @@ pause
 
 四、日志
 ---------------
-  运行日志位于程序目录下的 logs\\ 文件夹中（与 Miya.exe 同级）。
+  运行日志位于 _internal\\logs\\ 目录下。
 
 五、目录结构
 ---------------
   Miya/
   ├── Miya.exe                 主程序
   ├── 启动弥娅.bat               启动脚本
-  ├── config\\                   配置文件（可直接编辑）
-  ├── data\\                     数据文件（可直接查看）
-  ├── logs\\                     日志文件
-  └── _internal\\                运行时库（请勿手动修改）
+  └── _internal\\                运行时目录（所有配置和数据在此）
+      ├── config\\               配置文件（可直接编辑）
+      ├── data\\                 数据文件（可直接查看）
+      ├── logs\\                 日志文件
+      ├── models\\               本地模型文件
+      └── ...                    运行时库
 
 ================================================================================
    弥娅 (MIYA) - AI 虚拟化身  v8.0
@@ -322,6 +276,28 @@ pause
 
 def _create_readme():
     pass  # 已合并到 _create_launcher_bat 中
+
+
+def _copy_cce_to(target_dir: Path):
+    """将 Claude Code Engine 复制到目标目录，供守护进程调用"""
+    cce_src = PROJECT_ROOT / "claude-code-engine"
+    cce_dist_src = cce_src / "dist"
+    cce_dist_dst = target_dir / "claude-code-engine" / "dist"
+
+    if not cce_dist_src.exists():
+        print(f"  [WARN] CCE dist 不存在: {cce_dist_src}，跳过")
+        return
+
+    cce_dist_dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(str(cce_dist_src), str(cce_dist_dst), dirs_exist_ok=True)
+    print(f"  CCE dist 已复制到: {cce_dist_dst}")
+
+    ws_src = cce_src / "node_modules" / "ws"
+    ws_dst = target_dir / "claude-code-engine" / "node_modules" / "ws"
+    if ws_src.exists():
+        ws_dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(str(ws_src), str(ws_dst), dirs_exist_ok=True)
+        print(f"  CCE ws 依赖已复制")
 
 
 # ════════════════════════════════════════════════════════════════
@@ -338,11 +314,10 @@ def verify_release():
     checks = [
         (RELEASE_DIR / "Miya.exe", "主程序"),
         (RELEASE_DIR / "_internal", "运行库"),
-        (RELEASE_DIR / "_internal" / "config", "配置目录 (junction)"),
+        (RELEASE_DIR / "_internal" / "config", "配置目录"),
         (RELEASE_DIR / "_internal" / "config" / ".env.example", "配置模板"),
-        (RELEASE_DIR / "config", "配置目录 (外层)"),
-        (RELEASE_DIR / "data", "数据目录 (外层)"),
-        (RELEASE_DIR / "logs", "日志目录 (外层)"),
+        (RELEASE_DIR / "_internal" / "data", "数据目录"),
+        (RELEASE_DIR / "_internal" / "logs", "日志目录"),
         (RELEASE_DIR / "启动弥娅.bat", "启动脚本"),
     ]
 
@@ -474,6 +449,9 @@ def sync_to_electron_resources(source_dir=None):
         print(
             f"  复制: _internal/ ({_format_size(sum(f.stat().st_size for f in internal_dst.rglob('*') if f.is_file()))})"
         )
+
+    # 将 CCE 复制到后端 _internal/ 供守护进程调用
+    _copy_cce_to(ELECTRON_RESOURCES / "_internal")
 
     # 重命名 Miya.exe → miya-backend.exe (Electron 期望的名称)
     exe_src = source_dir / "Miya.exe"

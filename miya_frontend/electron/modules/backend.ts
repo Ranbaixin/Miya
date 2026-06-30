@@ -1,7 +1,7 @@
 import type { Buffer } from 'node:buffer'
 import type { ChildProcess } from 'node:child_process'
 import { execSync, spawn } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
@@ -34,6 +34,12 @@ function appendBackendLog(line: string, stream: 'stdout' | 'stderr' | 'system' =
   }
 }
 
+function getBackendInternalDir(): string {
+  return app.isPackaged
+    ? join(process.resourcesPath, 'backend', '_internal')
+    : join(__dirname, '..', '..')
+}
+
 function createChunkForwarder(
   stream: 'stdout' | 'stderr',
   onLine: (line: string) => boolean | void,
@@ -58,6 +64,50 @@ function createChunkForwarder(
 
 export function getBackendLogs(): string {
   return backendLogLines.join('\n')
+}
+
+export function readPortsFromDisk(): Record<string, number> | null {
+  const internalDir = getBackendInternalDir()
+  const portsFile = join(internalDir, 'config', 'runtime_ports.json')
+  try {
+    if (existsSync(portsFile)) {
+      return JSON.parse(readFileSync(portsFile, 'utf-8')) as Record<string, number>
+    }
+  }
+  catch {
+    // file may not exist yet or be invalid
+  }
+  return null
+}
+
+export function pushPortToWindow(ports: Record<string, number>) {
+  const apiPort = ports.web_api || ports.management_api
+  if (!apiPort) return
+  const mainWindow = getMainWindow()
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.executeJavaScript(
+      `window.__MIYA_API_PORT__ = ${apiPort}; console.log('[MIYA] API port set to', ${apiPort})`
+    ).catch(() => {})
+  }
+}
+
+let portPollTimer: ReturnType<typeof setInterval> | null = null
+
+export function startPortPolling() {
+  if (portPollTimer) return
+  const poll = () => {
+    const ports = readPortsFromDisk()
+    if (ports) pushPortToWindow(ports)
+  }
+  poll()
+  portPollTimer = setInterval(poll, 2000)
+}
+
+export function stopPortPolling() {
+  if (portPollTimer) {
+    clearInterval(portPollTimer)
+    portPollTimer = null
+  }
 }
 
 function quoteWindowsArg(arg: string): string {
@@ -153,8 +203,29 @@ export function startBackend(): void {
   // Collect all output for error reporting
   const outputLines: string[] = []
   const PROGRESS_PREFIX = '##PROGRESS##'
+  const MIYA_PORTS_PREFIX = '##MIYA_PORTS##'
   const consumeStdoutChunk = createChunkForwarder('stdout', (trimmed) => {
     outputLines.push(trimmed)
+
+    if (trimmed.startsWith(MIYA_PORTS_PREFIX)) {
+      try {
+        const jsonStr = trimmed.slice(MIYA_PORTS_PREFIX.length).replace(/##$/, '')
+        const ports = JSON.parse(jsonStr) as Record<string, number>
+        console.log('[Backend] Detected ports:', ports)
+
+        const apiPort = ports.web_api || ports.management_api || 9800
+        const mainWindow = getMainWindow()
+        if (mainWindow) {
+          mainWindow.webContents.executeJavaScript(
+            `window.__MIYA_API_PORT__ = ${apiPort}; console.log('[MIYA] API port set to', ${apiPort})`
+          ).catch(() => {})
+        }
+      }
+      catch {
+        // malformed port line, ignore
+      }
+      return false
+    }
 
     if (trimmed.startsWith(PROGRESS_PREFIX)) {
       try {

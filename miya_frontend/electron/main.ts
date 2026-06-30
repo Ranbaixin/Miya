@@ -4,7 +4,7 @@ import { dirname, resolve } from 'node:path'
 import process from 'node:process'
 import { domainToUnicode, fileURLToPath, pathToFileURL } from 'node:url'
 import { app, BrowserWindow, desktopCapturer, ipcMain, Menu, nativeTheme, net, protocol, shell, systemPreferences } from 'electron'
-import { getBackendLogs, startBackend, stopBackend } from './modules/backend'
+import { getBackendLogs, startBackend, stopBackend, startPortPolling, stopPortPolling } from './modules/backend'
 import { registerHotkeys, unregisterHotkeys } from './modules/hotkeys'
 import { createMenu } from './modules/menu'
 import { startTerminal, stopTerminal, writeToTerminal, resizeTerminal, isTerminalRunning, getTerminalBuffer, setMiyaRoot } from './modules/terminal'
@@ -566,6 +566,7 @@ app.whenReady().then(async () => {
   // Start backend services (skip if MIYA_NO_BACKEND is set)
   if (!process.env.MIYA_NO_BACKEND) {
     startBackend()
+    startPortPolling()
   }
   else {
     console.log('[Main] MIYA_NO_BACKEND=1, skipping backend auto-start')
@@ -581,6 +582,7 @@ app.on('will-quit', () => {
   destroyTray()
   stopTerminal()
   stopBackend()
+  stopPortPolling()
 })
 
 app.on('window-all-closed', () => {

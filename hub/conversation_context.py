@@ -104,7 +104,9 @@ class ConversationContextManager:
         self._conversation_turns: Dict[str, int] = defaultdict(int)  # session_id -> 对话轮次
         self._pending_intent: Dict[str, str] = {}  # session_id -> 未完成的意图
 
-        self._persist_file = Path("data/conversation_context_state.json")
+        from core.path_resolver import get_data_dir
+
+        self._persist_file = get_data_dir() / "conversation_context_state.json"
         self._persist_file.parent.mkdir(parents=True, exist_ok=True)
         self._load_topic_state()
 

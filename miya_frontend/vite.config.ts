@@ -62,10 +62,10 @@ function fastElectronPlugin() {
       })
     },
     closeBundle() {
-      if (started && process.electronApp) {
+      if (started && (process as any).electronApp) {
         try {
-          process.electronApp.removeAllListeners()
-          ;(process.electronApp as any).kill?.()
+          (process as any).electronApp.removeAllListeners()
+          ;(process as any).electronApp.kill?.()
         }
         catch { /* ignore */ }
       }

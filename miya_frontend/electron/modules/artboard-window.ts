@@ -78,10 +78,24 @@ export function createArtboardWindow(): BrowserWindow {
     artboardWindow?.show()
   })
 
+  function injectArtboardPort() {
+    try {
+      const portsFile = join(process.resourcesPath, 'backend', '_internal', 'config', 'runtime_ports.json')
+      if (fs.existsSync(portsFile)) {
+        const ports = JSON.parse(fs.readFileSync(portsFile, 'utf-8'))
+        const apiPort = ports.web_api || ports.management_api || 9800
+        artboardWindow?.webContents.executeJavaScript(
+          `window.__MIYA_API_PORT__ = ${apiPort}`
+        ).catch(() => {})
+      }
+    }
+    catch { /* ignore */ }
+  }
+
   artboardWindow.webContents.on('did-finish-load', () => {
-    artboardWindow?.webContents.executeJavaScript(
-      `window.__MIYA_API_PORT__ = ${process.env.VITE_API_PORT || 9800}`
-    ).catch(() => {})
+    injectArtboardPort()
+    const portInterval = setInterval(injectArtboardPort, 3000)
+    artboardWindow?.on('closed', () => clearInterval(portInterval))
     artboardWindow?.webContents.executeJavaScript(
       'window.__IS_ARTBOARD_WINDOW__ = true'
     ).catch(() => {})
