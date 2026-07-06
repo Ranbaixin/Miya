@@ -7,7 +7,7 @@ actor MiyaAPIService {
     private let session: URLSession
     private let decoder: JSONDecoder
 
-    init(baseURL: String = "http://localhost:9800") {
+    init(baseURL: String = "http://localhost:8000") {
         self.baseURL = baseURL
         self.session = URLSession.shared
         self.decoder = JSONDecoder()
@@ -129,6 +129,8 @@ actor MiyaAPIService {
         return result.id ?? result.current ?? "default"
     }
 
+    func getPersonas() async throws -> [MiyaPersona] { try await getPersonaList() }
+    func getCurrentPersonaId() async throws -> String { try await getCurrentPersona() }
     func switchPersona(_ personaId: String) async throws -> Bool {
         let body: [String: Any] = ["personality_id": personaId]
         let data = try await post("/api/persona/switch", body: body)

@@ -13,7 +13,6 @@ class MiyaApp : Application() {
                 context = PlatformContext(
                     settingsFactory = { Settings() }
                 ),
-                baseUrl = "http://192.168.10.122:8000"
             )
         } catch (e: Exception) {
             e.printStackTrace()

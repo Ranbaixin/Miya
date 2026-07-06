@@ -5,13 +5,16 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import ai.miya.android.ui.MiyaMainScreen
+import ai.miya.android.ui.theme.MiyaTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MiyaMainScreen()
+            MiyaTheme {
+                MiyaMainScreen()
+            }
         }
     }
 }

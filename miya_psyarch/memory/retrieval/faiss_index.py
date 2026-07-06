@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass
 from typing import Any
 
@@ -38,9 +39,8 @@ class FaissHnswIndex:
         self._memory_id_to_int: dict[str, int] = {}
         self._int_to_memory_id: dict[int, str] = {}
         self._next_id = 1
-        # Keep a copy of normalized vectors so we can rebuild the index if FAISS
-        # raises, and so we can keep behavior stable across backend changes.
         self._vectors: dict[str, np.ndarray] = {}
+        self._lock = threading.Lock()
         self._index = self._build_index()
 
     def _build_index(self) -> Any | None:
@@ -95,21 +95,20 @@ class FaissHnswIndex:
         if not clean:
             return
         vec = self._normalize(vector)
-        self._vectors[clean] = vec
-        if clean not in self._memory_id_to_int:
-            int_id = self._next_id
-            self._next_id += 1
-            self._memory_id_to_int[clean] = int_id
-            self._int_to_memory_id[int_id] = clean
-        if self._index is None:
-            return
-        int_id = int(self._memory_id_to_int[clean])
-        try:
-            self._index.add_with_ids(vec.reshape(1, -1), np.asarray([int_id], dtype=np.int64))
-        except Exception:
-            # HNSW cannot remove ids in our wheel; rebuild is the safe way to recover
-            # from accidental duplicate ids / dimension mismatches / backend quirks.
-            self.rebuild()
+        with self._lock:
+            self._vectors[clean] = vec
+            if clean not in self._memory_id_to_int:
+                int_id = self._next_id
+                self._next_id += 1
+                self._memory_id_to_int[clean] = int_id
+                self._int_to_memory_id[int_id] = clean
+            if self._index is None:
+                return
+            int_id = int(self._memory_id_to_int[clean])
+            try:
+                self._index.add_with_ids(vec.reshape(1, -1), np.asarray([int_id], dtype=np.int64))
+            except Exception:
+                self.rebuild()
 
     def remove(self, memory_id: str) -> bool:
         """
@@ -131,21 +130,22 @@ class FaissHnswIndex:
         clean = str(memory_id or "")
         if not clean:
             return False
-        if clean not in self._vectors:
-            return False
-        self._vectors.pop(clean, None)
-        # Keep id mapping stable; we don't recycle ids in this implementation.
+        with self._lock:
+            if clean not in self._vectors:
+                return False
+            self._vectors.pop(clean, None)
         return True
 
     def search(self, query_vector: list[float], *, top_k: int) -> list[dict]:
         k = max(1, int(top_k))
         query = self._normalize(query_vector)
-        if self._index is None or self.count() == 0:
-            return self._fallback_search(query, top_k=k)
-        try:
-            scores, ids = self._index.search(query.reshape(1, -1), k)
-        except Exception:
-            return self._fallback_search(query, top_k=k)
+        with self._lock:
+            if self._index is None or self.count() == 0:
+                return self._fallback_search(query, top_k=k)
+            try:
+                scores, ids = self._index.search(query.reshape(1, -1), k)
+            except Exception:
+                return self._fallback_search(query, top_k=k)
         rows: list[dict] = []
         for score, idx in zip(scores[0].tolist(), ids[0].tolist()):
             if int(idx) < 0:
@@ -157,27 +157,27 @@ class FaissHnswIndex:
         return rows
 
     def rebuild(self) -> None:
-        self._index = self._build_index()
-        if self._index is None:
-            return
-        if not self._vectors:
-            return
-        rows: list[tuple[str, np.ndarray, int]] = []
-        for memory_id, vec in self._vectors.items():
-            if memory_id not in self._memory_id_to_int:
-                int_id = self._next_id
-                self._next_id += 1
-                self._memory_id_to_int[memory_id] = int_id
-                self._int_to_memory_id[int_id] = memory_id
-            rows.append((memory_id, vec, int(self._memory_id_to_int[memory_id])))
-        rows.sort(key=lambda item: (int(item[2]), str(item[0])))
-        matrix = np.stack([vec for _, vec, _ in rows]).astype(np.float32, copy=False)
-        ids = np.asarray([int_id for _, _, int_id in rows], dtype=np.int64)
-        try:
-            self._index.add_with_ids(matrix, ids)
-        except Exception:
-            # If rebuild still fails, disable FAISS and fall back to numpy.
-            self._index = None
+        with self._lock:
+            self._index = self._build_index()
+            if self._index is None:
+                return
+            if not self._vectors:
+                return
+            rows: list[tuple[str, np.ndarray, int]] = []
+            for memory_id, vec in self._vectors.items():
+                if memory_id not in self._memory_id_to_int:
+                    int_id = self._next_id
+                    self._next_id += 1
+                    self._memory_id_to_int[memory_id] = int_id
+                    self._int_to_memory_id[int_id] = memory_id
+                rows.append((memory_id, vec, int(self._memory_id_to_int[memory_id])))
+            rows.sort(key=lambda item: (int(item[2]), str(item[0])))
+            matrix = np.stack([vec for _, vec, _ in rows]).astype(np.float32, copy=False)
+            ids = np.asarray([int_id for _, _, int_id in rows], dtype=np.int64)
+            try:
+                self._index.add_with_ids(matrix, ids)
+            except Exception:
+                self._index = None
 
     def _fallback_search(self, query: np.ndarray, *, top_k: int) -> list[dict]:
         rows: list[dict] = []

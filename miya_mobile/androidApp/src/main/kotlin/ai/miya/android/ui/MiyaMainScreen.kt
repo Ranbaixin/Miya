@@ -1,109 +1,200 @@
 package ai.miya.android.ui
 
+import ai.miya.shared.ServiceLocator
+import ai.miya.shared.connection.ConnectionStatus
+import ai.miya.android.ui.chat.ChatDetailScreen
+import ai.miya.android.ui.conversation.ConversationListScreen
+import ai.miya.android.ui.discover.DiscoverScreen
+import ai.miya.android.ui.profile.ProfileScreen
+import ai.miya.android.ui.setup.ConnectionSetupScreen
+import ai.miya.android.ui.theme.LocalMiyaColors
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import ai.miya.android.ui.chat.ChatScreen
-import ai.miya.android.ui.hub.HubScreen
-import ai.miya.android.ui.memory.MemoryScreen
-import ai.miya.android.ui.settings.SettingsScreen
-import ai.miya.android.ui.live2d.MiyaLive2DScreen
-import ai.miya.android.ui.theme.*
+import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 
-enum class MiyaTab(
-    val label: String,
-    val selectedIcon: ImageVector,
-    val unselectedIcon: ImageVector,
-) {
-    MIYA("弥娅", Icons.Filled.Face, Icons.Outlined.Face),
-    CHAT("聊天", Icons.Filled.Chat, Icons.Outlined.Chat),
-    HUB("中枢", Icons.Filled.Hub, Icons.Outlined.Hub),
-    MEMORY("记忆", Icons.Filled.Memory, Icons.Outlined.Memory),
-    SETTINGS("设置", Icons.Filled.Settings, Icons.Outlined.Settings),
+enum class MainTab(val label: String) {
+    MESSAGES("消息"),
+    DISCOVER("发现"),
+    ME("我的"),
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+sealed class AppScreen {
+    data object Main : AppScreen()
+    data class ChatDetail(val sessionId: String = "default", val sessionName: String = "弥娅") : AppScreen()
+}
+
 @Composable
 fun MiyaMainScreen() {
-    var selectedTab by remember { mutableStateOf(MiyaTab.CHAT) }
+    val colors = LocalMiyaColors.current
+    val appConfig = remember { ServiceLocator.appConfig }
+    val connMgr = remember { ServiceLocator.connectionManager }
+    val connState by connMgr.state.collectAsState()
+    val scope = rememberCoroutineScope()
 
-    MaterialTheme(
-        colorScheme = darkColorScheme(
-            primary = MiyaPrimary,
-            secondary = MiyaSecondary,
-            background = MiyaBackground,
-            surface = MiyaSurface,
-            surfaceVariant = MiyaSurfaceVariant,
-            onPrimary = MiyaTextPrimary,
-            onSecondary = MiyaTextPrimary,
-            onBackground = MiyaTextPrimary,
-            onSurface = MiyaTextPrimary,
-            onSurfaceVariant = MiyaTextSecondary,
+    var currentTab by remember { mutableStateOf(MainTab.MESSAGES) }
+    var currentScreen by remember { mutableStateOf<AppScreen>(AppScreen.Main) }
+    var showSetup by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        val saved = appConfig.load()
+        if (saved.serverHost != "localhost" || saved.serverPort != 9800) {
+            connMgr.setLanMode(saved.serverHost, saved.serverPort)
+        }
+        try {
+            val health = ServiceLocator.apiClient.health()
+            if (health.status != "ok") {
+                showSetup = true
+            } else {
+                connMgr.markConnected()
+            }
+        } catch (_: Exception) {
+            showSetup = true
+        }
+    }
+
+    if (showSetup) {
+        ConnectionSetupScreen(
+            onConnected = { host, port ->
+                scope.launch {
+                    appConfig.saveHost(host)
+                    appConfig.savePort(port)
+                    ServiceLocator.reconnect(host, port)
+                    connMgr.setLanMode(host, port)
+                    try {
+                        ServiceLocator.apiClient.health()
+                        connMgr.markConnected()
+                    } catch (_: Exception) {
+                        connMgr.markError("连接失败")
+                    }
+                    showSetup = false
+                }
+            }
         )
-    ) {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            bottomBar = {
-                MiyaBottomBar(
-                    selectedTab = selectedTab,
-                    onTabSelected = { selectedTab = it }
-                )
-            },
-            containerColor = MiyaBackground,
-        ) { padding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-            ) {
-                when (selectedTab) {
-                    MiyaTab.MIYA -> MiyaLive2DScreen()
-                    MiyaTab.CHAT -> ChatScreen()
-                    MiyaTab.HUB -> HubScreen()
-                    MiyaTab.MEMORY -> MemoryScreen()
-                    MiyaTab.SETTINGS -> SettingsScreen()
+        return
+    }
+
+    when (val screen = currentScreen) {
+        is AppScreen.Main -> {
+            Scaffold(
+                modifier = Modifier.fillMaxSize().background(colors.background),
+                containerColor = colors.background,
+                bottomBar = {
+                    HorizontalDivider(thickness = 0.5.dp, color = colors.divider)
+                    NavigationBar(
+                        containerColor = colors.surface,
+                        contentColor = colors.textPrimary,
+                        tonalElevation = 0.dp,
+                    ) {
+                        NavigationBarItem(
+                            selected = currentTab == MainTab.MESSAGES,
+                            onClick = { currentTab = MainTab.MESSAGES },
+                            icon = {
+                                Text(
+                                    text = "\uD83D\uDCAC",
+                                    fontSize = 18.sp,
+                                    modifier = Modifier.offset(y = (-2).dp),
+                                )
+                            },
+                            label = {
+                                Text(
+                                    "消息",
+                                    fontSize = 10.sp,
+                                    fontWeight = if (currentTab == MainTab.MESSAGES) FontWeight.Bold else FontWeight.Normal,
+                                )
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = colors.primary,
+                                selectedTextColor = colors.primary,
+                                unselectedIconColor = colors.textSecondary,
+                                unselectedTextColor = colors.textSecondary,
+                                indicatorColor = colors.primary.copy(alpha = 0.12f),
+                            ),
+                        )
+                        NavigationBarItem(
+                            selected = currentTab == MainTab.DISCOVER,
+                            onClick = { currentTab = MainTab.DISCOVER },
+                            icon = {
+                                Text(
+                                    text = "\u25C7",
+                                    fontSize = 20.sp,
+                                    modifier = Modifier.offset(y = (-2).dp),
+                                )
+                            },
+                            label = {
+                                Text(
+                                    "发现",
+                                    fontSize = 10.sp,
+                                    fontWeight = if (currentTab == MainTab.DISCOVER) FontWeight.Bold else FontWeight.Normal,
+                                )
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = colors.primary,
+                                selectedTextColor = colors.primary,
+                                unselectedIconColor = colors.textSecondary,
+                                unselectedTextColor = colors.textSecondary,
+                                indicatorColor = colors.primary.copy(alpha = 0.12f),
+                            ),
+                        )
+                        NavigationBarItem(
+                            selected = currentTab == MainTab.ME,
+                            onClick = { currentTab = MainTab.ME },
+                            icon = {
+                                Text(
+                                    text = "\u25CB",
+                                    fontSize = 20.sp,
+                                    modifier = Modifier.offset(y = (-2).dp),
+                                )
+                            },
+                            label = {
+                                Text(
+                                    "我的",
+                                    fontSize = 10.sp,
+                                    fontWeight = if (currentTab == MainTab.ME) FontWeight.Bold else FontWeight.Normal,
+                                )
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = colors.primary,
+                                selectedTextColor = colors.primary,
+                                unselectedIconColor = colors.textSecondary,
+                                unselectedTextColor = colors.textSecondary,
+                                indicatorColor = colors.primary.copy(alpha = 0.12f),
+                            ),
+                        )
+                    }
+                },
+            ) { padding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .background(colors.background)
+                ) {
+                    when (currentTab) {
+                        MainTab.MESSAGES -> ConversationListScreen(
+                            onConversationClick = { id, name ->
+                                currentScreen = AppScreen.ChatDetail(id, name)
+                            }
+                        )
+                        MainTab.DISCOVER -> DiscoverScreen()
+                        MainTab.ME -> ProfileScreen()
+                    }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun MiyaBottomBar(
-    selectedTab: MiyaTab,
-    onTabSelected: (MiyaTab) -> Unit,
-) {
-    NavigationBar(
-        containerColor = MiyaSurface,
-        contentColor = MiyaTextPrimary,
-        tonalElevation = 0.dp,
-    ) {
-        MiyaTab.entries.forEach { tab ->
-            NavigationBarItem(
-                selected = selectedTab == tab,
-                onClick = { onTabSelected(tab) },
-                icon = {
-                    Icon(
-                        imageVector = if (selectedTab == tab) tab.selectedIcon else tab.unselectedIcon,
-                        contentDescription = tab.label
-                    )
-                },
-                label = { Text(tab.label) },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MiyaPrimary,
-                    selectedTextColor = MiyaPrimary,
-                    unselectedIconColor = MiyaTextSecondary,
-                    unselectedTextColor = MiyaTextSecondary,
-                    indicatorColor = MiyaSurfaceVariant,
-                )
+        is AppScreen.ChatDetail -> {
+            ChatDetailScreen(
+                sessionId = screen.sessionId,
+                sessionName = screen.sessionName,
+                onBack = { currentScreen = AppScreen.Main },
             )
         }
     }

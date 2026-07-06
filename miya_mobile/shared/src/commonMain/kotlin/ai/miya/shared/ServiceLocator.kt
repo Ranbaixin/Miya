@@ -15,6 +15,7 @@ class PlatformContext(
 object ServiceLocator {
     var platformContext: PlatformContext? = null
 
+    private var _appConfig: AppConfig? = null
     private var _apiClient: MiyaApiClient? = null
     private var _webSocket: MiyaWebSocket? = null
     private var _connectionManager: ConnectionManager? = null
@@ -22,8 +23,11 @@ object ServiceLocator {
     private var _memoryRepo: MemoryRepository? = null
     private var _personaRepo: PersonaRepository? = null
 
-    fun init(context: PlatformContext, baseUrl: String = "http://localhost:9800") {
+    fun init(context: PlatformContext) {
         platformContext = context
+        val settings = context.settingsFactory()
+        _appConfig = AppConfig(settings)
+        val baseUrl = _appConfig!!.serverBaseUrl
         _connectionManager = ConnectionManager()
         _apiClient = MiyaApiClient(baseUrl)
         _webSocket = MiyaWebSocket(baseUrl.replace("http", "ws"))
@@ -31,6 +35,20 @@ object ServiceLocator {
         _memoryRepo = MemoryRepository(apiClient)
         _personaRepo = PersonaRepository(apiClient)
     }
+
+    fun reconnect(host: String, port: Int) {
+        _appConfig?.saveHost(host)
+        _appConfig?.savePort(port)
+        val baseUrl = "http://$host:$port"
+        _apiClient = MiyaApiClient(baseUrl)
+        _webSocket = MiyaWebSocket(baseUrl.replace("http", "ws"))
+        _chatRepo = ChatRepository(apiClient)
+        _memoryRepo = MemoryRepository(apiClient)
+        _personaRepo = PersonaRepository(apiClient)
+    }
+
+    val appConfig: AppConfig
+        get() = _appConfig ?: error("ServiceLocator not initialized")
 
     val apiClient: MiyaApiClient
         get() = _apiClient ?: error("ServiceLocator not initialized")

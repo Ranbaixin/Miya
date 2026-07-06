@@ -19,6 +19,8 @@ class AppState: ObservableObject {
     func updateConnection(host: String, port: Int) {
         baseURL = "http://\(host):\(port)"
         apiService.updateBaseURL(baseURL)
+        UserDefaults.standard.set(host, forKey: "server_host")
+        UserDefaults.standard.set(port, forKey: "server_port")
         checkConnection()
     }
 
@@ -245,11 +247,14 @@ struct SystemStatusInfo: Codable {
     let platforms: Int?
     let platformsActive: Int?
     let providersLoaded: Int?
+    let emotion: EmotionData?
+    let memory: MemoryStatsInfo?
 
     enum CodingKeys: String, CodingKey {
         case status, version, uptime, running, personality, name, platforms
         case platformsActive = "platforms_active"
         case providersLoaded = "providers_loaded"
+        case emotion, memory
     }
 }
 

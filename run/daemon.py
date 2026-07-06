@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import faulthandler
 import logging
 import os
 import sys
@@ -657,6 +658,9 @@ def main():
     setup_logging()
     log_dir = PROJECT_ROOT / "logs"
     log_dir.mkdir(exist_ok=True)
+
+    faulthandler.enable(file=open(str(log_dir / "faulthandler.log"), "a"))
+    faulthandler.dump_traceback_later(3600, repeat=True, file=open(str(log_dir / "faulthandler.log"), "a"))
 
     try:
         asyncio.run(

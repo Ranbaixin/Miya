@@ -1,60 +1,87 @@
 import SwiftUI
 
-enum MiyaTab: String, CaseIterable {
-    case miya = "弥娅"
-    case chat = "聊天"
-    case hub = "中枢"
-    case memory = "记忆"
-    case settings = "设置"
+enum MainTab: String, CaseIterable {
+    case messages = "消息"
+    case discover = "发现"
+    case me = "我的"
 
     var icon: String {
         switch self {
-        case .miya: return "face.smiling"
-        case .chat: return "message.fill"
-        case .hub: return "circle.hexagongrid.fill"
-        case .memory: return "brain.head.profile"
-        case .settings: return "gearshape.fill"
+        case .messages: return "message.fill"
+        case .discover: return "safari.fill"
+        case .me: return "person.fill"
         }
     }
 }
 
 struct ContentView: View {
-    @State private var selectedTab: MiyaTab = .miya
+    @EnvironmentObject var appState: AppState
+    @State private var selectedTab: MainTab = .messages
+    @AppStorage("isDarkTheme") private var isDarkTheme = true
+    @State private var showSetup = false
+    @State private var chatSession: (id: String, name: String)? = nil
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            MiyaCharacterView()
-                .tabItem {
-                    Label(MiyaTab.miya.rawValue, systemImage: MiyaTab.miya.icon)
+        Group {
+            if showSetup {
+                ConnectionSetupView(onConnected: { host, port in
+                    appState.updateConnection(host: host, port: port)
+                    showSetup = false
+                })
+                .preferredColorScheme(isDarkTheme ? .dark : .light)
+            } else if let session = chatSession {
+                NavigationStack {
+                    ChatDetailView(
+                        sessionId: session.id,
+                        sessionName: session.name,
+                        onBack: { chatSession = nil }
+                    )
                 }
-                .tag(MiyaTab.miya)
+                .preferredColorScheme(isDarkTheme ? .dark : .light)
+            } else {
+                TabView(selection: $selectedTab) {
+                    ConversationListView(onConversationClick: { id, name in
+                        chatSession = (id, name)
+                    })
+                    .tabItem {
+                        Label(MainTab.messages.rawValue, systemImage: MainTab.messages.icon)
+                    }
+                    .tag(MainTab.messages)
 
-            ChatView()
-                .tabItem {
-                    Label(MiyaTab.chat.rawValue, systemImage: MiyaTab.chat.icon)
-                }
-                .tag(MiyaTab.chat)
+                    DiscoverView()
+                        .tabItem {
+                            Label(MainTab.discover.rawValue, systemImage: MainTab.discover.icon)
+                        }
+                        .tag(MainTab.discover)
 
-            HubView()
-                .tabItem {
-                    Label(MiyaTab.hub.rawValue, systemImage: MiyaTab.hub.icon)
+                    ProfileView()
+                        .tabItem {
+                            Label(MainTab.me.rawValue, systemImage: MainTab.me.icon)
+                        }
+                        .tag(MainTab.me)
                 }
-                .tag(MiyaTab.hub)
-
-            MemoryView()
-                .tabItem {
-                    Label(MiyaTab.memory.rawValue, systemImage: MiyaTab.memory.icon)
-                }
-                .tag(MiyaTab.memory)
-
-            SettingsView()
-                .tabItem {
-                    Label(MiyaTab.settings.rawValue, systemImage: MiyaTab.settings.icon)
-                }
-                .tag(MiyaTab.settings)
+                .tint(isDarkTheme ? MiyaColors.primary : MiyaLightColors.primary)
+                .preferredColorScheme(isDarkTheme ? .dark : .light)
+            }
         }
-        .tint(MiyaColors.primary)
-        .preferredColorScheme(.dark)
+        .onAppear {
+            checkInitialConnection()
+        }
+    }
+
+    private func checkInitialConnection() {
+        let savedHost = UserDefaults.standard.string(forKey: "server_host") ?? "localhost"
+        let savedPort = UserDefaults.standard.integer(forKey: "server_port")
+        let port = savedPort > 0 ? savedPort : 9800
+
+        if savedHost != "localhost" {
+            appState.updateConnection(host: savedHost, port: port)
+        }
+
+        Task {
+            let healthy = await appState.apiService.healthCheck()
+            if !healthy { showSetup = true }
+        }
     }
 }
 

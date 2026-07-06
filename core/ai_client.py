@@ -1298,7 +1298,7 @@ class ZhipuAIClient(BaseAIClient):
 
 
 class AIClientFactory:
-    """AI客户端工厂"""
+    """AI客户端工厂（带缓存复用）"""
 
     _clients = {
         "openai": OpenAIClient,
@@ -1307,6 +1307,13 @@ class AIClientFactory:
         "zhipu": ZhipuAIClient,
         "siliconflow": OpenAIClient,  # 硅基流动使用 OpenAI 兼容格式
     }
+
+    _cache: dict[str, BaseAIClient] = {}
+    _cache_max_size: int = 8
+
+    @classmethod
+    def _cache_key(cls, provider: str, api_key: str, model: str, base_url: str = "") -> str:
+        return f"{provider}:{model}:{base_url}:{api_key[:8]}"
 
     @classmethod
     def create_client(cls, provider: str, api_key: str, model: str, **kwargs) -> BaseAIClient:
@@ -1328,18 +1335,44 @@ class AIClientFactory:
         if not client_class:
             raise ValueError(f"不支持的AI提供商: {provider}，支持的提供商: {list(cls._clients.keys())}")
 
-        logger.info(f"创建{provider}客户端，模型: {model}")
-        client = client_class(api_key=api_key, model=model, **kwargs)
+        base_url = kwargs.pop("base_url", "") or ""
+        cache_key = cls._cache_key(provider, api_key, model, base_url)
 
-        # 如果传入了 tool_context，设置到新客户端
+        if cache_key in cls._cache:
+            cached = cls._cache[cache_key]
+            cached.tool_context = kwargs.get("tool_context")
+            cached.tool_registry = None
+            if "tool_context" in kwargs and kwargs["tool_context"]:
+                cached.set_tool_context(kwargs["tool_context"])
+            logger.info(f"复用{provider}客户端，模型: {model} (缓存命中 {len(cls._cache)}个)")
+            return cached
+
+        logger.info(f"创建{provider}客户端，模型: {model}")
+        try:
+            kwargs["base_url"] = base_url if base_url else None
+            client = client_class(api_key=api_key, model=model, **kwargs)
+        except Exception as e:
+            logger.error(f"创建客户端失败 ({provider}/{model}): {type(e).__name__}: {e}", exc_info=True)
+            raise
+
         if "tool_context" in kwargs and kwargs["tool_context"]:
             client.set_tool_context(kwargs["tool_context"])
-            logger.info(f"[AIClientFactory] 为新客户端设置 tool_context, keys: {list(kwargs['tool_context'].keys())}")
 
-        logger.info(
-            f"[AIClientFactory] create_client完成，client.tool_context keys: {list(client.tool_context.keys()) if client.tool_context else 'None'}"
-        )
+        while len(cls._cache) >= cls._cache_max_size:
+            oldest_key = next(iter(cls._cache))
+            try:
+                old = cls._cache.pop(oldest_key)
+                if hasattr(old, 'client') and old.client:
+                    import asyncio as _asyncio
+                    try:
+                        loop = _asyncio.get_running_loop()
+                        loop.create_task(old.client.close())
+                    except RuntimeError:
+                        pass
+            except Exception:
+                pass
 
+        cls._cache[cache_key] = client
         return client
 
     @classmethod
