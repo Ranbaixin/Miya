@@ -71,15 +71,9 @@ class QQConfigLoader:
             return False
     
     def _get_default_config(self) -> Dict[str, Any]:
-        """获取默认配置"""
+        """获取默认配置（仅为功能配置提供回退，不包含连接凭证）"""
         return {
             "qq": {
-                "onebot": {
-                    "ws_url": "ws://localhost:6700",
-                    "token": "",
-                    "bot_qq": 0,
-                    "superadmin_qq": 0
-                },
                 "connection": {
                     "reconnect_interval": 5.0,
                     "ping_interval": 20,
@@ -164,21 +158,12 @@ class QQConfigLoader:
         return tool_config.get(key)
     
     def validate_config(self) -> tuple[bool, list[str]]:
-        """验证配置有效性"""
+        """验证配置有效性（仅验证功能配置，不验证 .env 中的连接凭证）"""
         errors = []
         config = self.get_config()
-        
-        # 检查OneBot配置
-        qq_config = config.get("qq", {})
-        onebot_config = qq_config.get("onebot", {})
-        
-        if not onebot_config.get("ws_url"):
-            errors.append("OneBot WebSocket地址未配置")
-        elif not onebot_config["ws_url"].startswith("ws://") and not onebot_config["ws_url"].startswith("wss://"):
-            errors.append("OneBot WebSocket地址格式不正确，必须以ws://或wss://开头")
-        
+
         # 检查多媒体配置
-        multimedia_config = qq_config.get("multimedia", {})
+        multimedia_config = config.get("multimedia", {})
         if multimedia_config.get("image", {}).get("max_size", 0) <= 0:
             errors.append("图片最大大小配置不正确")
         if multimedia_config.get("file", {}).get("max_size", 0) <= 0:

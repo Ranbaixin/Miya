@@ -6,11 +6,9 @@
 
 qq:
   # ===== 基础连接配置 =====
+  # 注意: ws_url / token / bot_qq / superadmin_qq 从 config/.env 读取
+  # 此处仅保留连接行为参数
   connection:
-    ws_url: "ws://localhost:6700"        # OneBot WebSocket 地址
-    token: ""                             # 访问令牌（可选）
-    bot_qq: 3681817929                              # 机器人 QQ 号
-    superadmin_qq: 1523878699                      # 超级管理员 QQ 号
     reconnect_interval: 5.0               # 重连间隔（秒）
     ping_interval: 20                     # 心跳间隔（秒）
     ping_timeout: 30                      # 心跳超时（秒）

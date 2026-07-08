@@ -92,30 +92,21 @@ def test_model_selection():
 
 
 def test_qq_model_integration():
-    """测试QQ模型集成"""
+    """测试QQ模型集成 — 基于 unified_config"""
     logger.info("测试QQ模型集成...")
 
     try:
-        from webnet.qq.hybrid_config import get_qq_model
+        from webnet.qq.unified_config import get_qq_config
 
-        # 测试获取QQ端模型配置
-        model_types = ["chat", "ocr", "vision", "safety"]
+        config = get_qq_config()
+        ws_url = config.get("ws_url", "")
+        bot_qq = config.get("bot_qq", 0)
 
-        for model_type in model_types:
-            model_config = get_qq_model(model_type)
-            if model_config:
-                model_id = model_config.get("id", "未知")
-                logger.info(f"  QQ {model_type}模型: {model_id}")
-            else:
-                logger.warning(f"  QQ {model_type}模型: 未配置")
+        logger.info(f"  QQ OneBot WS: {ws_url}")
+        logger.info(f"  QQ Bot QQ:    {bot_qq}")
 
-        # 测试获取所有模型配置
-        from webnet.qq.hybrid_config import get_model_config
-
-        all_models = get_model_config()
-
-        if all_models:
-            logger.info(f"QQ端共有 {len(all_models)} 类模型配置")
+        if ws_url and bot_qq:
+            logger.info(f"QQ端配置加载成功")
             return True
         else:
             logger.warning("未获取到QQ模型配置")

@@ -111,7 +111,7 @@ class QQNet:
             logging_cfg = get_qq_config("logging") or {}
 
             # 基础连接配置
-            self.onebot_ws_url = conn.get("ws_url", "ws://localhost:6700")
+            self.onebot_ws_url = conn.get("ws_url", "ws://localhost:3001")
             self.onebot_token = conn.get("token", "")
             self.bot_qq = conn.get("bot_qq", 0)
             self.superadmin_qq = conn.get("superadmin_qq", 0)
@@ -226,8 +226,8 @@ class QQNet:
             )
 
         except Exception as e:
-            logger.error(f"[QQNet] 加载统一配置失败，使用默认配置: {e}")
-            self.onebot_ws_url = "ws://localhost:6700"
+            logger.error(f"[QQNet] 加载配置失败: {e}")
+            self.onebot_ws_url = ""
             self.onebot_token = ""
             self.bot_qq = 0
             self.superadmin_qq = 0

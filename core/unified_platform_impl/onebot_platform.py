@@ -11,6 +11,7 @@ import asyncio
 import contextlib
 import json
 import logging
+import os
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -32,8 +33,8 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         BasePlatform.__init__(self, config)
-        self._ws_url = self.config.get("ws_url", "ws://127.0.0.1:3001")
-        self._bot_qq = self.config.get("bot_qq", "")
+        self._ws_url = self._read_ws_url()
+        self._bot_qq = os.getenv("QQ_BOT_QQ", self.config.get("bot_qq", ""))
         self._ws: Optional[Any] = None
         self._connected = False
         self._shutting_down = False
@@ -50,6 +51,15 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         self._batch_timers: Dict[str, asyncio.Task] = {}
         # 群成员缓存: group_id → (timestamp, [member_info_dict, ...])
         self._group_member_cache: Dict[int, tuple] = {}
+
+    @staticmethod
+    def _read_ws_url() -> str:
+        """从 .env 读取 OneBot WebSocket 地址"""
+        ws_url = os.getenv("QQ_ONEBOT_WS_URL", "")
+        if ws_url:
+            return ws_url
+        # 回退: 反向 WS 模式 — 弥娅监听，NapCat 主动连接
+        return "ws://127.0.0.1:3001"
 
     @property
     def _config_data(self) -> dict:
@@ -70,7 +80,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                     full = yaml.safe_load(f) or {}
                     qq = full.get("qq", {})
                     return {
-                        "superadmin_qq": str(qq.get("connection", {}).get("superadmin_qq", "")),
+                        "superadmin_qq": os.getenv("QQ_SUPERADMIN_QQ", ""),
                         "group_whitelist": qq.get("access_control", {}).get("group_whitelist", []),
                         "group_blacklist": qq.get("access_control", {}).get("group_blacklist", []),
                         "user_whitelist": qq.get("access_control", {}).get("user_whitelist", []),

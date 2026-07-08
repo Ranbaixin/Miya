@@ -26,7 +26,7 @@ async def test_config_loading():
     """测试配置加载（使用混合配置系统）"""
     logger.info("测试配置加载...")
     try:
-        from webnet.qq.hybrid_config import get_qq_config
+        from webnet.qq.unified_config import get_qq_config
         
         config = get_qq_config()
         logger.info(f"混合配置加载成功，OneBot地址: {config.get('onebot_ws_url', '未配置')}")

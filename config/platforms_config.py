@@ -53,7 +53,7 @@ def _env(key: str, default: str = "") -> str:
 
 
 # ==================== QQ 官方机器人 ====================
-# 环境变量: QQ_APPID, QQ_SECRET, QQ_BOT_QQ
+# 环境变量: QQ_APPID, QQ_SECRET, QQ_OFFICIAL_BOT_QQ
 # 申请地址: https://q.qq.com/
 # 文档: https://bot.q.qq.com/wiki/develop/api/
 
@@ -61,7 +61,7 @@ QQ_OFFICIAL_CONFIG = {
     "enabled": True,
     "appid": _env("QQ_APPID"),
     "secret": _env("QQ_SECRET"),
-    "bot_qq": _env("QQ_BOT_QQ"),
+    "bot_qq": _env("QQ_OFFICIAL_BOT_QQ", _env("QQ_BOT_QQ")),
     "enable_group_c2c": True,
     "enable_guild_direct_message": True,
     "sandbox": False,
