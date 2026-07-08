@@ -1,4 +1,5 @@
 @echo off
+cd /d "%~dp0"
 chcp 65001 >nul
 set PYTHONUTF8=1
 title MIYA v8.0 - Build
@@ -19,17 +20,20 @@ if errorlevel 1 (
     exit /b 1
 )
 
+:: init submodule if needed
+if not exist "claude-code-engine\package.json" (
+    echo [INFO] Claude Code Engine submodule not initialized, running git submodule update...
+    git submodule update --init -- claude-code-engine
+    if errorlevel 1 (
+        echo [WARN] Failed to init CCE submodule, skipping CCE build
+        set CCE_SKIP=1
+    )
+)
+echo.
+
 :: sync frontend config
 python scripts\sync_frontend_config.py
 echo.
-
-:: check bun
-where bun >nul 2>&1
-if errorlevel 1 (
-    echo [ERROR] bun not found. Install: npm install -g bun
-    pause
-    exit /b 1
-)
 
 :: check node
 node --version >nul 2>&1
@@ -40,7 +44,39 @@ if errorlevel 1 (
 )
 
 set MODE=%1
-if "%MODE%"=="" set MODE=all
+if not "%MODE%"=="" goto :start_build
+
+:: no arg — show interactive menu
+:show_menu
+echo.
+echo   ==========================================
+echo          MIYA v8.0 - Build Menu
+echo   ==========================================
+echo     [1] Build All (CCE + Desktop)
+echo     [2] Build CCE (Terminal Engine)
+echo     [3] Build Desktop (Electron App)
+echo     [Q] Quit
+echo   ==========================================
+echo.
+set /p CHOICE="  Select [1/2/3/Q]: "
+if /i "%CHOICE%"=="1" set MODE=all
+if /i "%CHOICE%"=="2" set MODE=cce
+if /i "%CHOICE%"=="3" set MODE=desktop
+if /i "%CHOICE%"=="Q" goto :quit
+if "%MODE%"=="" (
+    echo Invalid choice.
+    pause
+    goto :show_menu
+)
+goto :start_build
+
+:quit
+exit /b 0
+
+:start_build
+echo.
+echo Starting build mode: %MODE%
+echo.
 
 :: ==================== CCE ====================
 if /i "%MODE%"=="cce" goto :build_cce
@@ -53,20 +89,50 @@ echo ===========================================================================
 echo   Building Claude Code Engine (CCE)...
 echo ================================================================================
 echo.
-cd claude-code-engine
-if not exist "node_modules\" (
-    echo [INFO] Installing CCE dependencies...
-    bun install
+
+if "%CCE_SKIP%"=="1" (
+    echo [SKIP] CCE submodule not available, skipping CCE build
+    if /i "%MODE%"=="cce" goto :done
+    goto :check_desktop
+)
+
+:: check bun (only needed for CCE)
+where bun >nul 2>&1
+if errorlevel 1 (
+    echo [INFO] bun not found, auto-installing...
+    call npm install -g bun
+    if errorlevel 1 (
+        echo [ERROR] Failed to install bun. Please install manually: npm install -g bun
+        if /i "%MODE%"=="cce" pause
+        if /i "%MODE%"=="cce" exit /b 1
+        echo [WARN] Skipping CCE build (bun unavailable)
+        goto :check_desktop
+    )
+    echo [OK] bun installed successfully
+)
+
+cd /d "%~dp0claude-code-engine"
+echo [INFO] Installing CCE dependencies...
+start /wait "" bun install
+if errorlevel 1 (
+    echo [ERROR] CCE dependency install failed!
+    cd /d "%~dp0"
+    if /i "%MODE%"=="cce" pause
+    if /i "%MODE%"=="cce" exit /b 1
+    echo [WARN] Skipping CCE build, continuing with desktop...
+    goto :check_desktop
 )
 echo [INFO] Building CCE...
-bun run build
+start /wait "" bun run build
 if errorlevel 1 (
     echo [ERROR] CCE build failed!
-    cd ..
-    pause
-    exit /b 1
+    cd /d "%~dp0"
+    if /i "%MODE%"=="cce" pause
+    if /i "%MODE%"=="cce" exit /b 1
+    echo [WARN] CCE build failed, continuing with desktop...
+    goto :check_desktop
 )
-cd ..
+cd /d "%~dp0"
 echo [OK] CCE build complete
 if /i "%MODE%"=="cce" goto :done
 
@@ -83,20 +149,24 @@ echo   Building Electron Desktop App...
 echo ================================================================================
 echo.
 if exist "miya_frontend\package.json" (
-    cd miya_frontend
-    if not exist "node_modules\" (
-        echo [INFO] Installing desktop dependencies...
-        call npm install
+    cd /d "%~dp0miya_frontend"
+    echo [INFO] Installing desktop dependencies...
+    call npm install --legacy-peer-deps
+    if errorlevel 1 (
+        echo [ERROR] Desktop dependency install failed!
+        cd /d "%~dp0"
+        goto :done
     )
+    echo [INFO] Setting up esbuild binary...
+    node node_modules\esbuild\install.js 2>nul
     echo [INFO] Building desktop app...
     call npm run build
     if errorlevel 1 (
         echo [ERROR] Desktop build failed!
-        cd ..
-        pause
-        exit /b 1
+        cd /d "%~dp0"
+        goto :done
     )
-    cd ..
+    cd /d "%~dp0"
     echo [OK] Desktop build complete
 ) else (
     echo [WARN] miya_frontend not found, skipping...

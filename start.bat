@@ -63,7 +63,7 @@ echo   MIYA Terminal
 echo ================================================================================
 echo.
 
-if not exist "claude-code-engine\dist\cli-node.js" (
+if not exist "%~dp0claude-code-engine\dist\cli-node.js" (
     echo [ERROR] Claude Code Engine not found
     echo Run: build.bat cce
     pause
@@ -71,7 +71,7 @@ if not exist "claude-code-engine\dist\cli-node.js" (
 )
 
 echo Starting MIYA Terminal...
-start "MIYA Terminal" wt node claude-code-engine\dist\cli-node.js
+start "MIYA Terminal" wt node "%~dp0claude-code-engine\dist\cli-node.js"
 timeout /t 2 >nul
 echo.
 echo [OK] Terminal session ended
@@ -168,16 +168,35 @@ if not exist "miya_frontend\package.json" (
     goto :menu
 )
 
-if not exist "miya_frontend\node_modules\" (
-    echo [WARN] Dependencies not installed, running npm install...
-    cd miya_frontend
-    call npm install
-    cd ..
+:: Check if dependencies are properly installed
+if not exist "miya_frontend\node_modules\" goto :desktop_install
+if not exist "miya_frontend\node_modules\electron\dist\electron.exe" goto :desktop_rebuild
+goto :desktop_launch
+
+:desktop_install
+echo [WARN] Dependencies not installed, running npm install...
+cd /d "%~dp0miya_frontend"
+call npm install --legacy-peer-deps
+if errorlevel 1 (
+    echo [ERROR] Dependency install failed!
+    cd /d "%~dp0"
+    goto :restart
 )
+goto :desktop_rebuild
+
+:desktop_rebuild
+cd /d "%~dp0miya_frontend"
+echo [INFO] Downloading Electron and esbuild binaries...
+node node_modules\electron\install.js 2>nul
+node node_modules\esbuild\install.js 2>nul
+cd /d "%~dp0"
+goto :desktop_launch
+
+:desktop_launch
 
 echo Starting Electron desktop app...
 echo   Start backend separately (start.bat 2)
-start "MIYA Desktop" cmd /c "set MIYA_NO_BACKEND=1 && cd miya_frontend && npm run dev"
+start "MIYA Desktop" cmd /c "set MIYA_NO_BACKEND=1 && cd /d %~dp0miya_frontend && npm run dev"
 echo.
 echo [OK] Desktop app launched
 timeout /t 2 >nul
@@ -201,7 +220,7 @@ echo [OK] Daemon started
 :: Desktop (background)
 if exist "miya_frontend\package.json" (
     echo [2/3] Starting Desktop app...
-    start "MIYA Desktop" /B cmd /c "cd miya_frontend && npm run dev"
+    start "MIYA Desktop" /B cmd /c "set MIYA_NO_BACKEND=1 && cd /d %~dp0miya_frontend && npm run dev"
     timeout /t 2 >nul
     echo [OK] Desktop launched
 ) else (
