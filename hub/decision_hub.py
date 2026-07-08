@@ -1927,7 +1927,6 @@ class DecisionHub:
                 return None
 
             # 启动 Phase 1 所有并行任务（含 AI 注入检测，从 Phase 0 移入以消除串行等待）
-            is_terminal = (platform == 'terminal')
             is_qq = (platform == 'qq')
 
             conv_task = asyncio.create_task(fetch_conversation_context(), name="conv")

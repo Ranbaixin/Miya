@@ -547,7 +547,7 @@ class DiTingListener:
             # 如果没有 api_key，尝试从统一映射获取
             if not api_key:
                 from core.model_pool_manager import resolve_api_key_by_provider
-                api_key = resolve_api_key_by_provider(model_config.provider.lower(), 
+                api_key = resolve_api_key_by_provider(model_config.provider.lower(),
                                                        getattr(model_config, 'env_key', ''))
 
             client = AIClientFactory.create_client(

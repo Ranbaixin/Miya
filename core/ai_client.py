@@ -973,7 +973,6 @@ class OpenAIClient(BaseAIClient):
                         continue
 
                     delta = chunk.choices[0].delta
-                    finish_reason = chunk.choices[0].finish_reason
 
                     reasoning = getattr(delta, "reasoning_content", None)
                     if reasoning:

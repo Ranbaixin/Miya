@@ -343,7 +343,7 @@ class Miya:
                 str(
                     Path.home() / "AppData" / "Roaming" / "fnm" / "node-versions" / "v22" / "installation" / "node.exe"
                 ),
-                str(Path(os.environ.get("ProgramFiles", "C:\\Program Files")) / "nodejs" / "node.exe"),
+                str(Path(os.environ.get("PROGRAMFILES", "C:\\Program Files")) / "nodejs" / "node.exe"),
             ]
         else:
             node_candidates = [

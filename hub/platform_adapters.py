@@ -458,13 +458,13 @@ class WebAdapter(PlatformAdapter):
             "disk": {
                 "total_gb": round(psutil.disk_usage("/").total / (1024**3), 2)
                 if sys_platform.system() == "Linux"
-                else round(psutil.disk_usage(os.environ.get("SystemDrive", "C:") + "\\").total / (1024**3), 2),
+                else round(psutil.disk_usage(os.environ.get("SYSTEMDRIVE", "C:") + "\\").total / (1024**3), 2),
                 "free_gb": round(psutil.disk_usage("/").free / (1024**3), 2)
                 if sys_platform.system() == "Linux"
-                else round(psutil.disk_usage(os.environ.get("SystemDrive", "C:") + "\\").free / (1024**3), 2),
+                else round(psutil.disk_usage(os.environ.get("SYSTEMDRIVE", "C:") + "\\").free / (1024**3), 2),
                 "usage_percent": psutil.disk_usage("/").percent
                 if sys_platform.system() == "Linux"
-                else psutil.disk_usage(os.environ.get("SystemDrive", "C:") + "\\").percent,
+                else psutil.disk_usage(os.environ.get("SYSTEMDRIVE", "C:") + "\\").percent,
             },
             "network": {
                 "connections": len(psutil.net_connections()),

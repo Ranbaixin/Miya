@@ -159,7 +159,7 @@ async def list_providers() -> Dict:
 async def add_provider(provider_config: Dict) -> Dict:
     """添加提供商"""
     try:
-        pool = get_model_pool()
+        _pool = get_model_pool()
         return {"success": True, "message": "请通过 multi_model_config.json 添加模型"}
     except Exception as e:
         logger.error(f"[Dashboard] 添加提供商失败: {e}")
