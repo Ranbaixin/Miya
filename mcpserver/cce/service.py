@@ -82,6 +82,48 @@ class CCEService:
                     env_vars[key.strip()] = value.strip()
         return env_vars
 
+    def _get_model_env(self) -> dict[str, str]:
+        """从 ModelPoolManager 获取活跃模型配置，回退到 system_defaults，再回退 .env"""
+        try:
+            from core.model_pool_manager import get_model_pool, resolve_api_key_by_provider
+
+            pool = get_model_pool()
+            active_model = pool.select_model("simple_chat")
+            if active_model and active_model.base_url:
+                api_key = resolve_api_key_by_provider(
+                    active_model.provider,
+                    getattr(active_model, "env_key", ""),
+                )
+                return {
+                    "api_key": api_key,
+                    "base_url": active_model.base_url,
+                    "model": active_model.name,
+                }
+
+            system_defaults = pool._config.get("system_defaults", {})
+            default_model_id = system_defaults.get("default_model", "")
+            if default_model_id:
+                model = pool.get_model(default_model_id)
+                if model and model.enabled:
+                    api_key = resolve_api_key_by_provider(
+                        model.provider,
+                        getattr(model, "env_key", ""),
+                    )
+                    return {
+                        "api_key": api_key,
+                        "base_url": model.base_url,
+                        "model": model.name,
+                    }
+        except Exception as e:
+            logger.debug(f"[CCE] ModelPoolManager 获取模型失败，回退 .env: {e}")
+
+        env_vars = self._load_env_vars()
+        return {
+            "api_key": env_vars.get("DEEPSEEK_API_KEY", ""),
+            "base_url": env_vars.get("DEEPSEEK_API_BASE", "https://api.deepseek.com/v1"),
+            "model": env_vars.get("DEEPSEEK_MODEL", "deepseek-v4-flash"),
+        }
+
     async def handle_handoff(self, tool_call: dict) -> str:
         tool_name = tool_call.get("tool_name", "")
 
@@ -105,13 +147,13 @@ class CCEService:
                 {"success": False, "error": "CCE CLI 未就绪，请确认 claude-code-engine/dist/cli-node.js 存在"}
             )
 
-        env_vars = self._load_env_vars()
+        model_env = self._get_model_env()
         env = {
             **{k: v for k, v in os.environ.items()},
             "CLAUDE_CODE_USE_OPENAI": "1",
-            "OPENAI_API_KEY": env_vars.get("DEEPSEEK_API_KEY", ""),
-            "OPENAI_BASE_URL": env_vars.get("DEEPSEEK_API_BASE", "https://api.deepseek.com/v1"),
-            "OPENAI_MODEL": env_vars.get("DEEPSEEK_MODEL", "deepseek-v4-flash"),
+            "OPENAI_API_KEY": model_env["api_key"],
+            "OPENAI_BASE_URL": model_env["base_url"],
+            "OPENAI_MODEL": model_env["model"],
         }
 
         try:

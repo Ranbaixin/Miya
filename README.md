@@ -67,7 +67,7 @@ Claude Code Engine（Node.js）作为执行层，拥有 60+ 内置工具（文�
 面·外壳     Electron桌面   Web (Vue 3)   Live2D 独立窗口   Terminal (xterm)
                           │
 手·肢体     Claude Code Engine (Node.js)  ·  60+ 工具  ·  MCP 客户端
-                          │  MCP 协议 (miya-soul / miya-cognition / security_sandbox)
+                          │  MCP 协议 (miya-soul / security_sandbox)
 大脑·灵魂   弥娅守护进程 (Python)
             ├── APV2.1 白盒认知引擎 —— 心灵 · 皮层 · 感知器 · 观测站 (:8765)
             ├── DecisionHub 决策中枢 —— 感知处理 · 响应生成 · 情感引擎 · 记忆管理

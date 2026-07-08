@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
 from core.text_loader import get_error_message
+from core.terminal_formatter import TerminalFormatter
 
 from .prompt_cache import get_global_prompt_cache
 
@@ -37,18 +38,11 @@ class BaseAIClient:
         self.config = kwargs
         self.tool_registry: Optional[Callable] = None
         self.tool_context: Optional[Dict[str, Any]] = None
-        self.personality = kwargs.get("personality")  # 人格实例
-        self._miya_prompt: Optional[str] = None  # 弥娅人设提示词缓存
-        self._miya_prompt_full: Optional[str] = None  # 弥娅人设完整版提示词
-        self.use_compact_prompt: bool = kwargs.get("use_compact_prompt", False)  # 是否使用紧凑版提示词
-        self.enable_prompt_cache: bool = kwargs.get("enable_prompt_cache", True)  # 是否启用提示词缓存
+        self.personality = kwargs.get("personality")
+        self.use_compact_prompt: bool = kwargs.get("use_compact_prompt", False)
+        self.enable_prompt_cache: bool = kwargs.get("enable_prompt_cache", True)
         self.prompt_cache = get_global_prompt_cache() if self.enable_prompt_cache else None
-
-        # 【新增】存储最后一次AI思考过程，供外部获取
         self.last_reasoning_content: str = ""
-
-        # 尝试加载弥娅人设提示词
-        self._load_miya_prompt()
 
     def set_tool_registry(self, tool_registry: Callable):
         """设置工具注册表
@@ -67,19 +61,8 @@ class BaseAIClient:
         self.tool_context = context
 
     def set_personality(self, personality):
-        """设置人格实例
-
-        Args:
-            personality: 人格实例
-        """
+        """设置人格实例"""
         self.personality = personality
-
-    def _load_miya_prompt(self):
-        """加载弥娅人设提示词（已弃用，使用YAML配置）"""
-        # 现在系统使用 YAML 配置和人格模块，不再使用 prompts/ 目录
-        # 这里保留空的提示词，由 prompt_manager 动态生成
-        self._miya_prompt = ""
-        self._miya_prompt_full = ""
 
     def get_miya_system_prompt(self, additional_context: Optional[Dict] = None, use_full: bool = False) -> str:
         """
@@ -112,8 +95,8 @@ class BaseAIClient:
                 logger.debug("[AIClient] 提示词缓存命中")
                 return cached_prompt
 
-        # 生成提示词
-        prompt = self._generate_miya_prompt(base_only=False, use_full=use_full)
+        # 生成提示词（从人格系统动态构建）
+        prompt = ""
 
         # 添加动态人格信息
         if self.personality:
@@ -139,25 +122,6 @@ class BaseAIClient:
             logger.debug("[AIClient] 提示词已缓存")
 
         return prompt
-
-    def _generate_miya_prompt(self, base_only: bool = True, use_full: bool = False) -> str:
-        """
-        生成弥娅基础提示词
-
-        Args:
-            base_only: 是否只返回基础提示词
-            use_full: 是否使用完整版
-
-        Returns:
-            基础提示词
-        """
-        # 选择使用完整版还是紧凑版
-        if use_full and self._miya_prompt_full:
-            return self._miya_prompt_full
-        elif self._miya_prompt:
-            return self._miya_prompt
-        else:
-            return ""
 
     async def chat(
         self,
@@ -186,8 +150,6 @@ class BaseAIClient:
                 system_prompt = messages[0].content
                 additional_context = {}
                 # 提取 user_id 等占位符
-                import re
-
                 placeholders = re.findall(r"\{(\w+)\}", system_prompt)
                 for ph in placeholders:
                     match = re.search(rf"\{ph}\s*[:：]\s*(\S+)", system_prompt)
@@ -238,8 +200,6 @@ class BaseAIClient:
         # 如果有 reasoning_content，用它来提取纯回复
         if reasoning and len(reasoning) > 10:
             # 尝试匹配思考结束标记
-            import re
-
             patterns = [
                 r"\n\n([^\n])",  # 两个换行后是新段落
                 r"\n(?:好|那么|综上|所以|最后|总结|回复|回答|建议)",  # 回答类词语
@@ -297,6 +257,11 @@ class BaseAIClient:
             "【群聊动态】",
             "【与弥娅的对话】",
             "【工作记忆】",
+            "【弥娅时间感知】",
+            "【弥娅看到的画面】",
+            "【情感指引】",
+            "【记忆上下文】",
+            "【近期思维参考】",
         ]
         for marker in context_markers:
             if marker in user_message:
@@ -335,8 +300,6 @@ class BaseAIClient:
             r"(?:分钟后|小时后|几点|秒后).*(?:提醒|叫|喊)",
             r"定时.*(?:提醒|消息|任务)",
         ]
-
-        import re
 
         for pattern in action_patterns:
             if re.search(pattern, user_message):
@@ -465,7 +428,6 @@ class BaseAIClient:
         """
         try:
             from core.gestalt_controller import get_gestalt_controller
-            from core.terminal_formatter import TerminalFormatter
 
             from .tool_adapter import get_tool_adapter
 
@@ -565,25 +527,57 @@ class BaseAIClient:
 
 
 class OpenAIClient(BaseAIClient):
-    """OpenAI API客户端"""
+    """OpenAI API 客户端 — 同时支持所有 OpenAI 兼容协议的第三方 API"""
+
+    provider_label: str = "OpenAI"
+    _can_concurrent: bool = True
+    _direct_return_tools: list = [
+        "horoscope", "wenchang_dijun",
+        "list_game_saves", "create_game_save", "load_game_save",
+        "roll_dice", "roll_secret", "skill_check",
+        "create_pc", "show_pc", "update_pc", "delete_pc",
+        "start_combat", "add_initiative", "next_turn", "show_initiative",
+        "end_combat", "rest", "attack", "combat_log", "kp_command",
+        "terminal_command", "multi_terminal",
+        "douyinhot", "weibohot", "baiduhot",
+        "grok_search", "web_search", "crawl_webpage",
+        "group_file_downloader", "local_file_finder", "qq_file_reader",
+        "python_interpreter",
+    ]
 
     def __init__(
         self,
         api_key: str,
         model: str,
         base_url: Optional[str] = None,
+        provider=None,
         **kwargs,
     ):
         super().__init__(api_key, model, **kwargs)
         self.base_url = base_url
 
-        try:
-            from openai import AsyncOpenAI
+        if provider is not None:
+            self._provider = provider
+            self.client = provider._client
+        else:
+            self._provider = None
+            try:
+                from openai import AsyncOpenAI
 
-            self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
-        except ImportError:
-            logger.warning("OpenAI库未安装，请在虚拟环境中运行: pip install openai")
-            self.client = None
+                self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+            except ImportError:
+                logger.warning("OpenAI库未安装，请在虚拟环境中运行: pip install openai")
+                self.client = None
+
+    @classmethod
+    def from_provider(cls, provider):
+        """从 Provider 实例创建 OpenAIClient，复用其 AsyncOpenAI 连接"""
+        return cls(
+            api_key=provider.config.api_key,
+            model=provider.config.model,
+            base_url=provider.config.base_url or "",
+            provider=provider,
+        )
 
     async def chat(
         self,
@@ -681,10 +675,15 @@ class OpenAIClient(BaseAIClient):
                     logger.debug(f"[AIClient] 返回内容预览: {message.content[:200] if message.content else '(无内容)'}")
 
                     # 【修复】检测用户输入是否需要执行操作，如果是则强制AI重新考虑
-                    # 获取用户最新消息（排除系统提醒消息）
+                    # 获取用户最新消息（排除系统提醒/上下文标记消息）
                     user_message = ""
                     for msg in reversed(current_messages):
-                        if msg.role == "user" and "【系统提醒】" not in msg.content:
+                        if msg.role == "user" and not any(
+                            marker in msg.content
+                            for marker in ["【系统提醒】", "【弥娅时间感知】", "【弥娅看到的画面】",
+                                           "【对话历史上下文】", "【当前感知】", "【群聊时间线】",
+                                           "【情感指引】", "【记忆上下文】", "【近期思维参考】"]
+                        ):
                             user_message = msg.content
                             break
 
@@ -701,9 +700,7 @@ class OpenAIClient(BaseAIClient):
                         logger.info(
                             f"[AIClient] OpenAI检测到需要执行操作但AI未调用工具，强制重新请求... (重试 {force_retry_count + 1}/2)"
                         )
-                        import re as _re
-
-                        _is_reminder = _re.search(
+                        _is_reminder = re.search(
                             r"提醒我|提醒|叫我|喊我|定时|分钟.*后|几点",
                             user_message or "",
                         )
@@ -730,8 +727,6 @@ class OpenAIClient(BaseAIClient):
 
                     # 打印思考过程到终端（仅终端显示，不发送给用户）
                     if thinking_content:
-                        from core.terminal_formatter import TerminalFormatter
-
                         thinking_lines = thinking_content.split("\n")[:10]
                         print(TerminalFormatter.thinking_block("\n".join(thinking_lines)))
 
@@ -743,9 +738,10 @@ class OpenAIClient(BaseAIClient):
 
                 # 有工具调用，执行工具
                 tool_calls = message.tool_calls
-                logger.info(f"AI请求调用工具: {[tc.function.name for tc in tool_calls]}")
+                logger.info(f"{self.provider_label} AI请求调用工具: {[tc.function.name for tc in tool_calls]}")
 
-                # 添加助手消息（包含工具调用）
+                # 添加助手消息（包含工具调用和思考过程）
+                reasoning_content = getattr(message, "reasoning_content", None) or getattr(message, "reasoning", None)
                 current_messages.append(
                     AIMessage(
                         role="assistant",
@@ -761,6 +757,7 @@ class OpenAIClient(BaseAIClient):
                             }
                             for tc in tool_calls
                         ],
+                        reasoning_content=reasoning_content,
                     )
                 )
 
@@ -768,7 +765,7 @@ class OpenAIClient(BaseAIClient):
                 import asyncio
 
                 # 并发执行多工具调用以降低延迟
-                can_concurrent = True
+                can_concurrent = self._can_concurrent
 
                 if can_concurrent:
                     # 并发执行多个工具调用
@@ -866,43 +863,7 @@ class OpenAIClient(BaseAIClient):
                             return final_marker
 
                         # 检查是否是直接返回工具
-                        direct_return_tools = [
-                            "horoscope",
-                            "wenchang_dijun",
-                            "list_game_saves",
-                            "create_game_save",
-                            "load_game_save",
-                            "roll_dice",
-                            "roll_secret",
-                            "skill_check",
-                            "create_pc",
-                            "show_pc",
-                            "update_pc",
-                            "delete_pc",
-                            "start_combat",
-                            "add_initiative",
-                            "next_turn",
-                            "show_initiative",
-                            "end_combat",
-                            "rest",
-                            "attack",
-                            "combat_log",
-                            "kp_command",
-                            "terminal_command",  # 终端命令工具直接返回结果
-                            # 热搜工具 - 返回完整列表，不摘要
-                            "douyinhot",
-                            "weibohot",
-                            "baiduhot",
-                            "grok_search",
-                            "web_search",
-                            "crawl_webpage",
-                            # Agent 工具 - 返回完整结果
-                            "group_file_downloader",
-                            "local_file_finder",
-                            "qq_file_reader",
-                            # 注意：qq_image_analyzer 不在这里，因为它需要经过人格润色
-                            "python_interpreter",
-                        ]
+                        direct_return_tools = self._direct_return_tools
                     if tool_call.function.name in direct_return_tools:
                         logger.info(f"[AIClient] 检测到直接返回工具: {tool_call.function.name}，直接返回结果")
                         return result
@@ -918,10 +879,10 @@ class OpenAIClient(BaseAIClient):
                 from openai import AuthenticationError as OpenAIAuthError
 
                 err_str = str(e)
-                logger.error(f"OpenAI API调用失败: {err_str}")
+                logger.error(f"{self.provider_label} API调用失败: {err_str}")
 
                 if isinstance(e, OpenAIAuthError):
-                    return "抱歉亲爱的，当前模型认证出现问题，可能是密钥已过期。请检查API密钥是否有效~"
+                    return f"抱歉亲爱的，当前{self.provider_label}模型认证出现问题，可能是密钥已过期。请检查API密钥是否有效~"
 
                 # 工具调用格式错误时清理消息并重试
                 if "tool" in err_str.lower() and ("400" in err_str or "invalid" in err_str.lower()):
@@ -955,268 +916,206 @@ class OpenAIClient(BaseAIClient):
         # 达到最大迭代次数
         return get_error_message("tool_call_limit_exceeded")
 
-
-class DeepSeekClient(BaseAIClient):
-    """DeepSeek API客户端"""
-
-    def __init__(
-        self,
-        api_key: str,
-        model: str,
-        base_url: Optional[str] = None,
-        **kwargs,
-    ):
-        super().__init__(api_key, model, **kwargs)
-        self.base_url = base_url
-
-        try:
-            from openai import AsyncOpenAI
-
-            self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
-        except ImportError:
-            logger.warning("OpenAI库未安装，请运行: pip install openai")
-            self.client = None
-
-    async def chat(
+    async def chat_stream(
         self,
         messages: List[AIMessage],
         tools: Optional[List[Dict]] = None,
         max_iterations: int = 20,
         use_miya_prompt: bool = True,
         tool_choice: str = "auto",
-    ) -> str:
-        """调用DeepSeek聊天接口（支持工具调用）
+    ):
+        """流式聊天（async generator），逐块 yield 内容 + 工具调用处理
 
-        Args:
-            messages: 消息列表
-            tools: 可用工具列表
-            max_iterations: 最大工具调用迭代次数
-            use_miya_prompt: 是否使用弥娅人设提示词
-            tool_choice: 工具选择策略 ("auto", "required", "none")
-
-        Returns:
-            AI回复
+        Yields:
+            {"type": "content", "data": str}   — 文本块
+            {"type": "thinking", "data": str}  — 思考过程（DeepSeek）
+            {"type": "tool_start", "data": {"name": str, "id": str}}  — 工具调用开始
+            {"type": "tool_result", "data": {"name": str, "result": str}}  — 工具结果
+            {"type": "done", "data": str}      — 完成，data 为完整文本
+            {"type": "error", "data": str}     — 错误
         """
         if not self.client:
-            raise RuntimeError("DeepSeek客户端未初始化，请安装openai库")
+            yield {"type": "error", "data": "OpenAI客户端未初始化"}
+            return
 
-        # 调用基类方法处理人设提示词
-        if use_miya_prompt:
-            # 复制消息列表以避免修改原始数据
-            messages = [
-                AIMessage(
-                    role=msg.role,
-                    content=msg.content,
-                    tool_calls=msg.tool_calls,
-                    tool_call_id=msg.tool_call_id,
-                )
-                for msg in messages
-            ]
-
-        # 使用传入的工具或工具注册表
         if tools is None and self.tool_registry:
             tools = self.tool_registry()
 
-        logger.info(
-            f"[AIClient] 开始聊天 (模型: {self.model})，工具数量: {len(tools) if tools else 0}, has_tool_context={self.tool_context is not None}, tool_choice={tool_choice}"
-        )
-        if tools:
-            logger.info(f"[AIClient] 可用工具: {[t.get('function', {}).get('name', 'unknown') for t in tools]}")
+        logger.info(f"[AIClient-stream] 流式聊天开始 (模型: {self.model}), 工具: {len(tools) if tools else 0}")
 
         iteration = 0
-        current_messages = messages.copy()
+        current_messages = list(messages)
 
         while iteration < max_iterations:
             try:
-                # 转换为OpenAI格式（使用公共方法）
                 openai_messages = self._convert_messages_to_openai_format(current_messages)
 
-                # 构建请求参数
                 request_params = {
                     "model": self.model,
                     "messages": openai_messages,
                     "temperature": self.config.get("temperature", 0.7),
                     "max_tokens": self.config.get("max_tokens", 2000),
+                    "stream": True,
                 }
 
-                # 添加工具相关参数
                 if tools:
                     request_params["tools"] = tools
                     request_params["tool_choice"] = self._normalize_tool_choice(tool_choice)
 
-                # DeepSeek V4 内置联网搜索需要通过特定端点启用（API暂不支持）
-                # if "deepseek" in self.model.lower() and "v4" in self.model.lower():
-                #     request_params["enable_search"] = True
+                stream = await self.client.chat.completions.create(**request_params)
 
-                response = await self.client.chat.completions.create(**request_params)
+                content_parts: List[str] = []
+                tool_call_buffer: Dict[int, Dict] = {}
+                finish_reason = None
 
-                # 增强调试日志
-                choice = response.choices[0]
-                message = choice.message
+                async for chunk in stream:
+                    if not chunk.choices:
+                        continue
 
-                logger.info(
-                    f"[AIClient] DeepSeek响应 - 返回类型: {type(message).__name__}, 有工具调用: {bool(message.tool_calls)}, content长度: {len(message.content) if message.content else 0}"
-                )
+                    delta = chunk.choices[0].delta
+                    finish_reason = chunk.choices[0].finish_reason
 
-                # 如果没有工具调用，检查是否需要强制调用工具
-                if not message.tool_calls:
-                    logger.debug(f"[AIClient] DeepSeek返回纯文本（无工具调用），tool_choice={tool_choice}")
-                    logger.debug(f"[AIClient] 返回内容预览: {message.content[:200] if message.content else '(无内容)'}")
+                    reasoning = getattr(delta, "reasoning_content", None)
+                    if reasoning:
+                        yield {"type": "thinking", "data": reasoning}
 
-                    # 【修复】检测用户输入是否需要执行操作，如果是则强制AI重新考虑
-                    # 获取用户最新消息（排除系统提醒消息）
-                    user_message = ""
-                    for msg in reversed(current_messages):
-                        if msg.role == "user" and "【系统提醒】" not in msg.content:
-                            user_message = msg.content
-                            break
+                    if delta.content:
+                        content_parts.append(delta.content)
+                        yield {"type": "content", "data": delta.content}
 
-                    # 检测是否需要执行操作
-                    needs_action = self._check_needs_tool_action(user_message)
+                    if delta.tool_calls:
+                        for tc_delta in delta.tool_calls:
+                            idx = tc_delta.index
+                            if idx not in tool_call_buffer:
+                                tool_call_buffer[idx] = {
+                                    "id": "",
+                                    "function": {"name": "", "arguments": ""},
+                                }
+                            buf = tool_call_buffer[idx]
+                            if tc_delta.id:
+                                buf["id"] = tc_delta.id
+                            if tc_delta.function:
+                                if tc_delta.function.name:
+                                    buf["function"]["name"] += tc_delta.function.name
+                                if tc_delta.function.arguments:
+                                    buf["function"]["arguments"] += tc_delta.function.arguments
 
-                    # 限制强制重新请求次数，避免无限循环
-                    force_retry_count = sum(
-                        1 for msg in current_messages if msg.role == "user" and "【系统提醒】" in msg.content
+                if tool_call_buffer:
+                    tool_calls_list = [
+                        tool_call_buffer[i] for i in sorted(tool_call_buffer.keys())
+                    ]
+
+                    logger.info(f"[AIClient-stream] 检测到 {len(tool_calls_list)} 个工具调用")
+
+                    # 通知工具调用
+                    for tc in tool_calls_list:
+                        yield {"type": "tool_start", "data": {"name": tc["function"]["name"], "id": tc["id"]}}
+
+                    # 构建 assistant message
+                    current_messages.append(
+                        AIMessage(
+                            role="assistant",
+                            content="".join(content_parts) if content_parts else None,
+                            tool_calls=[
+                                {
+                                    "id": tc["id"],
+                                    "type": "function",
+                                    "function": tc["function"],
+                                }
+                                for tc in tool_calls_list
+                            ],
+                        )
                     )
 
-                    if needs_action and tool_choice == "auto" and force_retry_count < 2 and tools:
-                        # 添加强制调用工具的提示，重新请求AI（最多重试2次）
-                        logger.info(
-                            f"[AIClient] DeepSeek检测到需要执行操作但AI未调用工具，强制重新请求... (重试 {force_retry_count + 1}/2)"
-                        )
-                        import re as _re2
+                    # 执行工具
+                    for tc_info in tool_calls_list:
+                        tool_name = tc_info["function"]["name"]
+                        tool_args = self._fix_json_arguments(tc_info["function"]["arguments"])
 
-                        _is_reminder2 = _re2.search(
-                            r"提醒我|提醒|叫我|喊我|定时|分钟.*后|几点",
-                            user_message or "",
-                        )
-                        _retry_msg2 = (
-                            "【系统提醒】你刚才没有调用 create_schedule_task 工具来设置提醒！"
-                            if _is_reminder2
-                            else "【系统提醒】你刚才没有执行用户请求的操作。请用自然语言描述你正在做什么，不要输出代码格式。"
-                        )
-                        force_message = AIMessage(role="user", content=_retry_msg2)
-                        current_messages.append(force_message)
-                        continue  # 继续循环，让AI重新生成响应
+                        try:
+                            from core.gestalt_controller import get_gestalt_controller
 
-                    # 如果使用了required但没调用工具，记录详细错误
-                    if tool_choice == "required":
-                        logger.error(
-                            "[AIClient] tool_choice='required'但模型未调用工具，可能是工具描述或系统提示词问题"
+                            gestalt = get_gestalt_controller()
+                            result = await gestalt.execute_tool(
+                                tool_name, tool_args, self.tool_context or {}
+                            )
+                        except Exception as e:
+                            logger.error(f"[AIClient-stream] 工具执行异常: {e}")
+                            result = f"工具执行异常: {str(e)}"
+
+                        result_str = result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
+                        yield {"type": "tool_result", "data": {"name": tool_name, "result": result_str[:200]}}
+
+                        current_messages.append(
+                            AIMessage(role="tool", content=result_str, tool_call_id=tc_info["id"])
                         )
 
-                    # 提取思考过程（DeepSeek R1等模型特有）
-                    reasoning_content = getattr(message, "reasoning_content", None) or getattr(
-                        message, "reasoning", None
-                    )
-                    if reasoning_content:
-                        logger.info(f"[AIClient] DeepSeek检测到思考过程，长度: {len(reasoning_content)}")
+                        # 检查 FINAL 标记
+                        if result_str.startswith("[FINAL]"):
+                            if "|||" in result_str:
+                                embedded = result_str.split("|||", 1)[0].replace("[FINAL]", "").strip()
+                                if embedded:
+                                    yield {"type": "done", "data": embedded}
+                                    return
+                            yield {"type": "done", "data": ""}
+                            return
 
-                    # 过滤思考过程（如 DeepSeek R1 的 reasoning_content）
-                    final_content = message.content or ""
-                    thinking_content = ""
-                    if reasoning_content:
-                        final_content, thinking_content = self._filter_thinking_content(
-                            final_content, reasoning_content
-                        )
+                    iteration += 1
+                    continue  # 继续循环让 AI 处理工具结果
 
-                    # 打印思考过程到终端（仅终端显示，不发送给用户）
-                    if thinking_content:
-                        from core.terminal_formatter import TerminalFormatter
-
-                        thinking_lines = thinking_content.split("\n")[:10]
-                        print(TerminalFormatter.thinking_block("\n".join(thinking_lines)))
-
-                    # 【新增】保存思考过程供外部获取
-                    self.last_reasoning_content = thinking_content
-
-                    # 返回最终回复（不含思考过程）
-                    return final_content
-
-                # 有工具调用，执行工具
-                tool_calls = message.tool_calls
-                logger.info(f"DeepSeek AI请求调用工具: {[tc.function.name for tc in tool_calls]}")
-
-                # 添加助手消息（包含工具调用和思考过程）- 修复 V4 thinking mode 问题
-                reasoning_content = getattr(message, "reasoning_content", None) or getattr(message, "reasoning", None)
-                current_messages.append(
-                    AIMessage(
-                        role="assistant",
-                        content=message.content or "",
-                        tool_calls=[
-                            {
-                                "id": tc.id,
-                                "type": tc.type,
-                                "function": {
-                                    "name": tc.function.name,
-                                    "arguments": tc.function.arguments,
-                                },
-                            }
-                            for tc in tool_calls
-                        ],
-                        reasoning_content=reasoning_content,
-                    )
-                )
-
-                # 串行执行工具调用
-                can_concurrent = False
-
-                # 串行执行逻辑（使用公共方法）
-                if not can_concurrent:
-                    for tool_call in tool_calls:
-                        _, result = await self._execute_tool_call(tool_call, self.tool_context)
-
-                        # 检查FINAL标记
-                        final_marker = self._handle_final_marker(result)
-                        if final_marker == "[FINAL]":
-                            # 生成最终文本回复
-                            try:
-                                final_resp = await self.client.chat.completions.create(
-                                    model=self.model,
-                                    messages=[{"role": m.role, "content": m.content} for m in current_messages],
-                                    tool_choice="none",
-                                )
-                                if final_resp.choices and final_resp.choices[0].message:
-                                    return final_resp.choices[0].message.content or ""
-                            except Exception as e:
-                                logger.warning(f"[AIClient] 最终回复生成失败: {e}")
-                            return ""
-                        elif final_marker:
-                            return final_marker
-
-                        # 检查是否是直接返回工具
-                        direct_return_tools = [
-                            "horoscope",
-                            "wenchang_dijun",
-                            "terminal_command",
-                            "multi_terminal",
-                        ]
-                        if tool_call.function.name in direct_return_tools:
-                            return result
-
-                        # 添加工具响应消息
-                        current_messages.append(AIMessage(role="tool", content=result, tool_call_id=tool_call.id))
-
-                # 更新迭代计数
-                iteration += 1
+                # 无工具调用：流式完成
+                full_content = "".join(content_parts)
+                full_content, _ = self._filter_thinking_content(full_content, "")
+                yield {"type": "done", "data": full_content}
+                return
 
             except Exception as e:
+                logger.error(f"[AIClient-stream] 流式调用失败: {e}")
                 from openai import AuthenticationError as OpenAIAuthError
 
                 err_str = str(e)
-                logger.error(f"DeepSeek API调用失败: {err_str}")
-
                 if isinstance(e, OpenAIAuthError):
-                    return "抱歉亲爱的，当前DeepSeek模型认证失败，可能是密钥已过期。请检查~"
+                    yield {"type": "error", "data": f"认证失败，请检查API密钥: {err_str[:200]}"}
+                else:
+                    yield {"type": "error", "data": f"AI服务暂时不可用: {err_str[:300]}"}
+                return
 
-                if "tool" in err_str.lower() and ("400" in err_str or "invalid" in err_str.lower()):
-                    logger.warning(f"[DeepSeekClient] 工具调用格式错误，返回友好消息 | 原始错误: {err_str[:300]}")
-                    return f"抱歉亲爱的，刚才处理请求时出了点小差错~\n错误详情：{err_str[:300]}\n能再说一遍吗？"
+        yield {"type": "error", "data": "达到最大工具调用迭代次数"}
 
-                return f"抱歉，AI服务暂时不可用\n错误详情：{err_str[:300]}"
+    async def chat_with_system_prompt_stream(
+        self,
+        system_prompt: str,
+        user_message: str,
+        tools: Optional[List[Dict]] = None,
+        use_miya_prompt: bool = True,
+        conversation_history: Optional[List[Dict]] = None,
+        tool_choice: str = "auto",
+    ):
+        """流式版本 chat_with_system_prompt — async generator"""
+        if use_miya_prompt:
+            use_full = not bool(tools) or self.use_compact_prompt
+            miya_prompt = self.get_miya_system_prompt(use_full=use_full)
+            if miya_prompt:
+                extracted = self._extract_tools_instruction(system_prompt)
+                system_prompt = miya_prompt + "\n\n" + extracted
 
-        # 达到最大迭代次数
-        return get_error_message("tool_call_limit_exceeded")
+        messages = [AIMessage(role="system", content=system_prompt)]
+
+        if conversation_history:
+            for msg in conversation_history:
+                messages.append(AIMessage(role=msg["role"], content=msg["content"]))
+
+        messages.append(AIMessage(role="user", content=user_message))
+
+        async for chunk in self.chat_stream(messages, tools, use_miya_prompt=False, tool_choice=tool_choice):
+            yield chunk
+
+
+class DeepSeekClient(OpenAIClient):
+    """DeepSeek API 客户端 — 继承 OpenAIClient，仅覆盖 DeepSeek 特有行为"""
+
+    provider_label = "DeepSeek"
+    _can_concurrent = False
 
 
 class AnthropicClient(BaseAIClient):
@@ -1321,10 +1220,10 @@ class AIClientFactory:
         创建AI客户端
 
         Args:
-            provider: 提供商名称 (openai, deepseek, anthropic, zhipu)
+            provider: 提供商名称。已知类型走专用 Client，未知类型兜底走 OpenAIClient。
             api_key: API密钥
             model: 模型名称
-            **kwargs: 其他配置
+            **kwargs: 其他配置（可包含 'base_url', 'provider' 等）
 
         Returns:
             AI客户端实例
@@ -1333,9 +1232,11 @@ class AIClientFactory:
         client_class = cls._clients.get(provider)
 
         if not client_class:
-            raise ValueError(f"不支持的AI提供商: {provider}，支持的提供商: {list(cls._clients.keys())}")
+            logger.info(f"[AIClientFactory] 未知 provider '{provider}'，兜底使用 OpenAIClient")
+            client_class = OpenAIClient
 
         base_url = kwargs.pop("base_url", "") or ""
+        provider_instance = kwargs.pop("provider_instance", None)
         cache_key = cls._cache_key(provider, api_key, model, base_url)
 
         if cache_key in cls._cache:
@@ -1350,6 +1251,8 @@ class AIClientFactory:
         logger.info(f"创建{provider}客户端，模型: {model}")
         try:
             kwargs["base_url"] = base_url if base_url else None
+            if provider_instance is not None:
+                kwargs["provider"] = provider_instance
             client = client_class(api_key=api_key, model=model, **kwargs)
         except Exception as e:
             logger.error(f"创建客户端失败 ({provider}/{model}): {type(e).__name__}: {e}", exc_info=True)
@@ -1374,6 +1277,17 @@ class AIClientFactory:
 
         cls._cache[cache_key] = client
         return client
+
+    @classmethod
+    def from_provider(cls, provider) -> BaseAIClient:
+        """从 Provider 实例创建 AI 客户端（复用 HTTP 连接）"""
+        return cls.create_client(
+            provider=provider.config.provider,
+            api_key=provider.config.api_key,
+            model=provider.config.model,
+            base_url=provider.config.base_url or "",
+            provider_instance=provider,
+        )
 
     @classmethod
     def list_providers(cls) -> List[str]:

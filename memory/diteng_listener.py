@@ -544,18 +544,11 @@ class DiTingListener:
             if not api_key and hasattr(model_config, "api_key"):
                 api_key = model_config.api_key or ""
 
-            # 如果没有 api_key，尝试从常见的环境变量获取
+            # 如果没有 api_key，尝试从统一映射获取
             if not api_key:
-                provider_env_map = {
-                    "deepseek": "DEEPSEEK_API_KEY",
-                    "siliconflow": "SILICONFLOW_API_KEY",
-                    "openai": "OPENAI_API_KEY",
-                    "zhipu": "ZHIPU_API_KEY",
-                    "dashscope": "DASHSCOPE_API_KEY",
-                }
-                env_key = provider_env_map.get(model_config.provider.lower(), "")
-                if env_key:
-                    api_key = os.getenv(env_key, "")
+                from core.model_pool_manager import resolve_api_key_by_provider
+                api_key = resolve_api_key_by_provider(model_config.provider.lower(), 
+                                                       getattr(model_config, 'env_key', ''))
 
             client = AIClientFactory.create_client(
                 provider=model_config.provider,

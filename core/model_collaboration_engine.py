@@ -36,38 +36,18 @@ logger = logging.getLogger(__name__)
 
 
 def _get_api_key(model_config) -> str:
-    """从模型配置获取 API key，兼容 Model 和 ModelConfig 类型"""
-    import os
+    api_key = getattr(model_config, "api_key", None)
+    if api_key:
+        return api_key
 
-    # 如果是 Model/ModelConfig 类型有直接的 api_key，直接返回
-    api_key_attr = getattr(model_config, "api_key", None)
-    if api_key_attr:
-        return api_key_attr
-
-    # 如果是 Model 类型，从环境变量获取
-    if hasattr(model_config, "env_key") and model_config.env_key:
-        return os.getenv(model_config.env_key, "")
-
-    # 尝试从常见的环境变量获取
     provider = getattr(model_config, "provider", "")
-    if isinstance(provider, str):
-        provider_lower = provider.lower()
-    else:
-        provider_lower = provider.value.lower() if hasattr(provider, "value") else ""
+    if not isinstance(provider, str):
+        provider = provider.value.lower() if hasattr(provider, "value") else ""
 
-    provider_env_map = {
-        "deepseek": "DEEPSEEK_API_KEY",
-        "siliconflow": "SILICONFLOW_API_KEY",
-        "openai": "OPENAI_API_KEY",
-        "zhipu": "ZHIPU_API_KEY",
-        "dashscope": "DASHSCOPE_API_KEY",
-        "anthropic": "ANTHROPIC_API_KEY",
-    }
-    env_key = provider_env_map.get(provider_lower, "")
-    if env_key:
-        return os.getenv(env_key, "")
+    env_key = getattr(model_config, "env_key", "")
+    from core.model_pool_manager import resolve_api_key_by_provider
 
-    return ""
+    return resolve_api_key_by_provider(provider.lower(), env_key)
 
 
 class CollaborationMode(str, Enum):
@@ -392,7 +372,7 @@ class ModelCollaborationEngine:
         self.stats["total_calls"] += 1
         start_time = time.time()
 
-        logger.warning(
+        logger.debug(
             f"[协作引擎] process接收到的 context type: {type(context)}, keys: {list(context.keys()) if context else 'None'}"
         )
 
@@ -462,7 +442,7 @@ class ModelCollaborationEngine:
                     ai_client_factory,
                 )
         except Exception as e:
-            logger.warning(f"[协作引擎] 协作执行失败，降级为单模型: {e}")
+            logger.info(f"[协作引擎] 协作执行失败，降级为单模型: {e}")
             result = await self._fallback_to_single(
                 message,
                 task_type,
@@ -691,7 +671,7 @@ class ModelCollaborationEngine:
             self.msg_error_client_unavailable,
             self.msg_empty_response,
         ]:
-            logger.warning("[协作引擎] 第一阶段思考结果为空，回退到单模型")
+            logger.debug("[协作引擎] 第一阶段思考结果为空，回退到单模型")
             return await self._execute_single(
                 message,
                 task_type,
@@ -813,7 +793,7 @@ class ModelCollaborationEngine:
                 self.msg_error_client_unavailable,
                 self.msg_empty_response,
             ]:
-                logger.warning("[协作引擎] 第二阶段推理结果为空，使用思考结果")
+                logger.debug("[协作引擎] 第二阶段推理结果为空，使用思考结果")
                 reasoning_result = thinking_result
             return reasoning_result, chain_models[2]
         else:
@@ -861,7 +841,7 @@ class ModelCollaborationEngine:
                 self.msg_error_client_unavailable,
                 self.msg_empty_response,
             ]:
-                logger.warning("[协作引擎] 第三阶段模型响应为空，使用推理结果")
+                logger.debug("[协作引擎] 第三阶段模型响应为空，使用推理结果")
                 response = reasoning_result if reasoning_result else self.msg_empty_response
 
             return response
@@ -994,22 +974,6 @@ class ModelCollaborationEngine:
             token_estimate=self._estimate_tokens(message, thinking_result + final_response),
             reasoning=f"思考-输出分离: {parallel_model_ids[0]}思考 → {parallel_model_ids[1]}输出",
             thinking=thinking_result,
-        )
-
-        # 只有一个模型响应时的处理
-        final_response = model_responses[0][1]
-        final_response = self._clean_thinking_content(final_response)
-
-        return CollaborationResult(
-            response=final_response,
-            mode=CollaborationMode.PARALLEL,
-            complexity=ComplexityLevel.COMPLEX,
-            models_used=models_used,
-            token_estimate=sum(self._estimate_tokens(message, resp) for _, resp in model_responses),
-            reasoning=self.msg_reasoning_parallel.format(
-                models=", ".join(models_used),
-            ),
-            thinking="",
         )
 
     async def _execute_role(
@@ -1452,14 +1416,3 @@ class ModelCollaborationEngine:
             )
 
         return self.stats.copy()
-
-    def is_simple_task(self, message: str, task_type: str) -> bool:
-        score = 0
-        level_1 = self.length_thresholds.get("level_1", 200)
-        level_2 = self.length_thresholds.get("level_2", 500)
-        if len(message) > level_1:
-            score += 1
-        if len(message) > level_2:
-            score += 1
-        score += self.task_weights.get(task_type, 1)
-        return score <= self.threshold_single

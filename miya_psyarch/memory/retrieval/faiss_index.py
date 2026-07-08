@@ -40,7 +40,7 @@ class FaissHnswIndex:
         self._int_to_memory_id: dict[int, str] = {}
         self._next_id = 1
         self._vectors: dict[str, np.ndarray] = {}
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._index = self._build_index()
 
     def _build_index(self) -> Any | None:

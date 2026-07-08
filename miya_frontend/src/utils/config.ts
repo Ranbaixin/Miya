@@ -16,7 +16,7 @@ export const DEFAULT_CONFIG = {
   api: {
     api_key: 'your-api-key-here',
     base_url: 'https://api.deepseek.com/v1',
-    model: 'deepseek-v3.2',
+    model: 'deepseek-v4-flash',
     temperature: 0.7,
     max_tokens: 8192,
     max_history_rounds: 10,
@@ -136,7 +136,7 @@ export const DEFAULT_CONFIG = {
     token: null as string | null,
   },
   embedding: {
-    model: 'tongyi-embedding',
+    model: 'BAAI/bge-large-zh-v1.5',
     api_base: '',
     api_key: '',
   },

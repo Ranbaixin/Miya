@@ -46,6 +46,7 @@ logger = logging.getLogger(__name__)
 
 _emotion_guidance_cache = None
 _strategy_descriptions_cache = None
+_search_strategy_cache = None
 
 
 def _load_strategy_descriptions() -> dict:
@@ -373,7 +374,7 @@ class DecisionHub:
 
         # 对话历史上下文配置
         self.enable_conversation_context = True
-        self.conversation_context_max_count = 1
+        self.conversation_context_max_count = 10
         self.conversation_context_max_tokens = 2000
 
         # 终端执行能力由 CCE (Claude Code Engine) 提供
@@ -392,7 +393,9 @@ class DecisionHub:
         self._init_auth_subnet()
 
         # 【加速】Soul 结果缓存 — 复用上一轮情绪避免阻塞主响应
-        self._soul_cache: dict = {}  # {user_id: {"emotion_context": str, "cognitive_memory": str, "emotions": dict}}
+        self._soul_cache: dict = {}
+        self._soul_cache_max_size: int = 100
+        self._soul_cache_ttl: float = 1800.0
 
         # 【持久化】启动时恢复 soul 快照 + 诞生时间
         self._init_soul_snapshot()
@@ -452,6 +455,22 @@ class DecisionHub:
         self._deferred_init_complete = False
         self.proactive_chat = None
         self._start_deferred_init()
+
+    def _set_soul_cache(self, user_id: str, data: dict):
+        import time
+        data["_ts"] = time.time()
+        if len(self._soul_cache) >= self._soul_cache_max_size:
+            oldest = min(self._soul_cache, key=lambda k: self._soul_cache[k].get("_ts", 0))
+            del self._soul_cache[oldest]
+        self._soul_cache[user_id] = data
+
+    def _get_soul_cache(self, user_id: str) -> dict:
+        import time
+        entry = self._soul_cache.get(user_id, {})
+        if entry and time.time() - entry.get("_ts", 0) > self._soul_cache_ttl:
+            del self._soul_cache[user_id]
+            return {}
+        return entry
 
     @staticmethod
     def _calc_cognitive_limit(conversation_context: list, needs_recall: bool = False) -> int:
@@ -1150,7 +1169,7 @@ class DecisionHub:
                 )
             else:
                 self.collaboration_engine = None
-                logger.warning("[决策层] ModelPool 不可用，协作引擎未初始化")
+                logger.info("[决策层] ModelPool 不可用，协作引擎未初始化")
 
         except Exception as e:
             import traceback
@@ -1403,7 +1422,7 @@ class DecisionHub:
 
         quick_response = await self._handle_quick_commands(content, platform, perception)
         if quick_response:
-            logger.warning(f"[决策层] ========== 快捷命令拦截成功 ========== {content[:20]} -> {quick_response[:50]}")
+            logger.info(f"[决策层] 快捷命令拦截成功: {content[:20]} -> {quick_response[:50]}")
             return quick_response
 
         # 【安全检查】防注入检测（技术性检查同步，AI 检测移至并行阶段）
@@ -1536,7 +1555,7 @@ class DecisionHub:
             current_form = profile.get("current_form", "normal")
             speak_mode = profile.get("speak_mode", "casual")
             form_name = get_form_name(current_form)
-            logger.warning(f"[形态状态] {form_name}|{speak_mode}")
+            logger.debug(f"[形态状态] {form_name}|{speak_mode}")
 
         # 5. 情绪染色（委托给情绪控制器）
         # 先设置当前神格形态，让染色更符合神格风格
@@ -1783,7 +1802,7 @@ class DecisionHub:
                             sender_role=context.get("sender_role", ""),
                         )
                         result = perception_ctx.get("perception_text", "")
-                        logger.warning(f"[意识感知] 成功: {result[:150]}")
+                        logger.info(f"[意识感知] 成功: {result[:150]}")
                         return result
                 except Exception:
                     pass
@@ -1792,14 +1811,17 @@ class DecisionHub:
             async def fetch_search_context():
                 sc = ""
                 try:
-                    import json
-
-                    search_config_path = Path(__file__).parent.parent / "config" / "text_config.json"
-                    search_strategy = {}
-                    if search_config_path.exists():
-                        with open(search_config_path, "r", encoding="utf-8") as f:
-                            full_config = json.load(f)
-                        search_strategy = full_config.get("search_strategy", {})
+                    global _search_strategy_cache
+                    if _search_strategy_cache is None:
+                        search_config_path = Path(__file__).parent.parent / "config" / "text_config.json"
+                        if search_config_path.exists():
+                            import json
+                            with open(search_config_path, "r", encoding="utf-8") as f:
+                                full_config = json.load(f)
+                            _search_strategy_cache = full_config.get("search_strategy", {})
+                        else:
+                            _search_strategy_cache = {}
+                    search_strategy = _search_strategy_cache
                     enabled = search_strategy.get("enabled")
                     auto = search_strategy.get("auto_search_enabled")
                     if enabled and auto:
@@ -1845,7 +1867,7 @@ class DecisionHub:
                     )
                     gcc = wm.build_prompt_context(group_id_str)
                     if gcc:
-                        logger.warning(f"[工作记忆] 注入群聊上下文: {len(gcc)} 字符")
+                        logger.debug(f"[工作记忆] 注入群聊上下文: {len(gcc)} 字符")
                 elif msg_type == "private" and ctx_uid:
                     private_key = f"private_{ctx_uid_str}"
                     wm.add_message(
@@ -1857,7 +1879,7 @@ class DecisionHub:
                     )
                     gcc = wm.build_prompt_context(private_key)
                     if gcc:
-                        logger.warning(f"[工作记忆] 注入私聊上下文: {len(gcc)} 字符")
+                        logger.debug(f"[工作记忆] 注入私聊上下文: {len(gcc)} 字符")
                 return gcc
 
             async def fetch_diting_strategy():
@@ -1905,9 +1927,10 @@ class DecisionHub:
                 return None
 
             # 启动 Phase 1 所有并行任务（含 AI 注入检测，从 Phase 0 移入以消除串行等待）
+            is_terminal = (platform == 'terminal')
+            is_qq = (platform == 'qq')
+
             conv_task = asyncio.create_task(fetch_conversation_context(), name="conv")
-            persona_task = asyncio.create_task(fetch_user_persona(), name="persona")
-            awareness_task = asyncio.create_task(fetch_awareness_text(), name="awareness")
 
             async def fetch_search_with_timeout():
                 try:
@@ -1936,10 +1959,24 @@ class DecisionHub:
                 except Exception:
                     return None
 
-            search_task = asyncio.create_task(fetch_search_with_timeout(), name="search")
-            wm_task = asyncio.create_task(fetch_group_chat_context(), name="wm")
-            diting_task = asyncio.create_task(fetch_diting_with_timeout(), name="diting")
-            injection_task = asyncio.create_task(fetch_ai_injection_check(), name="injection")
+            if is_qq:
+                persona_task = asyncio.create_task(fetch_user_persona(), name="persona")
+                awareness_task = asyncio.create_task(fetch_awareness_text(), name="awareness")
+                search_task = asyncio.create_task(fetch_search_with_timeout(), name="search")
+                wm_task = asyncio.create_task(fetch_group_chat_context(), name="wm")
+                diting_task = asyncio.create_task(fetch_diting_with_timeout(), name="diting")
+                injection_task = asyncio.create_task(fetch_ai_injection_check(), name="injection")
+            else:
+                async def _empty_tuple(): return ("", "")
+                async def _empty_str(): return ""
+                async def _none(): return None
+                persona_task = asyncio.create_task(_empty_tuple(), name="persona-skip")
+                awareness_task = asyncio.create_task(_empty_str(), name="awareness-skip")
+                search_task = asyncio.create_task(_empty_str(), name="search-skip")
+                wm_task = asyncio.create_task(_empty_str(), name="wm-skip")
+                diting_task = asyncio.create_task(_none(), name="diting-skip")
+                injection_task = asyncio.create_task(_none(), name="injection-skip")
+                logger.info(f"[决策层-{platform}] 跳过 6 个非必要上下文检索")
 
             # 等待 conversation_context (cognitive 和 soul 都需要它)
             conversation_context = await conv_task
@@ -1963,7 +2000,7 @@ class DecisionHub:
                         group_id=query_group_id,
                     )
                     if cmc:
-                        logger.warning(f"[决策层] 智能记忆检索到相关记忆 (user_id={query_user_id})")
+                        logger.info(f"[决策层] 智能记忆检索到相关记忆 (user_id={query_user_id})")
                 except Exception as e:
                     logger.warning(f"[决策层] 智能记忆检索失败: {e}")
                 return cmc
@@ -2096,7 +2133,7 @@ class DecisionHub:
 
             # 等待 Phase 2 任务（soul 已在后台与 Phase 1 并行运行）
             # 【加速】先检查缓存 — 如果有缓存，立即用缓存继续；soul 结果后台更新
-            cached = self._soul_cache.get(user_id_str, {})
+            cached = self._get_soul_cache(user_id_str)
             cached_emotion = cached.get("emotion_context", "")
             cached_cognitive = cached.get("cognitive_memory", "")
 
@@ -2167,11 +2204,11 @@ class DecisionHub:
                 emotion_context_for_collab += eg["footer"]
 
                 # 更新缓存供下一轮复用
-                self._soul_cache[user_id_str] = {
+                self._set_soul_cache(user_id_str, {
                     "emotion_context": emotion_context_for_collab,
                     "cognitive_memory": cognitive_memory_context,
                     "emotions": miya_emotions,
-                }
+                })
                 self._save_soul_snapshot()
             elif cached_emotion:
                 emotion_context_for_collab = cached_emotion
@@ -2198,18 +2235,18 @@ class DecisionHub:
                                 if inner:
                                     ctx += eg["inner_thought"].format(inner_thought=inner)
                                 ctx += eg["footer"]
-                                self._soul_cache[user_id_str] = {
+                                self._set_soul_cache(user_id_str, {
                                     "emotion_context": ctx,
                                     "cognitive_memory": cm,
                                     "emotions": em,
-                                }
+                                })
                                 self._save_soul_snapshot()
                         except Exception:
                             pass
 
                     asyncio.create_task(_update_soul_cache(), name="soul_cache_bg")
 
-            logger.warning(
+            logger.debug(
                 f"[DEBUG认知] build_context 返回长度={len(cognitive_memory_context) if cognitive_memory_context else 0}, user={user_id_str}"
             )
 
@@ -2456,7 +2493,7 @@ class DecisionHub:
                     "image_analysis": perception.get("image_analysis"),
                     "image_data": perception.get("image_data"),
                 }
-                logger.warning(f"[决策层] 构建的tool_context keys: {list(tool_context.keys())}")
+                logger.debug(f"[决策层] 构建的tool_context keys: {list(tool_context.keys())}")
                 logger.debug(
                     f"[决策层] tool_context中 onebot_client={tool_context.get('onebot_client')}, send_like_callback={tool_context.get('send_like_callback')}"
                 )
@@ -2513,7 +2550,7 @@ class DecisionHub:
 
                         # 使用正确的tool_context，包含onebot_client和send_like_callback
                         tool_ctx_for_collab = tool_context
-                        logger.warning(
+                        logger.debug(
                             f"[决策层] 传递给协作引擎的tool_context keys: {list(tool_ctx_for_collab.keys()) if tool_ctx_for_collab else 'None'}"
                         )
 
@@ -2565,7 +2602,7 @@ class DecisionHub:
                                 + "\n【记忆记录结束】\n\n"
                                 + final_system_prompt
                             )
-                            logger.warning(
+                            logger.debug(
                                 f"[决策层] 认知记忆已注入 system prompt ({len(cognitive_memory_context)} 字符)"
                             )
 
@@ -2583,7 +2620,7 @@ class DecisionHub:
                         # 记录协作结果
                         self._last_selected_model = ",".join(collab_result.models_used)
                         self._last_task_type = task_type.value
-                        print("[灵魂记忆] ===== 协作引擎流程 =====")
+                        logger.debug("[协作引擎] 流程开始")
                         logger.info(
                             f"[决策层-协作引擎] 模式={collab_result.mode.value} | "
                             f"模型={collab_result.models_used} | "
@@ -2592,7 +2629,7 @@ class DecisionHub:
                         )
 
                         # 【新增】协作引擎路径也存储情绪记忆（无论soul_result是否有效都存储）
-                        print("[灵魂记忆] ===== 开始协作引擎存储 =====")
+                        logger.debug("[协作引擎] 开始存储情绪记忆")
                         logger.info(f"[灵魂记忆] 协作引擎检查: soul_result={bool(soul_result)}, user_id={user_id}")
 
                         # 处理emotions格式 - 支持list或dict
@@ -2670,7 +2707,7 @@ class DecisionHub:
                             collab_thinking = ""
                             if hasattr(collab_result, "thinking") and collab_result.thinking:
                                 collab_thinking = collab_result.thinking
-                            print(f"[DEBUG协作] thinking: {len(collab_thinking)} chars")
+                            logger.debug(f"[协作引擎] thinking: {len(collab_thinking)} chars")
 
                             # 直接使用之前从soul_result提取的数据
                             group_id_str_cog = str(context.get("group_id")) if context.get("group_id") else None
@@ -2683,7 +2720,7 @@ class DecisionHub:
                                 user_id=str(user_id),
                                 group_id=group_id_str_cog,
                             )
-                            print("[DEBUG协作] 协作引擎路径存储完成")
+                            logger.debug("[协作引擎] 认知记忆存储完成")
                         except Exception as cog_err:
                             logger.warning(f"[认知记忆] 协作路径存储失败: {cog_err}")
 
@@ -2695,14 +2732,14 @@ class DecisionHub:
                             "reflection": _reflection or "",
                             "thinking": _thinking or "",
                         }
-                        print(
+                        logger.debug(
                             f"[SSE] _last_soul_output (collab): inner={bool(_inner_thought)}, emotions={list(_emotions.keys()) if _emotions else []}"
                         )
 
                         return collab_result.response
 
                     except Exception as e:
-                        logger.warning(f"[决策层-协作引擎] 协作失败，降级为单模型: {e}")
+                        logger.info(f"[决策层-协作引擎] 协作失败，降级为单模型: {e}")
                         # 继续走原有单模型路径
 
             # 【优化】使用并行阶段预计算的 Soul Generator 结果
@@ -2809,8 +2846,7 @@ class DecisionHub:
             )
 
             # 【新增】存储情绪记忆 - 无论_soul_result是否有效都存储
-            print("[灵魂记忆] ===== 开始存储流程 =====")
-            logger.info(f"[灵魂记忆] 检查存储: _soul_result={bool(_soul_result)}, user_id={user_id}")
+            logger.info(f"[记忆存储] 检查存储: _soul_result={bool(_soul_result)}, user_id={user_id}")
 
             # 如果_soul_result为空，尝试从AI响应中提取情绪信息
             if not _soul_result:
@@ -2930,7 +2966,7 @@ class DecisionHub:
                 logger.debug(f"[决策层] LifeBook 记录失败: {e}")
 
             # 【增强】存储认知记忆 - 思考过程、情绪分析、内心独白 + 缓存
-            print("[DEBUG认知] 开始存储流程...")
+            logger.debug(f"[认知记忆] 存储流程开始, _soul_result存在: {_soul_result is not None}")
             try:
                 import uuid
 
@@ -2944,23 +2980,14 @@ class DecisionHub:
                 _attribution = ""
                 _reflection = ""
 
-                print(f"[DEBUG认知] _soul_result存在: {_soul_result is not None}")
+                logger.debug(f"[认知记忆] _soul_result keys: {_soul_result.keys()}")
                 if _soul_result:
-                    print(f"[DEBUG] _soul_result keys: {_soul_result.keys()}")
-
-                    # 打印soul_result的顶层内容
-                    print(
-                        f"[DEBUG] 顶层inner_thought: {_soul_result.get('inner_thought', 'EMPTY')[:30] if _soul_result.get('inner_thought') else 'EMPTY'}"
-                    )
-                    print(
-                        f"[DEBUG] 顶层attribution: {_soul_result.get('attribution', 'EMPTY')[:20] if _soul_result.get('attribution') else 'EMPTY'}"
-                    )
-                    print(
-                        f"[DEBUG] 顶层reflection: {_soul_result.get('reflection', 'EMPTY')[:20] if _soul_result.get('reflection') else 'EMPTY'}"
-                    )
+                    logger.debug(f"[认知记忆] inner_thought: {_soul_result.get('inner_thought', 'EMPTY')[:30]}")
+                    logger.debug(f"[认知记忆] attribution: {_soul_result.get('attribution', 'EMPTY')[:20]}")
+                    logger.debug(f"[认知记忆] reflection: {_soul_result.get('reflection', 'EMPTY')[:20]}")
 
                     soul_reasoning = _soul_result.get("reasoning", "")
-                    print(f"[DEBUG] soul_reasoning: {soul_reasoning[:50] if soul_reasoning else 'empty'}")
+                    logger.debug(f"[认知记忆] soul_reasoning: {soul_reasoning[:50] if soul_reasoning else 'empty'}")
                     # 处理emotions格式
                     _emotions_raw = _soul_result.get("emotions", [])
                     if isinstance(_emotions_raw, list):
@@ -2984,9 +3011,7 @@ class DecisionHub:
                         "attribution": _attribution,
                         "reflection": _reflection,
                     }
-                    print(
-                        f"[SSE] 已存储灵魂数据: emotions={list(self._last_soul_data['emotions'].keys())}, inner={_inner_thought[:20]}"
-                    )
+                    logger.debug(f"[SSE] 已存储灵魂数据: emotions={list(self._last_soul_data['emotions'].keys())}, inner={_inner_thought[:20]}")
 
                 # 获取AI客户端的思考（回复生成过程）
                 ai_reasoning = ""
@@ -3012,9 +3037,7 @@ class DecisionHub:
                 if not thinking_content and response:
                     thinking_content = f"[回复内容片段] {response[:200]}"
 
-                print(
-                    f"[DEBUG认知] soul_reasoning={bool(soul_reasoning)}, ai_reasoning={bool(ai_reasoning)}, _emotions={_emotions}, thinking_content长度={len(thinking_content)}"
-                )
+                logger.debug(f"[认知记忆] soul_reasoning={bool(soul_reasoning)}, ai_reasoning={bool(ai_reasoning)}, emotions={_emotions}, thinking={len(thinking_content)}")
 
                 # 存储到持久化存储
                 group_id_str_tmp = str(context.get("group_id")) if context.get("group_id") else None
@@ -3027,9 +3050,7 @@ class DecisionHub:
                     user_id=user_id,
                     group_id=group_id_str_tmp,
                 )
-                print(
-                    f"[DEBUG认知] ✅ 已存储 | 内心: {_inner_thought[:30]}... | 情绪: {_emotions} | 归因: {_attribution[:20]}..."
-                )
+                logger.debug(f"[认知记忆] 已存储 | 内心: {_inner_thought[:30]}... | 情绪: {_emotions} | 归因: {_attribution[:20]}...")
 
                 # 【新增】同时添加到内存缓存区
                 cache = get_cognition_cache()
@@ -3057,7 +3078,7 @@ class DecisionHub:
                 "reflection": _reflection or "",
                 "thinking": thinking_content or "",
             }
-            print(
+            logger.debug(
                 f"[SSE] _last_soul_output: inner={bool(_inner_thought)}, emotions={list(_emotions.keys()) if _emotions else []}"
             )
 
@@ -4534,7 +4555,7 @@ class DecisionHub:
 
         logger = logging.getLogger(__name__)
 
-        logger.warning(f"[AI学习] 检查纠正: {content[:30]}")
+        logger.debug(f"[AI学习] 检查纠正: {content[:30]}")
 
         # 检测用户是否在纠正（关键词检测）
         correction_keywords = ["是", "对的", "没错", "正确", "就是", "这个是", "错了"]
@@ -4561,7 +4582,7 @@ class DecisionHub:
             return
 
         answer = answer.strip()
-        logger.warning(f"[AI学习] 检测到纠正/确认，答案={answer}")
+        logger.info(f"[AI学习] 检测到纠正/确认，答案={answer}")
 
         # 保存到长期记忆
         try:
@@ -4574,7 +4595,7 @@ class DecisionHub:
                 priority=0.7,
                 metadata={"learned_answer": answer},
             )
-            logger.warning(f"[AI学习] 学习完成，memory_id={memory_id}")
+            logger.info(f"[AI学习] 学习完成，memory_id={memory_id}")
         except Exception as e:
             logger.warning(f"[AI学习] 保存失败: {e}")
 

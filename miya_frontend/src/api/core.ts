@@ -148,7 +148,19 @@ export class CoreApiClient extends ApiClient {
     })
   }
 
-  // ── 配置 ──
+  // ── 模型池 ──
+  async listModels(): Promise<{ models: Array<{ id: string; name: string; type: string; provider: string; enabled: boolean; priority: number }>; count: number }> {
+    return this.instance.get('/api/models/list')
+  }
+
+  async getModelsStatus(): Promise<{ total: number; enabled: number; disabled: number; by_type: Record<string, { enabled: number; total: number }> }> {
+    return this.instance.get('/api/models/status')
+  }
+
+  async getModelsRouting(taskType?: string): Promise<any> {
+    const params = taskType ? `?task_type=${encodeURIComponent(taskType)}` : ''
+    return this.instance.get(`/api/models/routing${params}`)
+  } ──
   async getConfig(): Promise<any> {
     return this.instance.get('/api/config/get')
   }

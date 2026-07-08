@@ -224,6 +224,7 @@ class Miya:
         # CCE 作为弥娅的"手"/肢体工具 —— 守护进程可调用 CCE 执行任务
         self.cce_cli_path: Path | None = None
         self.cce_node_exe: str = "node"
+        self._call_cce_env_cache: dict | None = None
         self._init_cce_executor()
 
         # 【自主能力】初始化带人设的自主能力
@@ -342,7 +343,7 @@ class Miya:
                 str(
                     Path.home() / "AppData" / "Roaming" / "fnm" / "node-versions" / "v22" / "installation" / "node.exe"
                 ),
-                "C:\\Program Files\\nodejs\\node.exe",
+                str(Path(os.environ.get("ProgramFiles", "C:\\Program Files")) / "nodejs" / "node.exe"),
             ]
         else:
             node_candidates = [
@@ -378,14 +379,18 @@ class Miya:
         if not self.cce_cli_path or not self.cce_cli_path.exists():
             return {"success": False, "output": "", "error": "CCE CLI 未就绪"}
 
-        dotenv_path = project_root / "config" / ".env"
-        env_vars: dict[str, str] = {}
-        if dotenv_path.exists():
-            for line in dotenv_path.read_text(encoding="utf-8").split("\n"):
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    key, _, value = line.partition("=")
-                    env_vars[key.strip()] = value.strip()
+        if self._call_cce_env_cache is None:
+            dotenv_path = project_root / "config" / ".env"
+            env_vars: dict[str, str] = {}
+            if dotenv_path.exists():
+                for line in dotenv_path.read_text(encoding="utf-8").split("\n"):
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        key, _, value = line.partition("=")
+                        env_vars[key.strip()] = value.strip()
+            self._call_cce_env_cache = env_vars
+
+        env_vars = self._call_cce_env_cache
 
         env = {
             **{k: v for k, v in os.environ.items()},
@@ -526,7 +531,7 @@ class Miya:
         load_dotenv(Path(__file__).parent.parent / "config" / ".env")
 
         try:
-            from core.model_pool_manager import get_model_pool
+            from core.model_pool_manager import get_model_pool, resolve_api_key_by_provider
 
             pool = get_model_pool()
             model_configs = pool.get_model_configs_for_manager()
@@ -551,16 +556,7 @@ class Miya:
                         if not api_key and hasattr(model_config, "api_key"):
                             api_key = model_config.api_key or ""
                         if not api_key:
-                            provider_env_map = {
-                                "deepseek": "DEEPSEEK_API_KEY",
-                                "siliconflow": "SILICONFLOW_API_KEY",
-                                "openai": "OPENAI_API_KEY",
-                                "zhipu": "ZHIPU_API_KEY",
-                                "dashscope": "DASHSCOPE_API_KEY",
-                            }
-                            env_key = provider_env_map.get(provider_value.lower(), "")
-                            if env_key:
-                                api_key = os.getenv(env_key, "")
+                            api_key = resolve_api_key_by_provider(provider_value.lower())
 
                         self._model_client_configs[model_key] = {
                             "provider": provider_value,
@@ -586,6 +582,7 @@ class Miya:
 
         except Exception as e:
             self.logger.warning(f"多模型管理器初始化失败: {e}")
+            self._ai_client_error = str(e)
             return None
 
     def _get_or_create_model_client(self, model_key: str):

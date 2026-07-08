@@ -1,6 +1,7 @@
 {
   "modelType": "openai",
   "env": {
+    "_comment": "CCE 引擎独立运行时使用此模型。通过 miya 主进程调用时，模型由 config/multi_model_config.json > system_defaults.default_model 统一管理。",
     "OPENAI_MODEL": "deepseek-v4-flash"
   },
   "permissions": {

@@ -142,12 +142,9 @@ DecisionHub (3860 行)
 | `ai_client.py` | 统一 AI 客户端 (OpenAI/DeepSeek/Anthropic/Zhipu) |
 | `model_pool_manager.py` | 多模型池管理 |
 | `prompt_manager.py` | 提示词管理 |
-| `miya_core.py` | MIYACore 统一核心 |
 | `miya_daemon.py` | MiyaDaemon 守护进程 (v7.0) |
-| `miya_system.py` | MIYASystem 管理器 |
 | `autonomy_with_personality.py` | 自主人格引擎 |
 | `event_system.py` | 事件总线 |
-| `providers_miya.py` | Provider 管理 |
 | `platform_extended.py` | 平台注册中心 |
 | `star_miya.py` | Star 插件系统 |
 | `knowledge_base.py` | 知识库管理 |
@@ -248,7 +245,6 @@ from config  import Settings
 | 组件 | 版本 | 位置 |
 |------|------|------|
 | 对外版本 | v7.0 | README / start.bat |
-| MIYACore | v6.0.0 | `core/miya_core.py` |
 | MiyaDaemon | v7.0.0 | `core/miya_daemon.py` |
 | 记忆核心 | V3.1 | `memory/core.py` |
 | Web 服务 | v2.0.0 | `webnet/web_main.py` |

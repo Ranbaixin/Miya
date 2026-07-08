@@ -110,38 +110,16 @@ class RuntimeAPIServer:
 
         logger.info("[Runtime API] 初始化全局组件...")
         try:
-            # 初始化AI客户端
-            from core.ai_client import AIClientFactory
-
+            # 初始化AI客户端 — 使用 ModelPoolManager 统一管理
             try:
-                import json
-                from pathlib import Path
+                from core.model_pool_manager import get_model_pool
 
-                config_path = Path(__file__).parent.parent / "config" / "multi_model_config.json"
-                if config_path.exists():
-                    with open(config_path, "r", encoding="utf-8") as f:
-                        config = json.load(f)
-
-                    models = config.get("models", {})
-                    routing = config.get("routing_strategy", {})
-                    simple_chat_routing = routing.get("simple_chat", {})
-
-                    for priority_key in ["primary", "secondary", "fallback"]:
-                        model_id = simple_chat_routing.get(priority_key)
-                        if model_id and model_id in models:
-                            model_config = models[model_id]
-                            try:
-                                cls._global_model_client = AIClientFactory.create_client(
-                                    provider=model_config.get("provider", "openai"),
-                                    api_key=model_config.get("api_key", ""),
-                                    model=model_config.get("name", ""),
-                                    base_url=model_config.get("base_url", None),
-                                )
-                                logger.info(f"[Runtime API] AI客户端初始化成功: {model_id}")
-                                break
-                            except Exception as e:
-                                logger.debug(f"尝试模型 {model_id} 失败: {e}")
-                                continue
+                pool = get_model_pool()
+                cls._global_model_client = pool.create_ai_client(task_type="simple_chat")
+                if cls._global_model_client:
+                    logger.info("[Runtime API] AI客户端初始化成功 (ModelPoolManager)")
+                else:
+                    logger.warning("[Runtime API] 模型池未返回可用客户端")
             except Exception as e:
                 logger.warning(f"AI客户端初始化失败: {e}")
 

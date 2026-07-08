@@ -53,17 +53,27 @@ _load_education_prompts()
 class LLMTeacherConfig:
     base_url: str = ""
     api_key: str = ""
-    model: str = "qwen3-32b"
+    model: str = ""
     timeout_seconds: float = 20.0
     system_prompt: str = DEFAULT_SYSTEM_PROMPT
     posthoc_judge_prompt: str = DEFAULT_POSTHOC_JUDGE_PROMPT
 
     @classmethod
     def from_env(cls) -> "LLMTeacherConfig":
+        model = os.environ.get("APV21_LLM_TEACHER_MODEL", "").strip()
+        if not model:
+            try:
+                from core.model_pool_manager import get_model_pool
+                pool = get_model_pool()
+                selected = pool.select_model("simple_chat")
+                active = selected.name if selected else "deepseek-v4-flash"
+                model = active
+            except Exception:
+                model = "deepseek-v4-flash"
         return cls(
             base_url=os.environ.get("APV21_LLM_TEACHER_BASE_URL", "").strip(),
             api_key=os.environ.get("APV21_LLM_TEACHER_API_KEY", "").strip(),
-            model=os.environ.get("APV21_LLM_TEACHER_MODEL", "qwen3-32b").strip() or "qwen3-32b",
+            model=model,
             timeout_seconds=float(os.environ.get("APV21_LLM_TEACHER_TIMEOUT", "20") or 20),
         )
 

@@ -1347,7 +1347,7 @@
     },
     "task_classification": {
         "mode": "keyword",
-        "llm_model": "qwen_7b",
+        "llm_model": "deepseek_v4_flash_official",
         "llm_timeout": 10,
         "fallback_to_keywords": true,
         "tool_calling": [
@@ -2504,16 +2504,10 @@
         "default_interval": 1.0,
         "max_retries": 2,
         "models": {
-            "deepseek_v3": {
+            "deepseek_v4_flash_official": {
                 "interval": 1.0
             },
-            "gpt4o": {
-                "interval": 1.0
-            },
-            "qwen_max": {
-                "interval": 1.0
-            },
-            "claude_sonnet": {
+            "kimi_k2_7_code_highspeed": {
                 "interval": 1.0
             }
         },

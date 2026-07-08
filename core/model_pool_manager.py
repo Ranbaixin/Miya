@@ -64,6 +64,44 @@ class ModelProvider(str, Enum):
     LOCAL = "local"
 
 
+PROVIDER_ENV_MAP = {
+    "deepseek": "DEEPSEEK_API_KEY",
+    "siliconflow": "SILICONFLOW_API_KEY",
+    "openai": "OPENAI_API_KEY",
+    "zhipu": "ZHIPU_API_KEY",
+    "dashscope": "DASHSCOPE_API_KEY",
+    "anthropic": "ANTHROPIC_API_KEY",
+    "grok": "GROK_API_KEY",
+    "moonshot": "MOONSHOT_API_KEY",
+}
+
+
+def resolve_api_key_by_provider(provider: str, env_key: str = "") -> str:
+    """根据 provider 名称解析 API Key（唯一真相源）
+    - 优先使用显式指定的 env_key
+    - 其次查 PROVIDER_ENV_MAP
+    - 再次尝试全局兜底 MIYA_AI_KEY
+    - 最后尝试 {provider.upper()}_API_KEY 命名约定
+    - 返回空字符串表示未找到
+    """
+    if env_key:
+        key = os.getenv(env_key, "")
+        if key:
+            return key
+    mapped_key = PROVIDER_ENV_MAP.get(provider.lower(), "")
+    if mapped_key:
+        key = os.getenv(mapped_key, "")
+        if key:
+            return key
+    global_key = os.getenv("MIYA_AI_KEY", "")
+    if global_key:
+        return global_key
+    fallback_key = os.getenv(f"{provider.upper()}_API_KEY", "")
+    if fallback_key:
+        return fallback_key
+    return ""
+
+
 # ==================== 数据类 ====================
 
 
@@ -205,6 +243,7 @@ class ModelPoolManager:
             if max_tokens == 4096 and "model_defaults" in model_conf:
                 max_tokens = model_conf["model_defaults"].get("max_tokens", 4096)
 
+            disabled = model_conf.get("disabled", False)
             model = Model(
                 id=model_id,
                 name=model_conf.get("name", ""),
@@ -222,7 +261,7 @@ class ModelPoolManager:
                 dimension=model_conf.get("dimension", 0),
                 max_tokens=max_tokens,
                 description=model_conf.get("description", ""),
-                enabled=bool(api_key),
+                enabled=bool(api_key) and not disabled,
             )
             self._models[model_id] = model
 
@@ -497,6 +536,8 @@ __all__ = [
     "TaskType",
     "ModelType",
     "ModelProvider",
+    "PROVIDER_ENV_MAP",
+    "resolve_api_key_by_provider",
     "get_model_pool",
     "get_model",
     "select_model",

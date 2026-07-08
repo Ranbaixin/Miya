@@ -118,7 +118,7 @@ onMounted(async () => {
       API.systemStatus(),
       API.getCurrentPersona(),
       API.getMemoryStats(),
-      API.getConfig().then((c: any) => c?.providers || []).catch(() => []),
+      API.listModels().then((r: any) => (r?.models || []).map((m: any) => ({ ...m, available: m.enabled }))).catch(() => []),
     ])
     systemStatus.value = status.status === 'fulfilled' ? status.value : null
     personaData.value = persona.status === 'fulfilled' ? persona.value : null

@@ -110,17 +110,9 @@ class ConfigLoader:
 
     def get_api_key(self, provider: str) -> str:
         """获取 Provider API 密钥"""
-        key_map = {
-            "siliconflow": "siliconflow_api_key",
-            "deepseek": "deepseek_api_key",
-            "zhipu": "zhipu_api_key",
-            "dashscope": "dashscope_api_key",
-            "grok": "grok_api_key",
-            "anthropic": "anthropic_api_key",
-            "openai": "openai_api_key",
-        }
-        env_key = key_map.get(provider, f"{provider}_api_key")
-        return os.getenv(env_key.upper(), "")
+        from core.model_pool_manager import resolve_api_key_by_provider
+
+        return resolve_api_key_by_provider(provider)
 
     def get_base_url(self, provider: str) -> str:
         """获取 Provider Base URL"""

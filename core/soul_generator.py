@@ -1288,11 +1288,11 @@ class SoulGenerator:
                     if isinstance(item, dict) and "name" in item:
                         ai_emotions_dict[item["name"]] = item.get("intensity", 50)
         else:
-            logger.warning("[灵魂] AI emotions为空，使用空字典")
+            logger.debug("[灵魂] AI emotions为空，使用空字典")
             # 修复：当AI分析失败时，不使用默认的70+情绪，返回空字典让上层处理
             ai_emotions_dict = {}
 
-        logger.warning(f"[灵魂] 返回的emotions: {ai_emotions_dict}")
+        logger.debug(f"[灵魂] 返回的emotions: {ai_emotions_dict}")
 
         return {
             "response": output,
@@ -1324,12 +1324,12 @@ class SoulGenerator:
         """使用AI分析情绪 + 生成内心独白（合并版本，v7.0+ 支持对话上下文和记忆注入）"""
         try:
             if not ai_client:
-                logger.warning("[灵魂] AI分析跳过: 无AI客户端")
+                logger.debug("[灵魂] AI分析跳过: 无AI客户端")
                 return None
 
             prompt_template = _CONFIG.get("AI_EMOTION_ANALYSIS_PROMPT", "")
             if not prompt_template:
-                logger.warning("[灵魂] AI分析跳过: 无prompt配置")
+                logger.debug("[灵魂] AI分析跳过: 无prompt配置")
                 return None
 
             # 获取用户身份配置（提前提取，用于正确标记对话上下文中的发送者）
@@ -1513,7 +1513,7 @@ class SoulGenerator:
             conv_len = len(conversation_context_str)
             mem_len = len(memory_context_str)
             prompt_tail = prompt[-300:] if len(prompt) > 300 else prompt
-            logger.warning(
+            logger.debug(
                 f"[灵魂] prompt({len(prompt)}字) | 对话: {conv_len}字 / 记忆: {mem_len}字 | 尾部: {prompt_tail[:200]}"
             )
 
@@ -1534,10 +1534,10 @@ class SoulGenerator:
                 return None
 
             if not response:
-                logger.warning("[灵魂] AI响应为空")
+                logger.debug("[灵魂] AI响应为空")
                 return None
 
-            logger.warning(f"[灵魂] AI响应: {response[:500] if response else 'None'}")
+            logger.debug(f"[灵魂] AI响应: {response[:500] if response else 'None'}")
 
             import json
             import re

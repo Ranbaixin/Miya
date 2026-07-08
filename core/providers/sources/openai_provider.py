@@ -28,7 +28,6 @@ class OpenAIProvider(BaseProvider):
         self._initialize_client()
 
     def _initialize_client(self):
-        """初始化客户端"""
         try:
             self._client = AsyncOpenAI(
                 api_key=self.config.api_key,
@@ -37,6 +36,11 @@ class OpenAIProvider(BaseProvider):
             logger.info(f"[OpenAIProvider] 初始化完成: {self.config.id}")
         except Exception as e:
             logger.error(f"[OpenAIProvider] 初始化失败: {e}")
+
+    def create_ai_client(self):
+        """创建工具调用 AI 客户端（复用 provider 的 HTTP 连接）"""
+        from core.ai_client import AIClientFactory
+        return AIClientFactory.from_provider(self)
 
     async def chat(
         self,
@@ -178,18 +182,3 @@ class OpenAIProvider(BaseProvider):
         except Exception as e:
             logger.error(f"[OpenAIProvider] Batch Embedding请求失败: {e}")
             raise
-
-
-class DeepSeekProvider(OpenAIProvider):
-    """DeepSeek Provider (兼容 OpenAI)"""
-
-    def __init__(self, config: ProviderConfig):
-        # DeepSeek 使用 OpenAI 兼容接口
-        super().__init__(config)
-
-
-class SiliconFlowProvider(OpenAIProvider):
-    """SiliconFlow Provider (兼容 OpenAI)"""
-
-    def __init__(self, config: ProviderConfig):
-        super().__init__(config)

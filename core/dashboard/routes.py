@@ -9,8 +9,8 @@ import logging
 from typing import Any, Dict
 
 from core.platform_adapter import PlatformType, get_platform_adapter_manager
-from core.providers import get_provider_config_loader
-from core.star import get_star_manager
+from core.model_pool_manager import get_model_pool
+from core.star_miya import get_star_manager
 
 logger = logging.getLogger(__name__)
 
@@ -148,9 +148,9 @@ async def delete_platform(platform_type: str) -> Dict:
 async def list_providers() -> Dict:
     """列出提供商"""
     try:
-        loader = get_provider_config_loader()
-        models = loader.list_models()
-        return {"providers": models}
+        pool = get_model_pool()
+        models_data = pool.to_dict()
+        return {"providers": models_data.get("models", [])}
     except Exception as e:
         logger.error(f"[Dashboard] 列出提供商失败: {e}")
         return {"error": str(e)}
@@ -159,8 +159,8 @@ async def list_providers() -> Dict:
 async def add_provider(provider_config: Dict) -> Dict:
     """添加提供商"""
     try:
-        get_provider_config_loader()
-        return {"success": True}
+        pool = get_model_pool()
+        return {"success": True, "message": "请通过 multi_model_config.json 添加模型"}
     except Exception as e:
         logger.error(f"[Dashboard] 添加提供商失败: {e}")
         return {"error": str(e)}
