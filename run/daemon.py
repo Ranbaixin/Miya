@@ -46,6 +46,15 @@ os.environ["MIYA_DAEMON_MODE"] = "1"
 # 本地 OCR 模型全局配置
 os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
 
+# botpy 日志路径修正（botpy 库默认写入 os.getcwd()/botpy.log，重定向到 logs/）
+_logs_dir = os.path.join(str(PROJECT_ROOT), "logs")
+os.makedirs(_logs_dir, exist_ok=True)
+try:
+    import botpy.logging as _botpy_logging
+    _botpy_logging.DEFAULT_FILE_HANDLER["filename"] = os.path.join(_logs_dir, "%(name)s.log")
+except ImportError:
+    pass
+
 
 def setup_logging():
     logging.basicConfig(
