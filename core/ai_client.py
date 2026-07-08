@@ -966,7 +966,6 @@ class OpenAIClient(BaseAIClient):
 
                 content_parts: List[str] = []
                 tool_call_buffer: Dict[int, Dict] = {}
-                finish_reason = None
 
                 async for chunk in stream:
                     if not chunk.choices:
