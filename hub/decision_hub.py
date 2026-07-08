@@ -2147,13 +2147,34 @@ class DecisionHub:
                 soul_result = None
                 if cached_emotion:
                     logger.info("[灵魂-加速] 使用缓存情绪上下文")
-                # 后台等待 soul 完成后更新 _last_soul_data，供 API 读取
+                # 后台等待 soul 完成后更新 _last_soul_data 并持久化认知记忆
                 async def _deferred_soul_update():
                     try:
                         _, sr = await soul_task
                         if sr and sr.get("emotions"):
                             self._last_soul_data = sr
                             logger.info("[灵魂-延迟] 已更新 _last_soul_data")
+
+                            # 补持久化认知记忆（修复情绪空白的bug）
+                            from memory import store_cognition
+
+                            _emotions_d = sr.get("emotions", {})
+                            _inner = sr.get("inner_thought", "") or sr.get("analysis", {}).get("inner_thought", "")
+                            _attr = sr.get("attribution", "") or sr.get("analysis", {}).get("attribution", "")
+                            _refl = sr.get("reflection", "") or sr.get("analysis", {}).get("reflection", "")
+                            _aie = sr.get("analysis", {}).get("ai_emotion", {}) or {}
+                            _reasoning = _aie.get("reasoning", "") or sr.get("reasoning", "")
+                            _gid_str = str(context.get("group_id")) if context.get("group_id") else None
+                            await store_cognition(
+                                thinking=_reasoning or f"[情绪分析] {json.dumps(_emotions_d, ensure_ascii=False)}",
+                                emotions=_emotions_d,
+                                inner_thought=_inner,
+                                attribution=_attr,
+                                reflection=_refl,
+                                user_id=user_id_str,
+                                group_id=_gid_str,
+                            )
+                            logger.info("[灵魂-延迟] 已补持久化认知记忆")
                     except Exception:
                         pass
                 asyncio.create_task(_deferred_soul_update())
