@@ -1,17 +1,17 @@
 # Miya - Database Dependencies
-# External databases and ORM
-# Note: all databases have Mock fallback; use simulation mode on failure
+# 当前存储后端：JSON 文件 + SQLite
+# 外部数据库（Redis / Milvus / Neo4j / ChromaDB）已不再使用
 # Install: pip install -r setup/dependencies/database.txt
 
-# Vector Database
-chromadb>=0.4.0,<0.6.0
-pymilvus>=2.3.0,<2.5.0
+# Vector Database (已废弃，不再加载)
+# chromadb  - 已移除
+# pymilvus  - 已移除（向量搜索通过 SQLite + 余弦相似度实现）
 
-# Graph Database
-neo4j>=5.0.0,<6.0.0
+# Graph Database (已废弃，不再加载)
+# neo4j     - 已移除（知识图谱功能已关闭）
 
-# Cache / Key-Value
-redis>=4.5.0,<6.0.0
+# Cache (已废弃，不再加载)
+# redis     - 已移除（缓存使用内存 + SQLite）
 
 # ORM / Data Access
 sqlalchemy>=2.0.0

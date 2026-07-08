@@ -23,7 +23,7 @@
 │  MemoryLevel.SEMANTIC     - 语义记忆 (向量搜索)              │
 │  MemoryLevel.KNOWLEDGE    - 知识图谱 (实体关系)              │
 ├─────────────────────────────────────────────────────────────┤
-│  存储后端：JSON文件 + Redis + Milvus + Neo4j                │
+│  存储后端：JSON文件 + SQLite (FTS5 全文搜索 + 向量搜索)    │
 └─────────────────────────────────────────────────────────────┘
 
 作者: 编程大师
@@ -1970,8 +1970,6 @@ class MiyaMemoryCore:
                 logger.debug(f"[MiyaMemoryCore] 向量生成并同步成功: {memory.id}")
         except Exception as e:
             logger.warning(f"[MiyaMemoryCore] 向量生成失败: {e}")
-        except Exception as e:
-            logger.warning(f"[MiyaMemoryCore] Neo4j同步失败: {e}")
 
     async def _backup_memory(self, memory: MemoryItem):
         """备份记忆 - 按周归档，避免数据丢失"""

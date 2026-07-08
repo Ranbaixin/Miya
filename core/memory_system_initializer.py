@@ -97,9 +97,7 @@ class MemorySystemInitializer:
             logger.info("\n数据存储位置:")
             logger.info(f"  • 对话历史: {self.data_dir / 'conversations'}")
             logger.info(f"  • 手动记忆: {self.data_dir / 'memory' / 'undefined_memory.json'}")
-            logger.info("  • Redis: 已禁用")
-            logger.info("  • Milvus: 已禁用")
-            logger.info("  • Neo4j: 已禁用")
+            logger.info(f"  • SQLite: {self.data_dir / 'memory' / 'miya_memory.db'} (FTS5 全文搜索 + 向量检索)")
 
             return True
 
@@ -146,11 +144,9 @@ class MemorySystemInitializer:
             },
             "tide_memory": {
                 "count": len(self.memory_engine.tide_memory),
-                "redis_available": self.redis_client is not None,
             },
             "dream_memory": {
                 "count": len(self.memory_engine.dream_memory),
-                "milvus_available": self.milvus_client is not None,
             },
         }
 
@@ -205,11 +201,6 @@ class MemorySystemInitializer:
 
     async def cleanup(self):
         """清理所有记忆系统"""
-        if self.memory_engine:
-            # 保存潮汐记忆
-            if self.redis_client:
-                self.memory_engine._save_tide_to_redis()
-
         logger.info("记忆系统已清理")
 
 
@@ -220,10 +211,10 @@ _global_initializer: MemorySystemInitializer = None
 async def get_memory_system_initializer(
     data_dir: Path = None,
 ) -> MemorySystemInitializer:
-    """获取全局记忆系统初始化器（单例）- 默认禁用外部数据库"""
+    """获取全局记忆系统初始化器（单例）- JSON + SQLite 存储后端"""
     global _global_initializer
 
-    logger.info("外部数据库已禁用（SQLite 已替代 Redis/Milvus/Neo4j）")
+    logger.info("记忆系统就绪（JSON + SQLite，零外部数据库依赖）")
     if _global_initializer is None:
         _global_initializer = MemorySystemInitializer(
             data_dir=data_dir,

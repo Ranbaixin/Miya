@@ -446,10 +446,6 @@ class DecisionHub:
         # 7. 会话处理器
         self.session_handler = SessionHandler()
 
-        # 8. 知识图谱管理器（新增）
-        self.knowledge_graph = None
-        self._init_knowledge_graph()
-
         logger.info("决策层 Hub 初始化完成（门面模式：感知/情绪/记忆/响应处理器 + 辅助模块）")
 
         # 9. 安全服务 / 10. 注入检测 / 11. 协作引擎 / 12. 主动聊天 — 后台延迟初始化
@@ -882,19 +878,6 @@ class DecisionHub:
         except Exception as e:
             logger.warning(f"[决策层-AI防注入] 并行检测失败: {e}")
         return None
-
-    def _init_knowledge_graph(self):
-        """初始化知识图谱管理器"""
-        try:
-            from core.knowledge_graph import KnowledgeGraphManager
-
-            if hasattr(self.memory_net, "grag_memory") and self.memory_net.grag_memory:
-                driver = self.memory_net.grag_memory.neo4j_driver
-                if driver:
-                    self.knowledge_graph = KnowledgeGraphManager(neo4j_driver=driver)
-                    logger.info("[决策层] 知识图谱管理器已初始化")
-        except Exception as e:
-            logger.warning(f"[决策层] 知识图谱初始化失败: {e}")
 
     async def _handle_proactive_chat(self, perception: dict, user_message: str, main_response: str = ""):
         """处理主动聊天"""
@@ -1766,17 +1749,6 @@ class DecisionHub:
                 )
                 return context
 
-            async def fetch_knowledge_context():
-                if self.knowledge_graph:
-                    keywords = self._extract_keywords_from_input(content)
-                    if keywords:
-                        knowledge = await self.knowledge_graph.query_by_keywords(keywords)
-                        if knowledge:
-                            from core.knowledge_graph import format_knowledge_for_prompt
-
-                            return format_knowledge_for_prompt(knowledge)
-                return ""
-
             async def fetch_user_persona():
                 upc = ""
                 gpc = ""
@@ -1934,7 +1906,6 @@ class DecisionHub:
 
             # 启动 Phase 1 所有并行任务（含 AI 注入检测，从 Phase 0 移入以消除串行等待）
             conv_task = asyncio.create_task(fetch_conversation_context(), name="conv")
-            kctx_task = asyncio.create_task(fetch_knowledge_context(), name="kctx")
             persona_task = asyncio.create_task(fetch_user_persona(), name="persona")
             awareness_task = asyncio.create_task(fetch_awareness_text(), name="awareness")
 
@@ -2061,7 +2032,6 @@ class DecisionHub:
             soul_task = asyncio.create_task(run_soul_early(), name="soul")
 
             # 等待其余 Phase 1 任务（同时 cog → soul 在后台运行）
-            knowledge_context = await kctx_task
             user_persona_context, group_persona_context = await persona_task
             awareness_text = await awareness_task
             temporal = self._get_temporal_awareness()
@@ -2374,7 +2344,7 @@ class DecisionHub:
             prompt_info = self.prompt_manager.build_full_prompt(
                 user_input=at_content_hint,
                 memory_context=conversation_context,
-                knowledge_context=knowledge_context,
+                knowledge_context="",
                 additional_context={
                     "platform": platform,
                     "message_type": message_type,

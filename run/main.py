@@ -169,11 +169,8 @@ class Miya:
         self._init_databases()
 
     def _init_databases(self):
-        """初始化可选数据库 - 默认禁用（SQLite 已替代）"""
-        self.logger.info("  [数据库] 外部数据库已禁用（SQLite 已替代 Redis/Milvus/Neo4j）")
-        self.redis = None
-        self.milvus = None
-        self.neo4j = None
+        """初始化存储 - SQLite 已替代所有外部数据库"""
+        self.logger.info("  [存储] JSON + SQLite（零外部数据库依赖）")
 
         # 初始化全局记忆系统 (M-Link + MemoryNet)
         self._init_memory_system()
@@ -298,38 +295,6 @@ class Miya:
         logger.addHandler(file_handler)
 
         return logger
-
-    def _init_neo4j(self):
-        """初始化 Neo4j 客户端"""
-        import os
-
-        from dotenv import load_dotenv
-
-        load_dotenv(Path(__file__).parent.parent / "config" / ".env")
-
-        neo4j_uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
-        neo4j_user = os.getenv("NEO4J_USER", "neo4j")
-        neo4j_password = os.getenv("NEO4J_PASSWORD")
-        neo4j_database = os.getenv("NEO4J_DATABASE", "neo4j")
-
-        self.logger.info(f"  [数据库] Neo4j 配置: {neo4j_uri} (用户: {neo4j_user})")
-
-        if neo4j_password:
-            neo4j = Neo4jClient(
-                uri=neo4j_uri,
-                user=neo4j_user,
-                password=neo4j_password,
-                database=neo4j_database,
-            )
-            if neo4j.is_mock_mode():
-                self.logger.warning("  [数据库] Neo4j 连接失败，使用模拟模式")
-            else:
-                self.logger.info("  [数据库] Neo4j 连接成功")
-        else:
-            self.logger.warning("  [数据库] 未配置 Neo4j 密码，使用模拟模式")
-            neo4j = None
-
-        return neo4j
 
     def _init_tool_subnet(self):
         """
@@ -663,40 +628,25 @@ class Miya:
         """初始化向量系统"""
         try:
             from core.embedding_client import EmbeddingClient, EmbeddingProvider
-            from memory.real_vector_cache import RealVectorCache
 
-            # 使用本地模型（无需API）
             self.embedding_client = EmbeddingClient(
                 provider=EmbeddingProvider.SENTENCE_TRANSFORMERS,
                 model="paraphrase-multilingual-MiniLM-L12-v2",
             )
 
-            # 初始化向量缓存
-
-            data_dir = Path(__file__).parent.parent / "data"
-            data_dir.mkdir(exist_ok=True)
-
-            self.vector_cache = RealVectorCache(
-                embedding_client=self.embedding_client,
-                milvus_db_path=str(data_dir / "milvus_lite.db"),
-                collection_name="miya_vectors",
-            )
-
-            # 初始化语义动力学引擎
+            # 基于 SQLite 的语义动力学引擎（零外部数据库依赖）
             from memory.semantic_dynamics_engine import get_semantic_dynamics_engine
 
             self.semantic_engine = get_semantic_dynamics_engine(
                 config={"top_k": 10, "fuzzy_threshold": 0.85},
-                vector_cache=self.vector_cache,
             )
             self.semantic_engine.set_embedding_client(self.embedding_client)
 
-            self.logger.info("向量系统初始化成功（使用Sentence Transformers本地模型）")
+            self.logger.info("向量系统初始化成功（使用Sentence Transformers本地模型 + SQLite）")
 
         except Exception as e:
             self.logger.warning(f"向量系统初始化失败: {e}，将不使用向量功能")
             self.embedding_client = None
-            self.vector_cache = None
             self.semantic_engine = None
 
     def _init_web_api(self):
@@ -803,29 +753,6 @@ class Miya:
             self.logger.info(f"Web API 服务器已在后台启动 (http://0.0.0.0:{api_port})")
         except Exception as e:
             self.logger.warning(f"API 服务器启动失败: {e}")
-
-    def _init_neo4j_system(self):
-        """初始化Neo4j知识图谱系统"""
-        try:
-            # 使用已初始化的neo4j客户端（在第81行已初始化）
-            self.neo4j_client = self.neo4j
-
-            # 检查是否为模拟模式
-            if self.neo4j_client and not self.neo4j_client.is_mock_mode():
-                self.logger.info("Neo4j知识图谱连接成功")
-
-                # 使用统一的记忆系统处理知识图谱
-                # Neo4j功能已整合到MiyaMemoryCore中
-                self.grag_memory = None
-                self.logger.info("知识图谱功能已整合到统一记忆系统")
-            else:
-                self.logger.warning("Neo4j连接失败或为模拟模式，将不使用知识图谱功能")
-                self.grag_memory = None
-
-        except Exception as e:
-            self.logger.warning(f"Neo4j知识图谱初始化失败: {e}，将不使用知识图谱功能")
-            self.grag_memory = None
-            self.neo4j_client = None
 
     async def process_input_async(self, user_input: str, user_id: str = "default") -> str:
         """
@@ -1015,10 +942,6 @@ class Miya:
                 self.logger.info("[AP] 状态已保存，心跳已停止")
             except Exception as e:
                 self.logger.warning(f"[AP] 关闭异常: {e}")
-
-        # 清理资源
-        if self.redis:
-            self.redis.flushdb()
 
         self.logger.info("弥娅系统已关闭")
 

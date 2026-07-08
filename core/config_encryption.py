@@ -77,7 +77,6 @@ class ConfigEncryption:
         "mongodb_password",
         "mysql_password",
         "postgres_password",
-        "redis_password"
     }
 
     def __init__(

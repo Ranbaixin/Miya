@@ -85,41 +85,285 @@ Claude Code Engine（Node.js）作为执行层，拥有 60+ 内置工具（文�
 
 ---
 
-## 快速开始
+## 部署指南
 
-### 环境
+### 环境要求
 
-- Python 3.11+
-- Node.js（终端模式与桌面应用需要）
+| 组件 | 版本 | 必需 | 说明 |
+|------|------|------|------|
+| Python | ≥ 3.11 | 是 | 守护进程核心 |
+| Node.js | LTS | 是 | 前端构建 + CCE 终端 |
+| Bun | ≥ 1.3.0 | 是 | CCE (Claude Code Engine) 构建与运行 |
+| Git | 最新 | 是 | 克隆仓库 |
 
-### 安装
-
-```bash
-pip install -r requirements.txt
-```
-
-### 启动
+### 第一步：克隆仓库
 
 ```bash
-# Windows 启动中心
-start.bat              # 显示菜单
-start.bat 1            # 终端模式
-start.bat 2            # 守护进程
-start.bat 2p           # 守护进程 + APV2.1
-start.bat 3            # 桌面应用
-start.bat 4            # Web 界面
-start.bat 5            # APV2.1 交互终端
-start.bat a            # 全部启动
-
-# Linux / macOS
-./start.sh
+git clone <仓库地址> Miya
+cd Miya
 ```
 
-### 配置
+### 第二步：安装 Python 依赖
 
-1. 复制 `config/.env.example` 为 `config/.env`
-2. 填入至少一个模型供应商的 API Key（推荐 DeepSeek）
-3. 可选：配置平台 Bot 信息（QQ / Telegram / Discord 等）
+弥娅提供三种安装级别，按需选择：
+
+```bash
+# 在项目根目录 Miya\ 下执行
+cd Miya
+
+# 轻量级（推荐日常体验，AI 功能完整 + Mock 数据库）
+pip install -r setup/requirements/lightweight.txt    # 约 300MB
+
+# 完整安装（生产环境，含所有数据库驱动）
+pip install -r setup/requirements/full.txt           # 约 800MB
+
+# 最小安装（仅核心，快速验证）
+pip install -r setup/requirements/minimal.txt        # 约 100MB
+```
+
+> 也可使用一键脚本：`Miya\install.bat` (Windows) / `Miya\install.sh` (Linux/Mac)
+> 支持 `install.bat uv` 使用 uv 加速安装（自动安装 uv 工具）
+
+| 安装类型 | 大小 | AI 模型 | 适用场景 |
+|----------|------|---------|----------|
+| minimal | ~100MB | 基础 | 快速测试 |
+| lightweight | ~300MB | 完整 | 开发调试 / 日常体验 |
+| full | ~800MB | 完整 | 含所有数据库驱动（当前已不加载） |
+
+### 第三步：安装前端组件
+
+弥娅的前端由两个独立项目组成：CCE 终端引擎 + Electron 桌面应用。
+
+#### Claude Code Engine (CCE) — 弥娅的"手"
+
+CCE 是弥娅的执行层，基于 Bun 运行时，提供 60+ 内置工具（文件操作、代码编写、系统命令、搜索分析）。
+
+**依赖：**
+
+| 组件 | 版本 | 说明 |
+|------|------|------|
+| Bun | ≥ 1.3.0 | CCE 构建与运行时 |
+| ws | ^8.20.0 | WebSocket 通信 |
+| highlight.js | ^11.11.1 | 代码高亮 |
+| @agentclientprotocol/sdk | ^0.19.0 | ACP 协议 |
+
+**构建：**
+
+```bash
+# 在项目根目录 Miya\ 下执行
+
+# 方式一：一键构建（推荐）
+build.bat cce                         # Windows
+./build.sh cce                        # Linux / Mac
+
+# 方式二：手动构建
+cd claude-code-engine                 # → Miya\claude-code-engine\
+bun install                           # 安装依赖
+bun run build                         # 编译（输出 dist/）
+cd ..                                 # 返回 Miya\
+```
+
+启动 CCE 终端：`node Miya\claude-code-engine\dist\cli-node.js` 或使用启动中心 `start.bat 1`。
+
+#### Electron 桌面应用（可选）
+
+基于 Vue 3 + Vite + Electron，内嵌 Live2D 角色渲染 + xterm 终端。
+
+**依赖：**
+
+| 组件 | 版本 | 说明 |
+|------|------|------|
+| Vue | 3.5 | UI 框架 |
+| Electron | 40 | 桌面壳 |
+| Vite | 6.3 | 构建工具 |
+| PrimeVue | 4.5 | UI 组件库 |
+| xterm | 6.0 | 终端模拟 |
+| pixi-live2d-display | 0.4 | Live2D 渲染 |
+
+**安装 & 启动（开发模式，推荐日常使用）：**
+
+```bash
+# 在项目根目录 Miya\ 下执行
+cd miya_frontend                      # → Miya\miya_frontend\
+npm install                           # 安装依赖
+npm run dev                           # 启动桌面应用（esbuild 编译 Electron 主进程 + Vite 热重载）
+```
+
+这是启动中心 `[3] Desktop` 实际使用的模式，开发体验最好，前端代码修改即时生效。
+
+**其他模式：**
+
+```bash
+npm run dev:web         # 纯 Web 模式（浏览器打开，无需 Electron）
+npm run dev:all         # 开发模式 + 自动启动后端守护进程
+```
+
+**生产构建 & 打包：**
+
+```bash
+# 方式一：一键构建（回到 Miya\ 根目录执行）
+cd ..                                 # 返回 Miya\
+build.bat desktop                     # Windows
+./build.sh desktop                    # Linux / Mac
+
+# 方式二：手动（在 miya_frontend\ 下）
+npm run build                         # 生产构建（输出 dist/ + dist-electron/）
+npm run dist:win                      # Electron 打包 → Miya\miya_frontend\release\Miya-*.zip
+npm run dist:mac                      # macOS 安装包
+npm run dist:linux                    # Linux 安装包
+```
+
+> 也可用 PyInstaller 一键打包完整桌面版：`python build_release.py --clean --desktop`，详见第六步。
+
+### 第四步：配置环境变量
+
+```bash
+# 在项目根目录 Miya\ 下执行
+copy config\.env.example config\.env   # Windows
+cp config/.env.example config/.env     # Linux / Mac
+```
+
+编辑 `config/.env`，**必须填入至少一个 AI 模型的 API Key**：
+
+```ini
+# 推荐：硅基流动（注册即送免费额度）
+SILICONFLOW_API_KEY=sk-xxxxxxxxxxxx
+
+# 推荐：DeepSeek 官方
+DEEPSEEK_API_KEY=sk-xxxxxxxxxxxx
+
+# 可选：其他模型供应商
+OPENAI_API_KEY=sk-xxxxxxxxxxxx
+ZHIPU_API_KEY=xxxxxxxxxxxx
+```
+
+ 其余配置（平台 Bot Token、人格参数等）均按需填写。`.env.example` 中 Redis/Milvus/Neo4j 等外部数据库配置项为历史遗留，当前版本已完全使用 JSON + SQLite 存储，不需要外部数据库。
+
+### 第五步：启动弥娅
+
+```bash
+# 在项目根目录 Miya\ 下执行
+start.bat               # Windows 启动中心（交互式菜单）
+./start.sh              # Linux / macOS 启动中心
+
+# 或直接指定模式跳过菜单
+start.bat 1             # 终端模式 (CCE + DeepSeek)
+start.bat 2             # 守护进程 (API :9800)
+start.bat 2p            # 守护进程 + APV2.1 认知引擎
+start.bat 3             # 桌面应用 (Electron, 需先完成第三步)
+start.bat a             # 一键全开
+```
+
+守护进程启动后，API 地址：`http://localhost:9800`，文档：`http://localhost:9800/docs`
+
+### 第六步：编译为 .exe 分发版（可选）
+
+如果你想把弥娅编译成绿色免安装版分发给其他人：
+
+```bash
+# 安装 PyInstaller
+pip install pyinstaller
+
+# 仅后端 .exe（绿色免安装，约 1-2GB）
+python build_release.py --clean
+
+# 完整桌面安装包（Electron 打包）
+python build_release.py --clean --desktop
+```
+
+输出目录：
+- `release/Miya/` — 绿色免安装版（双击 `启动弥娅.bat` 运行）
+- `miya_frontend/release/` — 桌面安装包 `Miya-*.zip`
+
+分发时注意：`release/Miya/_internal/config/.env` 已自动清空，需要接收者自行填入 API Key。
+
+### 第七步：下载 OCR 模型（QQ 图片识别等场景）
+
+弥娅的 QQ 图片 OCR、屏幕感知等功能依赖 PaddleOCR。首次运行时会自动下载模型到 `~/.paddlex/official_models/`，也可手动预下载：
+
+```bash
+# 安装 PaddleOCR 依赖
+pip install paddlepaddle paddleocr paddlex
+
+# 方式一：Python 一行触发自动下载（推荐）
+python -c "from paddleocr import PaddleOCR; PaddleOCR(lang='ch')"
+
+# 方式二：通过 PaddleX 下载指定模型
+python -c "
+from paddlex import create_pipeline
+create_pipeline('ocr')
+print('OCR 模型下载完成')
+"
+```
+
+需要的模型文件（约 200-300MB）：
+- `PP-OCRv5_server_det` — 文字检测
+- `PP-OCRv5_server_rec` — 文字识别
+- `PP-LCNet_x1_0_doc_ori` — 文档方向分类
+- `PP-LCNet_x1_0_textline_ori` — 文本行方向分类
+- `UVDoc` — 文档矫正
+
+> 编译 .exe 分发版时，`build_release.py` 会自动将 `~/.paddlex/official_models/` 同步到 `models/paddle_ocr/`，随 exe 一起打包。
+
+### 第八步：手机端打包（可选）
+
+弥娅提供 KMP (Kotlin Multiplatform) 原生移动客户端，支持 Android 和 iOS。
+
+#### 环境要求
+
+| 组件 | 版本 | 说明 |
+|------|------|------|
+| JDK | ≥ 17 | Kotlin 编译 |
+| Android Studio | Hedgehog 2024.1+ | Android 开发与模拟器 |
+| Android SDK | 35 | 编译目标 |
+| Xcode | 16.0+ | iOS 开发 (仅 macOS) |
+| macOS | 14.0+ | iOS 构建必须 |
+
+#### 快速上手
+
+```bash
+# 1. 检查环境
+cd miya_mobile
+setup_env.bat              # Windows 环境检查
+
+# 2. 构建 Shared 共享层
+./gradlew :shared:assembleDebug              # Android
+./gradlew :shared:linkDebugFrameworkIosArm64 # iOS (仅 macOS)
+
+# 3. 运行 Android
+# 用 Android Studio 打开 miya_mobile/ 目录，Run 'androidApp'
+
+# 4. 运行 iOS (仅 macOS)
+# 用 Xcode 打开 miya_mobile/iosApp/，配置 Framework Search Paths 后 Run
+```
+
+#### 核心依赖 (KMP)
+
+```
+Kotlin 2.0.21 · Jetpack Compose (BOM 2024.10) ·  Ktor 3.0 (HTTP/WS)
+SQLDelight 2.0 (本地缓存) · Koin 4.0 (DI) · Multiplatform Settings
+Coil 2.7 (图片加载) · kotlinx-serialization · kotlinx-coroutines
+```
+
+#### 连接说明
+
+- 手机和 PC 在同一 WiFi 下，手机端输入 PC 局域网 IP 即可连接
+- Android 模拟器中 `10.0.2.2` 自动映射到宿主机 `localhost`
+- 远程访问可使用 frp/nps 将 `9800` 端口映射到公网
+
+### 常见问题
+
+**Q: Redis / Milvus / Neo4j 需要装吗？**
+A: **完全不需要。** 弥娅现在使用 JSON 文件 + SQLite（Python 内置）作为唯一存储后端，向量搜索也通过 SQLite + Python 余弦相似度实现，不依赖任何外部数据库服务。`.env.example` 中残留的 Redis/Milvus/Neo4j 配置项为历史遗留，当前版本不会读取。
+
+**Q: 没有 GPU 能用吗？**
+A: 可以。`.env` 中设置 `MIYA_FORCE_CPU=true` 即可纯 CPU 运行，embedding 和推理都会走 CPU。
+
+**Q: 安装时依赖冲突怎么办？**
+A: 推荐使用 `install.bat uv` 或 `install.sh uv`，uv 的依赖解析比 pip 更可靠。
+
+**Q: OCR 模型下载失败或太慢？**
+A: 可以设置 HuggingFace 镜像：`export HF_ENDPOINT=https://hf-mirror.com`。或手动下载模型放到 `~/.paddlex/official_models/` 目录。
 
 ---
 
@@ -150,25 +394,40 @@ Miya/
 
 ---
 
-## 配置
+## 配置参考
 
 | 文件 | 说明 |
 |------|------|
-| `config/.env` | 环境变量 (API Keys) |
-| `config/multi_model_config.json` | 多模型池 |
-| `config/personalities/*.yaml` | 20+ 人格定义 |
-| `config/permissions.json` | 权限与命令 |
-| `config/skills.yaml` | Skills 配置 |
+| `config/.env` | 环境变量 (API Keys、数据库、平台 Token) |
+| `config/multi_model_config.json` | 多模型池配置 |
+| `config/personalities/*.yaml` | 20+ 人格定义 (运行时热切换) |
+| `config/permissions.json` | 权限与命令白名单 |
+| `config/skills.yaml` | Skills 扩展配置 |
+| `config/tts_config.json` | TTS 语音合成配置 |
+| `config/memory_config.json` | 记忆系统参数 |
 
-支持模型：DeepSeek · OpenAI · 智谱 AI · 硅基流动 · Anthropic · DashScope · Google AI
+支持模型：DeepSeek · OpenAI · 智谱 AI · 硅基流动 · Anthropic · DashScope · Google AI · Grok
 
----
-
-## 构建
+## 构建 & 分发
 
 ```bash
-python build_release.py --clean              # 仅后端
-python build_release.py --clean --desktop    # 完整桌面应用
+# Python 后端编译（详见部署指南第六步）
+python build_release.py --clean                      # 后端 .exe 绿色版 (~1-2GB)
+python build_release.py --clean --desktop             # 桌面安装包（Electron 打包）
+python build_release.py --skip-compile --desktop      # 跳过 PyInstaller，仅重新打包
+
+# 前端构建
+build.bat               # Windows: CCE + Desktop 全量构建
+build.bat cce           # Windows: 仅 CCE 终端
+build.bat desktop       # Windows: 仅桌面应用
+./build.sh              # Linux/Mac: 同上
+
+# 桌面应用单独打包
+cd miya_frontend
+npm run build           # Vite 生产构建
+npm run dist:win        # Electron 打包 → release/Miya-*.zip
+npm run dev             # 开发模式（热重载）
+npm run dev:web         # 纯 Web 开发模式
 ```
 
 详情见 [开发指南](docs/DEVELOP_GUIDE.md)。

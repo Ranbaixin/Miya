@@ -127,23 +127,7 @@ class CacheTTL:
 
 
 # ========== 数据库配置常量 ==========
-class DatabaseConfig:
-    """数据库配置常量"""
-
-    # Redis
-    REDIS_DEFAULT_PORT = 6379
-    REDIS_DEFAULT_DB = 0
-
-    # Milvus
-    MILVUS_DEFAULT_PORT = 19530
-    MILVUS_DEFAULT_INDEX_TYPE = "IVF_FLAT"
-
-    # Neo4j
-    NEO4J_DEFAULT_PORT = 7687
-    NEO4J_DEFAULT_HTTP_PORT = 7474
-
-    # ChromaDB
-    CHROMADB_DEFAULT_PORT = 8000
+# 存储后端：JSON 文件 + SQLite（零外部数据库依赖）
 
 
 # ========== 性能限制常量 ==========
@@ -253,8 +237,8 @@ class NetworkTimeout:
     # API请求
     API_REQUEST_TIMEOUT = 30
 
-    # Redis
-    REDIS_CONNECT_TIMEOUT = 5
+    # 线程等待
+    OBSERVER_JOIN_TIMEOUT = 5
 
     # 记忆系统
     MEMORY_SEARCH_TIMEOUT = 30
@@ -332,8 +316,6 @@ __all__ = [
     "ToolPermission",
     # 缓存
     "CacheTTL",
-    # 数据库
-    "DatabaseConfig",
     # 性能限制
     "PerformanceLimits",
     # 错误码

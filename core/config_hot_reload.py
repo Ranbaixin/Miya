@@ -63,10 +63,6 @@ _RESTART_REQUIRED_KEYS = {
     "port",
     "host",
     "server",
-    "redis",
-    "neo4j",
-    "milvus",
-    "chromadb",
     "api_keys",
     "admin_password",
 }
@@ -1098,6 +1094,6 @@ class ConfigHotReload:
         """停止配置热更新监听"""
         if self._observer:
             self._observer.stop()
-            self._observer.join(timeout=NetworkTimeout.REDIS_CONNECT_TIMEOUT)
+            self._observer.join(timeout=NetworkTimeout.OBSERVER_JOIN_TIMEOUT)
             self._observer = None
             logger.info("[配置热更新] 监听已停止")
