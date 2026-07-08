@@ -160,7 +160,7 @@ export class CoreApiClient extends ApiClient {
   async getModelsRouting(taskType?: string): Promise<any> {
     const params = taskType ? `?task_type=${encodeURIComponent(taskType)}` : ''
     return this.instance.get(`/api/models/routing${params}`)
-  } ──
+  }
   async getConfig(): Promise<any> {
     return this.instance.get('/api/config/get')
   }
