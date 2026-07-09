@@ -174,7 +174,8 @@
         "output": 0.006
       },
       "latency": "fast",
-      "quality": "excellent"
+      "quality": "excellent",
+      "temperature": 1.0
     },
     "kimi_k2_6_official": {
       "name": "kimi-k2.6",
@@ -198,7 +199,8 @@
         "output": 0.008
       },
       "latency": "medium",
-      "quality": "excellent"
+      "quality": "excellent",
+      "temperature": 1.0
     }
   },
   "embedding_config": {

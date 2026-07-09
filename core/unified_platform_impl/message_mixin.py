@@ -294,9 +294,9 @@ class MessageMixin:
                             pipeline_texts.append(pr["content"])
                         pipeline_context = "\n\n".join(pipeline_texts)
 
-                        # 注入到 perception_data，追加到 content 前使 AI 可见
+                        # 注入到 perception_data，追加到 content 后（不干扰谛听前置匹配）
                         perception_data["content"] = (
-                            f"{pipeline_context}\n\n[用户消息] {content}"
+                            f"{content}\n\n{pipeline_context}"
                         )
                         perception_data["pipeline_detections"] = pipeline_context
                         mlink_msg.content["content"] = perception_data["content"]
