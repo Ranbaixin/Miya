@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json as _json
 import logging
+import os
 from datetime import datetime
 from typing import Any, Dict, Optional
 
@@ -615,11 +617,14 @@ async def _dispatch_slash_command(
             ctx.ai_client = getattr(miya, "ai_client", None)
             ctx.cognitive_service = getattr(miya, "cognitive_service", None)
 
-        # 权限信息
+        # 权限信息 — 从 permissions.json 读取
+        ctx.superadmin_qq = int(os.getenv("QQ_SUPERADMIN_QQ", "0"))
+        ctx.bot_qq = int(os.getenv("QQ_BOT_QQ", "0"))
         try:
             from core.unified_permission import get_permission_engine
             engine = get_permission_engine()
-            ctx.superadmin_qq = engine.get_superadmin_qq() if hasattr(engine, "get_superadmin_qq") else 0
+            if engine.is_superadmin(str(ctx.sender_id), platform=getattr(platform, "platform_id", "aiocqhttp")):
+                ctx.superadmin_qq = ctx.sender_id
         except Exception:
             pass
 

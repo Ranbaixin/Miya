@@ -38,7 +38,7 @@ async def execute(args: List[str], context: Any) -> str:
     elif subcommand == "add":
         if not context.check_permission("admin"):
             return get_text_message("knowledge_base", "add_denied")
-        full = " ".join(args[1:] if len(args) > 1 else args)
+        full = " ".join(args)
         parts = full.split("|", 1)
         title = parts[0].strip()
         content = parts[1].strip() if len(parts) > 1 else title
