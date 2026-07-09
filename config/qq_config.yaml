@@ -127,6 +127,7 @@ qq:
     welcome_new_member: false             # 欢迎新成员
     scheduled_tasks: true                 # 定时任务
     passive_chat: true                    # 被动聊天（关键词触发）
+    passive_chat_keyword_only: false      # 仅关键词触发回复（关闭激活后的活跃窗口持续回复）
     active_chat: true                     # 主动聊天
 
   # ===== 命令配置 =====

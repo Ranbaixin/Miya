@@ -1468,24 +1468,47 @@ class DecisionHub:
                 f"matched={matched_keywords}, active={user_active}"
             )
 
+            # 读取"仅关键词触发"开关
+            keyword_only = False
+            try:
+                import re
+                qq_cfg_path = Path(__file__).resolve().parent.parent / "config" / "qq_config.yaml"
+                if qq_cfg_path.exists():
+                    raw_text = qq_cfg_path.read_text(encoding="utf-8")
+                    for line in raw_text.splitlines():
+                        m = re.match(r'\s*passive_chat_keyword_only\s*:\s*(true|false)', line)
+                        if m:
+                            keyword_only = m.group(1).lower() == "true"
+                            break
+            except Exception:
+                pass
+
             if matched_keywords:
                 logger.info(f"[决策层] 群聊关键词触发回复: 匹配到 {matched_keywords}")
-                # 关键词触发也标记为活跃对话
                 diteng.on_group_message(
                     group_id=str(group_id),
                     group_name=perception.get("group_name", ""),
                     user_id=user_id_str,
                     user_name=perception.get("sender_name", "未知"),
                     content=content,
-                    is_at_bot=True,  # 视为@了机器人
+                    is_at_bot=True,
                     reply_to_bot=reply_to_bot,
                 )
-            elif user_active:
+            elif not keyword_only and user_active:
                 logger.info(f"[决策层] 谛听检测到用户仍在活跃对话中，触发回复 (user={user_id_str})")
-                # 【优化】移除串行谛听策略分析，统一由 _generate_response_cross_platform 的并行 Phase 1 处理
-                # 避免重复 AI 调用，节省 3-5 秒延迟
             else:
-                logger.info(f"[决策层] 群聊消息无关键词且非活跃对话，跳过: {content[:30]}")
+                reason = "仅关键词模式" if keyword_only else "无关键词且非活跃对话"
+                logger.info(f"[决策层] 群聊消息跳过 ({reason}): {content[:30]}")
+                # 即使跳过回复，仍记录消息到谛听以保持上下文连贯
+                diteng.on_group_message(
+                    group_id=str(group_id),
+                    group_name=perception.get("group_name", ""),
+                    user_id=user_id_str,
+                    user_name=perception.get("sender_name", "未知"),
+                    content=content,
+                    is_at_bot=False,
+                    reply_to_bot=reply_to_bot,
+                )
                 return None
 
         # 终端命令处理已由 CCE 接管（CCE = 弥娅的"手"/肢体工具）
