@@ -205,6 +205,11 @@ models/
 modelspaddle_ocrofficial_models/
 data/miya_birth.json
 data/soul_snapshot.json
+# FAQ / Feedback / Knowledge (runtime generated)
+data/faq.json
+data/feedback.json
+data/admin_list.json
+data/knowledge/
 
 # Miya frontend backend dist
 miya_frontend/backend-dist/
