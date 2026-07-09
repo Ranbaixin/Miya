@@ -25,7 +25,7 @@ def _get_cognitive_dir() -> Path:
 
 
 class CognitiveProfileStorage:
-    _instance: Optional["CognitiveProfileStorage"] = None
+    _instance: Optional[CognitiveProfileStorage] = None
 
     def __init__(self):
         self._base = _get_cognitive_dir()
@@ -34,7 +34,7 @@ class CognitiveProfileStorage:
         self._locks: dict[str, asyncio.Lock] = {}
 
     @classmethod
-    def get_instance(cls) -> "CognitiveProfileStorage":
+    def get_instance(cls) -> CognitiveProfileStorage:
         if cls._instance is None:
             cls._instance = cls()
         return cls._instance
@@ -126,7 +126,7 @@ class CognitiveProfileStorage:
             data[key].append({
                 "observation": observation,
                 "source": source,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(datetime.UTC).isoformat(),
             })
             data[key] = data[key][-self._max_observations:]
             tmp = obs_path.with_suffix(".tmp")

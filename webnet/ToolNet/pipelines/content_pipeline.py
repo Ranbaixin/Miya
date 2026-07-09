@@ -36,7 +36,7 @@ class ContentPipeline:
                 continue
             try:
                 detect_fn = detector["detect"]
-                if hasattr(detect_fn, '__call__') and asyncio.iscoroutinefunction(detect_fn):
+                if callable(detect_fn) and asyncio.iscoroutinefunction(detect_fn):
                     detections = await detect_fn(text)
                 else:
                     detections = detect_fn(text)

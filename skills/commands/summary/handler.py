@@ -20,7 +20,7 @@ async def execute(args: List[str], context: Any) -> str:
         if arg.isdigit():
             count = min(int(arg), 500)
         elif arg.endswith(("h", "d", "w", "m")):
-            time_range = arg
+            pass  # time_range reserved for future use
         else:
             description = arg
 
@@ -79,9 +79,6 @@ async def execute(args: List[str], context: Any) -> str:
     # 尝试调用 AI 总结
     if context.ai_client:
         try:
-            from core.prompt_manager import PromptManager
-
-            pm = PromptManager()
             result = await context.ai_client.chat_with_system_prompt(
                 system_prompt="你是一个聊天记录总结助手。请用简洁的要点总结。",
                 user_prompt=summary_prompt,

@@ -55,7 +55,7 @@ def _get_embedding_config() -> dict:
 
 
 class KnowledgeStore:
-    _instance: Optional["KnowledgeStore"] = None
+    _instance: Optional[KnowledgeStore] = None
 
     def __init__(self):
         self._data_dir = _get_data_dir()
@@ -74,7 +74,7 @@ class KnowledgeStore:
         self._hnsw_space = get_knowledge_config("chroma", default={}).get("hnsw_space", "cosine")
 
     @classmethod
-    def get_instance(cls) -> "KnowledgeStore":
+    def get_instance(cls) -> KnowledgeStore:
         if cls._instance is None:
             cls._instance = cls()
         return cls._instance
@@ -118,7 +118,8 @@ class KnowledgeStore:
 
         # TODO: Miya 本地 embedder 懒加载会阻塞事件循环，暂时跳过
         # 后续改为 asyncio.to_thread 加载或复用已加载的全局实例
-        if False and not self._miya_embedder_init_attempted:
+        # (embedder disabled via early return)
+        if self._miya_embedder_init_attempted:
             self._miya_embedder_init_attempted = True
             try:
                 from core.embedding_client import EmbeddingClient, EmbeddingProvider
@@ -177,7 +178,7 @@ class KnowledgeStore:
         await self.initialize()
 
         knowledge_id = self._generate_id(title, content)
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(datetime.UTC).isoformat()
         cat = category or self._default_category
 
         entry = {

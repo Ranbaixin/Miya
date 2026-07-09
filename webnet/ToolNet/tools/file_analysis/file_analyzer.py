@@ -93,7 +93,7 @@ def detect_file_type(file_path: str) -> Dict[str, Any]:
         header = b""
     for sig, (name, sig_ext) in FILE_SIGNATURES.items():
         if header.startswith(sig):
-            ext = sig_ext if not ext else ext
+            ext = ext or sig_ext
             break
     if ext in TEXT_EXTENSIONS:
         return {"type": "text", "extension": ext, "description": f"文本文件 ({ext})", "size": size, "is_code": ext in CODE_EXTENSIONS}
