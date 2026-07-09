@@ -106,3 +106,44 @@ CCE 提供了丰富的工具集，包括但不限于：
 - PyInstaller 配置：`Miya.spec`
 - Electron 打包配置：`miya_frontend/package.json` (electron-builder)
 - 关键修复记录：unittest 排除、CWD 路径、ws 依赖、config/data 目录联结（单一数据源）
+
+## 配置优先原则
+
+**所有用户可见的文本、功能开关、限制参数必须从配置文件读取，禁止在代码中硬编码。**
+
+### 配置文件分工
+
+| 配置文件 | 用途 | 格式 |
+|----------|------|------|
+| `config/text_config.json` | 用户可见文本、消息模板、命令描述、错误提示 | JSON |
+| `config/qq_config.yaml` | 功能开关、性能参数、存储路径、限制值 | YAML |
+| `config/config_utils.py` | 统一配置读取辅助：`get_text_message()` / `get_qq_config()` 等 | Python |
+
+### 代码规范
+
+```python
+# ✅ 正确：从配置读取
+from config.config_utils import get_text_message, get_qq_config
+
+result = get_text_message("knowledge_base", "added", knowledge_id=kid, title=title)
+limit = get_qq_config("file_analysis", "limits", "max_pdf_pages", default=30)
+
+# ❌ 错误：硬编码
+result = f"知识已保存 (ID: {kid})"   # 用户文本不应硬编码
+max_pages = 30                        # 参数不应硬编码
+```
+
+### config_utils 主要 API
+
+- `get_text(*keys, default=None)` — 从 text_config.json 按路径读取
+- `get_text_message(section, key, **kwargs)` — 读取消息模板并格式化
+- `get_qq_config(*keys, default=None)` — 从 qq_config.yaml 按路径读取
+- `get_knowledge_config(key, default)` / `get_pipeline_config(key, default)` / `get_cognitive_config(key, default)` / `get_file_analysis_config(key, default)` / `get_github_config(key, default)` — 领域配置快捷方法
+- `get_command_message(key, **kwargs)` — 读取命令系统消息模板
+
+### 新增功能时的检查清单
+
+1. [ ] 用户可见字符串 → `text_config.json` 对应节
+2. [ ] 功能开关/限制参数 → `qq_config.yaml` 对应节
+3. [ ] 代码中通过 `config_utils` 读取，提供 `default` 兜底
+4. [ ] 不在代码中拼接中文/英文用户消息字符串

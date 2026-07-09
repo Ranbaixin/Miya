@@ -274,6 +274,8 @@ class ToolRegistry:
         self._load_agent_tools()
         self._load_music_tools()
         self._load_mcp_tools()
+        self._load_file_analysis_tools()
+        self._load_group_analysis_tools()
 
     def _load_basic_tools(self):
         """加载基础工具"""
@@ -545,7 +547,9 @@ class ToolRegistry:
         """加载网络工具"""
         try:
             # from webnet.ToolNet.tools.network.grok_search import GrokSearchTool  # 无免费额度，已禁用
+            from webnet.ToolNet.tools.network.arxiv_search import ArxivSearchTool
             from webnet.ToolNet.tools.network.crawl_webpage import CrawlWebpageTool
+            from webnet.ToolNet.tools.network.github_repo import GithubRepoTool
             from webnet.ToolNet.tools.network.speed_test import SpeedTestTool
             from webnet.ToolNet.tools.network.tavily_search_tool import TavilySearchTool
             from webnet.ToolNet.tools.network.tcping import TCPingTool
@@ -553,14 +557,16 @@ class ToolRegistry:
             from webnet.ToolNet.tools.network.whois_query import WhoisQueryTool
 
             # self.register(GrokSearchTool())  # 无免费额度，已禁用
+            self.register(ArxivSearchTool())
             self.register(CrawlWebpageTool())
+            self.register(GithubRepoTool())
             self.register(WhoisQueryTool())
             self.register(TCPingTool())
             self.register(SpeedTestTool())
             self.register(TavilySearchTool())
             self.register(WeatherQueryTool())
 
-            self.logger.info("已加载网络工具: CrawlWebpage, WhoisQuery, TCPing, SpeedTest, TavilySearch, WeatherQuery")
+            self.logger.info("已加载网络工具: ArxivSearch, CrawlWebpage, GithubRepo, WhoisQuery, TCPing, SpeedTest, TavilySearch, WeatherQuery")
         except Exception as e:
             self.logger.warning(f"加载网络工具失败: {e}")
 
@@ -778,6 +784,40 @@ class ToolRegistry:
             self.logger.info(f"[ToolRegistry] MCPNet 已加载 {len(tools)} 个工具: {[t._full_name for t in tools]}")
         except Exception as e:
             self.logger.warning(f"加载 MCP 工具失败（MCP 可能尚未初始化）: {e}")
+
+    def _load_file_analysis_tools(self):
+        """加载文件分析工具"""
+        try:
+            from webnet.ToolNet.tools.file_analysis.file_analyzer import (
+                FileAnalysisTool,
+                DetectFileTypeTool,
+            )
+
+            self.register(FileAnalysisTool())
+            self.register(DetectFileTypeTool())
+            self.logger.info("已加载文件分析工具: FileAnalysisTool, DetectFileTypeTool")
+        except Exception as e:
+            self.logger.warning(f"加载文件分析工具失败: {e}")
+
+    def _load_group_analysis_tools(self):
+        """加载群聊分析工具"""
+        try:
+            from webnet.ToolNet.tools.group_analysis.group_tools import (
+                GroupMemberStructureTool,
+                GroupMemberActivityTool,
+                GroupInactiveRiskTool,
+                GroupMessageMixTool,
+            )
+
+            self.register(GroupMemberStructureTool())
+            self.register(GroupMemberActivityTool())
+            self.register(GroupInactiveRiskTool())
+            self.register(GroupMessageMixTool())
+            self.logger.info(
+                "已加载群聊分析工具: member_structure, member_activity, inactive_risk, message_mix"
+            )
+        except Exception as e:
+            self.logger.warning(f"加载群聊分析工具失败: {e}")
 
 
 class BaseTool:

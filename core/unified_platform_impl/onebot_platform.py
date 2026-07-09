@@ -51,6 +51,8 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         self._batch_timers: Dict[str, asyncio.Task] = {}
         # 群成员缓存: group_id → (timestamp, [member_info_dict, ...])
         self._group_member_cache: Dict[int, tuple] = {}
+        # 群文件上传缓存: group_id → [(user_id, file_name, file_size, timestamp), ...]
+        self._recent_uploads: Dict[int, list] = {}
 
     @staticmethod
     def _read_ws_url() -> str:
@@ -385,8 +387,76 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                         self._notify_scheduler_online(user_id)
         elif notice_type in ("group_increase", "group_decrease"):
             logger.info(f"[{self.platform_id}] 群变动: {notice_type}")
+        elif notice_type == "group_upload":
+            await self._handle_group_upload(data)
         else:
             logger.info(f"[{self.platform_id}] 通知: {notice_type}")
+
+    async def _handle_group_upload(self, data: Dict):
+        """处理群文件上传通知，缓存文件信息并自动下载到本地"""
+        try:
+            group_id = int(data.get("group_id", 0))
+            user_id = str(data.get("user_id", ""))
+            file_info = data.get("file", {})
+            file_name = file_info.get("name", "")
+            file_size = file_info.get("size", 0)
+            file_id = file_info.get("id", "")
+            busid = file_info.get("busid", 0)
+
+            if not group_id or not file_name:
+                return
+
+            entry = {
+                "user_id": user_id,
+                "file_name": file_name,
+                "file_size": file_size,
+                "file_id": file_id,
+                "busid": busid,
+                "timestamp": time.time(),
+                "local_path": "",  # 下载后填充
+            }
+
+            # 尝试自动下载文件到 Miya 内部目录
+            try:
+                url = await self.get_group_file_url(group_id, file_id)
+                if url:
+                    download_dir = Path(__file__).resolve().parent.parent.parent / "data" / "downloads"
+                    download_dir.mkdir(parents=True, exist_ok=True)
+                    local_path = str(download_dir / file_name)
+                    success = await self.download_group_file(url, local_path)
+                    if success and Path(local_path).exists():
+                        entry["local_path"] = local_path
+                        logger.info(
+                            f"[{self.platform_id}] 群文件已自动下载: {file_name} → {local_path}"
+                        )
+            except Exception as e:
+                logger.debug(f"[{self.platform_id}] 自动下载群文件失败: {e}")
+
+            if group_id not in self._recent_uploads:
+                self._recent_uploads[group_id] = []
+            self._recent_uploads[group_id].append(entry)
+
+            # 只保留最近 30 分钟内的上传
+            cutoff = time.time() - 1800
+            self._recent_uploads[group_id] = [
+                e for e in self._recent_uploads[group_id] if e["timestamp"] > cutoff
+            ]
+
+            logger.info(
+                f"[{self.platform_id}] 群文件上传缓存: group={group_id}, "
+                f"user={user_id}, file={file_name}"
+            )
+        except Exception as e:
+            logger.warning(f"[{self.platform_id}] 处理群文件上传失败: {e}")
+
+    def _get_recent_uploads(self, group_id: int, user_id: str = "") -> list:
+        """获取最近的群文件上传记录"""
+        uploads = self._recent_uploads.get(group_id, [])
+        if user_id:
+            uploads = [u for u in uploads if u["user_id"] == user_id]
+        # 只返回最近 5 分钟内的
+        cutoff = time.time() - 300
+        return [u for u in uploads if u["timestamp"] > cutoff]
 
     async def _send_onebot_poke_reply(self, user_id: str, group_id: str, text: str):
         """拍一拍回复：文字 + data/emoji 随机图"""
@@ -702,6 +772,42 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             extra["files"] = file_segments
             has_media = True
 
+        # === 11b. 群文件上传引用检测 ===
+        # QQ群文件没有本地路径，需要AI先用 group_file_downloader 下载再 analyze_file
+        # 这里注入文件元信息为文本提示，让AI知道有文件需要下载分析
+        if not file_segments and msg_type == "group" and group_id_str:
+            file_keywords = ("文件", "文档", "分析", "看看", "附件", "pdf", "doc", "xls", "ppt", "txt")
+            if any(kw in content.lower() for kw in file_keywords):
+                recent = self._get_recent_uploads(int(group_id_str), user_id)
+                if recent:
+                    latest = recent[-1]
+                    local = latest.get("local_path", "")
+                    if local and Path(local).exists():
+                        hint = (
+                            f"\n[系统提示] 用户刚上传了文件 '{latest['file_name']}'，"
+                            f"已自动下载到本地: {local}"
+                            f"\n可直接使用 analyze_file 工具分析，file_path='{local}'"
+                        )
+                        content = content + hint
+                    else:
+                        hint = (
+                            f"\n[系统提示] 用户 {user_id} 在 {latest['timestamp']:.0f} 秒前上传了群文件: "
+                            f"'{latest['file_name']}' ({latest['file_size']} 字节)"
+                            f"\n如需分析此文件，请使用 group_file_downloader 工具下载，"
+                            f"参数: group_id={group_id_str}, file_name='{latest['file_name']}'"
+                        )
+                        content = content + hint
+                    has_media = True
+                    logger.info(
+                        f"[{self.platform_id}] 关联最近上传文件: {latest['file_name']} → 消息 '{content[:30]}'"
+                    )
+                else:
+                    # 没有缓存的上传记录，提示用户先上传
+                    content = content + (
+                        f"\n[系统提示] 用户提到了'文件'，但未检测到最近的文件上传。"
+                        f"请询问用户具体要分析哪个文件，或让用户先上传文件到群聊。"
+                    )
+
         if not content and not has_media and not reply_id:
             return
 
@@ -727,6 +833,17 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                     reply_content = "".join(
                         s.get("data", {}).get("text", "") for s in reply_raw if s.get("type") == "text"
                     )
+                    # 同时提取引用消息中的文件信息
+                    for s in reply_raw:
+                        if s.get("type") == "file":
+                            sd = s.get("data", {})
+                            file_segments.append({
+                                "file_id": sd.get("id", sd.get("file", "")),
+                                "name": sd.get("name", ""),
+                                "size": sd.get("size", 0),
+                                "file_type": sd.get("type", ""),
+                                "source": "reply",
+                            })
                 else:
                     reply_content = _re.sub(r"\[CQ:[^\]]+\]", "", str(reply_raw)).strip()
                 if reply_content:

@@ -36,7 +36,9 @@ class ArxivSearchTool(BaseTool):
         }
 
     async def execute(self, context: ToolContext, **kwargs) -> str:
-        args = kwargs.get("args", {}) if kwargs else {}
+        args = kwargs.get("args", kwargs) if kwargs else {}
+        if not isinstance(args, dict):
+            args = {"query": str(kwargs.get("query", kwargs.get("args", "")))}
         query = args.get("query", "")
         max_results = args.get("max_results", 5)
 

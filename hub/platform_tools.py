@@ -569,12 +569,32 @@ class PlatformToolsManager:
         "python_interpreter",
         "horoscope",
         "wenchang_dijun",
-        # 定时任务工具（交由 LLM 自行判断调用时机）
+        # 定时任务工具
         "create_schedule_task",
         "list_schedule_tasks",
         "delete_schedule_task",
         "update_schedule_task",
         "get_schedule_stats",
+        # 新版知识库工具
+        "add_knowledge",
+        "search_knowledge",
+        "delete_knowledge",
+        # 新版认知侧写工具
+        "get_profile",
+        "search_profiles",
+        "search_events",
+        # B站/arXiv/GitHub 工具
+        "bilibili_video",
+        "arxiv_search",
+        "github_repo",
+        # 文件分析工具
+        "analyze_file",
+        "detect_file_type",
+        # 群聊分析工具
+        "group_analysis_member_structure",
+        "group_analysis_member_activity",
+        "group_analysis_inactive_risk",
+        "group_analysis_message_mix",
     ]
 
     def __init__(self, tool_subnet):

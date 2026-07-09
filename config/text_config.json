@@ -1086,11 +1086,6 @@
         "failed": "任务执行失败: {error}",
         "format_error": "无法格式化任务结果"
     },
-    "command_responses": {
-        "who_are_you": "我是{name}，一个具备人格恒定、自我感知、记忆成长、情绪共生的数字生命伴侣。",
-        "at_available": "在的，有什么我可以帮助你的吗？",
-        "help_request": "我可以帮你处理各种任务，包括代码编辑、文件管理、系统操作等。有什么需要帮助的吗？"
-    },
     "existential_display": {
         "header": "【存在性情感】",
         "dominant": "  主导: {dominant}",
@@ -2668,16 +2663,6 @@
             "description": "显示可用命令"
         }
     },
-    "command_responses": {
-        "train": {
-            "success": "◆ AP 训练完成 ({mode})\n  📊 规则蒸馏: {distilled} 条调整\n  🏗 预训练锚点: {pretrained} 条注入\n  🎯 强化学习事件: {rl} 次\n  下次启动时自动生效",
-            "unsupported_mode": "不支持的训练模式: {mode}\n可用: all, distill, pretrain",
-            "not_ready": "AP 引擎未就绪，无法训练"
-        },
-        "help": {
-            "all": "◆ 弥娅命令列表\n\n/ap    查看 AP 认知引擎状态\n/train  AP 训练 (蒸馏/预训练)\n/状态  查看系统运行状态\n/帮助  显示此列表"
-        }
-    },
     "identity": {
         "birth_year": 2025,
         "birth_month": 3,
@@ -2717,6 +2702,212 @@
         "ctf_agent": {
             "prompt_header": "你是弥娅的 CTF 解题 Agent。目标：分析题目并制定下一步操作。",
             "prompt_template": "你是弥娅的 CTF 解题 Agent。目标：分析题目并制定下一步操作。\n\n{skill_prompt}\n\n## 题目\n{problem}\n\n## 历史记忆\n{history_summary}{failed_hint}\n\n请分析当前状态，给出下一步思考，并输出需要执行的工具调用。\n以 JSON 格式回复：\n{{\"think\": \"你的分析\", \"tool_calls\": [{{\"tool_name\": \"...\", \"arguments\": {{}}}}]}}"
+        }
+    },
+    "knowledge_base": {
+        "description": "本地知识库系统的用户可见文本",
+        "default_category": "通用",
+        "collection_name": "knowledge_base",
+        "embedding_model_default": "text-embedding-3-small",
+        "max_embedding_text_length": 8000,
+        "max_chroma_doc_length": 4000,
+        "messages": {
+            "added": "知识已保存到本地知识库\n- ID: `{knowledge_id}`\n- 标题: {title}\n- 分类: {category}\n- 长度: {length} 字",
+            "deleted": "知识已删除 (ID: `{knowledge_id}`)",
+            "not_found": "未找到知识 ID: `{knowledge_id}`",
+            "empty_search": "知识库为空，尚未添加任何知识。你可以用 add_knowledge 工具添加知识。",
+            "no_results": "未找到与 '{query}' 相关的知识。知识库共有 {total} 条记录，尝试换个关键词？",
+            "search_header": "【知识库搜索结果: {query}】共 {count} 条",
+            "categories_header": "知识分类 ({count}): {categories}",
+            "no_categories": "暂无分类",
+            "stats_header": "【知识库统计】",
+            "stats_total": "总条目: {total}",
+            "stats_categories": "分类数: {count}",
+            "stats_chroma": "向量存储: {mode} ({count} 条)",
+            "stats_embedding": "语义搜索: {status}",
+            "stats_label_semantic_on": "已启用",
+            "stats_label_semantic_off": "未启用（仅关键词匹配）",
+            "stats_label_chroma_on": "ChromaDB",
+            "stats_label_chroma_off": "仅文件",
+            "not_ready": "知识库系统未就绪",
+            "content_required": "错误：知识内容不能为空",
+            "query_required": "错误：搜索关键词不能为空",
+            "id_or_title_required": "请提供 knowledge_id 或 title 来指定要删除的知识",
+            "multi_match": "找到 {count} 条匹配 '{title}' 的知识，请指定具体 ID:",
+            "add_denied": "仅管理员可添加知识",
+            "delete_denied": "仅管理员可删除知识"
+        }
+    },
+    "cognitive_memory": {
+        "description": "认知侧写系统的用户可见文本",
+        "messages": {
+            "no_profile_user": "暂无用户 (ID: {entity_id}) 的侧写数据",
+            "no_profile_group": "暂无群聊 (ID: {entity_id}) 的侧写数据",
+            "profile_empty": "暂无{type}侧写数据。多聊聊天，弥娅会慢慢了解你的~",
+            "group_profile_private": "请在群聊中使用 /profile g 查看群聊侧写",
+            "preliminary_header": "【{type}侧写】(初步)\n暂无完整侧写，以下是最近的观察记录：",
+            "preliminary_footer": "继续聊天以生成完整侧写~",
+            "search_header": "【侧写搜索: {query}】共 {count} 条",
+            "search_no_results": "未找到与 '{query}' 相关的侧写",
+            "events_header": "【历史事件记忆: {type} {entity_id}】搜索: {query}",
+            "events_no_results": "未找到与 '{query}' 相关的历史事件记忆",
+            "query_required": "请提供搜索关键词",
+            "entity_unknown": "无法确定{type} ID",
+            "service_disabled": "侧写服务未启用"
+        }
+    },
+    "file_analysis": {
+        "description": "文件分析系统的用户可见文本",
+        "max_pdf_pages": 30,
+        "max_text_lines": 200,
+        "max_content_length": 8000,
+        "messages": {
+            "pdf_header": "【PDF 分析】共 {total} 页",
+            "pdf_page": "--- 第 {page} 页 ---",
+            "pdf_omitted": "... (省略 {count} 页)",
+            "docx_header": "【Word 文档分析】共 {count} 段落",
+            "docx_tables": "共 {count} 个表格",
+            "xlsx_header": "【Excel 分析】共 {count} 个工作表: {sheets}",
+            "xlsx_sheet": "--- {name} ---",
+            "xlsx_omitted": "... (省略 {count} 行)",
+            "pptx_header": "【PPT 分析】共 {count} 张幻灯片",
+            "pptx_slide": "--- 第 {num} 张 ---",
+            "pptx_omitted": "... (省略 {count} 张)",
+            "text_header": "【文本文件分析】{name} | {lines} 行",
+            "text_code_type": "类型: 代码文件 ({ext})",
+            "text_omitted": "... (省略 {count} 行)",
+            "text_unreadable": "无法读取文件（编码不支持）",
+            "image_info": "【图片信息】{name}",
+            "image_format": "格式: {format}",
+            "image_size": "尺寸: {width} x {height} 像素",
+            "image_mode": "模式: {mode}",
+            "image_dpi": "DPI: {dpi}",
+            "image_file_size_mb": "大小: {size:.1f} MB",
+            "image_file_size_kb": "大小: {size:.1f} KB",
+            "archive_header": "【压缩包内容】{name} | 共 {total} 个文件",
+            "archive_omitted": "  ... (省略 {count} 个文件)",
+            "archive_unsupported": "不支持的压缩格式: {ext}",
+            "type_unsupported": "不支持的文件类型: {type}",
+            "file_not_found": "文件不存在: {path}",
+            "path_required": "错误：未提供文件路径",
+            "analyze_failed": "文件分析失败: {error}",
+            "pdf_install_hint": "PDF 分析功能需要安装 pymupdf (pip install pymupdf)",
+            "docx_install_hint": "Word 分析功能需要安装 python-docx",
+            "xlsx_install_hint": "Excel 分析功能需要安装 openpyxl",
+            "pptx_install_hint": "PPT 分析功能需要安装 python-pptx",
+            "image_install_hint": "图片分析需要安装 Pillow",
+            "content_truncated": "... (内容过长，已截断)"
+        }
+    },
+    "pipelines": {
+        "description": "内容自动检测管线的用户可见文本",
+        "enabled_pipelines": ["bilibili", "arxiv", "github"],
+        "messages": {
+            "pipeline_header": "[{source} 检测]"
+        }
+    },
+    "github": {
+        "description": "GitHub 工具的配置",
+        "api_url": "https://api.github.com",
+        "user_agent": "Miya-Bot/1.0",
+        "messages": {
+            "header": "【GitHub 仓库】 {full_name}",
+            "stars": "Stars: {count}",
+            "forks": "Forks: {count}",
+            "watchers": "Watchers: {count}",
+            "issues": "Open Issues: {count}",
+            "language": "主语言: {lang}",
+            "license": "许可证: {license}",
+            "topics": "主题: {topics}",
+            "link": "{url}",
+            "created_updated": "创建: {created}  更新: {updated}",
+            "branch": "默认分支: {branch}",
+            "not_found": "GitHub 仓库不存在: {owner}/{repo}",
+            "rate_limit": "GitHub API 频率限制，请稍后再试",
+            "http_error": "获取仓库信息失败 (HTTP {code}): {owner}/{repo}",
+            "timeout": "请求 GitHub API 超时: {owner}/{repo}",
+            "parse_failed": "无法从输入中解析 GitHub 仓库: {text}",
+            "repo_id_required": "请提供 GitHub 仓库标识"
+        }
+    },
+    "group_analysis": {
+        "description": "群聊分析工具的用户可见文本",
+        "messages": {
+            "member_structure_header": "【群成员结构】群 {group_id} | 共 {total} 人",
+            "role_owner": "群主",
+            "role_admin": "管理员",
+            "role_member": "普通成员",
+            "activity_header": "【群活跃度排行】群 {group_id}",
+            "activity_no_data": "暂无活跃度数据",
+            "inactive_header": "【潜水风险分析】群 {group_id}",
+            "inactive_total": "总成员: {total}",
+            "inactive_active": "活跃成员: {active} ({pct}%)",
+            "inactive_inactive": "潜水成员: {inactive} ({pct}%)",
+            "inactive_warn_high": "超过半数成员处于潜水状态",
+            "inactive_warn_mid": "注意：约三分之一的成员处于潜水状态",
+            "inactive_ok": "群活跃度良好",
+            "message_mix_header": "【消息类型分布】群 {group_id} | 共 {total} 条",
+            "members_unavailable": "无法获取群 {group_id} 的成员列表",
+            "messages_unavailable": "暂无群 {group_id} 的消息数据",
+            "group_id_unknown": "无法确定群号"
+        }
+    },
+    "command_responses": {
+        "description": "命令系统消息模板（兼容新版斜杠命令和旧版 command_keywords）",
+        "who_are_you": "我是{name}，一个具备人格恒定、自我感知、记忆成长、情绪共生的数字生命伴侣。",
+        "at_available": "在的，有什么我可以帮助你的吗？",
+        "help_request": "我可以帮你处理各种任务，包括代码编辑、文件管理、系统操作等。有什么需要帮助的吗？",
+        "train": {
+            "success": "◆ AP 训练完成 ({mode})\n  📊 规则蒸馏: {distilled} 条调整\n  🏗 预训练锚点: {pretrained} 条注入\n  🎯 强化学习事件: {rl} 次\n  下次启动时自动生效",
+            "unsupported_mode": "不支持的训练模式: {mode}\n可用: all, distill, pretrain",
+            "not_ready": "AP 引擎未就绪，无法训练"
+        },
+        "help": {
+            "all": "◆ 弥娅命令列表\n\n/ap    查看 AP 认知引擎状态\n/train  AP 训练 (蒸馏/预训练)\n/状态  查看系统运行状态\n/帮助  显示此列表\n/help  查看完整帮助"
+        },
+        "messages": {
+            "help_list_header": "【弥娅命令列表】",
+            "help_unknown_command": "未知命令: /{name}",
+            "help_header": "【/{name}】{description}",
+            "help_aliases": "别名: {aliases}",
+            "help_permission": "权限: {permission}",
+            "help_subcommands": "子命令:",
+            "help_detail_link": "详细帮助见: {path}",
+            "permission_denied": "权限不足：/{command} 需要 {permission} 权限",
+            "rate_limited": "请稍后再试（冷却 {seconds} 秒）",
+            "system_not_ready": "命令系统未就绪",
+            "execute_failed": "命令执行失败: {error}",
+            "load_failed": "命令加载失败: {error}",
+            "not_implemented": "命令 '{name}' 未实现",
+            "faq_empty": "FAQ 列表为空。管理员可以用 /faq add 添加常见问题。",
+            "faq_list_header": "【FAQ 列表】",
+            "faq_not_found": "FAQ 不存在: {id}",
+            "faq_added": "FAQ 已添加: [{id}] {question}",
+            "faq_deleted": "FAQ 已删除: [{id}] {question}",
+            "faq_search_header": "【FAQ 搜索: {keyword}】共 {count} 条",
+            "faq_no_results": "未找到与 '{keyword}' 相关的 FAQ",
+            "faq_usage": "用法: /faq add <问题> | <回答>",
+            "faq_unknown_sub": "未知子命令: {sub}。可用: ls, view, search, add, del",
+            "feedback_submitted": "反馈已提交 (ID: {id})，谢谢！",
+            "feedback_deleted": "反馈已删除: {id}",
+            "feedback_not_found": "反馈不存在: {id}",
+            "feedback_empty": "暂无反馈。用 /fb <内容> 提交反馈吧~",
+            "feedback_list_header": "【反馈列表】最近 20 条",
+            "feedback_add_hint": "请输入反馈内容",
+            "admin_list_header": "【管理员列表】",
+            "admin_superadmin": "  超管: {qq}",
+            "admin_item": "  管理员: {qq}",
+            "admin_empty": "  (暂无其他管理员)",
+            "admin_added": "已添加管理员: {qq}",
+            "admin_deleted": "已移除管理员: {qq}",
+            "admin_already": "{qq} 已是管理员",
+            "admin_not_admin": "{qq} 不是管理员",
+            "admin_invalid_qq": "无效的QQ号: {qq}",
+            "summary_no_messages": "未能获取聊天记录，请稍后再试",
+            "summary_empty": "聊天记录为空",
+            "stats_header": "【弥娅统计 · 最近 {days} 天】",
+            "knowledge_unknown_sub": "未知子命令: {sub}",
+            "knowledge_added": "知识已添加: [{id}] {title}"
         }
     }
 }

@@ -266,20 +266,42 @@ class MessageMixin:
             )
 
             if hasattr(miya, "decision_hub"):
-                # ── 斜杠命令拦截 (在路由到 DecisionHub 之前) ──
+                # ── 新斜杠命令系统 (在路由到 DecisionHub 之前) ──
+                cmd_response = await _dispatch_slash_command(
+                    self, content, user_id, group_id, message_type
+                )
+                if cmd_response:
+                    await _send_cmd_reply(self, cmd_response, user_id, group_id, message_type)
+                    return
+
+                # ── 兼容旧版斜杠命令 (兜底) ──
                 cmd_response = _handle_slash_command(self, content, user_id, group_id)
                 if cmd_response:
-                    import inspect
-
-                    if hasattr(self, "send_private_message"):
-                        try:
-                            result = self.send_private_message(user_id, cmd_response)
-                            if inspect.isawaitable(result):
-                                loop = asyncio.get_event_loop()
-                                loop.create_task(result)
-                        except Exception:
-                            pass
+                    await _send_cmd_reply(self, cmd_response, user_id, group_id, message_type)
                     return
+
+                # ── 内容自动检测管线（B站/arXiv/GitHub）──
+                try:
+                    from webnet.ToolNet.pipelines.content_pipeline import get_pipeline
+
+                    pipeline = get_pipeline()
+                    pipeline_results = await pipeline.detect_and_process(content)
+                    if pipeline_results:
+                        pipeline_texts = []
+                        for pr in pipeline_results:
+                            pipeline_texts.append(pr["content"])
+                        pipeline_context = "\n\n".join(pipeline_texts)
+
+                        # 注入到 perception_data，追加到 content 前使 AI 可见
+                        perception_data["content"] = (
+                            f"{pipeline_context}\n\n[用户消息] {content}"
+                        )
+                        perception_data["pipeline_detections"] = pipeline_context
+                        mlink_msg.content["content"] = perception_data["content"]
+                        mlink_msg.content["pipeline_detections"] = pipeline_context
+                        logger.info(f"[Pipeline] 检测到 {len(pipeline_results)} 个内容，已注入上下文")
+                except Exception as e:
+                    logger.debug(f"[Pipeline] 检测失败: {e}")
 
                 # ── AP 聆听：先让弥娅"听到"消息，产生实时内心反应 ──
                 try:
@@ -528,11 +550,140 @@ def _handle_slash_command(self, content: str, user_id: str, group_id: str) -> st
     # /状态
     status_cfg = slash.get("status", {})
     if text in [a.lower() for a in status_cfg.get("aliases", [])]:
-        return "弥娅系统运行中 | APV2.1 激活 | 5/5 平台在线 | 输入 /ap 查看详情"
+        from config.config_utils import get_text_message
+        return get_text_message("command_responses", "status", default="弥娅系统运行中 | APV2.1 激活")
 
     # /帮助
     help_cfg = slash.get("help", {})
     if text in [a.lower() for a in help_cfg.get("aliases", [])]:
-        return responses.get("help", {}).get("all", "可用: /ap /train /状态 /帮助")
+        from config.config_utils import get_text_message
+        return responses.get("help", {}).get("all",
+            get_text_message("command_responses", "help", "all", default="可用: /ap /train /状态 /帮助"))
 
     return None
+
+
+async def _dispatch_slash_command(
+    platform: Any, content: str, user_id: str, group_id: str, message_type: str
+) -> str | None:
+    """新版统一斜杠命令分发"""
+    try:
+        from core.command_system import CommandContext, get_command_registry
+
+        registry = get_command_registry()
+        match = registry.match(content)
+        if not match:
+            return None
+
+        command_name, subcommand, args = match
+
+        # 构建上下文
+        ctx = CommandContext(
+            sender_id=int(user_id) if user_id.isdigit() else 0,
+            user_id=user_id,
+            group_id=int(group_id) if group_id and group_id.isdigit() else 0,
+            scope="private" if message_type == "private" else "group",
+        )
+
+        # 注入平台能力
+        ctx.onebot_client = getattr(platform, "_ws", None)
+
+        async def send_group_msg(gid, text):
+            if hasattr(platform, "_send_onebot_reply"):
+                await platform._send_onebot_reply(
+                    str(gid), text, message_type="group", group_id=str(gid)
+                )
+
+        async def send_private_msg(uid, text):
+            if hasattr(platform, "_send_onebot_reply"):
+                await platform._send_onebot_reply(
+                    str(uid), text, message_type="private", user_id=str(uid)
+                )
+
+        ctx.send_group_message = send_group_msg
+        ctx.send_private_message = send_private_msg
+
+        # 注入系统组件
+        try:
+            from webnet.ToolNet.tools.knowledge.knowledge_store import get_knowledge_store
+            ctx.knowledge_store = get_knowledge_store()
+        except Exception:
+            pass
+
+        miya = getattr(platform, "_miya_core", None)
+        if miya:
+            ctx.ai_client = getattr(miya, "ai_client", None)
+            ctx.cognitive_service = getattr(miya, "cognitive_service", None)
+
+        # 权限信息
+        try:
+            from core.unified_permission import get_permission_engine
+            engine = get_permission_engine()
+            ctx.superadmin_qq = engine.get_superadmin_qq() if hasattr(engine, "get_superadmin_qq") else 0
+        except Exception:
+            pass
+
+        # 检查权限
+        cmd = registry._commands.get(command_name, {})
+        required_permission = cmd.get("permission", "public")
+
+        # 子命令权限
+        if subcommand and cmd.get("subcommands", {}).get(subcommand, {}).get("permission"):
+            required_permission = cmd["subcommands"][subcommand]["permission"]
+
+        if not ctx.check_permission(required_permission):
+            from config.config_utils import get_command_message
+            return get_command_message("permission_denied", command=command_name, permission=required_permission)
+
+        # 限流检查
+        allowed, remaining = registry.check_rate_limit(command_name, user_id, required_permission)
+        if not allowed:
+            from config.config_utils import get_command_message
+            return get_command_message("rate_limited", seconds=f"{remaining:.0f}")
+
+        # 执行
+        result = await registry.execute(command_name, subcommand, args, ctx)
+        return result
+
+    except Exception as e:
+        logger.warning(f"[Commands] 分发失败: {e}", exc_info=True)
+        return None
+
+
+async def _send_cmd_reply(platform: Any, response: str, user_id: str, group_id: str, message_type: str) -> None:
+    """根据消息来源发送命令回复到正确的会话"""
+    try:
+        import json as _json
+        ws = getattr(platform, "_ws", None)
+        if not ws:
+            await _send_private(platform, response, user_id)
+            return
+
+        if message_type == "group" and group_id:
+            payload = {
+                "action": "send_group_msg",
+                "params": {
+                    "group_id": int(group_id),
+                    "message": str(response),
+                },
+            }
+        else:
+            payload = {
+                "action": "send_private_msg",
+                "params": {
+                    "user_id": int(user_id),
+                    "message": str(response),
+                },
+            }
+        await ws.send_str(_json.dumps(payload))
+    except Exception as e:
+        logger.warning(f"[Commands] 回复发送失败: {e}")
+        await _send_private(platform, response, user_id)
+
+
+async def _send_private(platform: Any, response: str, user_id: str) -> None:
+    import inspect
+    if hasattr(platform, "send_private_message"):
+        result = platform.send_private_message(user_id, response)
+        if inspect.isawaitable(result):
+            await result
