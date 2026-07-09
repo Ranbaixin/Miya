@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 async def execute(args: List[str], context: Any) -> str:
     """执行 /summary 命令"""
     count = 50  # 默认条数
-    time_range = ""
     description = ""
 
     for arg in args:

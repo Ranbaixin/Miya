@@ -266,7 +266,7 @@ class KnowledgeStore:
             if knowledge_id not in index["categories"][category]:
                 index["categories"][category].append(knowledge_id)
 
-        entry["updated_at"] = datetime.now(timezone.utc).isoformat()
+        entry["updated_at"] = datetime.now(datetime.UTC).isoformat()
         self._write_index(index)
 
         if self._collection is not None and content:
