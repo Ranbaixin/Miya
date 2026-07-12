@@ -587,6 +587,7 @@ class WebAPI:
                     )
 
                     yield f"data: {json.dumps({'type': 'session_id', 'data': None, 'session_id': session_id}, ensure_ascii=False)}\n\n"
+                    logger.debug(f"[SSE Chat] 已发送 session_id 事件: session_id={session_id}")
 
                     try:
                         response = await self.decision_hub.process_perception_cross_platform(message)
@@ -612,6 +613,7 @@ class WebAPI:
                             "streaming": False,
                         }
                         yield f"data: {json.dumps(response_data, ensure_ascii=False)}\n\n"
+                        logger.debug(f"[SSE Chat] 已发送 plain 事件: response_len={len(response) if response else 0}, preview={response[:30] if response else 'None'}")
 
                         # 读取灵魂数据 (从 decision_hub._last_soul_output)
                         soul_ = getattr(self.decision_hub, "_last_soul_output", None)
@@ -634,6 +636,7 @@ class WebAPI:
                             "personality": personality_,
                         }
                         yield f"data: {json.dumps({'type': 'done', 'data': final_result}, ensure_ascii=False)}\n\n"
+                        logger.debug(f"[SSE Chat] 已发送 done 事件")
 
                     except asyncio.TimeoutError:
                         logger.error("[SSE Chat] 处理超时")
@@ -647,7 +650,7 @@ class WebAPI:
 
             return StreamingResponse(
                 sse_generator(),
-                media_type="text/event-stream",
+                media_type="text/event-stream; charset=utf-8",
                 headers={
                     "Cache-Control": "no-cache",
                     "Connection": "keep-alive",
