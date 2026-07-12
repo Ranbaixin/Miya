@@ -1210,24 +1210,22 @@ class ModelCollaborationEngine:
                 client.set_tool_registry(lambda tools=tools: tools)
             return client
 
+        kwargs = dict(
+            provider=model_config.provider,
+            api_key=_get_api_key(model_config) or "",
+            model=model_config.name,
+            base_url=model_config.base_url,
+            tool_context=context,
+        )
+        if getattr(model_config, 'temperature', None) is not None:
+            kwargs['temperature'] = model_config.temperature
+
         if factory:
-            client = factory.create_client(
-                provider=model_config.provider,
-                api_key=_get_api_key(model_config) or "",
-                model=model_config.name,
-                base_url=model_config.base_url,
-                tool_context=context,
-            )
+            client = factory.create_client(**kwargs)
         else:
             from core.ai_client import AIClientFactory
 
-            client = AIClientFactory.create_client(
-                provider=model_config.provider,
-                api_key=_get_api_key(model_config) or "",
-                model=model_config.name,
-                base_url=model_config.base_url,
-                tool_context=context,
-            )
+            client = AIClientFactory.create_client(**kwargs)
 
         if client:
             self._client_cache[cache_key] = client

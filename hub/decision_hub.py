@@ -764,6 +764,26 @@ class DecisionHub:
                 if not sent:
                     logger.info(f"[主动聊天] 无法发送到 {platform}: {message}")
 
+                # 移动端兜底：存入待发送队列
+                # - platform==mobile: 直接存入对应的 user_id
+                # - 其他平台发送失败: 也存入 "default" 作为兜底
+                if platform == "mobile" or not sent:
+                    _key = str(target_id)
+                    if _key not in self._mobile_pending:
+                        self._mobile_pending[_key] = []
+                    self._mobile_pending[_key].append({
+                        "message": message,
+                        "timestamp": datetime.utcnow().isoformat(),
+                    })
+                # 无论是否已存，总向 "default" 追加一份（手机端兜底）
+                if not sent and platform != "mobile":
+                    if "default" not in self._mobile_pending:
+                        self._mobile_pending["default"] = []
+                    self._mobile_pending["default"].append({
+                        "message": f"[来自{platform}] {message}",
+                        "timestamp": datetime.utcnow().isoformat(),
+                    })
+
                 try:
                     perception = {
                         "platform": platform or "terminal",
@@ -777,6 +797,9 @@ class DecisionHub:
                     logger.debug(f"[主动聊天] 记忆存储失败: {e}")
 
             self.proactive_chat.set_send_callback(_proactive_send_callback)
+
+            # 移动端主动消息缓存
+            self._mobile_pending: Dict[str, List[Dict]] = {}
 
             # 【意图持续】注入工具调用能力
             if self.tool_subnet:

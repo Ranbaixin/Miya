@@ -44,11 +44,16 @@ class CognitionCache:
         self.max_per_user = max_per_user
         self.ttl_seconds = ttl_seconds
         self._cache: Dict[str, deque] = {}
-        self._lock = asyncio.Lock()
+        self._lock: Optional[asyncio.Lock] = None
+
+    async def _get_lock(self) -> asyncio.Lock:
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        return self._lock
 
     async def add(self, record: CognitionRecord) -> None:
         """添加认知记录"""
-        async with self._lock:
+        async with (await self._get_lock()):
             user_id = record.user_id
             if user_id not in self._cache:
                 self._cache[user_id] = deque(maxlen=self.max_per_user)
@@ -60,7 +65,7 @@ class CognitionCache:
 
     async def get_recent(self, user_id: str, limit: int = 3) -> List[CognitionRecord]:
         """获取用户最近的认知记录"""
-        async with self._lock:
+        async with (await self._get_lock()):
             if user_id not in self._cache:
                 return []
 
@@ -86,7 +91,7 @@ class CognitionCache:
     async def clear_expired(self) -> None:
         """清理过期记录"""
         now = time.time()
-        async with self._lock:
+        async with (await self._get_lock()):
             for user_id in list(self._cache.keys()):
                 records = self._cache[user_id]
                 # 过滤过期记录
@@ -98,7 +103,7 @@ class CognitionCache:
 
     async def clear_user(self, user_id: str) -> None:
         """清除指定用户的缓存"""
-        async with self._lock:
+        async with (await self._get_lock()):
             if user_id in self._cache:
                 del self._cache[user_id]
 

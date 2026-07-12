@@ -377,8 +377,13 @@ class JsonBackend(MemoryBackend):
         self._query_cache: Dict[str, List[MemoryItem]] = {}  # 查询缓存
         self._cache_max_size = 100
 
-        # 文件锁保护索引读写
-        self._index_lock = asyncio.Lock()
+        # 文件锁保护索引读写 (懒初始化，避免 event loop 绑定问题)
+        self._index_lock: Optional[asyncio.Lock] = None
+
+    async def _get_lock(self) -> asyncio.Lock:
+        if self._index_lock is None:
+            self._index_lock = asyncio.Lock()
+        return self._index_lock
 
         self._load_index()
         self._load_tag_index()
@@ -466,7 +471,7 @@ class JsonBackend(MemoryBackend):
 
     async def save(self, memory: MemoryItem) -> bool:
         """保存记忆"""
-        async with self._index_lock:
+        async with (await self._get_lock()):
             try:
                 file_path = self._get_file_path(memory)
 
@@ -541,7 +546,7 @@ class JsonBackend(MemoryBackend):
 
     async def delete(self, memory_id: str) -> bool:
         """删除记忆"""
-        async with self._index_lock:
+        async with (await self._get_lock()):
             if memory_id not in self._index:
                 return False
 

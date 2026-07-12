@@ -114,7 +114,7 @@ class SettingsViewModel : androidx.lifecycle.ViewModel() {
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
-    onBack: () -> Unit,
+    onBack: (() -> Unit)? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -124,9 +124,11 @@ fun SettingsScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(title = { Text("设置") }, navigationIcon = {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") }
-        })
+        if (onBack != null) {
+            TopAppBar(title = { Text("设置") }, navigationIcon = {
+                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") }
+            })
+        }
 
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),

@@ -23,13 +23,14 @@ def _is_process_running(process):
 
 
 try:
-    from fastapi import APIRouter, HTTPException
+    from fastapi import APIRouter, HTTPException, UploadFile
 
     FASTAPI_AVAILABLE = True
 except ImportError:
     FASTAPI_AVAILABLE = False
     APIRouter = object
     HTTPException = Exception
+    UploadFile = object
 
 logger = logging.getLogger(__name__)
 
@@ -404,6 +405,31 @@ class WebAPI:
                     "sendg_name": sendg_name,
                     "user_id": usg_id,
                 }
+
+                # 处理图片/文件分析 (base64 → 视觉模型 → 注入上下文)
+                if request.image_data:
+                    try:
+                        from core.game_play.engine import get_game_play_engine
+                        from core.text_loader import get_text
+
+                        engine = get_game_play_engine()
+                        await engine.initialize()
+                        analysis = await engine._call_vision(
+                            get_text("screen_vision.describe_prompt", "用中文描述当前屏幕上的内容。"),
+                            request.image_data,
+                            request.message or get_text("screen_vision.describe_default_query", "描述当前画面"),
+                        )
+                        if analysis:
+                            perception["_image_analysis"] = {
+                                "success": True,
+                                "description": analysis,
+                                "labels": [],
+                                "model": "vision",
+                            }
+                            perception["image_analysis"] = perception["_image_analysis"]
+                            logger.info(f"[WebChat] 图片分析: {analysis[:80]}...")
+                    except Exception as e:
+                        logger.warning(f"[WebChat] 图片分析失败: {e}")
 
                 # 检查是否为超级管理员，注入 is_owner 标记
                 try:
@@ -1114,6 +1140,122 @@ class WebAPI:
                 "timestamp": datetime.utcnow().isoformat(),
                 "service": "miya-web-api",
             }
+
+        # ── Emoji / 表情包 API ──
+
+        @self.router.get("/api/emoji/list")
+        async def list_emoji():
+            """获取表情包列表（分类 + 文件 URL）"""
+            try:
+                import json
+                from pathlib import Path
+
+                emoji_dir = Path("data/emoji")
+                if not emoji_dir.exists():
+                    return {"categories": []}
+
+                categories = []
+                for cat_dir in sorted(emoji_dir.iterdir()):
+                    if not cat_dir.is_dir():
+                        continue
+                    files = []
+                    for f in sorted(cat_dir.iterdir()):
+                        if f.suffix.lower() in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
+                            files.append({
+                                "name": f.name,
+                                "url": f"/api/emoji/file/{cat_dir.name}/{f.name}",
+                            })
+                    if files:
+                        categories.append({"name": cat_dir.name, "files": files})
+
+                # Also check stickers directory
+                sticker_dir = Path("data/stickers")
+                if sticker_dir.exists():
+                    for cat_dir in sorted(sticker_dir.iterdir()):
+                        if not cat_dir.is_dir():
+                            continue
+                        files = []
+                        for f in sorted(cat_dir.iterdir()):
+                            if f.suffix.lower() in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
+                                files.append({
+                                    "name": f.name,
+                                    "url": f"/api/emoji/file/stickers/{cat_dir.name}/{f.name}",
+                                })
+                        if files:
+                            categories.append({"name": f"贴纸-{cat_dir.name}", "files": files})
+
+                return {"categories": categories}
+            except Exception as e:
+                logger.error(f"[EmojiAPI] 列表获取失败: {e}")
+                return {"categories": [], "error": str(e)}
+
+        @self.router.get("/api/emoji/file/{category}/{filename:path}")
+        async def serve_emoji_file(category: str, filename: str):
+            """提供表情包图片文件"""
+            from pathlib import Path
+
+            import aiofiles
+            from fastapi.responses import FileResponse
+
+            possible_paths = [
+                Path("data/emoji") / category / filename,
+                Path("data/stickers") / category / filename,
+            ]
+            for file_path in possible_paths:
+                if file_path.exists() and file_path.is_file():
+                    media_type_map = {
+                        ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                        ".png": "image/png", ".gif": "image/gif",
+                        ".webp": "image/webp",
+                    }
+                    media_type = media_type_map.get(file_path.suffix.lower(), "application/octet-stream")
+                    return FileResponse(str(file_path), media_type=media_type)
+
+            raise HTTPException(status_code=404, detail="Emoji file not found")
+
+        @self.router.get("/api/chat/pending/{user_id}")
+        async def get_pending_messages(user_id: str):
+            """获取并清除移动端的待发送主动消息"""
+            try:
+                pending = getattr(self.decision_hub, "_mobile_pending", {})
+                msgs = pending.pop(str(user_id), [])
+                return {"messages": msgs}
+            except Exception as e:
+                return {"messages": []}
+
+        @self.router.post("/api/chat/upload")
+        async def upload_file(file: UploadFile):
+            """文件上传 — 保存到 data/downloads/ 并返回分析"""
+            import os
+            from pathlib import Path
+
+            try:
+                upload_dir = Path("data/downloads")
+                upload_dir.mkdir(parents=True, exist_ok=True)
+
+                safe_name = file.filename or "unknown_file"
+                file_path = upload_dir / safe_name
+
+                content = await file.read()
+                file_path.write_bytes(content)
+
+                result: dict = {"success": True, "path": str(file_path), "name": safe_name, "size": len(content)}
+
+                is_text = (file.content_type or "").startswith("text/") or safe_name.endswith((".txt", ".md", ".json", ".xml", ".yaml", ".yml", ".py", ".js", ".html", ".css", ".log"))
+                if is_text:
+                    try:
+                        text = content.decode("utf-8")[:5000]
+                        result["preview"] = text
+                    except Exception:
+                        result["preview"] = "[无法解码]"
+                else:
+                    result["preview"] = f"[二进制文件: {file.content_type}, {len(content)} bytes]"
+
+                logger.info(f"[Upload] 收到文件: {safe_name} ({len(content)} bytes)")
+                return result
+            except Exception as e:
+                logger.error(f"[Upload] 失败: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
 
     async def _do_tts_local(self, text: str):
         """TTS 本地播放 (fire-and-forget)"""

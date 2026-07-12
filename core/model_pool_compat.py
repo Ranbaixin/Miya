@@ -96,6 +96,7 @@ class ModelConfig:
     quality: str = "good"
     max_tokens: int = 4096
     enabled: bool = True
+    temperature: Optional[float] = None
 
     @classmethod
     def from_model(cls, model: Model) -> "ModelConfig":
@@ -114,6 +115,7 @@ class ModelConfig:
             latency=model.latency,
             quality=model.quality,
             max_tokens=model.max_tokens,
+            temperature=model.temperature if hasattr(model, 'temperature') else None,
             enabled=model.enabled,
         )
 

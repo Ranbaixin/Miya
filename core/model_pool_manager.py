@@ -124,6 +124,7 @@ class Model:
     enabled: bool = False
     max_tokens: int = 4096
     description: str = ""
+    temperature: Optional[float] = None
 
 
 @dataclass
@@ -261,6 +262,7 @@ class ModelPoolManager:
                 dimension=model_conf.get("dimension", 0),
                 max_tokens=max_tokens,
                 description=model_conf.get("description", ""),
+                temperature=model_conf.get("temperature"),
                 enabled=bool(api_key) and not disabled,
             )
             self._models[model_id] = model

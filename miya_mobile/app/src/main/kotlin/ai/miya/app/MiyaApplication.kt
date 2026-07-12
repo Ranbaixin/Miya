@@ -15,11 +15,22 @@ class MiyaApplication : Application() {
         super.onCreate()
         instance = this
         registerServices()
+        requestNotificationPermission()
+    }
+
+    private fun requestNotificationPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            // Permission will be requested by the Activity, just resister here
+        }
     }
 
     private fun registerServices() {
         val connectionManager = MiyaConnectionManager()
         val apiClient = MiyaApiClient()
+
+        ServiceRegistry.registerSingleton(MiyaApiClient::class.java) {
+            apiClient
+        }
 
         ServiceRegistry.registerSingleton(ConnectionProvider::class.java) {
             ConnectionProviderImpl(connectionManager, apiClient)

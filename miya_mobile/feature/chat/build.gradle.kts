@@ -19,6 +19,7 @@ dependencies {
     implementation(project(":core:domain"))
     implementation(project(":core:model"))
     implementation(project(":core:network"))
+    implementation(project(":core:database"))
     implementation(project(":core:ui-common"))
 
     implementation(platform(libs.androidx.compose.bom))
@@ -33,4 +34,5 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.coil.compose)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.room.runtime)
 }

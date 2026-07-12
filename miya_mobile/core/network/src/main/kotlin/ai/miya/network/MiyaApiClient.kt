@@ -234,7 +234,69 @@ class MiyaApiClient(
         }
     }
 
+    // ── Emoji ──
+
+    suspend fun getEmojiList(): EmojiListResponse {
+        return try {
+            client.get(apiUrl("/api/emoji/list")).body()
+        } catch (_: Exception) {
+            EmojiListResponse()
+        }
+    }
+
+    // ── Proactive Messages ──
+
+    suspend fun getPendingMessages(userId: String): List<Map<String, String>> {
+        return try {
+            val resp: PendingMessageResponse = client.get(apiUrl("/api/chat/pending/$userId")).body()
+            resp.messages
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    // ── File Upload ──
+
+    suspend fun uploadFile(fileName: String, bytes: ByteArray, mimeType: String): Map<String, String> {
+        return try {
+            client.post(apiUrl("/api/chat/upload")) {
+                setBody(io.ktor.client.request.forms.MultiPartFormDataContent(
+                    io.ktor.client.request.forms.formData {
+                        append("file", bytes, io.ktor.http.Headers.build {
+                            append(io.ktor.http.HttpHeaders.ContentDisposition, "filename=\"$fileName\"")
+                            append(io.ktor.http.HttpHeaders.ContentType, mimeType)
+                        })
+                    }
+                ))
+            }.body()
+        } catch (_: Exception) {
+            mapOf("success" to "false", "preview" to "上传失败")
+        }
+    }
+
     fun close() {
         client.close()
     }
 }
+
+@kotlinx.serialization.Serializable
+data class EmojiFileItem(
+    val name: String = "",
+    val url: String = "",
+)
+
+@kotlinx.serialization.Serializable
+data class EmojiCategory(
+    val name: String = "",
+    val files: List<EmojiFileItem> = emptyList(),
+)
+
+@kotlinx.serialization.Serializable
+data class EmojiListResponse(
+    val categories: List<EmojiCategory> = emptyList(),
+)
+
+@kotlinx.serialization.Serializable
+data class PendingMessageResponse(
+    val messages: List<Map<String, String>> = emptyList(),
+)
