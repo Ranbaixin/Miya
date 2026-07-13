@@ -4,12 +4,15 @@ import ai.miya.uicommon.component.MiyaChatAvatar
 import ai.miya.uicommon.component.pulseGlow
 import ai.miya.uicommon.theme.LocalMiyaTheme
 import ai.miya.uicommon.theme.MiyaColors
+import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -35,12 +38,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -56,8 +62,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun ChatScreen(
@@ -77,6 +83,23 @@ private fun ChatContent(viewModel: ChatViewModel, onBack: (() -> Unit)?) {
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
+    val view = LocalView.current
+    val density = LocalDensity.current
+
+    var imeHeightDp by remember { mutableStateOf(0f) }
+    DisposableEffect(view) {
+        val listener = android.view.ViewTreeObserver.OnGlobalLayoutListener {
+            val rect = android.graphics.Rect()
+            view.getWindowVisibleDisplayFrame(rect)
+            val keypadHeight = (view.rootView.height - rect.bottom).coerceAtLeast(0)
+            imeHeightDp = with(density) { keypadHeight.toDp().value }
+        }
+        view.viewTreeObserver.addOnGlobalLayoutListener(listener)
+        onDispose { view.viewTreeObserver.removeOnGlobalLayoutListener(listener) }
+    }
+    LaunchedEffect(imeHeightDp) {
+        if (imeHeightDp > 0f) { listState.animateScrollToItem(listState.layoutInfo.totalItemsCount) }
+    }
 
     val atBottom by remember {
         derivedStateOf {
@@ -88,13 +111,6 @@ private fun ChatContent(viewModel: ChatViewModel, onBack: (() -> Unit)?) {
     LaunchedEffect(state.messages.size) { listState.animateScrollToItem(listState.layoutInfo.totalItemsCount) }
     LaunchedEffect(state.streamedText) { if (atBottom) listState.animateScrollToItem(listState.layoutInfo.totalItemsCount) }
 
-    // 键盘弹起时自动滚到底部
-    val imeHeight = WindowInsets.ime.getBottom(LocalDensity.current)
-    val isImeVisible = imeHeight > 0
-    LaunchedEffect(isImeVisible) {
-        if (isImeVisible) { listState.animateScrollToItem(listState.layoutInfo.totalItemsCount) }
-    }
-
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let { viewModel.setPendingImage(it) }
     }
@@ -104,44 +120,84 @@ private fun ChatContent(viewModel: ChatViewModel, onBack: (() -> Unit)?) {
 
     var contextMenuMessage by remember { mutableStateOf<ChatMessage?>(null) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize()) {
 
-        Column(modifier = Modifier.fillMaxSize()) {
-            // ─ 返回栏 (固定顶部) ─
-            if (onBack != null) {
-                Surface(color = Color(0xFF1A1218).copy(alpha = 0.92f), tonalElevation = 0.dp) {
-                    Row(
-                        Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 4.dp, vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onSurface)
-                        }
-                        Spacer(Modifier.width(4.dp))
-                        Text(state.sessions.find { it.id == state.currentSessionId }?.displayName ?: "聊天",
-                            style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface)
-                    }
+        // 返回栏
+        if (onBack != null) {
+            Row(
+                Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 4.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onSurface)
                 }
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    state.sessions.find { it.id == state.currentSessionId }?.displayName ?: "聊天",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
             }
+        }
 
-            // 会话标签
-            if (onBack == null && state.sessions.size > 1) {
-                val name = state.sessions.find { it.id == state.currentSessionId }?.displayName ?: "聊天"
-                Surface(
-                    color = Color(0xFF2D2228).copy(alpha = 0.85f), shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(top = 4.dp, start = 8.dp, end = 8.dp),
+        // Session pill + picker overlay
+        if (onBack == null && state.sessions.size > 1) {
+            val name = state.sessions.find { it.id == state.currentSessionId }?.displayName ?: "聊天"
+            Surface(
+                color = Color(0xFF2D2228).copy(alpha = 0.85f),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(top = 8.dp, start = 14.dp),
+            ) {
+                Row(
+                    Modifier.clickable { viewModel.toggleSessionPicker() }.padding(horizontal = 14.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(Modifier.clickable { viewModel.toggleSessionPicker() }.padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.weight(1f))
-                        Icon(Icons.Default.ExpandMore, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
+                    Text(name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.width(4.dp))
+                    Icon(Icons.Default.ExpandMore, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
+                }
+            }
+        }
+        AnimatedVisibility(
+            visible = state.showSessionPicker,
+            enter = fadeIn(tween(200)) + scaleIn(tween(200)),
+            exit = fadeOut(tween(150)) + scaleOut(tween(150)),
+            modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(top = 50.dp, start = 14.dp),
+        ) {
+            Surface(color = Color(0xFF2D2228), shape = RoundedCornerShape(14.dp), tonalElevation = 8.dp, modifier = Modifier.widthIn(max = 280.dp)) {
+                Column(Modifier.padding(12.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("会话", style = MaterialTheme.typography.titleSmall)
+                        IconButton(onClick = { viewModel.newSession() }, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.Add, "新建", tint = MiyaColors.Primary, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    state.sessions.take(5).forEach { s ->
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { viewModel.selectSession(s.id) }
+                                .background(if (s.id == state.currentSessionId) MiyaColors.Primary.copy(alpha = 0.1f) else Color.Transparent)
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(s.displayName ?: s.name ?: s.id, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                                if (s.messageCount != null) Text("${s.messageCount}条", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            if (s.id == state.currentSessionId) Icon(Icons.Default.Check, null, tint = MiyaColors.Primary, modifier = Modifier.size(14.dp))
+                            if (s.id != "default") {
+                                IconButton(onClick = { viewModel.deleteSession(s.id) }, modifier = Modifier.size(24.dp)) {
+                                    Icon(Icons.Default.Close, "删除", modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
                     }
                 }
             }
+        }
 
-            // ─ 聊天区 (weight=1f 填充剩余) ─
-            Column(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.weight(1f).padding(bottom = imeHeightDp.dp)) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
@@ -324,47 +380,8 @@ private fun ChatContent(viewModel: ChatViewModel, onBack: (() -> Unit)?) {
                 onStop = { viewModel.stopStreaming() },
                 isStreaming = state.isStreaming,
                 onAttachment = { viewModel.toggleAttachmentPicker() },
+                onToggleSticker = { viewModel.toggleStickerPicker() },
             )
-        }
-        } // 关闭外层 Column
-
-        // Session picker dropdown
-        AnimatedVisibility(
-            visible = state.showSessionPicker,
-            enter = fadeIn(tween(200)) + scaleIn(tween(200)),
-            exit = fadeOut(tween(150)) + scaleOut(tween(150)),
-            modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 50.dp),
-        ) {
-            Surface(color = Color(0xFF2D2228), shape = RoundedCornerShape(14.dp), tonalElevation = 8.dp, modifier = Modifier.widthIn(max = 280.dp)) {
-                Column(Modifier.padding(12.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("会话", style = MaterialTheme.typography.titleSmall)
-                        IconButton(onClick = { viewModel.newSession() }, modifier = Modifier.size(28.dp)) {
-                            Icon(Icons.Default.Add, "新建", tint = MiyaColors.Primary, modifier = Modifier.size(16.dp))
-                        }
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    state.sessions.take(5).forEach { s ->
-                        Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { viewModel.selectSession(s.id) }
-                                .background(if (s.id == state.currentSessionId) MiyaColors.Primary.copy(alpha = 0.1f) else Color.Transparent)
-                                .padding(horizontal = 10.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text(s.displayName ?: s.name ?: s.id, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
-                                if (s.messageCount != null) Text("${s.messageCount}条", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            if (s.id == state.currentSessionId) Icon(Icons.Default.Check, null, tint = MiyaColors.Primary, modifier = Modifier.size(14.dp))
-                            if (s.id != "default") {
-                                IconButton(onClick = { viewModel.deleteSession(s.id) }, modifier = Modifier.size(24.dp)) {
-                                    Icon(Icons.Default.Close, "删除", modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 
@@ -491,19 +508,68 @@ private fun ChatBubble(message: ChatMessage, onLongPress: () -> Unit, onQuote: (
 @Composable
 private fun ImageAttachmentCard(src: String?) {
     if (src == null) return
-    val isUrl = src.startsWith("http://") || src.startsWith("https://")
+    val isDataUri = src.startsWith("data:")
+
     Surface(
         shape = RoundedCornerShape(10.dp),
         color = Color.White.copy(alpha = 0.08f),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Box(Modifier.fillMaxWidth().heightIn(max = 220.dp)) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current).data(src).crossfade(true).build(),
-                contentDescription = "图片",
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)),
-                contentScale = ContentScale.FillWidth,
-            )
+            if (isDataUri) {
+                var imageBitmap by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+                var loadFailed by remember { mutableStateOf(false) }
+
+                LaunchedEffect(src) {
+                    loadFailed = false
+                    imageBitmap = null
+                    withContext(Dispatchers.IO) {
+                        try {
+                            val b64 = src.substringAfter("base64,").trim()
+                            val bytes = Base64.decode(b64, Base64.DEFAULT)
+                            val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                            if (bmp != null) {
+                                imageBitmap = bmp.asImageBitmap()
+                            } else {
+                                loadFailed = true
+                            }
+                        } catch (_: Exception) {
+                            loadFailed = true
+                        }
+                    }
+                }
+
+                when {
+                    imageBitmap != null -> {
+                        Image(
+                            bitmap = imageBitmap!!,
+                            contentDescription = "图片",
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)),
+                            contentScale = ContentScale.FillWidth,
+                        )
+                    }
+                    loadFailed -> {
+                        Box(Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) {
+                            Text("图片加载失败", fontSize = 12.sp, color = Color.White.copy(alpha = 0.4f))
+                        }
+                    }
+                    else -> {
+                        Box(Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp, color = MiyaColors.Primary)
+                        }
+                    }
+                }
+            } else {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current).data(src).crossfade(true).build(),
+                    contentDescription = "图片",
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)),
+                    contentScale = ContentScale.FillWidth,
+                    placeholder = ColorPainter(Color.White.copy(alpha = 0.05f)),
+                    error = ColorPainter(Color.White.copy(alpha = 0.05f)),
+                )
+            }
+
             Box(
                 Modifier.align(Alignment.BottomStart).fillMaxWidth()
                     .background(Color.Black.copy(alpha = 0.35f))
@@ -614,15 +680,15 @@ private fun ChatInputBar(
     onStop: () -> Unit,
     isStreaming: Boolean,
     onAttachment: () -> Unit,
+    onToggleSticker: () -> Unit,
 ) {
-    val viewModel = androidx.lifecycle.viewmodel.compose.viewModel<ChatViewModel>()
     val hasContent = text.isNotBlank()
     Surface(color = Color(0xFF1A1218).copy(alpha = 0.95f), tonalElevation = 0.dp) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onAttachment, modifier = Modifier.size(36.dp)) {
                 Icon(Icons.Default.Add, "附件", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
             }
-            IconButton(onClick = { viewModel.toggleStickerPicker() }, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = onToggleSticker, modifier = Modifier.size(36.dp)) {
                 Icon(Icons.Default.EmojiEmotions, "表情", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
             }
             Box(Modifier.weight(1f).clip(RoundedCornerShape(21.dp)).background(Color.White.copy(alpha = 0.06f)).padding(horizontal = 14.dp, vertical = 10.dp)) {
