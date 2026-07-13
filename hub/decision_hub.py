@@ -67,7 +67,7 @@ def _load_strategy_descriptions() -> dict:
 
 
 def _get_emotion_guidance() -> dict:
-    """加载情感引导配置（带缓存）"""
+    """加载情感引导配置（带缓存）—— 所有文案从 config/text_config.json 读取，代码中不硬编码"""
     global _emotion_guidance_cache
     if _emotion_guidance_cache is not None:
         return _emotion_guidance_cache
@@ -77,27 +77,28 @@ def _get_emotion_guidance() -> dict:
         config_path = Path(__file__).parent.parent / "config" / "text_config.json"
         with open(config_path, "r", encoding="utf-8") as f:
             cfg = json.load(f)
-        _emotion_guidance_cache = cfg.get(
-            "emotion_guidance",
-            {
-                "header": "\n\n【情感指引】\n",
-                "user_emotion": "- 用户情绪: {dominant}\n",
-                "miya_emotion": "- 你的情绪: {miya_dominant} ({miya_intensity}%)\n",
-                "inner_thought": "- 你的内心独白: {inner_thought}\n",
-                "footer": "请根据上述情感自然回应，展现你真实的情感。\n注意：内心独白仅供你参考理解自己的感受，请不要在回复中直接引用或输出内心独白内容。",
-                "single_model_footer": "请根据上述情感自然回应，展现你真实的情感。\n注意：内心独白仅供你参考理解自己的感受，请不要在回复中直接引用或输出内心独白内容。\n禁止在回复中使用小括号()描述动作，如（微笑）、（点头）等。",
-            },
-        )
-    except Exception:
-        _emotion_guidance_cache = {
-            "header": "\n\n【情感指引】\n",
-            "user_emotion": "- 用户情绪: {dominant}\n",
-            "miya_emotion": "- 你的情绪: {miya_dominant} ({miya_intensity}%)\n",
-            "inner_thought": "- 你的内心独白: {inner_thought}\n",
-            "footer": "请根据上述情感自然回应，展现你真实的情感。\n注意：内心独白仅供你参考理解自己的感受，请不要在回复中直接引用或输出内心独白内容。",
-            "single_model_footer": "请根据上述情感自然回应，展现你真实的情感。\n注意：内心独白仅供你参考理解自己的感受，请不要在回复中直接引用或输出内心独白内容。\n禁止在回复中使用小括号()描述动作，如（微笑）、（点头）等。",
-        }
+        eg = cfg.get("emotion_guidance")
+        if eg and eg.get("header"):
+            _emotion_guidance_cache = eg
+        else:
+            logger.warning("[情感指引] text_config.json 缺少 emotion_guidance 配置段，使用最小兜底")
+            _emotion_guidance_cache = _MINIMAL_EMOTION_GUIDANCE
+    except Exception as e:
+        logger.error(f"[情感指引] 加载 text_config.json 失败: {e}，使用最小兜底")
+        _emotion_guidance_cache = _MINIMAL_EMOTION_GUIDANCE
     return _emotion_guidance_cache
+
+
+_MINIMAL_EMOTION_GUIDANCE = {
+    "header": "\n\n【情感指引】\n",
+    "user_emotion": "",
+    "miya_emotion": "",
+    "inner_thought": "",
+    "attribution": "",
+    "reflection": "",
+    "footer": "",
+    "single_model_footer": "",
+}
 
 
 def _build_integrated_status(
@@ -2177,53 +2178,10 @@ class DecisionHub:
                 pass
 
             # 等待 Phase 2 任务（soul 已在后台与 Phase 1 并行运行）
-            # 【加速】先检查缓存 — 如果有缓存，立即用缓存继续；soul 结果后台更新
-            cached = self._get_soul_cache(user_id_str)
-            cached_emotion = cached.get("emotion_context", "")
-            cached_cognitive = cached.get("cognitive_memory", "")
-
-            # 如果 soul_task 已就绪，直接拿结果；否则复用缓存
-            if soul_task.done():
-                cognitive_memory_context, soul_result = await soul_task
-                # 立即存储到 _last_soul_data 供 API 读取
-                if soul_result and soul_result.get("emotions"):
-                    self._last_soul_data = soul_result
-            else:
-                cognitive_memory_context = cached_cognitive
-                soul_result = None
-                if cached_emotion:
-                    logger.info("[灵魂-加速] 使用缓存情绪上下文")
-                # 后台等待 soul 完成后更新 _last_soul_data 并持久化认知记忆
-                async def _deferred_soul_update():
-                    try:
-                        _, sr = await soul_task
-                        if sr and sr.get("emotions"):
-                            self._last_soul_data = sr
-                            logger.info("[灵魂-延迟] 已更新 _last_soul_data")
-
-                            # 补持久化认知记忆（修复情绪空白的bug）
-                            from memory import store_cognition
-
-                            _emotions_d = sr.get("emotions", {})
-                            _inner = sr.get("inner_thought", "") or sr.get("analysis", {}).get("inner_thought", "")
-                            _attr = sr.get("attribution", "") or sr.get("analysis", {}).get("attribution", "")
-                            _refl = sr.get("reflection", "") or sr.get("analysis", {}).get("reflection", "")
-                            _aie = sr.get("analysis", {}).get("ai_emotion", {}) or {}
-                            _reasoning = _aie.get("reasoning", "") or sr.get("reasoning", "")
-                            _gid_str = str(context.get("group_id")) if context.get("group_id") else None
-                            await store_cognition(
-                                thinking=_reasoning or f"[情绪分析] {json.dumps(_emotions_d, ensure_ascii=False)}",
-                                emotions=_emotions_d,
-                                inner_thought=_inner,
-                                attribution=_attr,
-                                reflection=_refl,
-                                user_id=user_id_str,
-                                group_id=_gid_str,
-                            )
-                            logger.info("[灵魂-延迟] 已补持久化认知记忆")
-                    except Exception:
-                        pass
-                asyncio.create_task(_deferred_soul_update())
+            # 等待灵魂 AI 分析完成，确保当前轮次使用最新鲜的情绪上下文
+            cognitive_memory_context, soul_result = await soul_task
+            if soul_result and soul_result.get("emotions"):
+                self._last_soul_data = soul_result
 
             # 处理 Soul Generator 结果 (共用于两条路径)
             emotion_context_for_collab = ""
@@ -2240,17 +2198,23 @@ class DecisionHub:
                     miya_intensity = 40
                     emotion_str = "平静"
                 logger.info(f"[灵魂] 主导情绪: {dominant} | 弥娅: {emotion_str}")
-                inner_thought = soul_result.get("analysis", {}).get("reflection", "")
+                inner_thought = soul_result.get("inner_thought", "") or soul_result.get("analysis", {}).get("inner_thought", "")
+                attribution = soul_result.get("attribution", "") or soul_result.get("analysis", {}).get("attribution", "")
+                reflection = soul_result.get("reflection", "") or soul_result.get("analysis", {}).get("reflection", "")
 
                 # 从配置文件加载情感引导文案
                 eg = _get_emotion_guidance()
                 emotion_context_for_collab = eg["header"]
                 emotion_context_for_collab += eg["user_emotion"].format(dominant=dominant)
                 emotion_context_for_collab += eg["miya_emotion"].format(
-                    miya_dominant=miya_dominant, miya_intensity=miya_intensity
+                    miya_dominant=miya_dominant, miya_intensity=miya_intensity, emotion_spectrum=emotion_str
                 )
                 if inner_thought:
                     emotion_context_for_collab += eg["inner_thought"].format(inner_thought=inner_thought)
+                if attribution:
+                    emotion_context_for_collab += eg["attribution"].format(attribution=attribution)
+                if reflection:
+                    emotion_context_for_collab += eg["reflection"].format(reflection=reflection)
                 # 注入 AP 实时状态快照到情绪上下文
                 try:
                     from core.miya_psyarch_bridge import get_psyarch_bridge
@@ -2276,41 +2240,18 @@ class DecisionHub:
                     "emotions": miya_emotions,
                 })
                 self._save_soul_snapshot()
-            elif cached_emotion:
-                emotion_context_for_collab = cached_emotion
-                logger.info(f"[灵魂-加速] 使用缓存情绪上下文 ({len(cached_emotion)} 字符)")
+            # soul 分析失败时，尝试使用缓存兜底
+            if not emotion_context_for_collab:
+                cached = self._get_soul_cache(user_id_str)
+                cached_emotion = cached.get("emotion_context", "")
+                if cached_emotion:
+                    emotion_context_for_collab = cached_emotion
+                    logger.info(f"[灵魂-兜底] soul 分析未返回，使用缓存 ({len(cached_emotion)} 字符)")
 
-            # 冷启动兜底 — 没有缓存也没有新鲜 soul 时给协作引擎一个基础上下文
+            # 冷启动兜底 — 没有 soul 也没有缓存时，给协作引擎一个空标题
             if not emotion_context_for_collab:
                 eg = _get_emotion_guidance()
                 emotion_context_for_collab = eg.get("header", "")
-                # 后台更新缓存 — soul 完成后写入
-                if not soul_task.done():
-
-                    async def _update_soul_cache():
-                        try:
-                            cm, sr = await soul_task
-                            if sr:
-                                eg = _get_emotion_guidance()
-                                ctx = eg["header"]
-                                ctx += eg["user_emotion"].format(dominant=sr.get("dominant_emotion", "平静"))
-                                em = sr.get("emotions", {})
-                                top = sorted(em.items(), key=lambda x: x[1], reverse=True)[:3] if em else [("平静", 40)]
-                                ctx += eg["miya_emotion"].format(miya_dominant=top[0][0], miya_intensity=top[0][1])
-                                inner = sr.get("analysis", {}).get("reflection", "")
-                                if inner:
-                                    ctx += eg["inner_thought"].format(inner_thought=inner)
-                                ctx += eg["footer"]
-                                self._set_soul_cache(user_id_str, {
-                                    "emotion_context": ctx,
-                                    "cognitive_memory": cm,
-                                    "emotions": em,
-                                })
-                                self._save_soul_snapshot()
-                        except Exception:
-                            pass
-
-                    asyncio.create_task(_update_soul_cache(), name="soul_cache_bg")
 
             logger.debug(
                 f"[DEBUG认知] build_context 返回长度={len(cognitive_memory_context) if cognitive_memory_context else 0}, user={user_id_str}"
@@ -2822,18 +2763,23 @@ class DecisionHub:
                     miya_dominant = "平静"
                     miya_intensity = 40
                 _soul_result.get("intensity", miya_intensity)
-                inner_thought = _soul_result.get("inner_thought", "")
-                if not inner_thought and _soul_result.get("analysis"):
-                    inner_thought = _soul_result["analysis"].get("reflection", "")
+                inner_thought = _soul_result.get("inner_thought", "") or _soul_result.get("analysis", {}).get("inner_thought", "")
+                attribution = _soul_result.get("attribution", "") or _soul_result.get("analysis", {}).get("attribution", "")
+                reflection = _soul_result.get("reflection", "") or _soul_result.get("analysis", {}).get("reflection", "")
 
+                emotion_str_single = " + ".join([f"{name}({int(val)}%)" for name, val in top_emotions])
                 eg = _get_emotion_guidance()
                 ai_emotion_context = eg["header"]
                 ai_emotion_context += eg["user_emotion"].format(dominant=dominant)
                 ai_emotion_context += eg["miya_emotion"].format(
-                    miya_dominant=miya_dominant, miya_intensity=miya_intensity
+                    miya_dominant=miya_dominant, miya_intensity=miya_intensity, emotion_spectrum=emotion_str_single
                 )
                 if inner_thought:
                     ai_emotion_context += eg["inner_thought"].format(inner_thought=inner_thought)
+                if attribution:
+                    ai_emotion_context += eg["attribution"].format(attribution=attribution)
+                if reflection:
+                    ai_emotion_context += eg["reflection"].format(reflection=reflection)
                 # 注入 AP 实时状态到情绪上下文
                 try:
                     from core.miya_psyarch_bridge import get_psyarch_bridge
