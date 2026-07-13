@@ -68,6 +68,12 @@ val COMMON_STICKERS = listOf(
     "🐱" to "猫猫", "🐶" to "狗狗", "🌸" to "花花", "⭐" to "星星",
     "🍰" to "蛋糕", "☕" to "咖啡", "📱" to "手机", "💻" to "电脑",
 )
+internal fun formatFileSize(size: Long): String = when {
+    size < 1024 -> "${size}B"
+    size < 1024 * 1024 -> "${size / 1024}KB"
+    size < 1024 * 1024 * 1024 -> "${"%.1f".format(size.toFloat() / (1024 * 1024))}MB"
+    else -> "${"%.2f".format(size.toFloat() / (1024 * 1024 * 1024))}GB"
+}
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -337,13 +343,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private fun String.cleanAiContent() = this
         .replace(Regex("<think>.*?</think>", RegexOption.DOT_MATCHES_ALL), "")
         .replace(Regex("\n{3,}"), "\n\n").trim()
-
-    private fun formatFileSize(size: Long): String = when {
-        size < 1024 -> "${size}B"
-        size < 1024 * 1024 -> "${size / 1024}KB"
-        size < 1024 * 1024 * 1024 -> "${"%.1f".format(size.toFloat() / (1024 * 1024))}MB"
-        else -> "${"%.2f".format(size.toFloat() / (1024 * 1024 * 1024))}GB"
-    }
 
     companion object {
         fun extractImageUrl(text: String): String? {

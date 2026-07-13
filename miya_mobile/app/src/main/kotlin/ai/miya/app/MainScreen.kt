@@ -51,7 +51,7 @@ fun MainScreen() {
                     bottomBar = {
                         Box(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
-                                .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xFF1A111A).copy(alpha = 0.5f), Color(0xFF1A111A).copy(alpha = 0.85f))))
+                                .background(Brush.verticalGradient(listOf(Color.Transparent, MaterialTheme.colorScheme.background.copy(alpha = 0.5f), MaterialTheme.colorScheme.background.copy(alpha = 0.85f))))
                                 .padding(vertical = 6.dp),
                         ) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {

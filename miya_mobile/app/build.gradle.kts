@@ -33,11 +33,7 @@ dependencies {
     implementation(project(":core:database"))
     implementation(project(":core:ui-common"))
     implementation(project(":feature:chat"))
-    implementation(project(":feature:live2d"))
-    implementation(project(":feature:memory"))
-    implementation(project(":feature:hub"))
     implementation(project(":feature:settings"))
-    implementation(project(":feature:files"))
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.core.ktx)

@@ -58,9 +58,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
+import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -145,7 +149,7 @@ private fun ChatContent(viewModel: ChatViewModel, onBack: (() -> Unit)?) {
         if (onBack == null && state.sessions.size > 1) {
             val name = state.sessions.find { it.id == state.currentSessionId }?.displayName ?: "聊天"
             Surface(
-                color = Color(0xFF2D2228).copy(alpha = 0.85f),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(top = 8.dp, start = 14.dp),
             ) {
@@ -165,7 +169,7 @@ private fun ChatContent(viewModel: ChatViewModel, onBack: (() -> Unit)?) {
             exit = fadeOut(tween(150)) + scaleOut(tween(150)),
             modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(top = 50.dp, start = 14.dp),
         ) {
-            Surface(color = Color(0xFF2D2228), shape = RoundedCornerShape(14.dp), tonalElevation = 8.dp, modifier = Modifier.widthIn(max = 280.dp)) {
+            Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(14.dp), tonalElevation = 8.dp, modifier = Modifier.widthIn(max = 280.dp)) {
                 Column(Modifier.padding(12.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text("会话", style = MaterialTheme.typography.titleSmall)
@@ -204,6 +208,19 @@ private fun ChatContent(viewModel: ChatViewModel, onBack: (() -> Unit)?) {
                 verticalArrangement = Arrangement.spacedBy(2.dp),
                 contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp),
             ) {
+                if (state.messages.isEmpty() && !state.isStreaming) {
+                    item(key = "empty") {
+                        Box(Modifier.fillMaxWidth().heightIn(min = 280.dp), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                MiyaChatAvatar(size = 64.dp, modifier = Modifier.pulseGlow(MiyaColors.Primary.copy(alpha = 0.3f), radius = 40.dp, durationMs = 2200))
+                                Spacer(Modifier.height(16.dp))
+                                Text("我是弥娅，你的 AI 虚拟化身", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                                Spacer(Modifier.height(6.dp))
+                                Text("给我发张图片，或者和我说说话吧", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
                 itemsIndexed(state.messages, key = { _, m -> m.id }) { _, message ->
                     ChatBubble(
                         message = message,
@@ -227,7 +244,7 @@ private fun ChatContent(viewModel: ChatViewModel, onBack: (() -> Unit)?) {
             ) {
                 state.quotedMessage?.let { quoted ->
                     Surface(
-                        color = Color(0xFF2D2228),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
                         shape = RoundedCornerShape(8.dp),
                     ) {
@@ -255,7 +272,7 @@ private fun ChatContent(viewModel: ChatViewModel, onBack: (() -> Unit)?) {
                 enter = expandVertically(tween(200)) + fadeIn(tween(200)),
                 exit = shrinkVertically(tween(150)) + fadeOut(tween(150)),
             ) {
-                Surface(color = Color(0xFF2D2228), modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp), shape = RoundedCornerShape(10.dp)) {
+                Surface(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp), shape = RoundedCornerShape(10.dp)) {
                     Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Image, null, tint = MiyaColors.Primary, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
@@ -289,7 +306,7 @@ private fun ChatContent(viewModel: ChatViewModel, onBack: (() -> Unit)?) {
                 enter = expandVertically(tween(200)) + fadeIn(tween(200)),
                 exit = shrinkVertically(tween(150)) + fadeOut(tween(150)),
             ) {
-                Surface(color = Color(0xFF2D2228), modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp), shape = RoundedCornerShape(10.dp)) {
+                Surface(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp), shape = RoundedCornerShape(10.dp)) {
                     Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Description, null, tint = MiyaColors.Secondary, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
@@ -333,7 +350,7 @@ private fun ChatContent(viewModel: ChatViewModel, onBack: (() -> Unit)?) {
 
             // Attachment picker
             AnimatedVisibility(visible = state.showAttachmentPicker, enter = fadeIn(tween(200)) + slideInVertically(tween(250)) { it }, exit = fadeOut(tween(150)) + slideOutVertically(tween(200)) { it }) {
-                Surface(color = Color(0xFF2D2228), tonalElevation = 4.dp, modifier = Modifier.fillMaxWidth()) {
+                Surface(color = MaterialTheme.colorScheme.surfaceVariant, tonalElevation = 4.dp, modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { imagePicker.launch("image/*"); viewModel.toggleAttachmentPicker() }) {
                             Box(Modifier.size(52.dp).clip(RoundedCornerShape(14.dp)).background(MiyaColors.Primary.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
@@ -355,7 +372,7 @@ private fun ChatContent(viewModel: ChatViewModel, onBack: (() -> Unit)?) {
 
             // Emoji picker (只展示内置 Unicode 表情)
             AnimatedVisibility(visible = state.showStickerPicker, enter = fadeIn(tween(200)) + expandVertically(tween(250)), exit = fadeOut(tween(150)) + shrinkVertically(tween(200))) {
-                Surface(color = Color(0xFF2D2228), modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp)) {
+                Surface(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp)) {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(6),
                         modifier = Modifier.padding(8.dp),
@@ -425,7 +442,7 @@ private fun ChatContent(viewModel: ChatViewModel, onBack: (() -> Unit)?) {
             },
             confirmButton = {},
             dismissButton = {},
-            containerColor = Color(0xFF2D2228),
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
             shape = RoundedCornerShape(16.dp),
         )
     }
@@ -459,7 +476,7 @@ private fun ChatBubble(message: ChatMessage, onLongPress: () -> Unit, onQuote: (
                     bottomStart = if (isUser) 18.dp else 6.dp,
                     bottomEnd = if (isUser) 6.dp else 18.dp,
                 ),
-                color = if (isUser) MiyaColors.Primary.copy(alpha = 0.85f) else Color(0xFF2D2228).copy(alpha = 0.92f),
+                color = if (isUser) MiyaColors.Primary.copy(alpha = 0.85f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
                 tonalElevation = 0.dp,
                 shadowElevation = 0.dp,
                 modifier = Modifier.widthIn(max = 280.dp),
@@ -509,76 +526,169 @@ private fun ChatBubble(message: ChatMessage, onLongPress: () -> Unit, onQuote: (
 private fun ImageAttachmentCard(src: String?) {
     if (src == null) return
     val isDataUri = src.startsWith("data:")
+    var showFullScreen by remember { mutableStateOf(false) }
+    var imageBitmap by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    var bitmapWidth by remember { mutableIntStateOf(0) }
+    var bitmapHeight by remember { mutableIntStateOf(0) }
+    var loadFailed by remember { mutableStateOf(false) }
+
+    if (isDataUri) {
+        LaunchedEffect(src) {
+            loadFailed = false
+            imageBitmap = null
+            bitmapWidth = 0
+            bitmapHeight = 0
+            withContext(Dispatchers.IO) {
+                try {
+                    val b64 = src.substringAfter("base64,").trim()
+                    val bytes = Base64.decode(b64, Base64.DEFAULT)
+                    val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    if (bmp != null) {
+                        bitmapWidth = bmp.width
+                        bitmapHeight = bmp.height
+                        imageBitmap = bmp.asImageBitmap()
+                    } else {
+                        loadFailed = true
+                    }
+                } catch (_: Exception) {
+                    loadFailed = true
+                }
+            }
+        }
+    }
 
     Surface(
         shape = RoundedCornerShape(10.dp),
         color = Color.White.copy(alpha = 0.08f),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable { showFullScreen = true },
     ) {
-        Box(Modifier.fillMaxWidth().heightIn(max = 220.dp)) {
-            if (isDataUri) {
-                var imageBitmap by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
-                var loadFailed by remember { mutableStateOf(false) }
-
-                LaunchedEffect(src) {
-                    loadFailed = false
-                    imageBitmap = null
-                    withContext(Dispatchers.IO) {
-                        try {
-                            val b64 = src.substringAfter("base64,").trim()
-                            val bytes = Base64.decode(b64, Base64.DEFAULT)
-                            val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                            if (bmp != null) {
-                                imageBitmap = bmp.asImageBitmap()
-                            } else {
-                                loadFailed = true
-                            }
-                        } catch (_: Exception) {
-                            loadFailed = true
-                        }
-                    }
-                }
-
-                when {
-                    imageBitmap != null -> {
+        if (isDataUri) {
+            when {
+                imageBitmap != null && bitmapWidth > 0 -> {
+                    BoxWithConstraints(Modifier.fillMaxWidth()) {
+                        val ratio = bitmapHeight.toFloat() / bitmapWidth.toFloat()
+                        val displayHeight = minOf(maxWidth * ratio, 400.dp)
                         Image(
                             bitmap = imageBitmap!!,
                             contentDescription = "图片",
-                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)),
-                            contentScale = ContentScale.FillWidth,
+                            modifier = Modifier.fillMaxWidth().height(displayHeight).clip(RoundedCornerShape(10.dp)),
+                            contentScale = ContentScale.FillBounds,
                         )
-                    }
-                    loadFailed -> {
-                        Box(Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) {
-                            Text("图片加载失败", fontSize = 12.sp, color = Color.White.copy(alpha = 0.4f))
+                        Box(
+                            Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                                .background(Color.Black.copy(alpha = 0.35f))
+                                .padding(horizontal = 8.dp, vertical = 3.dp),
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Image, null, tint = Color.White, modifier = Modifier.size(12.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("图片", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                            }
                         }
                     }
-                    else -> {
-                        Box(Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp, color = MiyaColors.Primary)
+                }
+                loadFailed -> {
+                    Box(Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) {
+                        Text("图片加载失败", fontSize = 12.sp, color = Color.White.copy(alpha = 0.4f))
+                    }
+                }
+                else -> {
+                    Box(Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp, color = MiyaColors.Primary)
+                    }
+                }
+            }
+        } else {
+            val reqPainter = rememberAsyncImagePainter(
+                model = ImageRequest.Builder(LocalContext.current).data(src).crossfade(true).build(),
+                placeholder = ColorPainter(Color.White.copy(alpha = 0.05f)),
+                error = ColorPainter(Color.White.copy(alpha = 0.05f)),
+            )
+            val urlW = remember { mutableIntStateOf(0) }
+            val urlH = remember { mutableIntStateOf(0) }
+            LaunchedEffect(reqPainter.state) {
+                if (reqPainter.state is AsyncImagePainter.State.Success) {
+                    val d = (reqPainter.state as AsyncImagePainter.State.Success).result.drawable
+                    urlW.intValue = d.intrinsicWidth
+                    urlH.intValue = d.intrinsicHeight
+                }
+            }
+            if (urlW.intValue > 0) {
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val ratio = urlH.intValue.toFloat() / urlW.intValue.toFloat()
+                    val displayHeight = minOf(maxWidth * ratio, 400.dp)
+                    Image(
+                        painter = reqPainter,
+                        contentDescription = "图片",
+                        modifier = Modifier.fillMaxWidth().height(displayHeight).clip(RoundedCornerShape(10.dp)),
+                        contentScale = ContentScale.FillBounds,
+                    )
+                    Box(
+                        Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                            .background(Color.Black.copy(alpha = 0.35f))
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Image, null, tint = Color.White, modifier = Modifier.size(12.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("图片", style = MaterialTheme.typography.labelSmall, color = Color.White)
                         }
                     }
                 }
             } else {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current).data(src).crossfade(true).build(),
-                    contentDescription = "图片",
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)),
-                    contentScale = ContentScale.FillWidth,
-                    placeholder = ColorPainter(Color.White.copy(alpha = 0.05f)),
-                    error = ColorPainter(Color.White.copy(alpha = 0.05f)),
-                )
+                Box(Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
+                    Image(
+                        painter = reqPainter,
+                        contentDescription = "图片",
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)),
+                        contentScale = ContentScale.FillWidth,
+                    )
+                    Box(
+                        Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                            .background(Color.Black.copy(alpha = 0.35f))
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Image, null, tint = Color.White, modifier = Modifier.size(12.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("图片", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                        }
+                    }
+                }
             }
+        }
+    }
 
+    if (showFullScreen) {
+        Dialog(
+            onDismissRequest = { showFullScreen = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+        ) {
             Box(
-                Modifier.align(Alignment.BottomStart).fillMaxWidth()
-                    .background(Color.Black.copy(alpha = 0.35f))
-                    .padding(horizontal = 8.dp, vertical = 3.dp),
+                Modifier.fillMaxSize().background(Color.Black).clickable { showFullScreen = false },
+                contentAlignment = Alignment.Center,
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Image, null, tint = Color.White, modifier = Modifier.size(12.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("图片", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                if (imageBitmap != null) {
+                    Image(
+                        bitmap = imageBitmap!!,
+                        contentDescription = "全屏图片",
+                        modifier = Modifier.fillMaxSize().padding(16.dp),
+                        contentScale = ContentScale.Fit,
+                    )
+                } else {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current).data(src).crossfade(true).build(),
+                        contentDescription = "全屏图片",
+                        modifier = Modifier.fillMaxSize().padding(16.dp),
+                        contentScale = ContentScale.Fit,
+                        placeholder = ColorPainter(Color.White.copy(alpha = 0.05f)),
+                    )
+                }
+                IconButton(
+                    onClick = { showFullScreen = false },
+                    modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp).size(40.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.5f)),
+                ) {
+                    Icon(Icons.Default.Close, "关闭", tint = Color.White, modifier = Modifier.size(20.dp))
                 }
             }
         }
@@ -635,7 +745,7 @@ private fun StreamingBubble(text: String) {
 
         Surface(
             shape = RoundedCornerShape(18.dp, 18.dp, 18.dp, 6.dp),
-            color = Color(0xFF2D2228).copy(alpha = 0.92f),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
             modifier = Modifier.widthIn(max = 280.dp),
         ) {
             Box(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
@@ -654,15 +764,16 @@ private fun StreamingBubble(text: String) {
 
 @Composable
 private fun TypingBubble() {
+    val transition = rememberInfiniteTransition()
     val alphas = listOf(0, 120, 240).map { delay ->
-        rememberInfiniteTransition().animateFloat(0.4f, 1f, infiniteRepeatable(tween(400, delayMillis = delay), RepeatMode.Reverse)).value
+        transition.animateFloat(0.4f, 1f, infiniteRepeatable(tween(400, delayMillis = delay), RepeatMode.Reverse)).value
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
         MiyaChatAvatar(
             modifier = Modifier.padding(top = 4.dp, end = 8.dp).pulseGlow(MiyaColors.Primary.copy(alpha = 0.4f), radius = 28.dp, durationMs = 1500),
             size = 32.dp,
         )
-        Surface(shape = RoundedCornerShape(18.dp, 18.dp, 18.dp, 6.dp), color = Color(0xFF2D2228).copy(alpha = 0.92f)) {
+        Surface(shape = RoundedCornerShape(18.dp, 18.dp, 18.dp, 6.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f)) {
             Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                 alphas.forEach { alpha ->
                     Box(Modifier.size(7.dp).clip(CircleShape).background(MiyaColors.Primary.copy(alpha = alpha)))
@@ -683,7 +794,7 @@ private fun ChatInputBar(
     onToggleSticker: () -> Unit,
 ) {
     val hasContent = text.isNotBlank()
-    Surface(color = Color(0xFF1A1218).copy(alpha = 0.95f), tonalElevation = 0.dp) {
+    Surface(color = MaterialTheme.colorScheme.background.copy(alpha = 0.95f), tonalElevation = 0.dp) {
         Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onAttachment, modifier = Modifier.size(36.dp)) {
                 Icon(Icons.Default.Add, "附件", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
@@ -783,9 +894,3 @@ object MarkdownParser {
     }
 }
 
-private fun formatFileSize(size: Long): String = when {
-    size < 1024 -> "${size}B"
-    size < 1024 * 1024 -> "${size / 1024}KB"
-    size < 1024 * 1024 * 1024 -> "${"%.1f".format(size.toFloat() / (1024 * 1024))}MB"
-    else -> "${"%.2f".format(size.toFloat() / (1024 * 1024 * 1024))}GB"
-}

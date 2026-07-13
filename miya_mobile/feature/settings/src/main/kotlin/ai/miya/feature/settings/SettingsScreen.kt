@@ -178,7 +178,7 @@ fun SettingsScreen(
                             // Default
                             Box(
                                 Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(10.dp))
-                                    .background(Color(0xFF1A111A))
+                                    .background(MaterialTheme.colorScheme.background)
                                     .clickable { viewModel.selectBackground(null) },
                             ) {
                                 if (state.backgroundUri == null) {
