@@ -611,7 +611,7 @@ class JsonBackend(MemoryBackend):
 
                         if self._match_query(memory, query):
                             results.append(memory)
-                except (json.JSONDecodeError, IOError, OSError):
+                except (json.JSONDecodeError, OSError):
                     continue
 
         results = self._sort_results(results, query.sort_by, query.sort_order)
