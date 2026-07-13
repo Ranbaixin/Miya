@@ -1220,7 +1220,7 @@ class WebAPI:
                 pending = getattr(self.decision_hub, "_mobile_pending", {})
                 msgs = pending.pop(str(user_id), [])
                 return {"messages": msgs}
-            except Exception as e:
+            except Exception:
                 return {"messages": []}
 
         @self.router.post("/api/chat/upload")
