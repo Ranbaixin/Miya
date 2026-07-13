@@ -151,7 +151,6 @@ class CognitiveEngine:
 
     def _extract_keywords(self, text: str) -> List[str]:
         """提取关键词 — 预定义词典 + jieba 通用分词 + 正则模式"""
-        text_lower = text.lower()
         keywords = []
 
         # 1. 预定义话题关键词

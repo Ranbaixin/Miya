@@ -1952,7 +1952,7 @@ class MiyaMemoryCore:
 
                 try:
                     last_time = datetime.fromisoformat(last_access)
-                    if (datetime.now() - last_time).days >= days:
+                    if last_time < cut_date:
                         # 降低优先级
                         memory.priority = max(0.1, memory.priority - 0.1)
                         await self.backend.save(memory)
