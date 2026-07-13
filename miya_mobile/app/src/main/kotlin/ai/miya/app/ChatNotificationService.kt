@@ -105,10 +105,11 @@ class ChatNotificationService : Service() {
 
     private fun startPolling() {
         scope.launch {
+            delay(5000) // 等 App 初始化完成
             while (isActive) {
                 delay(15_000)
                 try {
-                    val api = ServiceRegistry.getOrThrow(MiyaApiClient::class.java)
+                    val api = ServiceRegistry.get(MiyaApiClient::class.java) ?: continue
                     val msgs = api.getPendingMessages("default")
                     for (msg in msgs) {
                         val text = msg["message"] ?: continue

@@ -39,6 +39,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -55,6 +56,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 
 @Composable
 fun ChatScreen(
@@ -84,6 +87,13 @@ private fun ChatContent(viewModel: ChatViewModel, onBack: (() -> Unit)?) {
 
     LaunchedEffect(state.messages.size) { listState.animateScrollToItem(listState.layoutInfo.totalItemsCount) }
     LaunchedEffect(state.streamedText) { if (atBottom) listState.animateScrollToItem(listState.layoutInfo.totalItemsCount) }
+
+    // 键盘弹起时自动滚到底部
+    val imeHeight = WindowInsets.ime.getBottom(LocalDensity.current)
+    val isImeVisible = imeHeight > 0
+    LaunchedEffect(isImeVisible) {
+        if (isImeVisible) { listState.animateScrollToItem(listState.layoutInfo.totalItemsCount) }
+    }
 
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let { viewModel.setPendingImage(it) }
@@ -170,7 +180,7 @@ private fun ChatContent(viewModel: ChatViewModel, onBack: (() -> Unit)?) {
             }
         }
 
-        Column(modifier = Modifier.fillMaxSize().statusBarsPadding().padding(top = if (onBack != null) 44.dp else 4.dp)) {
+        Column(modifier = Modifier.fillMaxSize().padding(top = if (onBack != null) 44.dp else 0.dp)) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
@@ -607,7 +617,7 @@ private fun ChatInputBar(
     val viewModel = androidx.lifecycle.viewmodel.compose.viewModel<ChatViewModel>()
     val hasContent = text.isNotBlank()
     Surface(color = Color(0xFF1A1218).copy(alpha = 0.95f), tonalElevation = 0.dp) {
-        Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onAttachment, modifier = Modifier.size(36.dp)) {
                 Icon(Icons.Default.Add, "附件", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
             }

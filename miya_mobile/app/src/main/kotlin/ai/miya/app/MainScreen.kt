@@ -40,62 +40,33 @@ fun MainScreen() {
 
     MiyaTheme {
         Box(modifier = Modifier.fillMaxSize()) {
-            MiyaBackground(
-                accentColor = theme.primary,
-                backgroundUri = bgUri,
-            )
+            MiyaBackground(accentColor = theme.primary, backgroundUri = bgUri)
 
-            Scaffold(
-                containerColor = Color.Transparent,
-                contentColor = theme.onSurface,
-                bottomBar = {
-                    if (activeSessionId == null) {
+            if (activeSessionId != null) {
+                ChatScreen(sessionId = activeSessionId!!, onBack = { activeSessionId = null })
+            } else {
+                Scaffold(
+                    containerColor = Color.Transparent,
+                    contentColor = theme.onSurface,
+                    bottomBar = {
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .navigationBarsPadding()
-                                .padding(bottom = 4.dp)
-                                .background(
-                                    Brush.verticalGradient(
-                                        colors = listOf(Color.Transparent, Color(0xFF1A111A).copy(alpha = 0.5f), Color(0xFF1A111A).copy(alpha = 0.85f))
-                                    )
-                                )
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
+                                .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xFF1A111A).copy(alpha = 0.5f), Color(0xFF1A111A).copy(alpha = 0.85f))))
                                 .padding(vertical = 6.dp),
                         ) {
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly,
-                            ) {
-                                TabItem(
-                                    selected = selectedTab == 0,
-                                    onClick = { selectedTab = 0; activeSessionId = null },
-                                    icon = { Icon(Icons.Default.QuestionAnswer, null, modifier = Modifier.size(20.dp)) },
-                                    label = "聊天",
-                                )
-                                TabItem(
-                                    selected = selectedTab == 1,
-                                    onClick = { selectedTab = 1; activeSessionId = null },
-                                    icon = { Icon(Icons.Default.Settings, null, modifier = Modifier.size(20.dp)) },
-                                    label = "设置",
-                                )
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                                TabItem(selected = selectedTab == 0, onClick = { selectedTab = 0; activeSessionId = null },
+                                    icon = { Icon(Icons.Default.QuestionAnswer, null, modifier = Modifier.size(20.dp)) }, label = "聊天")
+                                TabItem(selected = selectedTab == 1, onClick = { selectedTab = 1; activeSessionId = null },
+                                    icon = { Icon(Icons.Default.Settings, null, modifier = Modifier.size(20.dp)) }, label = "设置")
                             }
                         }
-                    }
-                },
-            ) { innerPadding ->
-                Box(Modifier.padding(innerPadding)) {
-                    when {
-                        activeSessionId != null -> ChatScreen(
-                            sessionId = activeSessionId!!,
-                            onBack = { activeSessionId = null },
-                        )
-                        else -> {
-                            when (selectedTab) {
-                                0 -> SessionListScreen(
-                                    onEnterSession = { sessionId -> activeSessionId = sessionId },
-                                )
-                                1 -> SettingsScreen()
-                            }
+                    },
+                ) { innerPadding ->
+                    Box(Modifier.padding(innerPadding).fillMaxSize()) {
+                        when (selectedTab) {
+                            0 -> SessionListScreen(onEnterSession = { sessionId -> activeSessionId = sessionId })
+                            1 -> SettingsScreen()
                         }
                     }
                 }
@@ -105,21 +76,9 @@ fun MainScreen() {
 }
 
 @Composable
-private fun TabItem(
-    selected: Boolean,
-    onClick: () -> Unit,
-    icon: @Composable () -> Unit,
-    label: String,
-) {
-    val color by animateColorAsState(
-        if (selected) MiyaColors.Primary else Color.White.copy(alpha = 0.4f),
-        tween(200),
-    )
-
-    Column(
-        Modifier.clickable(onClick = onClick).padding(horizontal = 24.dp, vertical = 0.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
+private fun TabItem(selected: Boolean, onClick: () -> Unit, icon: @Composable () -> Unit, label: String) {
+    val color by animateColorAsState(if (selected) MiyaColors.Primary else Color.White.copy(alpha = 0.4f), tween(200))
+    Column(Modifier.clickable(onClick = onClick).padding(horizontal = 24.dp, vertical = 0.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         icon()
         Spacer(Modifier.height(1.dp))
         CompositionLocalProvider(LocalContentColor provides color) {
