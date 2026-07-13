@@ -106,81 +106,42 @@ private fun ChatContent(viewModel: ChatViewModel, onBack: (() -> Unit)?) {
 
     Box(modifier = Modifier.fillMaxSize()) {
 
-        if (onBack != null) {
-            Row(
-                Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 4.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onSurface)
+        Column(modifier = Modifier.fillMaxSize()) {
+            // ─ 返回栏 (固定顶部) ─
+            if (onBack != null) {
+                Surface(color = Color(0xFF1A1218).copy(alpha = 0.92f), tonalElevation = 0.dp) {
+                    Row(
+                        Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 4.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回", tint = MaterialTheme.colorScheme.onSurface)
+                        }
+                        Spacer(Modifier.width(4.dp))
+                        Text(state.sessions.find { it.id == state.currentSessionId }?.displayName ?: "聊天",
+                            style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface)
+                    }
                 }
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    state.sessions.find { it.id == state.currentSessionId }?.displayName ?: "聊天",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
             }
-        }
 
-        if (onBack == null && state.sessions.size > 1) {
-            val name = state.sessions.find { it.id == state.currentSessionId }?.displayName ?: "聊天"
-            Surface(
-                color = Color(0xFF2D2228).copy(alpha = 0.85f),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 8.dp),
-            ) {
-                Row(
-                    Modifier.clickable { viewModel.toggleSessionPicker() }.padding(horizontal = 14.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+            // 会话标签
+            if (onBack == null && state.sessions.size > 1) {
+                val name = state.sessions.find { it.id == state.currentSessionId }?.displayName ?: "聊天"
+                Surface(
+                    color = Color(0xFF2D2228).copy(alpha = 0.85f), shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(top = 4.dp, start = 8.dp, end = 8.dp),
                 ) {
-                    Text(name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.width(4.dp))
-                    Icon(Icons.Default.ExpandMore, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
-                }
-            }
-        }
-
-        AnimatedVisibility(
-            visible = state.showSessionPicker,
-            enter = fadeIn(tween(200)) + scaleIn(tween(200)),
-            exit = fadeOut(tween(150)) + scaleOut(tween(150)),
-            modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 50.dp),
-        ) {
-            Surface(color = Color(0xFF2D2228), shape = RoundedCornerShape(14.dp), tonalElevation = 8.dp, modifier = Modifier.widthIn(max = 280.dp)) {
-                Column(Modifier.padding(12.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("会话", style = MaterialTheme.typography.titleSmall)
-                        IconButton(onClick = { viewModel.newSession() }, modifier = Modifier.size(28.dp)) {
-                            Icon(Icons.Default.Add, "新建", tint = MiyaColors.Primary, modifier = Modifier.size(16.dp))
-                        }
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    state.sessions.take(5).forEach { s ->
-                        Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { viewModel.selectSession(s.id) }
-                                .background(if (s.id == state.currentSessionId) MiyaColors.Primary.copy(alpha = 0.1f) else Color.Transparent)
-                                .padding(horizontal = 10.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text(s.displayName ?: s.name ?: s.id, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
-                                if (s.messageCount != null) Text("${s.messageCount}条", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            if (s.id == state.currentSessionId) Icon(Icons.Default.Check, null, tint = MiyaColors.Primary, modifier = Modifier.size(14.dp))
-                            if (s.id != "default") {
-                                IconButton(onClick = { viewModel.deleteSession(s.id) }, modifier = Modifier.size(24.dp)) {
-                                    Icon(Icons.Default.Close, "删除", modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        }
+                    Row(Modifier.clickable { viewModel.toggleSessionPicker() }.padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.weight(1f))
+                        Icon(Icons.Default.ExpandMore, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
                     }
                 }
             }
-        }
 
-        Column(modifier = Modifier.fillMaxSize().padding(top = if (onBack != null) 44.dp else 0.dp)) {
+            // ─ 聊天区 (weight=1f 填充剩余) ─
+            Column(modifier = Modifier.weight(1f)) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
@@ -364,6 +325,46 @@ private fun ChatContent(viewModel: ChatViewModel, onBack: (() -> Unit)?) {
                 isStreaming = state.isStreaming,
                 onAttachment = { viewModel.toggleAttachmentPicker() },
             )
+        }
+        } // 关闭外层 Column
+
+        // Session picker dropdown
+        AnimatedVisibility(
+            visible = state.showSessionPicker,
+            enter = fadeIn(tween(200)) + scaleIn(tween(200)),
+            exit = fadeOut(tween(150)) + scaleOut(tween(150)),
+            modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 50.dp),
+        ) {
+            Surface(color = Color(0xFF2D2228), shape = RoundedCornerShape(14.dp), tonalElevation = 8.dp, modifier = Modifier.widthIn(max = 280.dp)) {
+                Column(Modifier.padding(12.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("会话", style = MaterialTheme.typography.titleSmall)
+                        IconButton(onClick = { viewModel.newSession() }, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.Add, "新建", tint = MiyaColors.Primary, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    state.sessions.take(5).forEach { s ->
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { viewModel.selectSession(s.id) }
+                                .background(if (s.id == state.currentSessionId) MiyaColors.Primary.copy(alpha = 0.1f) else Color.Transparent)
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(s.displayName ?: s.name ?: s.id, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                                if (s.messageCount != null) Text("${s.messageCount}条", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            if (s.id == state.currentSessionId) Icon(Icons.Default.Check, null, tint = MiyaColors.Primary, modifier = Modifier.size(14.dp))
+                            if (s.id != "default") {
+                                IconButton(onClick = { viewModel.deleteSession(s.id) }, modifier = Modifier.size(24.dp)) {
+                                    Icon(Icons.Default.Close, "删除", modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
