@@ -80,11 +80,21 @@ COLUMN_TYPES = {
 
 
 def _load_sqlite_config() -> dict:
-    """从 text_config.json 加载 SQLite 配置"""
+    """从 memory_config.json 或 text_config.json 加载 SQLite 配置"""
+    config_dir = Path(__file__).parent.parent / "config"
     try:
-        config_path = Path(__file__).parent.parent / "config" / "text_config.json"
-        if config_path.exists():
-            with open(config_path, "r", encoding="utf-8") as f:
+        memory_config_path = config_dir / "memory_config.json"
+        text_config_path = config_dir / "text_config.json"
+
+        if memory_config_path.exists():
+            with open(memory_config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+            db_config = config.get("sqlite_backend")
+            if db_config:
+                return db_config
+
+        if text_config_path.exists():
+            with open(text_config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
             return config.get("sqlite_backend", {})
     except Exception as e:
@@ -244,8 +254,9 @@ class SQLiteBackend(MemoryBackend):
             conn = self._get_conn()
             placeholders = ", ".join(["?"] * len(COLUMNS))
             columns_str = ", ".join(COLUMNS)
+            conn.execute(f"DELETE FROM {self._table_name} WHERE id = ?", (memory.id,))
             conn.execute(
-                f"INSERT OR REPLACE INTO {self._table_name} ({columns_str}) VALUES ({placeholders})",
+                f"INSERT INTO {self._table_name} ({columns_str}) VALUES ({placeholders})",
                 self._build_values(memory),
             )
             conn.commit()
@@ -311,9 +322,13 @@ class SQLiteBackend(MemoryBackend):
                 conditions.append("significance <= ?")
                 params.append(query.max_significance)
             if query.query:
-                pattern = f"{self._like_prefix}{query.query}{self._like_suffix}"
-                conditions.append("(content LIKE ? OR tags LIKE ?)")
-                params.extend([pattern, pattern])
+                escaped_query = query.query.replace('"', '""')
+                fts_condition = (
+                    f"rowid IN (SELECT rowid FROM {self._fts_name} "
+                    f"WHERE {self._fts_name} MATCH ?)"
+                )
+                conditions.append(fts_condition)
+                params.append(escaped_query)
             if query.tags:
                 for tag in query.tags:
                     conditions.append("tags LIKE ?")

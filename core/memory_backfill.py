@@ -27,10 +27,19 @@ class MemoryBackfill:
     """弥娅记忆回填器"""
 
     def __init__(self, ap_engine=None):
+        from pathlib import Path as _Path
+
+        try:
+            from config.memory_config import get_storage_dir
+
+            data_dir = get_storage_dir()
+        except Exception:
+            data_dir = "data/memory"
+
         self._engine = ap_engine
-        self._db_path = Path("data/memory/miya_memory.db")
-        self._cognitive_path = Path("data/memory/cognitive_memories.json")
-        self._backup_dir = Path("data/memory/backups")
+        self._db_path = _Path(data_dir) / "miya_memory.db"
+        self._cognitive_path = _Path(data_dir) / "cognitive_memories.json"
+        self._backup_dir = _Path(data_dir) / "backups"
 
         self._loaded_ids: set[str] = set()
         self._pending: deque[dict[str, Any]] = deque()
@@ -43,7 +52,7 @@ class MemoryBackfill:
             return 0
 
         try:
-            conn = sqlite3.connect(str(self._db_path))
+            conn = sqlite3.connect(str(self._db_path), check_same_thread=False)
             conn.row_factory = sqlite3.Row
             cur = conn.cursor()
             cur.execute(
@@ -182,15 +191,15 @@ class MemoryBackfill:
         if not self._db_path.exists():
             return 0
         try:
-            conn = sqlite3.connect(str(self._db_path))
+            conn = sqlite3.connect(str(self._db_path), check_same_thread=False)
             conn.row_factory = sqlite3.Row
             cur = conn.cursor()
             if self._loaded_ids:
                 placeholders = ",".join("?" * min(len(self._loaded_ids), 500))
                 query = (
                     "SELECT id, content, level, priority, tags, user_id, created_at "
-                    "FROM memories WHERE id NOT IN ({}) "
-                    "ORDER BY priority DESC, created_at DESC LIMIT ?".format(placeholders)
+                    f"FROM memories WHERE id NOT IN ({placeholders}) "
+                    "ORDER BY priority DESC, created_at DESC LIMIT ?"
                 )
                 params = list(self._loaded_ids)[:500] + [batch]
             else:

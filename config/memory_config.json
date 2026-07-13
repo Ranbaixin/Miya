@@ -144,5 +144,36 @@
     "track_access": true,
     "track_level_distribution": true,
     "track_storage_size": true
+  },
+
+  "sqlite_backend": {
+    "_note": "SQLite 配置优先从本文件读取，回退到 text_config.json",
+    "enabled": true,
+    "db_path": "data/memory/miya_memory.db",
+    "pragma": {
+      "journal_mode": "WAL",
+      "foreign_keys": true,
+      "synchronous": "NORMAL",
+      "cache_size": -64000,
+      "temp_store": "MEMORY"
+    },
+    "table": {
+      "name": "memories",
+      "fts_enabled": true,
+      "fts_name": "memories_fts",
+      "fts_columns": ["content", "tags"]
+    },
+    "indexes": [
+      {"name": "idx_memories_user_id", "column": "user_id"},
+      {"name": "idx_memories_group_id", "column": "group_id"},
+      {"name": "idx_memories_level", "column": "level"},
+      {"name": "idx_memories_created_at", "column": "created_at"},
+      {"name": "idx_memories_priority", "column": "priority"}
+    ],
+    "query": {
+      "default_order": "priority DESC, created_at DESC",
+      "like_pattern_prefix": "%",
+      "like_pattern_suffix": "%"
+    }
   }
 }

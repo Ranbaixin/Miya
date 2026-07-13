@@ -14,6 +14,7 @@
 
 import json
 import logging
+import os
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -132,7 +133,11 @@ class MemoryEnhancer:
     - 记忆精炼
     """
 
-    def __init__(self, data_dir: str = "data/memory"):
+    def __init__(self, data_dir: str = None):
+        from memory import DEFAULT_MEMORY_DIR
+
+        if data_dir is None:
+            data_dir = DEFAULT_MEMORY_DIR
         self.data_dir = data_dir
         self._link_file = f"{data_dir}/memory_links.json"
         self._weight_file = f"{data_dir}/memory_weights.json"
@@ -150,8 +155,6 @@ class MemoryEnhancer:
 
     async def initialize(self):
         """初始化"""
-        import os
-
         os.makedirs(self.data_dir, exist_ok=True)
 
         await self._load_links()
@@ -395,8 +398,23 @@ class MemoryEnhancer:
     ) -> List[Dict]:
         """获取情感记忆"""
         result = []
-        # 遍历所有记忆查找情感记忆
-        # 这里只是简单示例，实际需要查询存储
+
+        memory_ids_with_emotion = [
+            mid for mid, w in self._weights.items() if w.emotional_boost > 0
+        ]
+
+        for mid in memory_ids_with_emotion:
+            weight = self._weights.get(mid)
+            if not weight:
+                continue
+            result.append({
+                "memory_id": mid,
+                "emotional_boost": weight.emotional_boost,
+                "last_accessed": weight.last_accessed,
+                "base_weight": weight.base_weight,
+            })
+
+        result.sort(key=lambda x: x["emotional_boost"], reverse=True)
         return result
 
     # ==================== 记忆遗忘机制 ====================

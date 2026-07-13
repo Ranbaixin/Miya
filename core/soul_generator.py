@@ -1520,10 +1520,16 @@ class SoulGenerator:
             from core.ai_client import AIMessage
 
             messages = [AIMessage(role="user", content=prompt)]
-            timeout_seconds = _CONFIG.get("AI_EMOTION_ANALYSIS_TIMEOUT")
+            timeout_seconds = _CONFIG.get("AI_EMOTION_ANALYSIS_TIMEOUT", 90)
+            soul_max_tokens = _CONFIG.get("AI_EMOTION_ANALYSIS_MAX_TOKENS", 1500)
             try:
                 response = await asyncio.wait_for(
-                    ai_client.chat(messages=messages, tools=None, use_miya_prompt=False),
+                    ai_client.chat(
+                        messages=messages,
+                        tools=None,
+                        use_miya_prompt=False,
+                        max_tokens=soul_max_tokens,
+                    ),
                     timeout=timeout_seconds,
                 )
             except asyncio.TimeoutError:
@@ -1571,9 +1577,13 @@ class SoulGenerator:
                 # 策略3: 宽松正则提取字段（JSON完全畸形时的fallback）
                 result = {}
                 for field in ["inner_thought", "attribution", "reflection"]:
-                    m = re.search(rf'"{field}"\s*:\s*"([^"]*)"', text)
+                    m = re.search(
+                        rf'"{field}"\s*:\s*"((?:[^"\\]|\\.)*)"',
+                        text,
+                        re.DOTALL,
+                    )
                     if m:
-                        result[field] = m.group(1)
+                        result[field] = m.group(1).replace('\\"', '"').replace("\\n", "\n")
                 # 提取 emotions 列表
                 emo_match = re.search(r'"emotions"\s*:\s*\[(.*?)\]', text, re.DOTALL)
                 if emo_match:
@@ -1590,6 +1600,22 @@ class SoulGenerator:
                     if missing:
                         logger.warning(f"[灵魂] 策略3正则解析缺字段: {missing} | 原始响应前200字: {text[:200]}")
                     return result
+
+                # 策略5: 尝试闭合被截断的JSON（AI响应生成中耗尽max_tokens）
+                truncated_text = text.rstrip()
+                if truncated_text and "{" in truncated_text:
+                    brace_diff = truncated_text.count("{") - truncated_text.count("}")
+                    if brace_diff > 0 or not truncated_text.endswith("}"):
+                        if brace_diff <= 0:
+                            brace_diff = 1
+                        fixed_text = truncated_text + "\n" + "}" * brace_diff
+                        try:
+                            parsed = json.loads(fixed_text)
+                            if isinstance(parsed, dict):
+                                logger.info(f"[灵魂] 策略5截断JSON闭合恢复成功")
+                                return parsed
+                        except json.JSONDecodeError:
+                            pass
 
                 # 策略4: 从碎片化中文文本中提取情绪关键词和内心独白
                 frag_result = {}

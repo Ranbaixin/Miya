@@ -39,6 +39,7 @@ class APMemoryFusion:
         self._write_lock = threading.Lock()
         self._last_write_time = 0.0
         self._write_interval = 10.0  # 每 10 秒批量写一次
+        self._energy_priority_divisor = 5.0
         self._auto_write_running = False
 
     async def initialize(self) -> APMemoryFusion:
@@ -62,7 +63,7 @@ class APMemoryFusion:
             return 0
 
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
         except RuntimeError:
             loop = asyncio.new_event_loop()
 
@@ -141,7 +142,7 @@ class APMemoryFusion:
             return 0
 
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
         except RuntimeError:
             loop = asyncio.new_event_loop()
 
@@ -163,7 +164,7 @@ class APMemoryFusion:
                         content=f"{item['display_text']}",
                         user_id="miya_ap",
                         tags=tags,
-                        priority=min(item["energy"] / 5.0, 1.0),
+                        priority=min(item["energy"] / self._energy_priority_divisor, 1.0),
                         metadata={
                             "ap_label": item["label"],
                             "ap_family": item["family"],

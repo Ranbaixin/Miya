@@ -241,7 +241,7 @@ class MemoryItem:
             return False
         try:
             return datetime.now() > datetime.fromisoformat(self.expires_at)
-        except:
+        except (ValueError, TypeError):
             return False
 
     def is_valid(self) -> bool:
@@ -380,14 +380,14 @@ class JsonBackend(MemoryBackend):
         # 文件锁保护索引读写 (懒初始化，避免 event loop 绑定问题)
         self._index_lock: Optional[asyncio.Lock] = None
 
+        self._load_index()
+        self._load_tag_index()
+        self._cleanup_stale_entries()
+
     async def _get_lock(self) -> asyncio.Lock:
         if self._index_lock is None:
             self._index_lock = asyncio.Lock()
         return self._index_lock
-
-        self._load_index()
-        self._load_tag_index()
-        self._cleanup_stale_entries()
 
     def _load_index(self):
         if self.index_file.exists():
@@ -588,6 +588,9 @@ class JsonBackend(MemoryBackend):
             group_candidates = self._get_candidates_by_group(query.group_id)
             candidate_ids = group_candidates if candidate_ids is None else candidate_ids & group_candidates
 
+        if candidate_ids is None:
+            candidate_ids = set(self._index.keys())
+
         search_levels = [query.levels] if query.levels else [query.level] if query.level else list(MemoryLevel)
 
         for level in search_levels:
@@ -608,7 +611,7 @@ class JsonBackend(MemoryBackend):
 
                         if self._match_query(memory, query):
                             results.append(memory)
-                except:
+                except (json.JSONDecodeError, IOError, OSError):
                     continue
 
         results = self._sort_results(results, query.sort_by, query.sort_order)
@@ -679,7 +682,7 @@ class JsonBackend(MemoryBackend):
                     return False
                 if query.end_time and mem_time > query.end_time:
                     return False
-            except:
+            except (ValueError, TypeError):
                 pass
 
         # 归档过滤
@@ -1109,7 +1112,7 @@ class MiyaMemoryCore:
         if isinstance(level, str):
             try:
                 level = MemoryLevel(level)
-            except:
+            except (ValueError, KeyError):
                 level = MemoryLevel.SHORT_TERM
         elif level is None:
             level = MemoryLevel.SHORT_TERM
@@ -1118,7 +1121,7 @@ class MiyaMemoryCore:
         if isinstance(source, str):
             try:
                 source = MemorySource(source)
-            except:
+            except (ValueError, KeyError):
                 source = MemorySource.SYSTEM
 
         # 自动分类
@@ -1772,7 +1775,7 @@ class MiyaMemoryCore:
                     memory.is_archived = True
                     await self.backend.save(memory)
                     count += 1
-            except:
+            except (ValueError, TypeError):
                 pass
 
         logger.info(f"[MiyaMemoryCore] 归档了 {count} 条旧对话")
@@ -1884,9 +1887,9 @@ class MiyaMemoryCore:
                         memory.priority = max(0.1, memory.priority - 0.1)
                         await self.backend.save(memory)
                         count += 1
-                except:
+                except (ValueError, TypeError):
                     pass
-            except:
+            except (ValueError, TypeError):
                 pass
 
         if count > 0:
@@ -1936,25 +1939,6 @@ class MiyaMemoryCore:
         profile["platforms"] = list(profile["platforms"])
 
         return profile
-
-    # ==================== 统计 ====================
-
-    async def get_statistics(self) -> Dict:
-        """获取统计"""
-        return {
-            "total_cached": len(self._cache),
-            "total_indexed": await self.backend.count(),
-            "by_level": {
-                "dialogue": len([m for m in self._cache.values() if m.level == MemoryLevel.DIALOGUE]),
-                "short_term": len([m for m in self._cache.values() if m.level == MemoryLevel.SHORT_TERM]),
-                "long_term": len([m for m in self._cache.values() if m.level == MemoryLevel.LONG_TERM]),
-                "semantic": len([m for m in self._cache.values() if m.level == MemoryLevel.SEMANTIC]),
-                "knowledge": len([m for m in self._cache.values() if m.level == MemoryLevel.KNOWLEDGE]),
-            },
-            "by_user": len(self._user_index),
-            "by_tag": len(self._tag_index),
-            "stats": self._stats,
-        }
 
     # ==================== 同步方法 ====================
 

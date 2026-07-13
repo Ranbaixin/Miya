@@ -16,10 +16,9 @@ from core.text_loader import get_text
 
 async def _get_memory_core():
     """获取记忆核心"""
-    from memory import get_memory_core, reset_memory_core
+    from memory import get_memory_core, DEFAULT_MEMORY_DIR
 
-    reset_memory_core()
-    return await get_memory_core("data/memory")
+    return await get_memory_core(DEFAULT_MEMORY_DIR)
 
 
 def _get_memory_aliases():

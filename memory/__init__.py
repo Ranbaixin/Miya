@@ -55,6 +55,8 @@ from memory.memory_enhancer import (
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_MEMORY_DIR = "data/memory"
+
 
 # ==================== 便捷存储函数 ====================
 
@@ -208,7 +210,7 @@ async def store_cognition(
 
     # 同时写入 JSON 文件，方便可视化查看
     try:
-        json_path = Path("data/memory/cognitive_memories.json")
+        json_path = Path(DEFAULT_MEMORY_DIR) / "cognitive_memories.json"
         json_path.parent.mkdir(parents=True, exist_ok=True)
 
         # 读取现有数据
@@ -439,11 +441,14 @@ class MiyaMemory:
         self._core: Optional[MiyaMemoryCore] = None
         self._initialized = True
 
+    @classmethod
     async def get_instance(
         cls,
-        data_dir: Union[str, Path] = "data/memory",
+        data_dir: Union[str, Path] = None,
     ) -> "MiyaMemory":
         """获取实例"""
+        if data_dir is None:
+            data_dir = DEFAULT_MEMORY_DIR
         if cls._instance is None:
             cls._instance = cls()
 
@@ -617,8 +622,10 @@ class MemoryCategory:
     KNOWLEDGE = "knowledge"
 
 
-def get_unified_memory(data_dir="data/memory"):
+def get_unified_memory(data_dir=None):
     """旧接口兼容 - 同步/异步安全获取统一记忆"""
+    if data_dir is None:
+        data_dir = DEFAULT_MEMORY_DIR
     global _unified_memory_sync
     if _unified_memory_sync is None:
         import asyncio
@@ -639,8 +646,10 @@ def get_unified_memory(data_dir="data/memory"):
     return _unified_memory_sync
 
 
-async def init_unified_memory(data_dir="data/memory"):
+async def init_unified_memory(data_dir=None):
     """旧接口兼容 - 初始化统一记忆"""
+    if data_dir is None:
+        data_dir = DEFAULT_MEMORY_DIR
     return get_unified_memory(data_dir)
 
 

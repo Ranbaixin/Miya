@@ -586,6 +586,7 @@ class OpenAIClient(BaseAIClient):
         max_iterations: int = 20,
         use_miya_prompt: bool = True,
         tool_choice: str = "auto",
+        max_tokens: int = None,
     ) -> str:
         """调用OpenAI聊天接口（支持工具调用）
 
@@ -642,7 +643,7 @@ class OpenAIClient(BaseAIClient):
                     "model": self.model,
                     "messages": openai_messages,
                     "temperature": self.config.get("temperature", 0.7),
-                    "max_tokens": self.config.get("max_tokens", 2000),
+                    "max_tokens": max_tokens or self.config.get("max_tokens", 2000),
                 }
 
                 # 添加工具相关参数
