@@ -569,7 +569,7 @@ class JsonBackend(MemoryBackend):
                 return False
 
     async def query(self, query: MemoryQuery) -> List[MemoryItem]:
-        """查询记忆 - 优化版"""
+        """查询记忆 - 使用内存索引直读文件路径，避免全量文件系统扫描"""
         cached = self.get_from_cache(query)
         if cached is not None:
             return cached
@@ -591,28 +591,39 @@ class JsonBackend(MemoryBackend):
         if candidate_ids is None:
             candidate_ids = set(self._index.keys())
 
-        search_levels = [query.levels] if query.levels else [query.level] if query.level else list(MemoryLevel)
+        search_levels = (
+            query.levels if query.levels
+            else [query.level] if query.level
+            else list(MemoryLevel)
+        )
+        search_level_names = {lvl.value for lvl in search_levels}
 
-        for level in search_levels:
-            level_dir = self._get_dir(level)
-            if not level_dir.exists():
+        for memory_id in candidate_ids:
+            index_info = self._index.get(memory_id)
+            if not index_info:
                 continue
 
-            for file_path in level_dir.rglob("*.json"):
-                try:
-                    memory_id = file_path.stem
-                    if candidate_ids and memory_id not in candidate_ids:
-                        continue
+            if index_info.get("level") not in search_level_names:
+                continue
 
-                    async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
-                        content = await f.read()
-                        data = json.loads(content)
-                        memory = MemoryItem.from_dict(data)
+            file_path_str = index_info.get("file_path", "")
+            if not file_path_str:
+                continue
 
-                        if self._match_query(memory, query):
-                            results.append(memory)
-                except (json.JSONDecodeError, OSError):
-                    continue
+            file_path = Path(file_path_str)
+            if not file_path.exists():
+                continue
+
+            try:
+                async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
+                    content = await f.read()
+                    data = json.loads(content)
+                    memory = MemoryItem.from_dict(data)
+
+                    if self._match_query(memory, query):
+                        results.append(memory)
+            except (json.JSONDecodeError, OSError):
+                continue
 
         results = self._sort_results(results, query.sort_by, query.sort_order)
         paginated = results[query.offset : query.offset + query.limit]
@@ -795,23 +806,40 @@ class MiyaMemoryCore:
         self._store_count_since_save = 0
         self._batch_save_threshold = 50  # 每50次store批量写一次index
 
+        # 备份批量写入优化
+        self._backup_buffer: List[Dict] = []
+        self._backup_batch_threshold = 50  # 每50条批量flush备份
+
         # MemoryEnhancer（延迟加载）
         self._enhancer = None
 
         logger.info(f"[MiyaMemoryCore] 初始化完成, 数据目录: {self.data_dir}")
 
     def _load_config(self):
-        """从配置文件加载记忆系统配置"""
+        """从配置文件加载记忆系统配置 - 优先 memory_config.json"""
+        try:
+            config_path = (Path(__file__).parent.parent / "config" / "memory_config.json")
+            if config_path.exists():
+                with open(config_path, "r", encoding="utf-8") as f:
+                    mem_config = json.load(f)
+                classify_config = mem_config.get("classification", {})
+                if classify_config and classify_config.get("auto_classify"):
+                    self._config = classify_config
+                    return
+        except Exception:
+            pass
+
         try:
             from core.text_loader import get_text
 
             config = get_text("memory_system")
             if config and "auto_classify" in config:
                 self._config = config["auto_classify"]
-            else:
-                self._config = self._get_default_classify_config()
+                return
         except Exception:
-            self._config = self._get_default_classify_config()
+            pass
+
+        self._config = self._get_default_classify_config()
 
     def _get_default_classify_config(self):
         """获取默认分类配置"""
@@ -1211,12 +1239,13 @@ class MiyaMemoryCore:
         return memory.id
 
     def _flush_index(self):
-        """批量刷新索引进磁盘"""
+        """批量刷新索引和备份到磁盘"""
         if self._index_dirty:
             self.backend._save_index()
             self._index_dirty = False
             self._store_count_since_save = 0
             logger.debug("[MiyaMemoryCore] 批量索引已刷新")
+        self._flush_backup()
 
     async def get_daily_dialogues(self, date_key: str, user_id: Optional[str] = None) -> List[MemoryItem]:
         """获取某天的所有对话记忆（情节记忆检索）
@@ -1378,6 +1407,9 @@ class MiyaMemoryCore:
             )
         else:
             q = query
+            # 确保后端拉取足够数据用于加权排序
+            if q.limit < limit:
+                q.limit = limit * 3
             if level is not None:
                 q.level = level
             if user_id is not None:
@@ -1481,17 +1513,40 @@ class MiyaMemoryCore:
         }
 
     def _search_from_cache(self, query: MemoryQuery) -> List[MemoryItem]:
-        """从缓存搜索"""
+        """从缓存搜索 - 利用索引缩小候选集"""
         results = []
 
-        for memory in self._cache.values():
+        def _candidate_ids() -> Optional[Set[str]]:
+            if query.tags:
+                if query.any_tag:
+                    ids = set()
+                    for tag in query.tags:
+                        ids.update(self._tag_index.get(tag, set()))
+                    return ids
+                else:
+                    sets = [self._tag_index.get(tag, set()) for tag in query.tags]
+                    if not sets:
+                        return None
+                    result = sets[0]
+                    for s in sets[1:]:
+                        result = result & s
+                    return result
+            if query.user_id:
+                return self._user_index.get(query.user_id, set())
+            return None
+
+        candidate_ids = _candidate_ids()
+
+        for memory_id, memory in self._cache.items():
             if not memory.is_valid():
+                continue
+
+            if candidate_ids is not None and memory_id not in candidate_ids:
                 continue
 
             if self._match_query(memory, query):
                 results.append(memory)
 
-        # 排序
         results = self._sort_results(results, query.sort_by, query.sort_order)
 
         return results[query.offset : query.offset + query.limit]
@@ -1506,9 +1561,24 @@ class MiyaMemoryCore:
             return False
         if query.level and memory.level != query.level:
             return False
-        if query.tags and not any(tag in memory.tags for tag in query.tags):
+        if query.levels and memory.level not in query.levels:
             return False
+        if query.tags:
+            if query.any_tag:
+                if not any(tag in memory.tags for tag in query.tags):
+                    return False
+            else:
+                if not all(tag in memory.tags for tag in query.tags):
+                    return False
         if memory.priority < query.min_priority:
+            return False
+        if memory.priority > query.max_priority:
+            return False
+        if query.is_pinned is not None and memory.is_pinned != query.is_pinned:
+            return False
+        if not query.include_archived and memory.is_archived:
+            return False
+        if not query.include_expired and memory.is_expired():
             return False
         if query.query:
             q = query.query.lower()
@@ -1859,7 +1929,7 @@ class MiyaMemoryCore:
             衰减的记录数
         """
         count = 0
-        datetime.now() - timedelta(days=days)
+        cut_date = datetime.now() - timedelta(days=days)
 
         all_ids = await self.backend.get_all_ids()
 
@@ -1961,41 +2031,48 @@ class MiyaMemoryCore:
             logger.warning(f"[MiyaMemoryCore] 向量生成失败: {e}")
 
     async def _backup_memory(self, memory: MemoryItem):
-        """备份记忆 - 按周归档，避免数据丢失"""
+        """备份记忆 - 批量延迟写入，按周归档"""
+        self._backup_buffer.append(memory.to_dict())
+
+        if len(self._backup_buffer) >= self._backup_batch_threshold:
+            self._flush_backup()
+
+    def _flush_backup(self):
+        """批量刷新备份到磁盘"""
+        import json
+
+        if not self._backup_buffer:
+            return
+
         backup_dir = self.data_dir / "backups"
         backup_dir.mkdir(parents=True, exist_ok=True)
 
-        # 使用 ISO 周年格式 (2026-W14) 按周归档
         iso_year, iso_week, _ = datetime.now().isocalendar()
         week_key = f"{iso_year}-W{iso_week:02d}"
         backup_file = backup_dir / f"{week_key}.json"
 
         try:
-            # 读取现有备份
-            backups = []
+            existing = []
             if backup_file.exists():
                 with open(backup_file, "r", encoding="utf-8") as f:
-                    backups = json.load(f)
+                    existing = json.load(f)
 
-            # 添加新备份
-            backups.append(memory.to_dict())
+            existing.extend(self._backup_buffer)
+            self._backup_buffer.clear()
 
-            # 每周最多10000条，超出后归档旧数据到archive
-            if len(backups) > 10000:
+            if len(existing) > 10000:
                 archive_dir = backup_dir / "archive"
                 archive_dir.mkdir(parents=True, exist_ok=True)
-                overflow = backups[:5000]
-                backups = backups[5000:]
+                overflow = existing[:5000]
+                existing = existing[5000:]
                 archive_file = archive_dir / f"{week_key}_overflow_{len(overflow)}.json"
                 with open(archive_file, "w", encoding="utf-8") as f:
                     json.dump(overflow, f, ensure_ascii=False, indent=2)
                 logger.info(f"[MiyaMemoryCore] 备份溢出已归档: {archive_file}")
 
-            # 保存
             with open(backup_file, "w", encoding="utf-8") as f:
-                json.dump(backups, f, ensure_ascii=False, indent=2)
+                json.dump(existing, f, ensure_ascii=False, indent=2)
 
-            # 清理超过8周的旧备份文件
             self._cleanup_old_backups(backup_dir)
         except Exception as e:
             logger.warning(f"[MiyaMemoryCore] 备份失败: {e}")

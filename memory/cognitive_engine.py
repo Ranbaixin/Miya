@@ -150,50 +150,50 @@ class CognitiveEngine:
         return topics
 
     def _extract_keywords(self, text: str) -> List[str]:
-        """提取关键词
-
-        Args:
-            text: 用户输入
-
-        Returns:
-            关键词列表
-        """
-        # 简单分词
+        """提取关键词 — 预定义词典 + jieba 通用分词 + 正则模式"""
+        text_lower = text.lower()
         keywords = []
 
-        # 提取长度大于2的词
+        # 1. 预定义话题关键词
         for _topic, topic_keywords in TOPIC_KEYWORDS.items():
             for keyword in topic_keywords:
                 if keyword in text:
                     keywords.append(keyword)
 
-        # 添加触发词
+        # 2. 触发词
         for _category, triggers in MEMORY_TRIGGERS.items():
             for trigger in triggers:
                 if trigger in text:
                     keywords.append(trigger)
 
-        # 【新增】从配置文件加载的记忆锚点关键词
+        # 3. 记忆锚点关键词
         for keyword in ANCHOR_KEYWORDS:
             if keyword in text:
                 keywords.append(keyword)
 
-        # 【新增】从配置文件加载的关键词提取模式
+        # 4. 正则模式提取
         my_pattern = KEYWORD_EXTRACTION_PATTERNS.get("my_patterns", r"我的(\w{2,})")
         what_pattern = KEYWORD_EXTRACTION_PATTERNS.get("what_patterns", r"(\w{2,})是什么")
         when_pattern = KEYWORD_EXTRACTION_PATTERNS.get("when_patterns", r"(\w{2,})的时候")
 
-        # 提取 "我的XXX" 模式
         my_patterns = re.findall(my_pattern, text)
         keywords.extend(my_patterns)
-
-        # 提取 "XXX是什么" 模式
         what_patterns = re.findall(what_pattern, text)
         keywords.extend(what_patterns)
-
-        # 提取 "XXX的时候" 模式
         when_patterns = re.findall(when_pattern, text)
         keywords.extend(when_patterns)
+
+        # 5. jieba 通用分词作为补充（解决新词、专有名词不在预定义词典的问题）
+        try:
+            import jieba
+
+            jieba_words = jieba.lcut(text)
+            for word in jieba_words:
+                word = word.strip()
+                if len(word) >= 2 and word not in keywords:
+                    keywords.append(word)
+        except Exception:
+            pass
 
         return list(set(keywords))
 
@@ -369,12 +369,13 @@ class CognitiveEngine:
 
         logger.info(f"[认知引擎] 当前话题: {current_topics}, 关键词: {keywords[:5]}")
 
-        # 2. 查询记忆（支持用户/群聊过滤 + 时间范围过滤）
-        # 当有时间范围时，搜索所有级别（包括对话记录），不然只搜索长期/语义记忆
+        # 2. 查询记忆（全局检索，user_id/group_id 仅用于加权排序）
+        # 使用 any_tag=True：任一关键词匹配即命中，避免过于限制
         if temporal_range:
             query = MemoryQuery(
-                query="",
+                query=user_input,
                 tags=current_topics + keywords,
+                any_tag=True,
                 levels=[
                     MemoryLevel.DIALOGUE,
                     MemoryLevel.SHORT_TERM,
@@ -382,34 +383,18 @@ class CognitiveEngine:
                     MemoryLevel.SEMANTIC,
                 ],
                 limit=limit * 3,
-                user_id=user_id,
-                group_id=group_id,
                 start_time=temporal_range.start,
                 end_time=temporal_range.end,
             )
         else:
             query = MemoryQuery(
-                query="",
+                query=user_input,
                 tags=current_topics + keywords,
+                any_tag=True,
                 limit=limit * 3,
-                user_id=user_id,
-                group_id=group_id,
             )
 
-        all_memories = await self.memory_core.retrieve(query)
-
-        # 【修复】当 group_id 过滤返回空结果时，回退到不按群过滤再查一次
-        if not all_memories and group_id:
-            fallback_query = MemoryQuery(
-                query="",
-                tags=current_topics + keywords,
-                limit=limit * 3,
-                user_id=user_id,
-                group_id=None,
-            )
-            all_memories = await self.memory_core.retrieve(fallback_query)
-            if all_memories:
-                logger.info(f"[认知引擎] group_id({group_id})无匹配，回退到全局检索: {len(all_memories)} 条")
+        all_memories = await self.memory_core.retrieve(query, user_id=user_id, group_id=group_id)
 
         # 2.5 【新增】专门搜索记忆锚点（优先级最高）
         # 如果用户输入包含个人信息相关的关键词，优先搜索记忆锚点
@@ -427,18 +412,16 @@ class CognitiveEngine:
         if need_anchor_search or is_personal_query:
             logger.info("[认知引擎] 检测到个人信息查询，优先搜索记忆锚点")
 
-            # 搜索记忆锚点（从配置文件加载的标签）
+            # 搜索记忆锚点（全局检索，从配置文件加载的标签）
             for tag in ANCHOR_TAGS:
                 if tag in user_input_lower or tag in str(keywords):
                     anchor_query = MemoryQuery(
                         query="",
                         tags=[tag],
                         limit=limit * 2,
-                        user_id=user_id,
                     )
                     anchor_results = await self.memory_core.retrieve(anchor_query)
                     if anchor_results:
-                        # 记忆锚点优先级最高，直接返回
                         logger.info(f"[认知引擎] 找到 {len(anchor_results)} 条记忆锚点 (标签: {tag})")
                         return anchor_results[:limit]
 

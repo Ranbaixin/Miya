@@ -81,9 +81,8 @@ class MemoryQueryTool(BaseTool):
 
     async def _get_stats(self) -> str:
         """获取统计"""
-        from memory import get_memory_core, reset_memory_core
+        from memory import get_memory_core
 
-        reset_memory_core()
         core = await get_memory_core("data/memory")
         stats = await core.get_statistics()
 
@@ -110,9 +109,8 @@ class MemoryQueryTool(BaseTool):
         if not keyword:
             return "请提供搜索关键词"
 
-        from memory import get_memory_core, reset_memory_core
+        from memory import get_memory_core
 
-        reset_memory_core()
         core = await get_memory_core("data/memory")
 
         results = await core.retrieve(query=keyword, limit=limit)
@@ -136,9 +134,8 @@ class MemoryQueryTool(BaseTool):
         if not user_id:
             return "请指定用户ID"
 
-        from memory import get_memory_core, reset_memory_core
+        from memory import get_memory_core
 
-        reset_memory_core()
         core = await get_memory_core("data/memory")
 
         results = await core.search_by_user(user_id, limit=limit)
@@ -166,16 +163,13 @@ class MemoryQueryTool(BaseTool):
 
     async def _get_recent(self, limit: int) -> str:
         """获取最近记忆"""
-        from memory import get_memory_core, reset_memory_core
+        from memory import get_memory_core
+        from memory.core import MemoryQuery
 
-        reset_memory_core()
         core = await get_memory_core("data/memory")
 
-        # 获取所有记忆然后排序
-        all_mems = await core.retrieve(query="", limit=1000)
-
-        # 按时间排序
-        sorted_mems = sorted(all_mems, key=lambda x: x.created_at, reverse=True)[:limit]
+        q = MemoryQuery(query="", limit=limit, sort_by="created_at", sort_order="desc")
+        sorted_mems = await core.retrieve(q)
 
         if not sorted_mems:
             return "暂无记忆"
@@ -191,21 +185,15 @@ class MemoryQueryTool(BaseTool):
         return "\n".join(lines)
 
     async def _get_tags(self) -> str:
-        """获取热门标签"""
-        from memory import get_memory_core, reset_memory_core
+        """获取热门标签 - 使用内存索引统计，避免全量加载"""
+        from memory import get_memory_core
 
-        reset_memory_core()
         core = await get_memory_core("data/memory")
 
-        all_mems = await core.retrieve(query="", limit=5000)
-
-        # 统计标签
         tag_counts = {}
-        for mem in all_mems:
-            for tag in mem.tags:
-                tag_counts[tag] = tag_counts.get(tag, 0) + 1
+        for tag, mem_ids in core._tag_index.items():
+            tag_counts[tag] = len(mem_ids)
 
-        # 排序
         sorted_tags = sorted(tag_counts.items(), key=lambda x: -x[1])[:20]
 
         if not sorted_tags:

@@ -8,6 +8,7 @@ JSON 保持可视化，SQLite 用于快速检索
 import json
 import logging
 import math
+import re
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -309,30 +310,73 @@ class SQLiteBackend(MemoryBackend):
             if query.level:
                 conditions.append("level = ?")
                 params.append(query.level.value)
+            if query.levels:
+                placeholders = ", ".join(["?"] * len(query.levels))
+                conditions.append(f"level IN ({placeholders})")
+                params.extend(lv.value for lv in query.levels)
             if query.session_id:
                 conditions.append("session_id = ?")
                 params.append(query.session_id)
             if query.min_priority > 0:
                 conditions.append("priority >= ?")
                 params.append(query.min_priority)
+            if query.max_priority < 1.0:
+                conditions.append("priority <= ?")
+                params.append(query.max_priority)
             if query.min_significance > 0:
                 conditions.append("significance >= ?")
                 params.append(query.min_significance)
             if query.max_significance < 1.0:
                 conditions.append("significance <= ?")
                 params.append(query.max_significance)
+            if not query.include_archived:
+                conditions.append("is_archived = 0")
+            if not query.include_expired:
+                conditions.append("(expires_at IS NULL OR expires_at > ?)")
+                params.append(datetime.now().isoformat())
+            if query.is_pinned is not None:
+                conditions.append("is_pinned = ?")
+                params.append(1 if query.is_pinned else 0)
+            if query.event_type:
+                conditions.append("event_type = ?")
+                params.append(query.event_type)
+            if query.location:
+                conditions.append("location = ?")
+                params.append(query.location)
+            if query.conversation_partner:
+                conditions.append("conversation_partner = ?")
+                params.append(query.conversation_partner)
+            if query.emotional_tone:
+                conditions.append("emotional_tone = ?")
+                params.append(query.emotional_tone)
+            if query.start_time:
+                conditions.append("created_at >= ?")
+                params.append(query.start_time.isoformat())
+            if query.end_time:
+                conditions.append("created_at <= ?")
+                params.append(query.end_time.isoformat())
             if query.query:
-                escaped_query = query.query.replace('"', '""')
-                fts_condition = (
-                    f"rowid IN (SELECT rowid FROM {self._fts_name} "
-                    f"WHERE {self._fts_name} MATCH ?)"
-                )
-                conditions.append(fts_condition)
-                params.append(escaped_query)
+                clean = re.sub(r'[^\w\s]', ' ', query.query)
+                clean = re.sub(r'\s+', ' ', clean).strip()
+                if clean:
+                    escaped_query = clean.replace('"', '""')
+                    fts_condition = (
+                        f"rowid IN (SELECT rowid FROM {self._fts_name} "
+                        f"WHERE {self._fts_name} MATCH ?)"
+                    )
+                    conditions.append(fts_condition)
+                    params.append(f'"{escaped_query}"')
             if query.tags:
-                for tag in query.tags:
-                    conditions.append("tags LIKE ?")
-                    params.append(f'%"{tag}"%')
+                if query.any_tag:
+                    tag_conditions = []
+                    for tag in query.tags:
+                        tag_conditions.append("tags LIKE ?")
+                        params.append(f'%"{tag}"%')
+                    conditions.append(f"({' OR '.join(tag_conditions)})")
+                else:
+                    for tag in query.tags:
+                        conditions.append("tags LIKE ?")
+                        params.append(f'%"{tag}"%')
 
             where_clause = " AND ".join(conditions) if conditions else "1=1"
             limit_clause = f"LIMIT {query.limit}"

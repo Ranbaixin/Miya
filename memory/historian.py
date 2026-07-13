@@ -545,8 +545,7 @@ class Historian:
             short_term_memories = await self.memory_core.retrieve(
                 query="",
                 level=MemoryLevel.SHORT_TERM,
-                user_id=user_id,
-                limit=20,
+                limit=100,
             )
 
             # 统计升级数量

@@ -146,6 +146,15 @@
     "track_storage_size": true
   },
 
+  "enhancer": {
+    "decay_rate": 0.05,
+    "emotion_boost_threshold": 0.7,
+    "similarity_threshold": 0.85,
+    "refine_interval": 86400,
+    "link_file": "data/memory/memory_links.json",
+    "weight_file": "data/memory/memory_weights.json"
+  },
+
   "sqlite_backend": {
     "_note": "SQLite 配置优先从本文件读取，回退到 text_config.json",
     "enabled": true,

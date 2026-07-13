@@ -68,9 +68,16 @@ async def store_dialogue(
     session_id: str,
     platform: str = "unknown",
     metadata: Optional[Dict] = None,
+    group_id: Optional[str] = None,
+    tags: Optional[List[str]] = None,
 ) -> str:
     """存储对话"""
     core = await get_memory_core()
+    meta = dict(metadata or {})
+    if group_id:
+        meta["group_id"] = group_id
+    if tags:
+        meta["tags"] = tags
     return await core.store(
         content=content,
         level=MemoryLevel.DIALOGUE,
@@ -79,7 +86,9 @@ async def store_dialogue(
         platform=platform,
         source=MemorySource.DIALOGUE,
         role=role,
-        metadata=metadata,
+        tags=tags,
+        group_id=group_id,
+        metadata=meta,
     )
 
 
@@ -245,16 +254,16 @@ async def store_cognition(
 
 
 async def retrieve_cognition(
-    user_id: str,
+    user_id: Optional[str] = None,
     limit: int = 5,
 ) -> List[Dict]:
     """
-    检索认知记忆 - 获取最近的思考过程和情绪记录
+    检索认知记忆 - 获取最近的思考过程和情绪记录（全局检索）
 
-    用于在构建回复上下文时，让弥娅能参考之前的思维链。
+    弥娅的认知记忆是全局共享的，user_id 仅用于加权排序。
 
     Args:
-        user_id: 用户ID
+        user_id: 可选，仅用于加权排序
         limit: 返回数量
 
     Returns:
@@ -263,9 +272,9 @@ async def retrieve_cognition(
     core = await get_memory_core()
     results = await core.retrieve(
         query="",
-        user_id=user_id,
         tags=["cognition"],
         limit=limit,
+        user_id=user_id,
     )
 
     cognition_list = []
@@ -289,15 +298,17 @@ async def retrieve_cognition(
 
 async def search_cognition(
     query: str,
-    user_id: str,
+    user_id: Optional[str] = None,
     limit: int = 5,
 ) -> List[Dict]:
     """
-    搜索认知记忆 - 按关键词搜索思考过程和情绪记录
+    搜索认知记忆 - 按关键词搜索思考过程和情绪记录（全局检索）
+
+    弥娅的认知记忆是全局共享的，user_id 仅用于加权排序。
 
     Args:
         query: 搜索关键词
-        user_id: 用户ID
+        user_id: 可选，仅用于加权排序
         limit: 返回数量
 
     Returns:
@@ -306,9 +317,9 @@ async def search_cognition(
     core = await get_memory_core()
     results = await core.retrieve(
         query=query,
-        user_id=user_id,
         tags=["cognition"],
         limit=limit,
+        user_id=user_id,
     )
 
     cognition_list = []
@@ -498,25 +509,37 @@ class MemoryAdapter:
     旧系统适配器
 
     此类将新系统适配为旧接口，确保向后兼容。
+    支持延迟初始化——首次使用时自动获取 core。
     """
 
     def __init__(self):
         self._core: Optional[MiyaMemoryCore] = None
+        self._initializing = False
 
     async def initialize(self):
         """初始化"""
         self._core = await get_memory_core()
         return self
 
+    async def _ensure_core(self):
+        """确保 core 已初始化（延迟初始化）"""
+        if self._core is None and not self._initializing:
+            self._initializing = True
+            try:
+                self._core = await get_memory_core()
+            finally:
+                self._initializing = False
+
     @property
     def core(self) -> MiyaMemoryCore:
         if self._core is None:
-            raise RuntimeError("MemoryAdapter 未初始化")
+            raise RuntimeError("MemoryAdapter 未初始化，请先调用 await adapter.initialize()")
         return self._core
 
     # 兼容旧接口
     async def add_message(self, session_id: str, role: str, content: str, **kwargs) -> str:
         """添加消息 (旧接口)"""
+        await self._ensure_core()
         user_id = kwargs.get("user_id", "unknown")
         platform = kwargs.get("platform", "qq")
 
@@ -531,6 +554,7 @@ class MemoryAdapter:
 
     async def get_history(self, session_id: str, limit: int = 20, **kwargs) -> List[Dict]:
         """获取历史 (旧接口)"""
+        await self._ensure_core()
         platform = kwargs.get("platform", "unknown")
         memories = await get_dialogue_history(session_id, platform=platform, limit=limit)
 
@@ -567,8 +591,11 @@ class MemoryAdapter:
         ]
 
     async def get_all(self, user_id: Optional[str] = None, limit: int = 100) -> List[Dict]:
-        """获取所有 (旧接口)"""
-        memories = await get_user_memories(user_id, limit=limit)
+        """获取所有记忆（全局检索，user_id 可选用于按需过滤）"""
+        if user_id:
+            memories = await get_user_memories(user_id, limit=limit)
+        else:
+            memories = await search_memory("", limit=limit)
 
         return [
             {
@@ -623,7 +650,11 @@ class MemoryCategory:
 
 
 def get_unified_memory(data_dir=None):
-    """旧接口兼容 - 同步/异步安全获取统一记忆"""
+    """旧接口兼容 - 同步/异步安全获取统一记忆
+
+    返回的 MiyaMemoryCore 实例会自动延迟初始化（首次调用时），
+    因此同步和异步上下文均可安全使用。
+    """
     if data_dir is None:
         data_dir = DEFAULT_MEMORY_DIR
     global _unified_memory_sync
@@ -633,15 +664,12 @@ def get_unified_memory(data_dir=None):
         try:
             loop = asyncio.get_event_loop()
             if loop.is_running():
-                # 在异步上下文中，创建任务并等待
-                import concurrent.futures
-
-                # 直接同步初始化，避免在异步上下文中调用 run_until_complete
+                # 异步上下文：创建实例，首次调用时会延迟初始化
                 _unified_memory_sync = MiyaMemoryCore(data_dir)
             else:
                 _unified_memory_sync = loop.run_until_complete(get_memory_core(data_dir))
         except RuntimeError:
-            # 没有事件循环，直接同步初始化
+            # 没有事件循环
             _unified_memory_sync = MiyaMemoryCore(data_dir)
     return _unified_memory_sync
 
@@ -654,16 +682,10 @@ async def init_unified_memory(data_dir=None):
 
 
 def get_undefined_memory_adapter():
-    """旧接口兼容 - 同步/异步安全获取适配器"""
+    """旧接口兼容 - 同步/异步安全获取适配器（支持延迟初始化）"""
     global _memory_adapter
     if _memory_adapter is None:
-        import asyncio
-
-        try:
-            loop = asyncio.get_event_loop()
-            _memory_adapter = MemoryAdapter() if loop.is_running() else loop.run_until_complete(get_memory_adapter())
-        except RuntimeError:
-            _memory_adapter = MemoryAdapter()
+        _memory_adapter = MemoryAdapter()
     return _memory_adapter
 
 

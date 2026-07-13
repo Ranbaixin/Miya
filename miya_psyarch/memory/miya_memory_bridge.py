@@ -40,7 +40,7 @@ class MiyaMemoryBridge:
             logger.warning(f"memory warmup failed: {e}")
 
     def search(self, query: str, limit: int = 8) -> list[dict]:
-        """多关键词分词搜索——比单 LIKE 召回率大幅提升"""
+        """FTS5 分词搜索——利用全文索引替代 LIKE 全表扫描"""
         if not query or len(query) < 2:
             return []
         if not self._initialized:
@@ -57,12 +57,22 @@ class MiyaMemoryBridge:
             for token in tokens[:5]:
                 if len(token) < 2:
                     continue
-                rows = conn.execute(
-                    "SELECT rowid, role, content, created_at FROM memories "
-                    "WHERE content LIKE ? AND level='dialogue' "
-                    "ORDER BY created_at DESC LIMIT ?",
-                    (f"%{token}%", limit * 2),
-                ).fetchall()
+                fts_query = self._build_fts_query(token)
+                try:
+                    rows = conn.execute(
+                        "SELECT memories.rowid, role, content, created_at FROM memories "
+                        "JOIN memories_fts ON memories.rowid = memories_fts.rowid "
+                        "WHERE memories_fts MATCH ? AND level='dialogue' "
+                        "ORDER BY created_at DESC LIMIT ?",
+                        (fts_query, limit * 2),
+                    ).fetchall()
+                except Exception:
+                    rows = conn.execute(
+                        "SELECT rowid, role, content, created_at FROM memories "
+                        "WHERE content LIKE ? AND level='dialogue' "
+                        "ORDER BY created_at DESC LIMIT ?",
+                        (f"%{token}%", limit * 2),
+                    ).fetchall()
                 for r in rows:
                     rowid = r[0]
                     if rowid not in results:
@@ -82,6 +92,11 @@ class MiyaMemoryBridge:
         except Exception as e:
             logger.debug(f"memory search failed: {e}")
             return []
+
+    @staticmethod
+    def _build_fts_query(token: str) -> str:
+        escaped = token.replace('"', '""')
+        return f'"{escaped}"'
 
     def _tokenize(self, text: str) -> list[str]:
         try:

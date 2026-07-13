@@ -30,6 +30,26 @@ class UndefinedMemoryAdapter:
 
         return await store_important(content, user_id, tags=kwargs.get("tags", []))
 
+    async def add(self, fact: str = "", content: str = "", tags: list = None, user_id: str = "global", **kwargs) -> str:
+        """添加记忆（兼容 auto_extract_memory 调用）"""
+        from memory import store_important
+
+        text = fact or content
+        uid = kwargs.get("user_id", user_id)
+        return await store_important(text, uid, tags=tags or [])
+
+    async def update(self, memory_id: str, content: str, tags: list = None, **kwargs) -> bool:
+        """更新记忆"""
+        from memory import update_memory
+
+        return await update_memory(memory_id, content=content, tags=tags or [])
+
+    async def delete(self, memory_id: str, **kwargs) -> bool:
+        """删除记忆"""
+        from memory import delete_memory
+
+        return await delete_memory(memory_id)
+
     async def search_memory(self, query: str, user_id: Optional[str] = None, **kwargs) -> List[Dict]:
         """搜索记忆"""
         from memory import search_memory

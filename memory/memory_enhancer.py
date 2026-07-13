@@ -18,6 +18,7 @@ import os
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 from enum import Enum
 from typing import Dict, List, Optional, Set
 
@@ -145,13 +146,27 @@ class MemoryEnhancer:
         self._weights: Dict[str, MemoryWeight] = {}
         self._initialized = False
 
-        # 遗忘曲线参数
-        self.decay_rate = 0.05  # 每天衰减率
-        self.emotion_boost_threshold = 0.7  # 情感强化阈值
+        self._load_config()
 
-        # 精炼参数
-        self.similarity_threshold = 0.85  # 相似度阈值
-        self.refine_interval = 86400  # 精炼间隔(秒)
+    def _load_config(self):
+        """从配置文件加载增强器参数"""
+        try:
+            config_path = Path(__file__).parent.parent / "config" / "memory_config.json"
+            if config_path.exists():
+                with open(config_path, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+                enh_cfg = cfg.get("enhancer", {})
+                self.decay_rate = enh_cfg.get("decay_rate", 0.05)
+                self.emotion_boost_threshold = enh_cfg.get("emotion_boost_threshold", 0.7)
+                self.similarity_threshold = enh_cfg.get("similarity_threshold", 0.85)
+                self.refine_interval = enh_cfg.get("refine_interval", 86400)
+                return
+        except Exception:
+            pass
+        self.decay_rate = 0.05
+        self.emotion_boost_threshold = 0.7
+        self.similarity_threshold = 0.85
+        self.refine_interval = 86400
 
     async def initialize(self):
         """初始化"""
@@ -622,6 +637,3 @@ async def get_memory_enhancer(data_dir: str = "data/memory") -> MemoryEnhancer:
         _enhancer = MemoryEnhancer(data_dir)
         await _enhancer.initialize()
     return _enhancer
-
-
-import os
