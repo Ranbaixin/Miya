@@ -209,13 +209,33 @@ WEIXIN_OC_CONFIG = {
 # 功能: 关注回复、消息自动回复、菜单
 
 WEIXIN_OFFICIAL_CONFIG = {
-    "enabled": False,
-    "appid": "",  # 公众号 AppID
-    "secret": "",  # 公众号 AppSecret
-    "token": "",  # 服务器配置 Token
-    "encoding_aes_key": "",  # 消息加解密密钥 (43位)
+    "enabled": True,
+    "appid": _env("WEIXIN_APP_ID"),       # 公众号 AppID
+    "secret": _env("WEIXIN_APP_SECRET"),   # 公众号 AppSecret
+    "token": _env("WEIXIN_TOKEN", "miya_token_2024"),  # 服务器配置 Token
+    "encoding_aes_key": _env("WEIXIN_ENCODING_AES_KEY", ""),  # 消息加解密密钥 (43位)
+    "port": 8090,                          # webhook 服务端口
     # 主动发送模式 (推荐): 启用后绕过5秒被动回复限制，使用客服消息API主动回复
-    "active_send_mode": False,
+    "active_send_mode": True,
+}
+
+# ==================== 微信 iLink (新版) ====================
+# 基于 weixin-ilink-client SDK 的个人微信接入
+# 项目地址: https://github.com/69gg/weixin-ilink-client
+# 步骤: 首次运行会显示终端 QR 码，微信扫码登录即可
+# 文档: 非官方逆向协议，仅供学习实验
+#
+# 功能: 个人微信消息收发、图片/视频/文件
+
+WEIXIN_ILINK_CONFIG = {
+    "enabled": True,
+    "account_id": "",     # 扫码登录后自动填充
+    "bot_token": "",      # 扫码登录后自动填充
+    "user_id": "",        # 扫码登录后自动填充
+    "base_url": "https://ilinkai.weixin.qq.com",
+    "cdn_base_url": "https://novac2c.cdn.weixin.qq.com/c2c",
+    "bot_type": "3",
+    "state_dir": "",      # 状态文件目录 (留空用系统默认)
 }
 
 # ==================== Slack ====================
@@ -367,6 +387,7 @@ ALL_PLATFORMS = {
     "wecom_ai_bot": WECOM_AI_BOT_CONFIG,
     "weixin_oc": WEIXIN_OC_CONFIG,
     "weixin_official_account": WEIXIN_OFFICIAL_CONFIG,
+    "weixin_ilink": WEIXIN_ILINK_CONFIG,
     # 社区平台
     "kook": KOOK_CONFIG,
     "mattermost": MATTERMOST_CONFIG,

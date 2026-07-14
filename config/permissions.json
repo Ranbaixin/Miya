@@ -16,7 +16,8 @@
         "webchat": ["1523878699"],
         "telegram": [],
         "discord": [],
-        "lark": ["452c3ccc"]
+        "lark": ["452c3ccc"],
+        "weixin_ilink": ["o9cq806WYR-N8Zxxg94EyHYgUXwY@im.wechat"]
       }
     }
   },
@@ -121,7 +122,8 @@
     "lark": ["QQ"],
     "webchat": ["Web"],
     "discord": ["Default"],
-    "telegram": ["Default"]
+    "telegram": ["Default"],
+    "weixin_ilink": ["QQ"]
   },
 
   "users": [
@@ -189,6 +191,14 @@
       "permission_groups": ["Admin", "Developer"],
       "description": "移动端默认用户",
       "created_at": "2026-07-12T00:00:00"
+    },
+    {
+      "user_id": "weixin_ilink_o9cq806WYR-N8Zxxg94EyHYgUXwY@im.wechat",
+      "username": "佳",
+      "platform": "weixin_ilink",
+      "permission_groups": ["Admin", "Developer"],
+      "description": "微信 iLink 用户 - 佳",
+      "created_at": "2026-07-15T00:00:00"
     }
   ],
 
@@ -273,7 +283,8 @@
       "lark_452c3ccc",
       "desktop_user",
       "mobile_default",
-      "webchat_1523878699"
+      "webchat_1523878699",
+      "weixin_ilink_o9cq806WYR-N8Zxxg94EyHYgUXwY@im.wechat"
     ],
     "super_admin_whitelist": [
       "terminal_default",
@@ -286,7 +297,8 @@
       "lark_452c3ccc",
       "desktop_user",
       "mobile_default",
-      "webchat_1523878699"
+      "webchat_1523878699",
+      "weixin_ilink_o9cq806WYR-N8Zxxg94EyHYgUXwY@im.wechat"
     ]
   },
 

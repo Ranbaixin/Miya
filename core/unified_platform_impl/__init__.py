@@ -19,6 +19,7 @@ from .real_platforms import (
 from .telegram_platform import TelegramPlatform
 from .webhook_base import WebhookPlatform
 from .webhook_platforms import LarkPlatform, LINEPlatform
+from .weixin_ilink_platform import WeixinIlinkPlatform
 
 __all__ = [
     "QQOfficialPlatform",
@@ -36,4 +37,5 @@ __all__ = [
     "SatoriPlatform",
     "WeComPlatform",
     "WeChatOfficialPlatform",
+    "WeixinIlinkPlatform",
 ]

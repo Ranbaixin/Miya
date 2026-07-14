@@ -104,6 +104,7 @@ class MiyaDaemon:
             WeChatOfficialPlatform,
             WeComPlatform,
         )
+        from .unified_platform_impl.weixin_ilink_platform import WeixinIlinkPlatform
 
         platform_map: Dict[str, type] = {
             "qqofficial": QQOfficialPlatform,
@@ -119,6 +120,7 @@ class MiyaDaemon:
             "satori": SatoriPlatform,
             "wecom": WeComPlatform,
             "weixin_official_account": WeChatOfficialPlatform,
+            "weixin_ilink": WeixinIlinkPlatform,
         }
 
         cls = platform_map.get(platform_id)

@@ -407,6 +407,7 @@ wcwidth==0.5.3
 websocket-client==1.9.0
 websockets==15.0.1
 wechatpy==1.8.18
+weixin-ilink-client==0.1.0
 Werkzeug==3.1.5
 WMI==1.5.1
 wrapt==1.17.3
