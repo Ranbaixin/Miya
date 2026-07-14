@@ -59,10 +59,7 @@ class WeixinIlinkPlatform(MessageMixin, BasePlatform):
             )
 
             state_dir = str(self.config.get("state_dir", "")).strip()
-            if state_dir:
-                store_dir = Path(state_dir)
-            else:
-                store_dir = default_state_dir()
+            store_dir = Path(state_dir) if state_dir else default_state_dir()
             store_dir.mkdir(parents=True, exist_ok=True)
 
             credential_store = JsonCredentialStore(store_dir / "credentials.json")
@@ -164,7 +161,6 @@ class WeixinIlinkPlatform(MessageMixin, BasePlatform):
             return
 
         text = msg.text or ""
-        context_token = getattr(msg, "context_token", "") or ""
 
         logger.debug("[weixin_ilink] 收到消息: %s → %s", from_user_id, text[:50])
 
