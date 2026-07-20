@@ -40,6 +40,12 @@ class MemoryManager:
         self.memory_net = memory_net
         self.memory_engine = memory_engine
         self.historian = get_historian()
+        # 【时间对照】初始化时间追踪器
+        try:
+            from memory.time_tracker import get_time_tracker
+            self.time_tracker = get_time_tracker()
+        except Exception:
+            self.time_tracker = None
         logger.info("[记忆管理器] 初始化完成 (使用新版统一记忆API)")
 
     @staticmethod
@@ -47,6 +53,13 @@ class MemoryManager:
         if message_type == "group" and group_id:
             return f"{platform}_group_{group_id}_{user_id}"
         return f"{platform}_{user_id}"
+
+    @staticmethod
+    def _build_unified_user_key(user_id: str, group_id: str, message_type: str) -> str:
+        """构建跨平台统一用户 Key（不含 platform 前缀）"""
+        if message_type == "group" and group_id:
+            return f"all_group_{group_id}_{user_id}"
+        return f"all_{user_id}"
 
     async def store_user_message(self, perception: Dict) -> None:
         """
@@ -77,8 +90,23 @@ class MemoryManager:
             sender_name = perception.get("sender_name", "用户")
             message_type = perception.get("message_type", "")
             session_id = self._build_session_id(platform, user_id, group_id, message_type)
+            # 【跨平台统一】生成不含 platform 前缀的统一会话 Key
+            unified_session_id = self._build_unified_user_key(user_id, group_id, message_type)
 
             logger.info(f"[记忆管理器] 收到消息: {content[:50]}...")
+
+            # 【时间对照】记录交互时间戳
+            if self.time_tracker:
+                try:
+                    self.time_tracker.record_interaction(
+                        user_id=user_id,
+                        platform=platform,
+                        role="user",
+                        session_start=False,
+                        message_preview=content[:50],
+                    )
+                except Exception:
+                    pass
 
             # 自动检测重要信息（提前计算，用于注入 metadata）
             important_patterns = [
@@ -122,6 +150,17 @@ class MemoryManager:
                     metadata=metadata,
                 )
 
+                # 【跨平台统一】同时存储到统一会话（不含 platform 前缀）
+                unified_metadata = dict(metadata)
+                unified_metadata["original_session"] = session_id
+                unified_metadata["original_platform"] = platform
+                await self.memory_net.conversation_history.add_message(
+                    session_id=unified_session_id,
+                    role="user",
+                    content=content,
+                    metadata=unified_metadata,
+                )
+
                 # 每 3 条消息强制 flush 到磁盘
                 self._conv_save_counter = getattr(self, "_conv_save_counter", 0) + 1
                 if self._conv_save_counter % 3 == 0:
@@ -139,6 +178,20 @@ class MemoryManager:
                     "sender_name": sender_name,
                     "message_type": message_type,
                     "group_id": group_id,
+                },
+            )
+            # 【跨平台统一】同时以统一会话 Key 存储到记忆系统
+            await store_dialogue(
+                content=content,
+                role="user",
+                user_id=user_id,
+                session_id=unified_session_id,
+                platform="all",
+                metadata={
+                    "sender_name": sender_name,
+                    "message_type": message_type,
+                    "group_id": group_id,
+                    "original_platform": platform,
                 },
             )
 
@@ -177,6 +230,20 @@ class MemoryManager:
             message_type = perception.get("message_type", "")
             platform = perception.get("platform", "qq")
             session_id = self._build_session_id(platform, user_id, group_id, message_type)
+            unified_session_id = self._build_unified_user_key(user_id, group_id, message_type)
+
+            # 【时间对照】记录弥娅响应时间戳
+            if self.time_tracker:
+                try:
+                    self.time_tracker.record_interaction(
+                        user_id=user_id,
+                        platform=platform,
+                        role="assistant",
+                        session_start=False,
+                        message_preview=response[:50],
+                    )
+                except Exception:
+                    pass
 
             # 快速计算弥娅回复的重要性（用于压缩保护标记）
             assistant_importance = self._calc_assistant_importance(response)
@@ -198,6 +265,16 @@ class MemoryManager:
                     content=response,
                     metadata=metadata,
                 )
+                # 【跨平台统一】同时存储到统一会话
+                unified_metadata = dict(metadata)
+                unified_metadata["original_session"] = session_id
+                unified_metadata["original_platform"] = platform
+                await self.memory_net.conversation_history.add_message(
+                    session_id=unified_session_id,
+                    role="assistant",
+                    content=response,
+                    metadata=unified_metadata,
+                )
 
                 # 每 3 条消息强制 flush 到磁盘
                 self._conv_save_counter = getattr(self, "_conv_save_counter", 0) + 1
@@ -216,6 +293,20 @@ class MemoryManager:
                     "sender_name": "弥娅",
                     "message_type": message_type,
                     "group_id": group_id,
+                },
+            )
+            # 【跨平台统一】同时以统一会话 Key 存储
+            await store_dialogue(
+                content=response,
+                role="assistant",
+                user_id=user_id,
+                session_id=unified_session_id,
+                platform="all",
+                metadata={
+                    "sender_name": "弥娅",
+                    "message_type": message_type,
+                    "group_id": group_id,
+                    "original_platform": platform,
                 },
             )
 

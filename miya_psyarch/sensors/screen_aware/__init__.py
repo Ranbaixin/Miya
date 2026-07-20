@@ -107,6 +107,7 @@ class ScreenAwareProactive:
         # ── 视觉模型开关 ──
         vision_mode: str = "hybrid",  # ocr_only | api_only | hybrid
         model_dir: str = "",  # 本地 OCR 模型目录，留空自动检测
+        ocr_startup_grace_seconds: float = 120.0,  # 启动后延迟加载 OCR，避免阻塞启动
     ) -> None:
         self.enabled = bool(enabled)
         self.min_interval = max(5.0, float(min_interval_seconds))
@@ -140,6 +141,9 @@ class ScreenAwareProactive:
 
         self._ocr_engine: Any = None
         self._ocr_enabled: bool = True
+        self._ocr_loading: bool = False
+        self._ocr_grace: float = max(0.0, float(ocr_startup_grace_seconds))
+        self._init_time: float = time.time()
 
     def _reset_daily_quota(self) -> None:
         now = time.time()
@@ -409,38 +413,72 @@ class ScreenAwareProactive:
     def _lazy_init_ocr(self) -> Any:
         if self._ocr_engine is not None:
             return self._ocr_engine
-        if not self._ocr_enabled:
+        if not self._ocr_enabled or self._ocr_loading:
             return None
+
+        elapsed = time.time() - self._init_time
+        if elapsed < self._ocr_grace:
+            logger.debug(f"[ScreenAware] OCR 启动宽限期内 ({elapsed:.0f}s/{self._ocr_grace:.0f}s)，延迟加载")
+            return None
+
+        self._ocr_loading = True
         try:
-            global _OCR_INIT_WARNED
+            import threading
 
-            _project_models = (
-                Path(self._model_dir)
-                if self._model_dir
-                else (Path(__file__).resolve().parent.parent.parent.parent / "models" / "paddle_ocr")
-            )
-            _system_cache = Path.home() / ".paddlex"
+            result_holder: dict = {}
 
-            if self._has_ocr_models(_system_cache):
-                logger.debug("[ScreenAware] 使用系统 PaddleX 缓存模型")
-            elif self._has_ocr_models(_project_models):
-                os.environ.setdefault("PADDLE_PDX_CACHE_HOME", str(_project_models))
-                logger.info(f"[ScreenAware] 系统缓存缺失，回退到项目模型: {_project_models}")
+            def _load_ocr():
+                try:
+                    result_holder["engine"] = self._init_paddle_ocr()
+                except Exception as exc:
+                    result_holder["error"] = exc
+
+            thread = threading.Thread(target=_load_ocr, daemon=True, name="PaddleOCR-Loader")
+            thread.start()
+            thread.join(timeout=60)
+
+            if "engine" in result_holder:
+                self._ocr_engine = result_holder["engine"]
+                logger.info("[ScreenAware] PaddleOCR 本地引擎初始化完成")
+            elif "error" in result_holder:
+                raise result_holder["error"]
             else:
-                logger.warning("[ScreenAware] 未找到本地 OCR 模型，可能需联网下载")
-
-            os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
-
-            from paddleocr import PaddleOCR
-
-            self._ocr_engine = PaddleOCR(lang="ch")
-            logger.info("[ScreenAware] PaddleOCR 本地引擎初始化完成")
+                logger.warning("[ScreenAware] PaddleOCR 加载超时")
+                self._ocr_enabled = False
         except Exception as exc:
+            global _OCR_INIT_WARNED
             if not _OCR_INIT_WARNED:
                 logger.warning(f"[ScreenAware] PaddleOCR 初始化失败: {exc}")
                 _OCR_INIT_WARNED = True
             self._ocr_enabled = False
+        finally:
+            self._ocr_loading = False
         return self._ocr_engine
+
+    def _init_paddle_ocr(self) -> Any:
+        """实际初始化 PaddleOCR（在后台线程中调用）"""
+        global _OCR_INIT_WARNED
+
+        _project_models = (
+            Path(self._model_dir)
+            if self._model_dir
+            else (Path(__file__).resolve().parent.parent.parent.parent / "models" / "paddle_ocr")
+        )
+        _system_cache = Path.home() / ".paddlex"
+
+        if self._has_ocr_models(_system_cache):
+            logger.debug("[ScreenAware] 使用系统 PaddleX 缓存模型")
+        elif self._has_ocr_models(_project_models):
+            os.environ.setdefault("PADDLE_PDX_CACHE_HOME", str(_project_models))
+            logger.info(f"[ScreenAware] 系统缓存缺失，回退到项目模型: {_project_models}")
+        else:
+            logger.warning("[ScreenAware] 未找到本地 OCR 模型，可能需联网下载")
+
+        os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
+
+        from paddleocr import PaddleOCR
+
+        return PaddleOCR(lang="ch")
 
     def _analyze_with_ocr(self, img_bytes: bytes) -> tuple[str, float]:
         """

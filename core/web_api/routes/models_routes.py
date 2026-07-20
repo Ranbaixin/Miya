@@ -50,7 +50,7 @@ async def models_routing(task_type: Optional[str] = Query(None)):
                 "task_type": task_type,
                 "selected": {"id": model.id, "name": model.name, "provider": model.provider} if model else None,
             }
-        return {"task_types": ["simple_chat", "complex_reasoning", "code_analysis", "code_generation", "tool_calling", "creative_writing", "image_description", "agent_mode"]}
+        return {"task_types": ["simple_chat", "complex_reasoning", "code_analysis", "code_generation", "tool_calling", "creative_writing", "agent_mode"]}
     except Exception as e:
         logger.error(f"[models/routing] 获取路由信息失败: {e}")
         return {"task_types": []}

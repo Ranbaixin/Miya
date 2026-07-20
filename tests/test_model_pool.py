@@ -70,7 +70,6 @@ def test_model_selection():
         test_tasks = [
             ("simple_chat", "qq", "balanced"),
             ("text_extraction", "qq", "cost"),
-            ("image_description", "qq", "quality"),
             ("nsfw_detection", "qq", "speed"),
         ]
 

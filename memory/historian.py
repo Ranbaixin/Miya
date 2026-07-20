@@ -534,12 +534,17 @@ class Historian:
         """短期记忆自动归档机制
 
         检查短期记忆，将重要记忆自动升级为长期记忆
-        避免短期记忆过期丢失
+        避免短期记忆过期丢失。
+
+        仅处理创建时间超过 30 分钟的短期记忆，
+        避免刚创建的短期记忆被立即升级。
         """
         try:
             await self._ensure_memory_core_initialized()
 
             # 查询短期记忆
+            from datetime import timedelta
+
             from memory import MemoryLevel
 
             short_term_memories = await self.memory_core.retrieve(
@@ -548,10 +553,18 @@ class Historian:
                 limit=100,
             )
 
-            # 统计升级数量
+            cutoff = datetime.now() - timedelta(minutes=30)
             upgraded_count = 0
 
             for mem in short_term_memories:
+                # 跳过刚创建不到 30 分钟的短期记忆
+                try:
+                    created = datetime.fromisoformat(mem.created_at)
+                    if created > cutoff:
+                        continue
+                except Exception:
+                    pass
+
                 # 升级条件：高优先级(>=0.7) 或 手动标记的记忆
                 priority = getattr(mem, "priority", 0)
                 source = getattr(mem, "source", None)

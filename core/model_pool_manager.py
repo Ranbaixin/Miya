@@ -228,6 +228,20 @@ class ModelPoolManager:
                 )
             self._routes[task_type] = route
 
+        # 解析 @active 引用：将路由中的 "@active" 替换为当前激活模型
+        active_model = config.get("active", "")
+        if active_model:
+            for route in self._routes.values():
+                for field in ('primary', 'secondary', 'third', 'fallback'):
+                    if getattr(route, field) == "@active":
+                        setattr(route, field, active_model)
+
+            # 解析 system_defaults 中的 @active 引用
+            sd = config.get("system_defaults", {})
+            for key in ("default_model", "soul_model"):
+                if sd.get(key) == "@active":
+                    sd[key] = active_model
+
         # 解析模型
         models_data = config.get("models", {})
         for model_id, model_conf in models_data.items():

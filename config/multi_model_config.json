@@ -1,6 +1,7 @@
 {
   "active": "deepseek_v4_flash_official",
   "vision_preferences": {
+    "active_vision": "kimi_k2_vision",
     "timeout": 90,
     "http_client_timeout": 90,
     "model_defaults": {
@@ -17,7 +18,7 @@
       "priority": 1
     },
     "model_preferences": {
-      "primary": "kimi_k2_vision",
+      "primary": "@active_vision",
       "secondary": "glm_4_5v_vision",
       "fallback": "simple_analysis",
       "disabled_models": []
@@ -105,6 +106,30 @@
       "cost_per_1k_tokens": {
         "input": 0.001,
         "output": 0.001
+      },
+      "latency": "medium",
+      "quality": "excellent"
+    },
+    "proxy_model": {
+      "name": "deepseek-ai/deepseek-v4-pro",
+      "provider": "proxy",
+      "base_url": "https://api.yinziapi.top/v1",
+      "env_key": "PROXY_API_KEY",
+      "description": "中转站 DeepSeek V4 Pro - 通用代理 OpenAI 兼容模型",
+      "capabilities": [
+        "simple_chat",
+        "chinese_understanding",
+        "tool_calling",
+        "multimodal",
+        "complex_reasoning",
+        "code_analysis",
+        "creative_writing",
+        "task_planning",
+        "agent_mode"
+      ],
+      "cost_per_1k_tokens": {
+        "input": 0.0,
+        "output": 0.0
       },
       "latency": "medium",
       "quality": "excellent"
@@ -217,59 +242,54 @@
   },
   "routing_strategy": {
     "simple_chat": {
-      "primary": "deepseek_v4_flash_official",
-      "secondary": "qwen_72b",
+      "primary": "@active",
+      "secondary": "deepseek_v4_flash_official",
       "fallback": "qwen_72b"
     },
     "complex_reasoning": {
-      "primary": "deepseek_v4_flash_official",
-      "secondary": "qwen_72b",
+      "primary": "@active",
+      "secondary": "deepseek_v4_flash_official",
       "fallback": "qwen_72b"
     },
     "code_analysis": {
-      "primary": "kimi_k2_7_code_highspeed",
-      "secondary": "deepseek_v4_flash_official",
-      "fallback": "qwen_72b"
+      "primary": "@active",
+      "secondary": "kimi_k2_7_code_highspeed",
+      "fallback": "deepseek_v4_flash_official"
     },
     "code_generation": {
-      "primary": "kimi_k2_7_code_highspeed",
-      "secondary": "deepseek_v4_flash_official",
-      "fallback": "qwen_72b"
+      "primary": "@active",
+      "secondary": "kimi_k2_7_code_highspeed",
+      "fallback": "deepseek_v4_flash_official"
     },
     "tool_calling": {
-      "primary": "deepseek_v4_flash_official",
-      "secondary": "kimi_k2_7_code_highspeed",
-      "fallback": "qwen_72b"
+      "primary": "@active",
+      "secondary": "deepseek_v4_flash_official",
+      "fallback": "kimi_k2_7_code_highspeed"
     },
     "creative_writing": {
-      "primary": "deepseek_v4_flash_official",
-      "secondary": "kimi_k2_6_official",
-      "fallback": "qwen_72b"
+      "primary": "@active",
+      "secondary": "deepseek_v4_flash_official",
+      "fallback": "kimi_k2_6_official"
     },
     "chinese_understanding": {
-      "primary": "deepseek_v4_flash_official",
-      "secondary": "kimi_k2_6_official",
-      "fallback": "qwen_72b"
+      "primary": "@active",
+      "secondary": "deepseek_v4_flash_official",
+      "fallback": "kimi_k2_6_official"
     },
     "summarization": {
-      "primary": "deepseek_v4_flash_official",
-      "secondary": "kimi_k2_6_official",
-      "fallback": "qwen_72b"
-    },
-    "image_description": {
-      "primary": "kimi_k2_vision",
-      "secondary": "glm_4_5v_vision",
+      "primary": "@active",
+      "secondary": "deepseek_v4_flash_official",
       "fallback": "kimi_k2_6_official"
     },
     "agent_mode": {
-      "primary": "kimi_k2_7_code_highspeed",
-      "secondary": "deepseek_v4_flash_official",
-      "fallback": "qwen_72b"
+      "primary": "@active",
+      "secondary": "kimi_k2_7_code_highspeed",
+      "fallback": "deepseek_v4_flash_official"
     },
     "computer_use": {
-      "primary": "kimi_k2_7_code_highspeed",
-      "secondary": "deepseek_v4_flash_official",
-      "fallback": "qwen_72b"
+      "primary": "@active",
+      "secondary": "kimi_k2_7_code_highspeed",
+      "fallback": "deepseek_v4_flash_official"
     }
   },
   "budget_control": {
@@ -374,35 +394,35 @@
     "role_collaboration": {
       "role_mapping": {
         "code_analysis": {
-          "analyst": "deepseek_v4_flash_official",
-          "creator": "deepseek_v4_flash_official",
-          "reviewer": "qwen_72b"
+          "analyst": "@active",
+          "creator": "@active",
+          "reviewer": "@active"
         },
         "code_generation": {
-          "analyst": "deepseek_v4_flash_official",
-          "creator": "qwen_72b",
-          "reviewer": "deepseek_v4_flash_official"
+          "analyst": "@active",
+          "creator": "@active",
+          "reviewer": "@active"
         },
         "creative_writing": {
-          "analyst": "qwen_72b",
-          "creator": "deepseek_v4_flash_official",
-          "reviewer": "deepseek_v4_flash_official"
+          "analyst": "@active",
+          "creator": "@active",
+          "reviewer": "@active"
         },
         "complex_reasoning": {
-          "analyst": "deepseek_v4_flash_official",
-          "creator": "qwen_72b",
-          "reviewer": "deepseek_v4_flash_official"
+          "analyst": "@active",
+          "creator": "@active",
+          "reviewer": "@active"
         },
         "task_planning": {
-          "analyst": "deepseek_v4_flash_official",
-          "creator": "deepseek_v4_flash_official",
-          "reviewer": "qwen_72b"
+          "analyst": "@active",
+          "creator": "@active",
+          "reviewer": "@active"
         }
       },
       "default_role_assignment": {
-        "analyst": "deepseek_v4_flash_official",
-        "creator": "qwen_72b",
-        "reviewer": "deepseek_v4_flash_official"
+        "analyst": "@active",
+        "creator": "@active",
+        "reviewer": "@active"
       },
       "role_prompts": {
         "analyst": "你是一个专业分析师，请深入分析问题的核心要点、关键约束和潜在风险。",
@@ -489,8 +509,8 @@
     }
   },
   "system_defaults": {
-    "default_model": "deepseek_v4_flash_official",
-    "soul_model": "deepseek_v4_flash_official",
+    "default_model": "@active",
+    "soul_model": "@active",
     "description": "系统各模块使用的默认模型。default_model 用于 CCE / 主路由回退，soul_model 用于 Soul Generator。"
   },
   "_custom_model_guide": {

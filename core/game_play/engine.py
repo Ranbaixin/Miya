@@ -299,7 +299,9 @@ class GamePlayEngine:
         cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
         models = cfg.get("models", {})
         vision_prefs = cfg.get("vision_preferences", {}).get("model_preferences", {})
-        for key in [vision_prefs.get("primary"), vision_prefs.get("secondary")]:
+        active_vision = cfg.get("vision_preferences", {}).get("active_vision", "")
+        for raw_key in [vision_prefs.get("primary"), vision_prefs.get("secondary")]:
+            key = active_vision if raw_key == "@active_vision" else raw_key
             if not key or key not in models:
                 continue
             m = models[key]

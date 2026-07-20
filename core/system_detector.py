@@ -2,6 +2,7 @@
 系统环境检测器
 自动检测操作系统、Linux 发行版、Shell、包管理器等信息
 """
+import concurrent.futures
 import logging
 import os
 import platform
@@ -11,6 +12,9 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
+
+_PM_DETECTION_TIMEOUT = 5
+_PM_MAX_WORKERS = 6
 
 
 @dataclass
@@ -75,36 +79,32 @@ class SystemDetector:
         self._cached_info: Optional[SystemInfo] = None
 
     def detect(self, force_refresh: bool = False) -> SystemInfo:
-        """检测系统信息"""
+        """检测系统信息（并行化 subprocess 调用以加速启动）"""
         if not force_refresh and self._cached_info:
             return self._cached_info
 
         info = SystemInfo()
 
-        # 检测操作系统
         info.os_name = platform.system()
         info.os_version = platform.version()
         info.arch = platform.machine()
         info.current_path = os.getcwd()
         info.home_dir = os.path.expanduser('~')
 
-        # 检测 Linux 发行版
         if info.is_linux():
             info.distro, info.distro_version = self._detect_linux_distro()
 
-        # 检测 Shell
-        info.shell = self._detect_shell()
-
-        # 检测 Python 版本
         info.python_version = self._detect_python_version()
 
-        # 检测 Node.js 版本
-        info.node_version = self._detect_node_version()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            future_shell = executor.submit(self._detect_shell)
+            future_node = executor.submit(self._detect_node_version)
+            future_pm = executor.submit(self._detect_package_managers, info)
 
-        # 检测包管理器
-        info.package_managers = self._detect_package_managers(info)
+            info.shell = future_shell.result()
+            info.node_version = future_node.result()
+            info.package_managers = future_pm.result()
 
-        # 缓存结果
         self._cached_info = info
 
         logger.info(f"系统检测完成: {info.os_name} {info.distro} (Python {info.python_version})")
@@ -196,119 +196,61 @@ class SystemDetector:
 
         return "not_installed"
 
+    @staticmethod
+    def _check_command(cmd: List[str]) -> bool:
+        """检查单个命令是否可用"""
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=_PM_DETECTION_TIMEOUT,
+            )
+            return result.returncode == 0
+        except Exception:
+            return False
+
     def _detect_package_managers(self, info: SystemInfo) -> List[str]:
-        """检测可用的包管理器"""
-        managers = []
+        """检测可用的包管理器（并行化 subprocess 调用）"""
+        managers = ['pip']
 
-        # Python 包管理器（所有平台都有）
-        managers.append('pip')
+        has_node = info.node_version != "not_installed"
+        is_win = info.is_windows()
+        is_mac = info.is_macos()
+        is_linux = info.is_linux()
 
-        # Node.js 包管理器
-        if info.node_version != "not_installed":
+        if has_node:
             managers.append('npm')
 
-            # 检测 yarn
-            try:
-                result = subprocess.run(
-                    ['yarn', '--version'],
-                    capture_output=True,
-                    text=True,
-                    timeout=5
-                )
-                if result.returncode == 0:
-                    managers.append('yarn')
-            except:
-                pass
+        cmds_to_check = []
+        if has_node:
+            cmds_to_check.extend([('yarn', ['yarn', '--version']), ('pnpm', ['pnpm', '--version'])])
+        if is_win:
+            cmds_to_check.extend([('winget', ['winget', '--version']), ('choco', ['choco', '--version']), ('scoop', ['scoop', '--version'])])
+        if is_mac:
+            cmds_to_check.append(('brew', ['brew', '--version']))
 
-            # 检测 pnpm
-            try:
-                result = subprocess.run(
-                    ['pnpm', '--version'],
-                    capture_output=True,
-                    text=True,
-                    timeout=5
-                )
-                if result.returncode == 0:
-                    managers.append('pnpm')
-            except:
-                pass
+        if cmds_to_check:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=_PM_MAX_WORKERS) as executor:
+                future_map = {executor.submit(self._check_command, cmd): name for name, cmd in cmds_to_check}
+                for future in concurrent.futures.as_completed(future_map):
+                    name = future_map[future]
+                    try:
+                        if future.result():
+                            managers.append(name)
+                    except Exception:
+                        pass
 
-        # Windows 包管理器
-        if info.is_windows():
-            # winget
-            try:
-                result = subprocess.run(
-                    ['winget', '--version'],
-                    capture_output=True,
-                    text=True,
-                    timeout=5
-                )
-                if result.returncode == 0:
-                    managers.append('winget')
-            except:
-                pass
-
-            # Chocolatey
-            try:
-                result = subprocess.run(
-                    ['choco', '--version'],
-                    capture_output=True,
-                    text=True,
-                    timeout=5
-                )
-                if result.returncode == 0:
-                    managers.append('choco')
-            except:
-                pass
-
-            # Scoop
-            try:
-                result = subprocess.run(
-                    ['scoop', '--version'],
-                    capture_output=True,
-                    text=True,
-                    timeout=5
-                )
-                if result.returncode == 0:
-                    managers.append('scoop')
-            except:
-                pass
-
-        # Linux 包管理器
-        elif info.is_linux():
+        if is_linux:
             distro = info.distro
-
-            # Debian/Ubuntu 系列
             if distro in ['ubuntu', 'debian', 'linuxmint', 'pop']:
                 managers.append('apt')
-
-            # RedHat/CentOS/Fedora 系列
             elif distro in ['fedora', 'rhel', 'centos', 'rocky']:
-                managers.append('dnf')
-                managers.append('yum')
-
-            # Arch Linux
+                managers.extend(['dnf', 'yum'])
             elif distro in ['arch', 'manjaro', 'endeavouros']:
                 managers.append('pacman')
-
-            # Alpine Linux
             elif distro in ['alpine']:
                 managers.append('apk')
-
-        # macOS 包管理器
-        elif info.is_macos():
-            # Homebrew
-            try:
-                result = subprocess.run(
-                    ['brew', '--version'],
-                    capture_output=True,
-                    text=True,
-                    timeout=5
-                )
-                if result.returncode == 0:
-                    managers.append('brew')
-            except:
-                pass
 
         logger.info(f"检测到的包管理器: {', '.join(managers)}")
         return managers

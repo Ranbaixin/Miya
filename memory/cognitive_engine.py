@@ -16,6 +16,11 @@ from typing import Any, Dict, List, Optional
 
 from memory.core import MemoryItem, MemoryLevel, MemoryQuery, get_memory_core
 from memory.temporal_parser import extract_temporal_keywords, parse_temporal
+from memory.date_boundary import (
+    classify_memory_age,
+    get_date_boundary,
+    time_decay_by_boundary,
+)
 
 logger = logging.getLogger("Miya.CognitiveEngine")
 
@@ -307,11 +312,10 @@ class CognitiveEngine:
                 score += 0.3
                 break
 
-        # 4. 时间衰减（新记忆权重更高）
+        # 4. 时间衰减（按日期边界：今天 > 昨天 > 本周 > 更长）
         try:
             memory_time = datetime.fromisoformat(memory.created_at)
-            hours_ago = (datetime.now() - memory_time).total_seconds() / 3600
-            time_weight = max(0.1, 1 - hours_ago / (24 * 30))  # 30天内衰减
+            time_weight = time_decay_by_boundary(memory_time)
             score += time_weight * 0.15
         except:
             score += 0.1
@@ -487,6 +491,16 @@ class CognitiveEngine:
         # 4.5 按创建时间倒序排列（统一群聊与私聊记忆的时间线）
         results.sort(key=lambda m: m.created_at if m.created_at else "", reverse=True)
 
+        # 4.6 【新增】标注每条记忆的日期边界（今天/昨天/本周/更早）
+        for memory in results:
+            try:
+                age_label = classify_memory_age(datetime.fromisoformat(memory.created_at))
+                if not memory.metadata:
+                    memory.metadata = {}
+                memory.metadata["age_label"] = age_label
+            except Exception:
+                pass
+
         # 5. 记录共现关系（用于关联度学习）
         retrieved_ids = [m.id for m in results]
         if retrieved_ids:
@@ -611,7 +625,11 @@ class CognitiveEngine:
         if not memories:
             return ""
 
-        lines = ["【弥娅记住的事情】"]
+        context_display = _config.get("context_display", {})
+        header_text = context_display.get("header", "【弥娅记住的事情】")
+        footer_text = context_display.get("footer", "（这些都是之前对话中记住的重要事情，与当前对话可能相关）")
+
+        lines = [header_text]
         lines.append("")
 
         # 检测是否为时间范围查询，格式化不同
@@ -625,6 +643,7 @@ class CognitiveEngine:
             for memory in memories:
                 date_str = memory.created_at[:10]  # YYYY-MM-DD
                 time_str = memory.created_at[11:16] if len(memory.created_at) > 10 else ""
+                age_label = (memory.metadata or {}).get("age_label", "")
                 if date_str not in by_date:
                     by_date[date_str] = []
                 entry = f"[{time_str}]" if time_str else ""
@@ -641,16 +660,17 @@ class CognitiveEngine:
                     lines.append(entry)
                 lines.append("")
         else:
-            # 普通查询 → 按时序展示（已按 created_at 降序排列）
+            # 普通查询 → 按时序展示，使用日期边界标签
             for memory in memories:
+                age_label = (memory.metadata or {}).get("age_label", "")
                 time_str = memory.created_at[11:16] if len(memory.created_at) > 10 else ""
-                date_str = memory.created_at[:10] if len(memory.created_at) >= 10 else ""
-                ts = f"[{date_str} {time_str}]" if date_str else ""
+                date_label = age_label if age_label else (memory.created_at[:10] if len(memory.created_at) >= 10 else "")
+                ts = f"[{date_label} {time_str}]" if date_label else ""
                 content_preview = memory.content.replace("\n", " ")[:150]
                 lines.append(f"- {ts} {content_preview}")
 
         lines.append("")
-        lines.append("（这些都是之前对话中记住的重要事情，与当前对话可能相关）")
+        lines.append(footer_text)
 
         return "\n".join(lines)
 

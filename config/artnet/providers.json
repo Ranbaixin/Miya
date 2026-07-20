@@ -1,6 +1,14 @@
 {
-  "priority": ["comfyui", "dalle", "novelai", "cogview", "tongyi"],
+  "priority": ["proxy_image", "comfyui", "dalle", "novelai", "cogview", "tongyi"],
   "providers": {
+    "proxy_image": {
+      "enabled": true,
+      "base_url": "https://api.yinziapi.top",
+      "model": "gpt-image-2",
+      "env_key": "PROXY_API_KEY",
+      "quality": "standard",
+      "timeout": 120
+    },
     "stable_diffusion": {
       "enabled": false,
       "base_url": "http://127.0.0.1:7860",

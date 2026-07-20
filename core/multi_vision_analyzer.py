@@ -35,6 +35,13 @@ def _load_vision_config():
             with open(config_path, "r", encoding="utf-8") as f:
                 full_config = json.load(f)
                 _vision_config = full_config.get("vision_preferences", {})
+                # 解析 @active_vision 引用
+                active_vision = _vision_config.get("active_vision", "")
+                if active_vision:
+                    model_prefs = _vision_config.get("model_preferences", {})
+                    for key in ("primary", "secondary", "fallback"):
+                        if model_prefs.get(key) == "@active_vision":
+                            model_prefs[key] = active_vision
                 logger.info(
                     "[MultiVisionAnalyzer] 已从 multi_model_config.json 加载视觉配置"
                 )

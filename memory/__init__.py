@@ -374,12 +374,20 @@ async def get_user_memories(
 
 async def get_dialogue_history(
     session_id: str,
-    platform: str = "unknown",
+    platform: Optional[str] = None,
     limit: int = 50,
+    cross_platform: bool = False,
 ) -> List[MemoryItem]:
-    """获取对话历史"""
+    """获取对话历史
+
+    Args:
+        session_id: 会话ID
+        platform: 平台过滤（None=不过滤平台，跨平台检索）
+        limit: 返回数量限制
+        cross_platform: 是否跨平台检索（同时匹配其他平台的同名用户会话）
+    """
     core = await get_memory_core()
-    return await core.get_dialogue(session_id, platform=platform, limit=limit)
+    return await core.get_dialogue(session_id, platform=platform, limit=limit, cross_platform=cross_platform)
 
 
 # ==================== 用户画像 ====================

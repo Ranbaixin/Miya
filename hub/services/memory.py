@@ -104,14 +104,25 @@ class MemoryService:
         return state
 
     async def get_context(self, request: ProcessRequest, max_tokens: int = 2000) -> list[dict[str, Any]]:
-        """获取对话上下文"""
+        """获取对话上下文（跨平台统一检索）"""
         try:
             from memory import get_dialogue_history
 
+            user_id = str(request.user_id) if request.user_id else ""
+            session_id = request.session_id or request.target_id
+
             history = await get_dialogue_history(
-                session_id=request.session_id or request.target_id,
+                session_id=session_id,
+                platform=None,
                 limit=20,
             )
+            if not history and user_id:
+                history = await get_dialogue_history(
+                    session_id=f"all_{user_id}",
+                    platform=None,
+                    limit=20,
+                )
+
             return [
                 {
                     "role": h.role if hasattr(h, "role") else "user",

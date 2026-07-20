@@ -1685,24 +1685,31 @@ class MiyaMemoryCore:
     async def get_dialogue(
         self,
         session_id: str,
-        platform: str = "unknown",
+        platform: Optional[str] = None,
         limit: int = 50,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
+        cross_platform: bool = False,
     ) -> List[MemoryItem]:
         """获取对话历史
 
         Args:
             session_id: 会话ID
-            platform: 平台过滤
+            platform: 平台过滤（None=不过滤，跨平台检索）
             limit: 返回数量限制
             start_time: 开始时间（可选）
             end_time: 结束时间（可选）
+            cross_platform: 是否跨平台检索（忽略 platform 参数，全局查询）
         """
+        session_pattern = session_id
+        if cross_platform and session_id:
+            user_suffix = session_id.split("_", 1)[-1] if "_" in session_id else session_id
+            session_pattern = user_suffix
+
         q = MemoryQuery(
-            session_id=session_id,
+            session_id=session_id if not cross_platform else None,
             level=MemoryLevel.DIALOGUE,
-            limit=limit,
+            limit=limit * (3 if cross_platform else 1),
             sort_by="created_at",
             sort_order="asc",
             start_time=start_time,
@@ -1710,11 +1717,16 @@ class MiyaMemoryCore:
         )
         results = await self.retrieve(q)
 
-        # 过滤平台
-        if platform:
+        if cross_platform:
+            if session_pattern:
+                results = [
+                    r for r in results
+                    if r.session_id.endswith(session_pattern) or r.user_id == session_pattern
+                ]
+        elif platform:
             results = [r for r in results if r.platform == platform]
 
-        return results
+        return results[:limit]
 
     # ==================== 更新删除 ====================
 

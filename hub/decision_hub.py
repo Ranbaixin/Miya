@@ -13,6 +13,7 @@
 import asyncio
 import json
 import logging
+import threading
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -453,7 +454,7 @@ class DecisionHub:
         logger.info("决策层 Hub 初始化完成（门面模式：感知/情绪/记忆/响应处理器 + 辅助模块）")
 
         # 9. 安全服务 / 10. 注入检测 / 11. 协作引擎 / 12. 主动聊天 — 后台延迟初始化
-        self._deferred_init_complete = False
+        self._deferred_init_event = threading.Event()
         self.proactive_chat = None
         self._start_deferred_init()
 
@@ -544,8 +545,8 @@ class DecisionHub:
         except Exception as e:
             logger.debug(f"[时间感知] 初始化失败: {e}")
 
-    def _get_temporal_awareness(self) -> str:
-        """构建时间感知文本"""
+    def _get_temporal_awareness(self, user_id: str = "", platform: str = "") -> str:
+        """构建时间感知文本（含时间对照）"""
         try:
             if not hasattr(self, "_birth_data") or not self._birth_data:
                 return ""
@@ -561,6 +562,32 @@ class DecisionHub:
                     parts.append(f"本次已在线 {h} 小时 {m} 分")
                 else:
                     parts.append(f"本次已在线 {m} 分钟")
+
+            # 【时间对照】注入用户级时间感知
+            if user_id and platform:
+                try:
+                    from memory.time_comparison import get_time_comparison_engine
+                    from memory.time_tracker import get_time_tracker
+                    from memory.pattern_learner import get_pattern_learner
+                    tracker = get_time_tracker()
+                    engine = get_time_comparison_engine()
+                    learner = get_pattern_learner()
+                    engine.set_tracker(tracker)
+                    learner.set_tracker(tracker)
+                    perception = engine.compare(user_id, platform)
+                    if perception and perception.full_context:
+                        raw_facts = perception.full_context
+                        parts.append(f"\n[时间事实]\n{raw_facts}")
+                    # 模式学习者
+                    peak_desc = learner.get_peak_hours_description(user_id)
+                    if peak_desc:
+                        parts.append(peak_desc)
+                    quiet_desc = learner.get_quiet_hours_description(user_id, datetime.now().hour)
+                    if quiet_desc:
+                        parts.append(quiet_desc)
+                except Exception as e:
+                    logger.debug(f"[时间感知] TimeComparison 失败: {e}")
+
             last_active = self._birth_data.get("last_active_at")
             if last_active:
                 try:
@@ -575,13 +602,12 @@ class DecisionHub:
 
     def _start_deferred_init(self):
         """后台线程初始化非关键子系统（安全、协作引擎、主动聊天）"""
-        import threading
 
         def _deferred():
             self._init_security()
             self._init_collaboration_engine()
             self._init_proactive_chat()
-            self._deferred_init_complete = True
+            self._deferred_init_event.set()
 
         threading.Thread(target=_deferred, daemon=True, name="Miya-Init-BG").start()
 
@@ -637,6 +663,7 @@ class DecisionHub:
                     vision_trigger_light_count=cfg.get("vision_trigger_light_count", 10),
                     hash_similarity_threshold=cfg.get("hash_similarity_threshold", 8),
                     model_dir=cfg.get("model_dir", ""),
+                    ocr_startup_grace_seconds=cfg.get("ocr_startup_grace_seconds", 120),
                 )
                 self.proactive_chat.set_screen_aware(sa)
                 logger.info(
@@ -2117,7 +2144,10 @@ class DecisionHub:
             # 等待其余 Phase 1 任务（同时 cog → soul 在后台运行）
             user_persona_context, group_persona_context = await persona_task
             awareness_text = await awareness_task
-            temporal = self._get_temporal_awareness()
+            temporal = self._get_temporal_awareness(
+                user_id=user_id_str,
+                platform=platform,
+            )
             if temporal:
                 awareness_text = (awareness_text or "") + f"\n【弥娅时间感知】{temporal}"
                 logger.info(f"[时间感知] {temporal}")

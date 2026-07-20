@@ -174,18 +174,14 @@ class MiyaDaemon:
 
             if self._miya.memory_net:
                 try:
-                    await self._miya.memory_net.initialize()
+                    await self._miya._initialize_memory_net_async()
                     logger.info("✅ MemoryNet 全局记忆系统初始化成功")
                 except Exception as e:
                     logger.error(f"⚠️ MemoryNet 初始化失败: {e}")
 
             dh = getattr(self._miya, "decision_hub", None)
             if dh:
-                # Wait for background deferred init to complete
-                for _ in range(50):  # max 5s
-                    if dh._deferred_init_complete:
-                        break
-                    await asyncio.sleep(0.1)
+                dh._deferred_init_event.wait(timeout=5)
             if dh and getattr(dh, "proactive_chat", None) and dh.proactive_chat.is_enabled():
                 await dh.start_proactive_background()
                 logger.info("✅ 主动聊天后台轮询已启动")

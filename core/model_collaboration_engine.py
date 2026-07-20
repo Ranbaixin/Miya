@@ -166,6 +166,18 @@ class ModelCollaborationEngine:
         self.role_user_templates = rc.get("role_user_templates", {})
         self.role_skip_messages = rc.get("skip_messages", {})
 
+        # 解析 @active 引用
+        active_model = self.model_pool._config.get("active", "")
+        if active_model:
+            self.role_mapping = {
+                task: {role: active_model if mid == "@active" else mid for role, mid in roles.items()}
+                for task, roles in self.role_mapping.items()
+            }
+            self.default_role_assignment = {
+                role: active_model if mid == "@active" else mid
+                for role, mid in self.default_role_assignment.items()
+            }
+
         # 链式协作 - 三阶段：思考 → 推理 → 输出
         cc = self.config.get("chain_collaboration", {})
         self.chain_enabled = cc.get("enabled", True)

@@ -570,6 +570,17 @@ class WorkingMemoryManager:
             get_phase_description,
         )
 
+        recovery_prompts = _load_working_memory_config().get("recovery_prompts", {})
+        yesterday_context = recovery_prompts.get(
+            "yesterday_context", "这是昨天的对话内容，已经过去一天了，请以今天的新对话为主"
+        )
+        yesterday_bare = recovery_prompts.get(
+            "yesterday_bare", "这是昨天的对话，已经是新的一天了"
+        )
+        warm_hint = recovery_prompts.get(
+            "warm_hint", "以上为上次对话摘要，请自然接续"
+        )
+
         now = time.time()
 
         # 用持久化的活跃时间（不受 add_message 重置影响）
@@ -612,7 +623,7 @@ class WorkingMemoryManager:
                 topic_tags = f"【{'、'.join(unique)}】"
             return (
                 f"【{phase_desc}】{topic_tags}{summary}\n"
-                f"[提示] 以上为上次对话摘要，请自然接续"
+                f"[提示] {warm_hint}"
             )
 
         elif phase == SessionPhase.COLD:
@@ -624,6 +635,19 @@ class WorkingMemoryManager:
             if summary:
                 return f"【{phase_desc}】{summary}"
             return ""
+
+        elif phase == SessionPhase.YESTERDAY:
+            topic_history = self._get_topic_history_for(group_id)
+            messages_for_summary = (
+                state.recent_messages[-3:] if state.recent_messages else extra_messages[-3:]
+            )
+            summary = generate_cold_summary(messages_for_summary, topic_history)
+            if summary:
+                return (
+                    f"【{phase_desc}】{summary}\n"
+                    f"[提示] {yesterday_context}"
+                )
+            return f"【{phase_desc}】[提示] {yesterday_bare}"
 
         return ""
 

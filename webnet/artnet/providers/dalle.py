@@ -24,7 +24,8 @@ class DalleProvider(ArtProvider):
 
     def __init__(self, config: dict):
         super().__init__(config)
-        self.api_key = config.get("api_key", "") or os.getenv("OPENAI_API_KEY", "")
+        env_key = config.get("env_key", "OPENAI_API_KEY")
+        self.api_key = config.get("api_key", "") or os.getenv(env_key, "")
         base_url = config.get("base_url", "https://api.openai.com").rstrip("/")
         self.api_url = f"{base_url}/v1/images/generations"
         self.model = config.get("model", "dall-e-3")

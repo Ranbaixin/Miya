@@ -444,50 +444,27 @@ class Miya:
         try:
             from webnet.memory import MemoryNet
 
-            # 初始化 M-Link
             self.mlink = MLinkCore()
             self.logger.info("M-Link 初始化成功")
 
-            # 初始化 MemoryNet 全局记忆子网
             self.memory_net = MemoryNet(self.mlink)
             self.logger.info("MemoryNet 全局记忆子网初始化成功")
-
-            # 知识图谱功能已整合到统一记忆系统（SQLite）
-            # Neo4j 不再需要
 
         except Exception as e:
             self.logger.error(f"全局记忆系统初始化失败: {e}")
             self.mlink = None
             self.memory_net = None
 
-        # 初始化统一记忆系统
-        self._init_unified_memory()
-
-    def _init_unified_memory(self):
-        """初始化统一记忆系统"""
+    async def _init_unified_memory_async(self):
+        """异步初始化统一记忆系统（在事件循环中调用）"""
         try:
-            import asyncio
-
             from memory import get_memory_adapter, get_memory_core
 
-            try:
-                asyncio.get_running_loop()
-                # 如果有运行中的loop，在后台任务中初始化
-                import concurrent.futures
+            MIYA_ROOT = Path(__file__).parent.parent.resolve()
+            DATA_DIR = str(MIYA_ROOT / "data" / "memory")
 
-                # 获取 Miya 根目录
-                MIYA_ROOT = Path(__file__).parent.parent.resolve()
-                DATA_DIR = str(MIYA_ROOT / "data" / "memory")
-
-                with concurrent.futures.ThreadPoolExecutor() as pool:
-                    self.unified_memory_core = pool.submit(asyncio.run, get_memory_core(DATA_DIR)).result()
-                    self.unified_memory_adapter = pool.submit(asyncio.run, get_memory_adapter()).result()
-            except RuntimeError:
-                # 没有运行中的loop，可以直接使用asyncio.run
-                MIYA_ROOT = Path(__file__).parent.parent.resolve()
-                DATA_DIR = str(MIYA_ROOT / "data" / "memory")
-                self.unified_memory_core = asyncio.run(get_memory_core(DATA_DIR))
-                self.unified_memory_adapter = asyncio.run(get_memory_adapter())
+            self.unified_memory_core = await get_memory_core(DATA_DIR)
+            self.unified_memory_adapter = await get_memory_adapter()
 
             self.logger.info("[记忆] 统一记忆系统初始化成功")
 
@@ -497,30 +474,23 @@ class Miya:
             self.unified_memory_adapter = None
 
     async def _initialize_memory_net_async(self):
-        """异步初始化 MemoryNet（在事件循环中调用）"""
+        """异步初始化 MemoryNet + 统一记忆系统（在事件循环中调用）"""
         if self.memory_net:
             try:
                 await self.memory_net.initialize()
                 self.logger.info("MemoryNet 初始化完成")
-
-                # 清除之前的终端对话历史，确保新会话是干净的
-                try:
-                    if self.memory_net.conversation_history:
-                        session_to_clear = "terminal_default"
-                        await self.memory_net.conversation_history.clear_session(session_to_clear)
-                        self.logger.info("已清除之前的终端对话历史（新会话开始）")
-                except Exception as e:
-                    self.logger.warning(f"清除对话历史失败: {e}")
-
             except Exception as e:
                 self.logger.error(f"MemoryNet 初始化失败: {e}")
 
-        # 初始化统一记忆系统
-        if hasattr(self, "unified_memory_core") and self.unified_memory_core:
+        await self._init_unified_memory_async()
+
+        if self.memory_net and self.memory_net.conversation_history:
             try:
-                self.logger.info("[记忆] 统一记忆系统已就绪")
+                session_to_clear = "terminal_default"
+                await self.memory_net.conversation_history.clear_session(session_to_clear)
+                self.logger.info("已清除之前的终端对话历史（新会话开始）")
             except Exception as e:
-                self.logger.error(f"[记忆] 统一记忆系统初始化失败: {e}")
+                self.logger.warning(f"清除对话历史失败: {e}")
 
     def _init_ai_client(self):
         """初始化AI客户端 - 模型配置从 multi_model_config.json 加载，客户端延迟创建"""
@@ -743,9 +713,8 @@ class Miya:
                 return False
 
             server_ready = threading.Event()
-            server_thread = threading.Thread(target=run_server, args=(api_port,), daemon=False)
+            server_thread = threading.Thread(target=run_server, args=(api_port,), daemon=True)
             server_thread.start()
-            server_ready.wait(timeout=5)
 
             self.logger.info(f"Web API 服务器已在后台启动 (http://0.0.0.0:{api_port})")
         except Exception as e:

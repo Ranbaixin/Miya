@@ -554,7 +554,8 @@
         "bianka": "比安卡态",
         "baiyuekui": "白月魁态",
         "feixue": "绯雪态",
-        "weila":"薇拉态"
+        "weila":"薇拉态",
+        "jizi": "姬子态"
     },
     "personality_config": {
         "name": "弥娅",
@@ -1307,7 +1308,12 @@
             "?",
             "！",
             "!"
-        ]
+        ],
+        "recovery_prompts": {
+            "yesterday_context": "这是昨天的对话内容，已经过去一天了，请以今天的新对话为主",
+            "yesterday_bare": "这是昨天的对话，已经是新的一天了",
+            "warm_hint": "以上为上次对话摘要，请自然接续"
+        }
     },
     "conversation_context": {
         "enabled": true,
@@ -2130,6 +2136,10 @@
                 "what_patterns": "(\\w{2,})是什么",
                 "when_patterns": "(\\w{2,})的时候"
             }
+        },
+        "context_display": {
+            "header": "【弥娅记住的事情】",
+            "footer": "（这些都是之前对话中记住的重要事情，与当前对话可能相关）"
         }
     },
     "correction_learning": {
@@ -2565,12 +2575,103 @@
         "form_inner_thought_hint": "用当前形态的语气写 inner_thought。{form_name}态的表达方式：{form_speaking_style}\n让形态风格自然流露在内心独白里。",
         "json_format_constraint": "⚠️ 重要：必须只输出原始JSON对象，禁止在JSON之前或之后添加任何文字、解释或感叹词。\n第一个字符必须是 {，最后一个字符必须是 }。"
     },
+    "time_awareness": {
+        "description": "时间对照系统配置 — 弥娅时间感知所有文本从本配置读取",
+        "elapsed_thresholds": {
+            "just_now": 300,
+            "this_session": 1800,
+            "hours": 21600,
+            "today": 43200,
+            "yesterday": 172800,
+            "this_week": 604800
+        },
+        "elapsed_labels": {
+            "just_now": "刚才还在聊",
+            "this_session": "{minutes}分钟前聊过",
+            "hours": "{hours}小时前聊过",
+            "today": "今天{period}聊过",
+            "yesterday": "昨天{period}聊过",
+            "this_week": "上次是{weekday}",
+            "older": "好久不见（{days}天前）"
+        },
+        "time_periods": {
+            "late_night": {"range": [0, 6], "label": "深夜", "simple": "深夜"},
+            "morning": {"range": [6, 9], "label": "清晨", "simple": "早上"},
+            "forenoon": {"range": [9, 12], "label": "上午", "simple": "上午"},
+            "noon": {"range": [12, 14], "label": "中午", "simple": "中午"},
+            "afternoon": {"range": [14, 18], "label": "下午", "simple": "下午"},
+            "evening": {"range": [18, 22], "label": "晚上", "simple": "晚上"},
+            "night": {"range": [22, 24], "label": "深夜", "simple": "深夜"}
+        },
+        "weekdays": ["周一", "周二", "周三", "周四", "周五", "周六", "周日"],
+        "platform_names": {
+            "qq": "QQ",
+            "aiocqhttp": "QQ",
+            "qqofficial": "QQ",
+            "terminal": "终端",
+            "desktop": "桌面端",
+            "web": "Web",
+            "webchat": "网页聊天",
+            "lark": "飞书",
+            "weixin_official_account": "微信公众号",
+            "weixin_ilink": "微信",
+            "generic": "通用平台"
+        },
+        "duration_labels": {
+            "just_started": "刚开始",
+            "minutes": "{minutes}分钟",
+            "hours": "{hours}小时{remain_min}分"
+        },
+        "pattern_learner": {
+            "description": "活跃模式学习配置（第二层）",
+            "enabled": true,
+            "min_days_data": 7,
+            "max_daily_samples": 50,
+            "anomaly_threshold_std": 2.0,
+            "peak_hours_label": "你通常在{times}比较活跃",
+            "quiet_label": "这个时间你通常不在线",
+            "pattern_stability_days": 14
+        }
+    },
+    "date_boundary": {
+        "description": "日期边界配置 — 将日期分类为今天/昨天/本周等语义标签",
+        "labels": {
+            "today": "今天",
+            "yesterday": "昨天",
+            "this_week": "本周",
+            "last_week": "上周",
+            "this_month": "本月",
+            "older": "更早"
+        },
+        "time_parts": {
+            "morning": "上午",
+            "afternoon": "下午",
+            "evening": "晚上"
+        },
+        "age_labels": {
+            "today": "今天{part}",
+            "yesterday": "昨天{part}",
+            "this_week": "本周",
+            "last_week": "上周",
+            "this_month": "本月",
+            "older": "更早"
+        },
+        "decay_weights": {
+            "today": 1.0,
+            "yesterday": 0.7,
+            "this_week": 0.5,
+            "last_week": 0.3,
+            "this_month": 0.2,
+            "older": 0.1
+        }
+    },
     "session_decay": {
         "description": "会话时间衰减配置 - 会话阶段判断与中文描述标签",
         "enabled": true,
         "hot_window_minutes": 30,
         "warm_window_hours": 6,
         "cold_window_hours": 24,
+        "yesterday_window_hours": 48,
         "ai_summary_min_messages": 10,
         "ai_summary_enabled": true,
         "phase_labels": {
@@ -2578,10 +2679,12 @@
             "warm": "之前的对话",
             "cold_today": "今日有过对话",
             "cold_yesterday": "昨日有过对话",
+            "yesterday": "昨天的对话",
             "dormant": "新对话",
             "warm_with_elapsed": "之前聊过（已过{hours}小时）",
             "warm_with_elapsed_zero": "之前聊过",
-            "cold_with_elapsed": "{day_label}有过对话（已过{hours}小时）"
+            "cold_with_elapsed": "{day_label}有过对话（已过{hours}小时）",
+            "yesterday_with_elapsed": "昨天聊过（已过{hours}小时）"
         }
     },
     "proactive_chat": {

@@ -23,7 +23,8 @@ class SessionPhase(str, Enum):
     HOT = "hot"  # ≤30min：活跃，完整恢复
     WARM = "warm"  # 30min-6h：摘要恢复
     COLD = "cold"  # 6h-24h：标签恢复
-    DORMANT = "dormant"  # >24h：不恢复
+    YESTERDAY = "yesterday"  # 24h-48h：昨天发生过，保留关键摘要
+    DORMANT = "dormant"  # >48h：不恢复
 
 
 _DEFAULT_CONFIG = {
@@ -31,6 +32,7 @@ _DEFAULT_CONFIG = {
     "hot_window_minutes": 30,
     "warm_window_hours": 6,
     "cold_window_hours": 24,
+    "yesterday_window_hours": 48,
     "ai_summary_min_messages": 10,
     "ai_summary_enabled": True,
     "phase_labels": {
@@ -38,10 +40,12 @@ _DEFAULT_CONFIG = {
         "warm": "之前的对话",
         "cold_today": "今日有过对话",
         "cold_yesterday": "昨日有过对话",
+        "yesterday": "昨天的对话",
         "dormant": "新对话",
         "warm_with_elapsed": "之前聊过（已过{hours}小时）",
         "warm_with_elapsed_zero": "之前聊过",
         "cold_with_elapsed": "{day_label}有过对话（已过{hours}小时）",
+        "yesterday_with_elapsed": "昨天聊过（已过{hours}小时）",
     },
 }
 
@@ -74,6 +78,7 @@ def get_phase(elapsed_seconds: float) -> SessionPhase:
     hot_seconds = config.get("hot_window_minutes", 30) * 60
     warm_seconds = config.get("warm_window_hours", 6) * 3600
     cold_seconds = config.get("cold_window_hours", 24) * 3600
+    yesterday_seconds = config.get("yesterday_window_hours", 48) * 3600
 
     if elapsed_seconds <= hot_seconds:
         return SessionPhase.HOT
@@ -81,6 +86,8 @@ def get_phase(elapsed_seconds: float) -> SessionPhase:
         return SessionPhase.WARM
     elif elapsed_seconds <= cold_seconds:
         return SessionPhase.COLD
+    elif elapsed_seconds <= yesterday_seconds:
+        return SessionPhase.YESTERDAY
     else:
         return SessionPhase.DORMANT
 
@@ -117,6 +124,11 @@ def get_phase_description(
             desc = labels.get(
                 "cold_with_elapsed", "{day_label}有过对话（已过{hours}小时）"
             ).format(day_label=day_label, hours=hours)
+        elif phase == SessionPhase.YESTERDAY:
+            hours = int(elapsed_minutes / 60)
+            desc = labels.get(
+                "yesterday_with_elapsed", "昨天聊过（已过{hours}小时）"
+            ).format(hours=hours)
         else:
             desc = default_desc
     else:
@@ -127,6 +139,8 @@ def get_phase_description(
         elif phase == SessionPhase.COLD:
             key = "cold_today" if is_today else "cold_yesterday"
             desc = labels.get(key, "今日有过对话")
+        elif phase == SessionPhase.YESTERDAY:
+            desc = labels.get("yesterday", "昨天的对话")
         elif phase == SessionPhase.DORMANT:
             desc = labels.get("dormant", "新对话")
         else:

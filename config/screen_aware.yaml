@@ -9,6 +9,11 @@ screen_aware:
   # PaddleOCR 模型存放路径。留空则自动使用 models/paddle_ocr/
   model_dir: ""
 
+  # ── OCR 启动宽限期（秒）──
+  # 启动后延迟加载 PaddleOCR，避免阻塞 daemon 启动
+  # PaddleOCR 需加载 5 个模型约 60s，宽限期内 OCR 暂不可用
+  ocr_startup_grace_seconds: 120
+
   # ── 感知模式 ──
   # ocr_only:  纯本地 OCR，零 API 调用，零 token
   # api_only:  纯 API 视觉模型，跳过 OCR，结果更精准但费 token
