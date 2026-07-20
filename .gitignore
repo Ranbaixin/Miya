@@ -210,6 +210,7 @@ data/faq.json
 data/feedback.json
 data/admin_list.json
 data/knowledge/
+data/time_tracker.json
 
 # Miya frontend backend dist
 miya_frontend/backend-dist/
