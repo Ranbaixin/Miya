@@ -1327,6 +1327,28 @@ class DecisionHub:
 
         logger.info(f"[决策层] 收到感知数据: {sender_name} - {content[:50]}")
 
+        # 【统一消息存储】记录入站消息（fire-and-forget）
+        async def _record_inbound():
+            try:
+                from core.unified_message_store import get_unified_message_store
+                store = get_unified_message_store()
+                await store.initialize()
+                await store.record_message(
+                    platform_id=platform,
+                    user_id=str(user_id) if user_id else "unknown",
+                    sender_id=str(perception.get("sender_id", "")),
+                    sender_name=sender_name,
+                    content={"text": content[:2000]},
+                    direction="in",
+                    message_id=perception.get("message_id", ""),
+                    group_id=str(group_id) if group_id else None,
+                    text=content[:2000],
+                )
+            except Exception as e:
+                logger.debug(f"[MessageStore] 入站记录失败: {e}")
+
+        asyncio.create_task(_record_inbound(), name="record_inbound")
+
         # 【过滤】跳过内部处理标志消息，防止循环处理
         if content.startswith("[表情包请求已处理]"):
             logger.info("[决策层] 跳过内部标志消息 (emoji request processed)")
@@ -1695,6 +1717,25 @@ class DecisionHub:
         # 8. 返回响应
         message.content["response"] = response
         message.content["platform"] = platform
+
+        # 【统一消息存储】记录出站回复（fire-and-forget）
+        if response:
+            async def _record_outbound():
+                try:
+                    from core.unified_message_store import get_unified_message_store
+                    store = get_unified_message_store()
+                    await store.initialize()
+                    await store.record_miya_reply(
+                        platform_id=platform,
+                        user_id=str(user_id) if user_id else "unknown",
+                        content_text=response[:2000],
+                        reply_to_message_id=perception.get("message_id", ""),
+                        group_id=str(group_id) if group_id else None,
+                    )
+                except Exception as e:
+                    logger.debug(f"[MessageStore] 出站记录失败: {e}")
+
+            asyncio.create_task(_record_outbound(), name="record_outbound")
 
         logger.info(f"[决策层-跨平台] 生成响应: {response[:50] if response else '(空)'}")
         return response

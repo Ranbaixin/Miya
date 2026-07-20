@@ -223,6 +223,83 @@ class ManagementAPI:
         async def daemon_status():
             return self.daemon.get_daemon_status()
 
+        # ======== 跨平台统一消息 (v8.1) ========
+
+        @app.get("/api/v1/messages")
+        async def query_messages(
+            platform_id: str = "",
+            user_id: str = "",
+            direction: str = "",
+            sender_name: str = "",
+            limit: int = 50,
+            offset: int = 0,
+        ):
+            """查询跨平台消息"""
+            from core.unified_message_store import get_unified_message_store
+
+            store = get_unified_message_store()
+            messages = await store.query_messages(
+                platform_id=platform_id or None,
+                user_id=user_id or None,
+                direction=direction or None,
+                sender_name=sender_name or None,
+                limit=min(limit, 500),
+                offset=offset,
+            )
+            count = await store.get_message_count(platform_id=platform_id or None)
+            return {
+                "messages": messages,
+                "total": count,
+                "limit": limit,
+                "offset": offset,
+            }
+
+        @app.post("/api/v1/messages")
+        async def record_message(request: Request):
+            """记录一条消息到跨平台存储"""
+            try:
+                body = await request.json()
+            except Exception:
+                return {"error": "需要 JSON body"}
+
+            from core.unified_message_store import get_unified_message_store
+
+            store = get_unified_message_store()
+            record_id = await store.record_message(
+                platform_id=body.get("platform_id", "unknown"),
+                user_id=body.get("user_id", "unknown"),
+                sender_id=body.get("sender_id"),
+                sender_name=body.get("sender_name"),
+                content=body.get("content"),
+                direction=body.get("direction", "in"),
+                message_id=body.get("message_id"),
+                reply_to_message_id=body.get("reply_to_message_id"),
+                group_id=body.get("group_id"),
+                text=body.get("text"),
+            )
+            return {"success": record_id is not None, "id": record_id}
+
+        @app.post("/api/v1/messages/reply")
+        async def record_miya_reply(request: Request):
+            """记录弥娅发出的回复"""
+            try:
+                body = await request.json()
+            except Exception:
+                return {"error": "需要 JSON body"}
+
+            from core.unified_message_store import get_unified_message_store
+
+            store = get_unified_message_store()
+            record_id = await store.record_miya_reply(
+                platform_id=body.get("platform_id", "unknown"),
+                user_id=body.get("user_id", "unknown"),
+                content_text=body.get("text", ""),
+                reply_to_message_id=body.get("reply_to_message_id"),
+                sender_name=body.get("sender_name", "弥娅"),
+                group_id=body.get("group_id"),
+            )
+            return {"success": record_id is not None, "id": record_id}
+
         # ======== 权限管理 (v7.0) ========
 
         @app.get("/api/v1/auth/status")
@@ -452,11 +529,51 @@ class ManagementAPI:
             await ws.send_json({"type": "error", "message": f"Unknown action: {action}"})
 
     async def broadcast_event(self, event: Dict):
-        """向所有 WebSocket 客户端广播事件"""
+        """向所有 WebSocket 客户端广播平台事件"""
         payload = {
             "type": "platform_event",
             "timestamp": datetime.now().isoformat(),
             **event,
+        }
+        dead = set()
+        for ws in self._ws_clients:
+            try:
+                await ws.send_json(payload)
+            except Exception:
+                dead.add(ws)
+        self._ws_clients -= dead
+
+    async def broadcast_message(
+        self,
+        content: str,
+        platform: str = "",
+        platform_name: str = "",
+        sender_name: str = "",
+        sender_id: str = "",
+        user_id: str = "",
+        direction: str = "in",
+        message_id: str = "",
+        reply_to_message_id: str = "",
+        timestamp: str = "",
+        group_id: str = "",
+    ):
+        """向所有 WebSocket 客户端广播跨平台消息"""
+        payload = {
+            "type": "new_message",
+            "timestamp": timestamp or datetime.now().isoformat(),
+            "data": {
+                "content": content,
+                "platform": platform,
+                "platform_name": platform_name,
+                "sender_name": sender_name,
+                "sender_id": sender_id,
+                "user_id": user_id,
+                "direction": direction,
+                "message_id": message_id,
+                "reply_to_message_id": reply_to_message_id,
+                "group_id": group_id,
+                "timestamp": timestamp or datetime.now().isoformat(),
+            },
         }
         dead = set()
         for ws in self._ws_clients:

@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { useStorage } from '@vueuse/core'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import API from '@/api/core'
-import { CONFIG } from '@/utils/config'
 
 const backendOnline = ref(false)
 const miyaPersona = ref('默认')
-const miyaPlatforms = ref(0)
 const currentTime = ref('')
 let timer: ReturnType<typeof setInterval> | null = null
 
@@ -16,8 +14,6 @@ async function fetchStatus() {
     backendOnline.value = health.status === 'healthy'
     const persona = await API.getCurrentPersona()
     miyaPersona.value = persona?.persona?.name || persona?.persona?.id || '默认'
-    const platforms = await fetch('http://localhost:9800/api/v1/platforms').then(r => r.json())
-    miyaPlatforms.value = platforms.online || 0
   } catch {
     backendOnline.value = false
   }
@@ -42,24 +38,13 @@ const showStatus = useStorage('miya-show-status', true)
 </script>
 
 <template>
-  <header class="top-bar">
+  <header v-if="showStatus" class="top-bar">
     <div class="top-left">
-      <span class="top-brand">MIYA</span>
-      <span class="top-sep">//</span>
-      <span class="top-version">v2.0</span>
-    </div>
-
-    <div v-if="showStatus" class="top-center">
       <span class="top-dot" :class="{ online: backendOnline }" />
-      <span class="top-status-text">
-        {{ backendOnline ? 'SYS.ONLINE' : 'SYS.OFFLINE' }}
-      </span>
+      <span class="top-brand">MIYA</span>
       <span class="top-sep">·</span>
-      <span class="top-status-text">{{ miyaPlatforms }} 平台</span>
-      <span class="top-sep">·</span>
-      <span class="top-status-text">人格: {{ miyaPersona }}</span>
+      <span class="top-persona">{{ miyaPersona }}</span>
     </div>
-
     <div class="top-right">
       <span class="top-time">{{ currentTime }}</span>
     </div>
@@ -71,13 +56,10 @@ const showStatus = useStorage('miya-show-status', true)
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 36px;
-  min-height: 36px;
+  height: 32px;
+  min-height: 32px;
   padding: 0 1rem;
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  border-bottom: 1px solid color-mix(in srgb, var(--miya-border) 4%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--miya-border) 3%, transparent);
   z-index: 60;
   user-select: none;
 }
@@ -85,14 +67,26 @@ const showStatus = useStorage('miya-show-status', true)
 .top-left {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 6px;
+}
+
+.top-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 100, 100, 0.45);
+  transition: all 0.5s ease;
+}
+
+.top-dot.online {
+  background: color-mix(in srgb, var(--miya-chat-ai) 50%, transparent);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--miya-chat-ai) 30%, transparent);
 }
 
 .top-brand {
   font-family: 'Noto Serif SC', serif;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
-  letter-spacing: 0.15em;
   background: linear-gradient(135deg, var(--miya-chat-ai), var(--miya-accent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -101,42 +95,15 @@ const showStatus = useStorage('miya-show-status', true)
 
 .top-sep {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.55rem;
-  color: color-mix(in srgb, var(--miya-border) 25%, transparent);
-}
-
-.top-version {
-  font-family: 'JetBrains Mono', monospace;
   font-size: 0.5rem;
-  color: color-mix(in srgb, var(--miya-border) 35%, transparent);
-  letter-spacing: 0.1em;
+  color: color-mix(in srgb, var(--miya-border) 20%, transparent);
 }
 
-.top-center {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
+.top-persona {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.55rem;
-}
-
-.top-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: rgba(255, 100, 100, 0.5);
-  box-shadow: 0 0 4px rgba(255, 100, 100, 0.3);
-  transition: all 0.5s ease;
-}
-
-.top-dot.online {
-  background: color-mix(in srgb, var(--miya-chat-ai) 60%, transparent);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--miya-chat-ai) 40%, transparent);
-}
-
-.top-status-text {
-  color: color-mix(in srgb, var(--miya-border) 50%, transparent);
-  letter-spacing: 0.05em;
+  font-size: 0.52rem;
+  color: color-mix(in srgb, var(--miya-border) 40%, transparent);
+  letter-spacing: 0.04em;
 }
 
 .top-right {
@@ -146,7 +113,7 @@ const showStatus = useStorage('miya-show-status', true)
 
 .top-time {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
-  color: color-mix(in srgb, var(--miya-chat-ai) 45%, transparent);
+  font-size: 0.55rem;
+  color: color-mix(in srgb, var(--miya-chat-ai) 35%, transparent);
 }
 </style>

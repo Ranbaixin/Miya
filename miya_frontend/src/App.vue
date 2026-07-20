@@ -8,7 +8,6 @@ import Live2dModel from '@/components/Live2dModel.vue'
 import SciFiOverlay from '@/components/SciFiOverlay.vue'
 import SideNav from '@/components/SideNav.vue'
 import TitleBar from '@/components/TitleBar.vue'
-import TopStatusBar from '@/components/TopStatusBar.vue'
 import { playBgm } from '@/composables/useAudio'
 import { useElectron } from '@/composables/useElectron'
 import { useMIYARealtime } from '@/composables/useMIYARealtime'
@@ -29,6 +28,8 @@ const isHome = computed(() => route.path === '/')
 
 const customBg = useStorage('miya-bg-image', '')
 const customBgOpacity = useStorage('miya-bg-opacity', 0.35)
+const hudVisible = useStorage('miya-hud-visible', true)
+const hudOpacity = useStorage('miya-hud-opacity', 1.0)
 
 const frameStyle = computed(() => {
   const overlay = `rgba(13, 17, 23, ${1 - customBgOpacity.value})`
@@ -108,10 +109,8 @@ const layoutPadTop = computed(() => isElectron ? (isMac ? '28px' : '32px') : '0p
     <FloatingView />
   </template>
   <template v-else>
-    <SciFiOverlay />
+    <SciFiOverlay v-if="hudVisible" :style="{ opacity: hudOpacity }" />
     <TitleBar />
-    <TopStatusBar :style="{ paddingTop: layoutPadTop }" />
-
     <div class="miya-body">
       <div v-if="showEmbeddedLive2d" class="live2d-container" :style="{ width: `${live2dW}px`, height: `${live2dH}px` }">
         <Live2dModel

@@ -151,15 +151,8 @@ const showStatus = useStorage('miya-show-status', true)
 const logoBrightness = useStorage('miya-logo-brightness', 1.0)
 const footerBrightness = useStorage('miya-footer-brightness', 1.0)
 const gyroEnabled = useStorage('miya-gyro-enabled', true)
-
-const hudColorMode = useStorage('miya-hud-color', 'mixed')
-const COLOR_MODES = [
-  { key: 'mixed', label: '混色', colors: ['#00ADB5', '#ff6b9d', '#00ADB5', '#ff4488'] },
-  { key: 'cyan', label: '青蓝', colors: ['#00ADB5'] },
-  { key: 'warm', label: '暖粉', colors: ['#ff6b9d', '#ff4488'] },
-  { key: 'purple', label: '紫调', colors: ['#00ADB5'] },
-  { key: 'blue', label: '深蓝', colors: ['#4488ff'] },
-]
+const hudOpacity = useStorage('miya-hud-opacity', 1.0)
+const hudVisible = useStorage('miya-hud-visible', true)
 
 // 背景
 const bgImage = useStorage('miya-bg-image', '')
@@ -351,19 +344,6 @@ function getRouteModel(key: string): string {
               <Slider v-model="footerBrightness" :min="0.3" :max="2.5" :step="0.01" />
               <span class="slider-val">{{ Math.round(footerBrightness * 100) }}%</span>
             </div>
-          </div>
-        </div>
-
-        <div class="config-section">
-          <h3>HUD 色彩</h3>
-          <p class="hint">
-            全局配色请至「调色」tab
-          </p>
-          <div class="color-modes">
-            <button v-for="m in COLOR_MODES" :key="m.key" class="color-btn" :class="{ active: hudColorMode === m.key }" @click="hudColorMode = m.key">
-              <span class="color-dots"><span v-for="c in m.colors" :key="c" class="dot" :style="{ background: c }" /></span>
-              <span class="color-label">{{ m.label }}</span>
-            </button>
           </div>
         </div>
       </div>
@@ -595,6 +575,19 @@ function getRouteModel(key: string): string {
                 >
                 <span class="cp-val">{{ componentColors[c.key] || c.default }}</span>
               </div>
+            </div>
+          </div>
+          <div v-if="group.id === 'hud'" class="hud-extras">
+            <div class="hud-extra-row">
+              <label class="he-label">透明度</label>
+              <div class="he-slider">
+                <Slider v-model="hudOpacity" :min="0.05" :max="1.5" :step="0.01" />
+              </div>
+              <span class="he-val">{{ Math.round(hudOpacity * 100) }}%</span>
+            </div>
+            <div class="hud-extra-row">
+              <label class="he-label">显示 HUD</label>
+              <ToggleSwitch v-model="hudVisible" />
             </div>
           </div>
         </div>
@@ -857,6 +850,12 @@ function getRouteModel(key: string): string {
 .cp-row { display: flex; align-items: center; gap: 0.4rem; }
 .cp-input { width: 28px; height: 22px; border: 1px solid rgba(0, 173, 181, 0.15); border-radius: 0.2rem; background: transparent; cursor: pointer; padding: 1px; }
 .cp-val { font-size: 0.6rem; color: rgba(0, 255, 245, 0.4); font-family: 'JetBrains Mono', monospace; }
+
+.hud-extras { margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px solid rgba(0, 173, 181, 0.06); display: flex; flex-direction: column; gap: 0.5rem; }
+.hud-extra-row { display: flex; align-items: center; gap: 0.6rem; }
+.he-label { font-size: 0.68rem; color: rgba(200, 200, 200, 0.5); min-width: 56px; }
+.he-slider { flex: 1; }
+.he-val { font-size: 0.6rem; color: rgba(0, 255, 245, 0.4); font-family: 'JetBrains Mono', monospace; min-width: 32px; text-align: right; }
 
 /* Live2D 配置 */
 .live2d-color-row { display: flex; align-items: center; gap: 0.6rem; }

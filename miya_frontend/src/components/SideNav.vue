@@ -16,6 +16,7 @@ const showMore = ref(false)
 
 const mainItems: NavItem[] = [
   { id: 'chat', label: '弥娅对话', icon: '◆', path: '/chat' },
+  { id: 'platforms', label: '平台状态', icon: '⊡', path: '/platforms' },
   { id: 'mind', label: '记忆星河', icon: '◇', path: '/mind' },
   { id: 'artboard', label: '弥娅画板', icon: '⬗', path: '/artboard' },
   { id: 'terminal', label: '终端引擎', icon: '⬡', path: '/terminal' },

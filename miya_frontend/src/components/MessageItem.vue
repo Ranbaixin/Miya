@@ -3,6 +3,7 @@ import type { Message, ToolEvent } from '@/utils/session'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { CONFIG } from '@/utils/config'
 import { buildEmotionColorMap } from '@/utils/emotionColors'
+import { getPlatformColor, getPlatformLabel } from '@/utils/platform'
 import Markdown from './Markdown.vue'
 import SoulCard from './SoulCard.vue'
 
@@ -65,6 +66,15 @@ const displaySource = computed(() => {
   if (typeof props.content === 'string')
     return props.content
   return JSON.stringify(props.content, null, 2)
+})
+
+const platformInfo = computed(() => {
+  if (!props.platform) return null
+  return {
+    id: props.platform,
+    label: getPlatformLabel(props.platform, props.platformName),
+    color: getPlatformColor(props.platform),
+  }
 })
 
 function formatToolPayload(value: any): string {
@@ -149,6 +159,17 @@ watch(() => props.generating, (v) => {
     <div class="card-bar row-group">
       <span class="bar-id">{{ ROLE_PREFIX[role] }}</span>
       <span class="bar-sender">{{ sender ?? ROLE_MAP[role] }}</span>
+
+      <span
+        v-if="platformInfo && platform"
+        class="bar-platform"
+        :style="{ '--pf-color': platformInfo.color }"
+      >
+        {{ platformInfo.label }}
+      </span>
+
+      <span v-if="direction === 'in'" class="bar-dir-in" title="入站消息">←</span>
+      <span v-else-if="direction === 'out'" class="bar-dir-out" title="出站回复">→</span>
 
       <!-- 情绪光带 (仅 AI) -->
       <div v-if="role === 'assistant' && soulBars.length" class="bar-emotion-strip">
@@ -455,6 +476,36 @@ watch(() => props.generating, (v) => {
 
 .msg-card.user .bar-sender {
   color: color-mix(in srgb, var(--usr) 80%, rgba(255,255,255,0.7));
+}
+
+.bar-platform {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  padding: 0 4px;
+  height: 14px;
+  line-height: 14px;
+  border-radius: 2px;
+  color: color-mix(in srgb, var(--pf-color, #6B7280) 85%, #e4ecf0);
+  background: color-mix(in srgb, var(--pf-color, #6B7280) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pf-color, #6B7280) 18%, transparent);
+  margin-left: 6px;
+  letter-spacing: 0.04em;
+}
+
+.bar-dir-in {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  color: #22c55e;
+  margin-left: 4px;
+  opacity: 0.6;
+}
+
+.bar-dir-out {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  color: #3b82f6;
+  margin-left: 4px;
+  opacity: 0.6;
 }
 
 .bar-status {

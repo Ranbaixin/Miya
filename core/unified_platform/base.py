@@ -212,29 +212,52 @@ class BasePlatform(ABC):
             },
         )
 
+    async def _ping(self) -> bool:
+        """
+        执行心跳检测，测量延迟
+
+        默认委托给 _do_health_check() 但会测量耗时。
+        子类可覆写以提供更轻量的 ping 实现。
+        """
+        start = asyncio.get_event_loop().time()
+        try:
+            ok = await asyncio.wait_for(self._do_health_check(), timeout=10.0)
+            elapsed_ms = (asyncio.get_event_loop().time() - start) * 1000
+            if ok:
+                self._health.latency_ms = round(elapsed_ms, 1)
+                self._health.last_heartbeat = datetime.now()
+            return ok
+        except asyncio.TimeoutError:
+            self._health.latency_ms = -1.0
+            return False
+        except Exception:
+            self._health.latency_ms = -1.0
+            return False
+
     async def _health_check_loop(self):
         """后台健康检查循环"""
         await asyncio.sleep(self.health_check_interval)
-        consecutive_failures = 0
+        self._health.heartbeat_interval = self.health_check_interval
         while self._health.status in (PlatformStatus.ONLINE, PlatformStatus.DEGRADED):
             try:
-                ok = await self._do_health_check()
+                ok = await self._ping()
                 if not ok:
                     self._health.status = PlatformStatus.DEGRADED
-                    consecutive_failures += 1
-                    # 仅首次失败或每 10 次记录一次，避免日志刷屏
-                    if consecutive_failures == 1 or consecutive_failures % 10 == 0:
+                    self._health.consecutive_health_failures += 1
+                    cf = self._health.consecutive_health_failures
+                    if cf == 1 or cf % 10 == 0:
                         logger.warning(
-                            f"[{self.platform_id}] 健康检查失败 (第{consecutive_failures}次)"
+                            f"[{self.platform_id}] 心跳检测失败 (第{cf}次, 延迟={self._health.latency_ms}ms)"
                         )
+                    await self._emit(
+                        PlatformEvent.HEALTH_CHECK_FAILED,
+                        {"consecutive_failures": cf, "latency_ms": self._health.latency_ms},
+                    )
                     if self.auto_reconnect:
                         await self._reconnect()
-                        consecutive_failures = 0
+                        self._health.consecutive_health_failures = 0
                         return
                     else:
-                        await self._emit(PlatformEvent.HEALTH_CHECK_FAILED, {})
-                        # 即使 auto_reconnect=False，也尝试重新拉起连接
-                        # （适用于 listen_loop 任务意外死亡的情况）
                         try:
                             await self._do_connect()
                         except Exception:
@@ -242,10 +265,13 @@ class BasePlatform(ABC):
                 else:
                     if self._health.status == PlatformStatus.DEGRADED:
                         self._health.status = PlatformStatus.ONLINE
-                        await self._emit(PlatformEvent.HEALTH_CHECK_RECOVERED, {})
-                    consecutive_failures = 0
+                        await self._emit(
+                            PlatformEvent.HEALTH_CHECK_RECOVERED,
+                            {"latency_ms": self._health.latency_ms},
+                        )
+                    self._health.consecutive_health_failures = 0
             except Exception as e:
-                logger.debug(f"[{self.platform_id}] 健康检查异常: {e}")
+                logger.debug(f"[{self.platform_id}] 心跳检测异常: {e}")
 
             await asyncio.sleep(self.health_check_interval)
 
@@ -298,6 +324,16 @@ class BasePlatform(ABC):
         logger.warning(f"[{self.platform_id}] send_message 未实现")
         return False
 
+    def _record_message_in(self):
+        """记录一条入站消息"""
+        self._health.message_count += 1
+        self._health.message_in_count += 1
+
+    def _record_message_out(self):
+        """记录一条出站消息"""
+        self._health.message_count += 1
+        self._health.message_out_count += 1
+
     # ==================== 事件系统 ====================
 
     def on(self, event: PlatformEvent, callback: Callable[[Dict], Awaitable[None]]):
@@ -317,6 +353,7 @@ class BasePlatform(ABC):
             "platform_name": self.platform_name,
             "timestamp": datetime.now().isoformat(),
             "status": self._health.status.value,
+            "health": self._health.to_dict(),
             "data": data,
         }
         for listener in self._event_listeners.get(event, []):

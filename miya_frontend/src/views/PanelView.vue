@@ -110,8 +110,8 @@ function updateTime() {
 const leftCards = [
   { id: 'chat', label: '对话', desc: '灵魂共鸣', path: '/chat' },
   { id: 'mind', label: '记忆', desc: '认知星河', path: '/mind' },
+  { id: 'platforms', label: '平台', desc: '在线状态', path: '/platforms' },
   { id: 'artboard', label: '画板', desc: 'AI 创作', path: '/artboard' },
-  { id: 'terminal', label: '终端', desc: 'CC 引擎', path: '/terminal' },
 ]
 
 const rightLinks = [
@@ -234,7 +234,7 @@ function toggleChat() {
             class="cmd-nav-card"
             @click="navigate(card.path)"
           >
-            <span class="cmd-nav-icon">{{ { chat: '◆', mind: '◇', artboard: '⬡', terminal: '▷' }[card.id] }}</span>
+            <span class="cmd-nav-icon">{{ { chat: '◆', mind: '◇', platforms: '⊡', artboard: '⬡' }[card.id] }}</span>
             <span class="cmd-nav-title">{{ card.label }}</span>
             <span class="cmd-nav-desc">{{ card.desc }}</span>
           </button>

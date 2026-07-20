@@ -165,6 +165,14 @@ export const componentColors = useStorage<Record<string, string>>(
 )
 
 // ─── 注入 CSS custom properties ────────────────────────
+function hexToRgb(hex: string): string {
+  const h = hex.replace('#', '')
+  const r = parseInt(h.substring(0, 2), 16)
+  const g = parseInt(h.substring(2, 4), 16)
+  const b = parseInt(h.substring(4, 6), 16)
+  return isNaN(r) ? '0,173,181' : `${r},${g},${b}`
+}
+
 export function applyComponentColors(colors: Record<string, string>) {
   const root = document.documentElement
   for (const group of COLOR_GROUPS) {
@@ -176,6 +184,12 @@ export function applyComponentColors(colors: Record<string, string>) {
   const accent = colors.accent || '#00ADB5'
   root.style.setProperty('--miya-primary', accent)
   root.style.setProperty('--miya-glow', `color-mix(in srgb, ${accent} 30%, transparent)`)
+
+  // HUD 覆盖层 RGB 版本（供 SciFiOverlay 动画使用）
+  const hudPrimary = colors.primary || '#00FFF5'
+  const hudSecondary = colors.secondary || '#00ADB5'
+  root.style.setProperty('--miya-comp-hud-primary-r', hexToRgb(hudPrimary))
+  root.style.setProperty('--miya-comp-hud-secondary-r', hexToRgb(hudSecondary))
 }
 
 // 启动时从 localStorage 读取并注入 CSS 变量（不依赖 Vue 组件上下文）

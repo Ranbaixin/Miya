@@ -13,6 +13,12 @@ export interface Message {
   generating?: boolean
   status?: string
   sender?: string
+  platform?: string
+  platformName?: string
+  messageId?: string
+  direction?: 'in' | 'out'
+  replyToMessageId?: string
+  timestamp?: string
   toolEvents?: ToolEvent[]
   soulData?: SoulData
 }
@@ -212,6 +218,12 @@ function normalizeMessage(input: any, assistantName?: string): Message | null {
     generating: Boolean(input.generating),
     status: typeof input.status === 'string' ? input.status : undefined,
     sender: typeof input.sender === 'string' ? input.sender : role === 'assistant' ? assistantName : undefined,
+    platform: typeof input.platform === 'string' ? input.platform : undefined,
+    platformName: typeof input.platform_name === 'string' ? input.platform_name : typeof input.platformName === 'string' ? input.platformName : undefined,
+    messageId: typeof input.message_id === 'string' ? input.message_id : typeof input.messageId === 'string' ? input.messageId : undefined,
+    direction: typeof input.direction === 'string' ? input.direction : undefined,
+    replyToMessageId: typeof input.reply_to_message_id === 'string' ? input.reply_to_message_id : typeof input.replyToMessageId === 'string' ? input.replyToMessageId : undefined,
+    timestamp: typeof input.timestamp === 'string' ? input.timestamp : undefined,
     toolEvents: toolEvents.length ? toolEvents : undefined,
     soulData: normalizeSoulData(input.soulData || input.soul_data),
   }
@@ -235,6 +247,16 @@ function mergeAssistantMessages(base: Message, extra: Message) {
     base.status = extra.status
   if (!base.sender && extra.sender)
     base.sender = extra.sender
+  if (!base.platform && extra.platform)
+    base.platform = extra.platform
+  if (!base.platformName && extra.platformName)
+    base.platformName = extra.platformName
+  if (!base.messageId && extra.messageId)
+    base.messageId = extra.messageId
+  if (!base.direction && extra.direction)
+    base.direction = extra.direction
+  if (!base.timestamp && extra.timestamp)
+    base.timestamp = extra.timestamp
   if (extra.soulData && !base.soulData)
     base.soulData = extra.soulData
   base.generating = base.generating || extra.generating

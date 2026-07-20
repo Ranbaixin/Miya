@@ -35,6 +35,13 @@ class MessageType(Enum):
     SYSTEM = "system"
 
 
+class MessageDirection(str, Enum):
+    """消息方向"""
+
+    INBOUND = "in"
+    OUTBOUND = "out"
+
+
 @dataclass
 class UnifiedMessage:
     """统一消息格式"""
@@ -47,6 +54,9 @@ class UnifiedMessage:
     source: MessageSource
     platform: str
     timestamp: datetime
+    direction: MessageDirection = MessageDirection.INBOUND
+    message_id: Optional[str] = None
+    reply_to_message_id: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 

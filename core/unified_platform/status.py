@@ -54,7 +54,12 @@ class PlatformHealth:
     max_reconnect_attempts: int = 10
     latency_ms: float = 0.0
     message_count: int = 0
+    message_in_count: int = 0
+    message_out_count: int = 0
     uptime_seconds: float = 0.0
+    last_heartbeat: Optional[datetime] = None
+    heartbeat_interval: float = 30.0
+    consecutive_health_failures: int = 0
     extra: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
@@ -70,5 +75,10 @@ class PlatformHealth:
             "max_reconnect_attempts": self.max_reconnect_attempts,
             "latency_ms": self.latency_ms,
             "message_count": self.message_count,
+            "message_in_count": self.message_in_count,
+            "message_out_count": self.message_out_count,
             "uptime_seconds": self.uptime_seconds,
+            "last_heartbeat": self.last_heartbeat.isoformat() if self.last_heartbeat else None,
+            "heartbeat_interval": self.heartbeat_interval,
+            "consecutive_health_failures": self.consecutive_health_failures,
         }
