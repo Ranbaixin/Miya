@@ -179,7 +179,6 @@ class TimeTracker:
 
         # 连续活跃天数
         if profile.last_active_date != today:
-            yesterday = datetime.now().strftime("%Y-%m-%d") if False else ""  # placeholder
             if profile.last_active_date:
                 last_date = datetime.strptime(profile.last_active_date, "%Y-%m-%d")
                 delta = (datetime.now() - last_date).days
