@@ -524,7 +524,6 @@ class MemoryManager:
 
             if not messages and user_id:
                 from memory import get_user_dialogue
-                unified_session_id = f"user_{user_id}"
                 unified_memories = await get_user_dialogue(
                     user_id=user_id, limit=max_messages
                 )
