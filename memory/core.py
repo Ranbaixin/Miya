@@ -1682,48 +1682,90 @@ class MiyaMemoryCore:
         )
         return await self.retrieve(q)
 
+    async def get_user_memory(
+        self,
+        user_id: str,
+        level: Optional[MemoryLevel] = None,
+        limit: int = 50,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+    ) -> List[MemoryItem]:
+        """【统一检索 API】按 user_id 获取所有平台、所有形态的记忆
+
+        这是弥娅统一记忆系统的主要检索入口。
+        不受平台、会话、形态等因素影响，返回该用户的所有记忆。
+        platform 仅作为返回结果中的元数据标记。
+
+        Args:
+            user_id: 用户ID（主检索键）
+            level: 记忆层级过滤
+            limit: 返回数量
+            start_time: 开始时间
+            end_time: 结束时间
+
+        Returns:
+            统一记忆列表
+        """
+        q = MemoryQuery(
+            user_id=user_id,
+            level=level,
+            limit=limit,
+            sort_by="created_at",
+            sort_order="desc",
+            start_time=start_time,
+            end_time=end_time,
+        )
+        return await self.retrieve(q)
+
     async def get_dialogue(
         self,
-        session_id: str,
+        session_id: str = "",
+        user_id: Optional[str] = None,
         platform: Optional[str] = None,
         limit: int = 50,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
-        cross_platform: bool = False,
     ) -> List[MemoryItem]:
-        """获取对话历史
+        """获取对话历史（统一检索）
+
+        优先按 user_id 跨平台检索；session_id 保留向后兼容。
+        platform 仅作可选的元数据过滤，不是主检索键。
 
         Args:
-            session_id: 会话ID
+            session_id: 会话ID（向后兼容，user_id 优先）
+            user_id: 用户ID（推荐，跨平台统一检索）
             platform: 平台过滤（None=不过滤，跨平台检索）
             limit: 返回数量限制
-            start_time: 开始时间（可选）
-            end_time: 结束时间（可选）
-            cross_platform: 是否跨平台检索（忽略 platform 参数，全局查询）
+            start_time: 开始时间
+            end_time: 结束时间
         """
-        session_pattern = session_id
-        if cross_platform and session_id:
-            user_suffix = session_id.split("_", 1)[-1] if "_" in session_id else session_id
-            session_pattern = user_suffix
+        if user_id:
+            q = MemoryQuery(
+                user_id=user_id,
+                level=MemoryLevel.DIALOGUE,
+                limit=limit,
+                sort_by="created_at",
+                sort_order="asc",
+                start_time=start_time,
+                end_time=end_time,
+            )
+            results = await self.retrieve(q)
+        elif session_id:
+            q = MemoryQuery(
+                session_id=session_id,
+                level=MemoryLevel.DIALOGUE,
+                limit=limit,
+                sort_by="created_at",
+                sort_order="asc",
+                start_time=start_time,
+                end_time=end_time,
+            )
+            results = await self.retrieve(q)
+        else:
+            return []
 
-        q = MemoryQuery(
-            session_id=session_id if not cross_platform else None,
-            level=MemoryLevel.DIALOGUE,
-            limit=limit * (3 if cross_platform else 1),
-            sort_by="created_at",
-            sort_order="asc",
-            start_time=start_time,
-            end_time=end_time,
-        )
-        results = await self.retrieve(q)
-
-        if cross_platform:
-            if session_pattern:
-                results = [
-                    r for r in results
-                    if r.session_id.endswith(session_pattern) or r.user_id == session_pattern
-                ]
-        elif platform:
+        # platform 仅作可选的元数据过滤标签
+        if platform and results:
             results = [r for r in results if r.platform == platform]
 
         return results[:limit]

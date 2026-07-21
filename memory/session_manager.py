@@ -3,7 +3,7 @@
 
 职责：
 - 管理会话生命周期
-- 提供对话历史查询
+- 提供对话历史查询（统一按 user_id 检索）
 - 与统一记忆系统集成
 """
 
@@ -11,7 +11,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional
 
-from memory import get_dialogue_history, store_dialogue
+from memory import get_dialogue_history, get_user_dialogue, store_dialogue
 
 
 class SessionCategory(Enum):
@@ -27,7 +27,7 @@ class SessionCategory(Enum):
 
 
 class SessionManager:
-    """会话管理器"""
+    """会话管理器 —— platform 仅作元数据，user_id 为主键"""
 
     def __init__(self):
         self._active_sessions: Dict[str, Dict] = {}
@@ -39,8 +39,8 @@ class SessionManager:
         platform: str = "unknown",
         category: SessionCategory = SessionCategory.DIALOGUE,
     ) -> str:
-        """创建新会话"""
-        session_key = f"{platform}_{session_id}"
+        """创建新会话 —— session_key 不再包含 platform 前缀"""
+        session_key = f"user_{user_id}" if user_id else session_id
         self._active_sessions[session_key] = {
             "session_id": session_id,
             "user_id": user_id,
@@ -56,18 +56,20 @@ class SessionManager:
     async def get_session(
         self, session_id: str, platform: str = "unknown"
     ) -> Optional[Dict]:
-        """获取会话信息"""
-        session_key = f"{platform}_{session_id}"
-        return self._active_sessions.get(session_key)
+        """获取会话信息 —— 直接按 session_id 查找"""
+        return self._active_sessions.get(session_id)
 
     async def get_conversation_messages(
-        self, session_id: str, platform: str = "unknown", limit: int = 50
+        self, session_id: str = "", user_id: str = "", platform: str = "unknown", limit: int = 50
     ) -> List[Dict]:
-        """获取会话消息"""
+        """获取会话消息 —— 优先按 user_id 统一检索"""
         try:
-            mems = await get_dialogue_history(
-                session_id, platform=platform, limit=limit
-            )
+            if user_id:
+                mems = await get_user_dialogue(user_id=user_id, platform=platform, limit=limit)
+            else:
+                mems = await get_dialogue_history(
+                    session_id=session_id, platform=platform, limit=limit
+                )
             return [{"role": m.role, "content": m.content} for m in mems]
         except Exception:
             return []
@@ -95,8 +97,7 @@ class SessionManager:
             except Exception:
                 continue
 
-        # 更新活跃会话
-        session_key = f"{platform}_{session_id}"
+        session_key = session_id
         if session_key in self._active_sessions:
             self._active_sessions[session_key]["message_count"] = stored
 
@@ -109,9 +110,8 @@ class SessionManager:
 
     async def close_session(self, session_id: str, platform: str = "unknown") -> bool:
         """关闭会话"""
-        session_key = f"{platform}_{session_id}"
-        if session_key in self._active_sessions:
-            del self._active_sessions[session_key]
+        if session_id in self._active_sessions:
+            del self._active_sessions[session_id]
             return True
         return False
 

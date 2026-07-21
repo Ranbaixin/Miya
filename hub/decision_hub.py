@@ -682,7 +682,7 @@ class DecisionHub:
 
                     parts = []
                     target_str = str(target_id)
-                    session_id = f"aiocqhttp_{target_str}"
+                    session_id = f"user_{target_str}"
                     now = datetime.now()
 
                     try:
@@ -700,7 +700,7 @@ class DecisionHub:
 
                     try:
                         conv = await self.conversation_context_manager.get_conversation_context(
-                            session_id, current_input=""
+                            session_id, user_id=target_str, current_input=""
                         )
                         if conv:
                             cutoff = now - timedelta(hours=4)
@@ -2273,9 +2273,9 @@ class DecisionHub:
             msg_type = context.get("message_type", "")
             ctx_group_id = str(context.get("group_id", "")) if context.get("group_id") else ""
             if msg_type == "group" and ctx_group_id:
-                session_id = f"{platform}_group_{ctx_group_id}_{user_id}"
+                session_id = f"group_{ctx_group_id}_{user_id}"
             else:
-                session_id = f"{platform}_{user_id}"
+                session_id = f"user_{user_id}"
             user_id_str = str(user_id)
 
             _needs_recall = self.conversation_context_manager.check_needs_recall(content)
@@ -2295,6 +2295,7 @@ class DecisionHub:
 
                 allocation = await self.context_builder.build(
                     session_id=session_id,
+                    user_id=user_id_str,
                     current_input=content,
                     consumers=[
                         ConsumerRequest("main_prompt", max_messages=main_msgs, max_tokens=max_tokens, priority=1),

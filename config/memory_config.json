@@ -177,7 +177,8 @@
       {"name": "idx_memories_group_id", "column": "group_id"},
       {"name": "idx_memories_level", "column": "level"},
       {"name": "idx_memories_created_at", "column": "created_at"},
-      {"name": "idx_memories_priority", "column": "priority"}
+      {"name": "idx_memories_priority", "column": "priority"},
+      {"name": "idx_memories_platform", "column": "platform"}
     ],
     "query": {
       "default_order": "priority DESC, created_at DESC",

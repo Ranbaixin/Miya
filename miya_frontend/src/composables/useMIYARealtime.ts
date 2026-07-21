@@ -137,13 +137,26 @@ export function useMIYARealtime() {
     const direction = msg.direction || (platform === 'desktop' ? 'in' : 'in')
     const messageId = msg.message_id || msg.msg_id || undefined
     const timestamp = msg.timestamp || msg.time || null
-    const role = platform === 'desktop' ? 'user' : 'system'
 
-    const existing = MESSAGES.value[MESSAGES.value.length - 1]
-    if (existing
-      && existing.content === content
-      && existing.role === role
-      && existing.platform === platform) return
+    if (!content.trim()) return
+
+    // 去重：检查最近 5 条已有消息，按内容和平台近似匹配
+    const trimmed = content.trim()
+    const recent = MESSAGES.value.slice(-5)
+    const duplicate = recent.find(
+      (m) => {
+        if (!m.content) return false
+        const mTrimmed = m.content.trim()
+        // 精确匹配
+        if (mTrimmed === trimmed && m.platform === platform) return true
+        // 同平台 + 内容匹配 → 防重复（本地已渲染的平台消息会被 WS 重复推送）
+        if ((platform === 'desktop' || platform === 'mobile') && mTrimmed === trimmed) return true
+        return false
+      }
+    )
+    if (duplicate) return
+
+    const role = (platform === 'desktop' || platform === 'mobile') ? 'user' : 'system'
 
     const newMsg: Message = {
       role: role as 'system' | 'user',

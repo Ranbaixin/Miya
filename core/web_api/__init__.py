@@ -375,11 +375,11 @@ class WebAPI:
 
                 # 用户身份链接处理
                 # 优先使用 usg_id 字段（桌面端专用），其次用 session_id
-                lookup_id = request.usg_id or request.session_id
+                lookup_id = request.usg_id or request.user_id or request.session_id
                 usg_id = lookup_id
                 sendg_name = f"{platform}用户-{lookup_id[:8]}"
 
-                # 从 permissions.json 检查用户链接配置
+                # 从 permissions.json 检查用户链接配置（兼容 usg_id / user_id 两种字段名）
                 try:
                     import json
                     from pathlib import Path
@@ -389,7 +389,8 @@ class WebAPI:
                         perms_data = json.loads(perms_file.read_text(encoding="utf-8"))
                         users = perms_data.get("users", [])
                         for u in users:
-                            if u.get("usg_id") == lookup_id:
+                            uid_match = u.get("usg_id") or u.get("user_id")
+                            if uid_match and str(uid_match) == str(lookup_id or ""):
                                 linked_to = u.get("linked_to")
                                 if linked_to:
                                     usg_id = linked_to
@@ -538,7 +539,7 @@ class WebAPI:
                 try:
                     from mlink.message import Message
 
-                    lookup_id = request.usg_id or session_id
+                    lookup_id = request.usg_id or request.user_id or session_id
                     sendg_name = f"{platform}用户-{lookup_id[:8]}"
 
                     try:
@@ -549,7 +550,8 @@ class WebAPI:
                         if perms_file.exists():
                             perms_data = _json.loads(perms_file.read_text(encoding="utf-8"))
                             for u in perms_data.get("users", []):
-                                if u.get("usg_id") == lookup_id:
+                                uid_match = u.get("usg_id") or u.get("user_id")
+                                if uid_match and str(uid_match) == str(lookup_id or ""):
                                     linked_to = u.get("linked_to")
                                     if linked_to:
                                         lookup_id = linked_to

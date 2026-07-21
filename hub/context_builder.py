@@ -4,10 +4,15 @@
 一次读取对话历史，多组件共享分配。
 替代原有的 ConversationContextManager / MemoryManager / PromptManager / SoulGenerator 各自独立的上下文截断逻辑。
 
+检索路径:
+  1. MemoryNet conversation_history（快速文件缓存）
+  2. MiyaMemoryCore（统一 SQLite+JSON 后端，跨平台）
+
 用法:
     builder = ContextBuilder(memory_net)
     allocation = await builder.build(
-        session_id="qq_1523878699",
+        session_id="user_1523878699",
+        user_id="1523878699",
         current_input="今天的对话内容...",
         consumers=[
             ConsumerRequest("main_prompt", max_messages=20, max_tokens=6000, priority=1),
@@ -63,6 +68,7 @@ class ContextBuilder:
     async def build(
         self,
         session_id: str,
+        user_id: str = "",
         current_input: str = "",
         consumers: Optional[List[ConsumerRequest]] = None,
         needs_recall: bool = False,
@@ -81,7 +87,7 @@ class ContextBuilder:
         elif is_deep_discussion:
             max_needed = max(max_needed, 60)
 
-        raw_messages = await self._load_messages(session_id, max_needed)
+        raw_messages = await self._load_messages(session_id, user_id, max_needed)
 
         if not raw_messages:
             return ContextAllocation(
@@ -102,24 +108,45 @@ class ContextBuilder:
 
         return allocation
 
-    async def _load_messages(self, session_id: str, limit: int) -> List[Any]:
-        if not self._memory_net or not self._memory_net.conversation_history:
-            return []
+    async def _load_messages(self, session_id: str, user_id: str = "", limit: int = 50) -> List[Any]:
+        """加载消息: MemoryNet 文件缓存 → MiyaMemoryCore 统一后端 双层回退"""
+        # 第一层: MemoryNet conversation_history（快速文件缓存）
+        if self._memory_net and self._memory_net.conversation_history:
+            try:
+                messages = await self._memory_net.conversation_history.get_history(
+                    session_id, limit=limit
+                )
+                if messages:
+                    if len(messages) > limit:
+                        messages = messages[-limit:]
+                    return messages
+            except Exception as e:
+                logger.error(f"[ContextBuilder] MemoryNet 加载消息失败: {e}")
 
-        try:
-            messages = await self._memory_net.conversation_history.get_history(
-                session_id, limit=limit
-            )
-            if not messages:
-                return []
+        # 第二层: MiyaMemoryCore 统一记忆后端（跨平台 SQLite+JSON）
+        if user_id:
+            try:
+                from memory import get_user_dialogue
+                memories = await get_user_dialogue(user_id=user_id, limit=limit)
+                if memories:
+                    result = []
+                    for m in memories:
+                        result.append(_MemoryItemWrapper(
+                            role=getattr(m, "role", "user"),
+                            content=getattr(m, "content", ""),
+                            timestamp=getattr(m, "created_at", ""),
+                            metadata=getattr(m, "metadata", {}),
+                        ))
+                    if len(result) > limit:
+                        result = result[-limit:]
+                    logger.info(
+                        f"[ContextBuilder] MiyaMemoryCore 加载: user={user_id}, count={len(result)}"
+                    )
+                    return result
+            except Exception as e:
+                logger.error(f"[ContextBuilder] MiyaMemoryCore 加载消息失败: {e}")
 
-            if len(messages) > limit:
-                messages = messages[-limit:]
-
-            return messages
-        except Exception as e:
-            logger.error(f"[ContextBuilder] 加载消息失败: {e}")
-            return []
+        return []
 
     def _allocate_slice(
         self,
@@ -159,3 +186,12 @@ class ContextBuilder:
             token_count=total_tokens,
             total_available=len(messages),
         )
+
+
+class _MemoryItemWrapper:
+    """MemoryItem -> conversation message 兼容适配器"""
+    def __init__(self, role: str, content: str, timestamp: str, metadata: Dict = None):
+        self.role = role
+        self.content = content
+        self.timestamp = timestamp
+        self.metadata = metadata or {}

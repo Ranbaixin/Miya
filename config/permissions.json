@@ -179,9 +179,19 @@
       "user_id": "mobile_default",
       "username": "佳",
       "platform": "mobile",
+      "linked_to": "1523878699",
       "permission_groups": ["Admin", "Developer"],
       "description": "移动端默认用户",
       "created_at": "2026-07-12T00:00:00"
+    },
+    {
+      "user_id": "default",
+      "username": "佳",
+      "platform": "mobile",
+      "linked_to": "1523878699",
+      "permission_groups": ["Admin", "Developer"],
+      "description": "移动/桌面端未登录用户 - 关联到QQ的佳",
+      "created_at": "2026-07-21T00:00:00"
     },
     {
       "user_id": "weixin_ilink_o9cq806WYR-N8Zxxg94EyHYgUXwY@im.wechat",

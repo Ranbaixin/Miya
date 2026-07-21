@@ -105,7 +105,7 @@ async def test_3_retrieve(core):
     print(f"[OK] User search: {len(user_results)} results")
 
     # 获取对话
-    dialogue = await core.get_dialogue("session_001", "qq")
+    dialogue = await core.get_dialogue(session_id="session_001", platform="qq")
     print(f"[OK] Dialogue: {len(dialogue)} messages")
 
     return results

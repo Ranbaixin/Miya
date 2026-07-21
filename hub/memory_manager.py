@@ -50,16 +50,10 @@ class MemoryManager:
 
     @staticmethod
     def _build_session_id(platform: str, user_id: str, group_id: str, message_type: str) -> str:
+        """构建统一会话ID（不含平台前缀，platform 仅作元数据标签）"""
         if message_type == "group" and group_id:
-            return f"{platform}_group_{group_id}_{user_id}"
-        return f"{platform}_{user_id}"
-
-    @staticmethod
-    def _build_unified_user_key(user_id: str, group_id: str, message_type: str) -> str:
-        """构建跨平台统一用户 Key（不含 platform 前缀）"""
-        if message_type == "group" and group_id:
-            return f"all_group_{group_id}_{user_id}"
-        return f"all_{user_id}"
+            return f"group_{group_id}_{user_id}"
+        return f"user_{user_id}"
 
     async def store_user_message(self, perception: Dict) -> None:
         """
@@ -90,8 +84,6 @@ class MemoryManager:
             sender_name = perception.get("sender_name", "用户")
             message_type = perception.get("message_type", "")
             session_id = self._build_session_id(platform, user_id, group_id, message_type)
-            # 【跨平台统一】生成不含 platform 前缀的统一会话 Key
-            unified_session_id = self._build_unified_user_key(user_id, group_id, message_type)
 
             logger.info(f"[记忆管理器] 收到消息: {content[:50]}...")
 
@@ -150,17 +142,6 @@ class MemoryManager:
                     metadata=metadata,
                 )
 
-                # 【跨平台统一】同时存储到统一会话（不含 platform 前缀）
-                unified_metadata = dict(metadata)
-                unified_metadata["original_session"] = session_id
-                unified_metadata["original_platform"] = platform
-                await self.memory_net.conversation_history.add_message(
-                    session_id=unified_session_id,
-                    role="user",
-                    content=content,
-                    metadata=unified_metadata,
-                )
-
                 # 每 3 条消息强制 flush 到磁盘
                 self._conv_save_counter = getattr(self, "_conv_save_counter", 0) + 1
                 if self._conv_save_counter % 3 == 0:
@@ -178,20 +159,6 @@ class MemoryManager:
                     "sender_name": sender_name,
                     "message_type": message_type,
                     "group_id": group_id,
-                },
-            )
-            # 【跨平台统一】同时以统一会话 Key 存储到记忆系统
-            await store_dialogue(
-                content=content,
-                role="user",
-                user_id=user_id,
-                session_id=unified_session_id,
-                platform="all",
-                metadata={
-                    "sender_name": sender_name,
-                    "message_type": message_type,
-                    "group_id": group_id,
-                    "original_platform": platform,
                 },
             )
 
@@ -230,7 +197,6 @@ class MemoryManager:
             message_type = perception.get("message_type", "")
             platform = perception.get("platform", "qq")
             session_id = self._build_session_id(platform, user_id, group_id, message_type)
-            unified_session_id = self._build_unified_user_key(user_id, group_id, message_type)
 
             # 【时间对照】记录弥娅响应时间戳
             if self.time_tracker:
@@ -265,16 +231,6 @@ class MemoryManager:
                     content=response,
                     metadata=metadata,
                 )
-                # 【跨平台统一】同时存储到统一会话
-                unified_metadata = dict(metadata)
-                unified_metadata["original_session"] = session_id
-                unified_metadata["original_platform"] = platform
-                await self.memory_net.conversation_history.add_message(
-                    session_id=unified_session_id,
-                    role="assistant",
-                    content=response,
-                    metadata=unified_metadata,
-                )
 
                 # 每 3 条消息强制 flush 到磁盘
                 self._conv_save_counter = getattr(self, "_conv_save_counter", 0) + 1
@@ -293,20 +249,6 @@ class MemoryManager:
                     "sender_name": "弥娅",
                     "message_type": message_type,
                     "group_id": group_id,
-                },
-            )
-            # 【跨平台统一】同时以统一会话 Key 存储
-            await store_dialogue(
-                content=response,
-                role="assistant",
-                user_id=user_id,
-                session_id=unified_session_id,
-                platform="all",
-                metadata={
-                    "sender_name": "弥娅",
-                    "message_type": message_type,
-                    "group_id": group_id,
-                    "original_platform": platform,
                 },
             )
 
@@ -557,13 +499,14 @@ class MemoryManager:
             logger.error(f"[记忆管理器] 存储统一记忆失败: {e}")
 
     async def get_conversation_history(
-        self, session_id: str, current_input: str = "", max_tokens: int = 2000
+        self, session_id: str, user_id: str = "", current_input: str = "", max_tokens: int = 2000
     ) -> List[Dict]:
         """
-        获取对话历史上下文
+        获取对话历史上下文（统一检索：按 user_id 跨平台聚合）
 
         Args:
-            session_id: 会话ID
+            session_id: 会话ID（辅助定位）
+            user_id: 用户ID（主检索键，跨平台统一）
             current_input: 当前用户输入
             max_tokens: 最大token数
 
@@ -578,6 +521,28 @@ class MemoryManager:
 
         try:
             messages = await self.memory_net.conversation_history.get_history(session_id, limit=max_messages)
+
+            if not messages and user_id:
+                from memory import get_user_dialogue
+                unified_session_id = f"user_{user_id}"
+                unified_memories = await get_user_dialogue(
+                    user_id=user_id, limit=max_messages
+                )
+                if unified_memories:
+                    context = []
+                    total_tokens = 0
+                    for m in unified_memories:
+                        token_estimate = count_message_tokens(m.content)
+                        if total_tokens + token_estimate > max_tokens:
+                            break
+                        context.append({
+                            "role": m.role,
+                            "content": m.content,
+                            "timestamp": m.created_at if hasattr(m, "created_at") else "",
+                        })
+                        total_tokens += token_estimate
+                    return context
+                return []
 
             if not messages:
                 return []

@@ -367,27 +367,52 @@ async def get_user_memories(
     level: Optional[MemoryLevel] = None,
     limit: int = 20,
 ) -> List[MemoryItem]:
-    """获取用户记忆"""
+    """按用户获取记忆（跨平台统一）"""
     core = await get_memory_core()
-    return await core.search_by_user(user_id, level=level, limit=limit)
+    return await core.get_user_memory(user_id, level=level, limit=limit)
+
+
+async def get_user_dialogue(
+    user_id: str,
+    platform: Optional[str] = None,
+    limit: int = 50,
+) -> List[MemoryItem]:
+    """【统一检索 API】按 user_id 获取对话历史，跨平台聚合
+
+    不受平台、形态等因素影响。platform 仅作可选过滤标签。
+
+    Args:
+        user_id: 用户ID（主检索键）
+        platform: 可选，平台过滤标签
+        limit: 返回数量
+    """
+    core = await get_memory_core()
+    return await core.get_dialogue(user_id=user_id, platform=platform, limit=limit)
 
 
 async def get_dialogue_history(
-    session_id: str,
+    session_id: str = "",
+    user_id: Optional[str] = None,
     platform: Optional[str] = None,
     limit: int = 50,
-    cross_platform: bool = False,
 ) -> List[MemoryItem]:
     """获取对话历史
 
+    优先按 user_id 检索（统一跨平台），session_id 保留向后兼容。
+
     Args:
-        session_id: 会话ID
-        platform: 平台过滤（None=不过滤平台，跨平台检索）
+        session_id: 会话ID（向后兼容）
+        user_id: 用户ID（推荐主检索键）
+        platform: 平台过滤（None=不过滤，跨平台检索）
         limit: 返回数量限制
-        cross_platform: 是否跨平台检索（同时匹配其他平台的同名用户会话）
     """
     core = await get_memory_core()
-    return await core.get_dialogue(session_id, platform=platform, limit=limit, cross_platform=cross_platform)
+    return await core.get_dialogue(
+        session_id=session_id,
+        user_id=user_id,
+        platform=platform,
+        limit=limit,
+    )
 
 
 # ==================== 用户画像 ====================
@@ -561,10 +586,15 @@ class MemoryAdapter:
         )
 
     async def get_history(self, session_id: str, limit: int = 20, **kwargs) -> List[Dict]:
-        """获取历史 (旧接口)"""
+        """获取历史 (旧接口) — 优先按 user_id 统一检索"""
         await self._ensure_core()
-        platform = kwargs.get("platform", "unknown")
-        memories = await get_dialogue_history(session_id, platform=platform, limit=limit)
+        user_id = kwargs.get("user_id", "")
+        platform = kwargs.get("platform")
+
+        if user_id:
+            memories = await get_user_dialogue(user_id=user_id, platform=platform, limit=limit)
+        else:
+            memories = await get_dialogue_history(session_id=session_id, platform=platform, limit=limit)
 
         return [
             {
@@ -572,6 +602,7 @@ class MemoryAdapter:
                 "content": m.content,
                 "timestamp": m.created_at,
                 "session_id": m.session_id,
+                "platform": m.platform,
             }
             for m in memories
         ]
@@ -728,6 +759,7 @@ __all__ = [
     "store_knowledge",
     "search_memory",
     "get_user_memories",
+    "get_user_dialogue",
     "get_dialogue_history",
     "get_user_profile",
     "update_memory",

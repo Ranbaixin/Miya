@@ -522,7 +522,7 @@ class Scheduler:
             # Strip "user_" prefix if present
             raw_owner = created_by if created_by else target_id
             owner_id = raw_owner.replace("user_", "") if str(raw_owner).startswith("user_") else str(raw_owner)
-            session_id = f"{platform}_{owner_id}"
+            session_id = f"user_{owner_id}"
 
             perception = {
                 "content": message,

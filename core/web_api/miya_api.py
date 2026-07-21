@@ -948,6 +948,25 @@ class MiyaAPI:
                 usg_id = request_data.get("usg_id")
                 lookup_id = usg_id or user_id
 
+                # 从 permissions.json 链接到主用户身份（统一跨平台记忆）
+                try:
+                    import json
+                    from pathlib import Path
+
+                    perms_file = Path("config/permissions.json")
+                    if perms_file.exists():
+                        perms_data = json.loads(perms_file.read_text(encoding="utf-8"))
+                        for u in perms_data.get("users", []):
+                            uid_match = u.get("usg_id") or u.get("user_id")
+                            if uid_match and str(uid_match) == str(lookup_id or ""):
+                                linked_to = u.get("linked_to")
+                                if linked_to:
+                                    lookup_id = linked_to
+                                    logger.info(f"[chat/send] 用户身份已链接: {user_id} → {linked_to}")
+                                break
+                except Exception:
+                    pass
+
                 perception = {
                     "platform": platform,
                     "content": message,

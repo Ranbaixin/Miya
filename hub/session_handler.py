@@ -109,19 +109,17 @@ class SessionHandler:
     async def _fetch_messages(
         self, session_id: str, platform: str, memory_net=None
     ) -> List[Dict]:
-        """获取对话消息"""
+        """获取对话消息（统一检索：优先按 user_id）"""
         messages = []
 
-        # 尝试从 memory_net 获取
         if (
             memory_net
             and hasattr(memory_net, "conversation_history")
             and memory_net.conversation_history
         ):
             try:
-                full_session_id = f"{platform}_{session_id}"
                 msgs = await memory_net.conversation_history.get_history(
-                    full_session_id, limit=100
+                    session_id, limit=100
                 )
                 if msgs:
                     return [{"role": m.role, "content": m.content} for m in msgs]

@@ -382,9 +382,9 @@ class MemoryNet:
             if not self.conversation_history:
                 return []
 
-            # 生成session_id（如果是QQ用户）
+            # 生成统一 session_id（跨平台）
             if user_id:
-                session_id = f"qq_{user_id}"
+                session_id = f"user_{user_id}"
             else:
                 # 没有user_id时，尝试获取最近的会话
                 # 由于ConversationHistoryManager没有get_all_sessions方法，返回空列表
@@ -551,7 +551,7 @@ class MemoryNet:
                             score += 3
 
                     # 3. 用户优先级
-                    if user_id and f"qq_{user_id}" == session_id:
+                    if user_id and f"user_{user_id}" == session_id:
                         score += 2
 
                     # 4. 最近的对话权重更高

@@ -109,7 +109,7 @@ async def test_memory_system():
         # Test dialogue history retrieval
         print("\n4. Testing dialogue history retrieval...")
         dialogue_history = await core.get_dialogue(
-            "session_001", platform="web", limit=10
+            session_id="session_001", platform="web", limit=10
         )
         print(f"   [OK] Retrieved {len(dialogue_history)} dialogue history items")
 

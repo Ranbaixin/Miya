@@ -307,6 +307,9 @@ class SQLiteBackend(MemoryBackend):
             if query.group_id:
                 conditions.append("group_id = ?")
                 params.append(query.group_id)
+            if query.platform:
+                conditions.append("platform = ?")
+                params.append(query.platform)
             if query.level:
                 conditions.append("level = ?")
                 params.append(query.level.value)
