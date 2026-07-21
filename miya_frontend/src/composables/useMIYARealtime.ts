@@ -156,10 +156,18 @@ export function useMIYARealtime() {
     )
     if (duplicate) return
 
-    const role = (platform === 'desktop' || platform === 'mobile') ? 'user' : 'system'
+    // 角色判定：弥娅发出的消息用 assistant，用户发出的用 user，其他用 system
+    let role: string
+    if (direction === 'out' || sender === '弥娅' || msg.sender_id === 'miya') {
+      role = 'assistant'
+    } else if (platform === 'desktop' || platform === 'mobile') {
+      role = 'user'
+    } else {
+      role = 'system'
+    }
 
     const newMsg: Message = {
-      role: role as 'system' | 'user',
+      role: role as 'assistant' | 'system' | 'user',
       content: content,
       sender,
       platform,

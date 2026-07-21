@@ -1083,7 +1083,7 @@ class DecisionHub:
         if not sent:
             logger.info(f"[主动分发] 无法发送到 {platform}: {message[:50]}")
 
-        # 5) 记入记忆
+        # 5) 记入记忆 + WS 广播到桌面前端
         if store_memory:
             try:
                 perception = {
@@ -1094,6 +1094,23 @@ class DecisionHub:
                     "response": message,
                 }
                 await self.memory_manager.store_unified_memory(perception, role="assistant")
+                # WS 广播——让桌面前端实时显示主动聊天内容
+                try:
+                    from core.management_api import get_management_api
+                    mgmt = get_management_api()
+                    if mgmt:
+                        await mgmt.broadcast_message(
+                            content=message[:2000],
+                            platform=platform,
+                            sender_name="弥娅",
+                            sender_id="miya",
+                            user_id=str(target_id),
+                            direction="out",
+                            message_id="",
+                            group_id=str(target_id) if chat_type == "group" else None,
+                        )
+                except Exception:
+                    pass
             except Exception as e:
                 logger.debug(f"[主动分发] 记忆存储失败: {e}")
 
