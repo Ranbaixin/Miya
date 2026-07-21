@@ -73,8 +73,35 @@ onMounted(() => {
   checkBackend()
   wsConnect()
   timer = setInterval(checkBackend, 30000)
-  setOnPlatformChange(() => {})
+  setOnPlatformChange((event: PlatformChangeEvent) => {
+    if (event.newStatus === 'offline' || event.newStatus === 'error') {
+      showDesktopNotification(event.platformName, event.newStatus)
+    }
+  })
 })
+
+function showDesktopNotification(name: string, status: string) {
+  if (!('Notification' in window)) return
+  if (Notification.permission === 'granted') {
+    new Notification(`弥娅 · ${name}`, {
+      body: `平台状态变更: ${statusLabel(status)}`,
+      icon: '/favicon.ico',
+    })
+  } else if (Notification.permission !== 'denied') {
+    Notification.requestPermission()
+  }
+}
+
+function formatLastMessage(ts: string | null) {
+  if (!ts) return '--'
+  const d = new Date(ts)
+  const now = new Date()
+  const diff = now.getTime() - d.getTime()
+  if (diff < 60000) return '刚刚'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m前`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h前`
+  return `${Math.floor(diff / 86400000)}d前`
+}
 
 onUnmounted(() => {
   if (timer) clearInterval(timer)
@@ -165,7 +192,11 @@ onUnmounted(() => {
               </div>
             </div>
 
-            <div class="pvc-timestamps" v-if="p.last_online || p.last_offline">
+            <div class="pvc-timestamps" v-if="p.last_online || p.last_offline || p.last_message_received">
+              <div class="pvc-ts" v-if="p.last_message_received">
+                <span class="pvc-ts-label">最近消息</span>
+                <span class="pvc-ts-val">{{ formatLastMessage(p.last_message_received) }}</span>
+              </div>
               <div class="pvc-ts" v-if="p.last_online">
                 <span class="pvc-ts-label">上线</span>
                 <span class="pvc-ts-val">{{ new Date(p.last_online).toLocaleString('zh-CN') }}</span>

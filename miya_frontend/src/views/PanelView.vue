@@ -111,6 +111,7 @@ const leftCards = [
   { id: 'chat', label: '对话', desc: '灵魂共鸣', path: '/chat' },
   { id: 'mind', label: '记忆', desc: '认知星河', path: '/mind' },
   { id: 'platforms', label: '平台', desc: '在线状态', path: '/platforms' },
+  { id: 'inbox', label: '收件箱', desc: '跨平台消息', path: '/inbox' },
   { id: 'artboard', label: '画板', desc: 'AI 创作', path: '/artboard' },
 ]
 
@@ -234,7 +235,7 @@ function toggleChat() {
             class="cmd-nav-card"
             @click="navigate(card.path)"
           >
-            <span class="cmd-nav-icon">{{ { chat: '◆', mind: '◇', platforms: '⊡', artboard: '⬡' }[card.id] }}</span>
+            <span class="cmd-nav-icon">{{ { chat: '◆', mind: '◇', platforms: '⊡', inbox: '✉', artboard: '⬡' }[card.id] }}</span>
             <span class="cmd-nav-title">{{ card.label }}</span>
             <span class="cmd-nav-desc">{{ card.desc }}</span>
           </button>
@@ -296,7 +297,7 @@ function toggleChat() {
           <span class="cmd-time-icon" :class="{ active: backendOnline }" :title="backendOnline ? '后端在线' : '后端离线'">🔋</span>
           <span class="cmd-time-val">{{ currentTime }}</span>
           <div class="cmd-time-icons">
-            <span class="cmd-time-icn" title="消息" @click="navigate('/chat')">✉</span>
+            <span class="cmd-time-icn" title="消息收件箱" @click="navigate('/inbox')">✉</span>
             <span class="cmd-time-icn" title="设置" @click="navigate('/config')">⚙</span>
             <span class="cmd-time-icn cmd-hide-icn" title="隐藏面板" @click="togglePanels">⊙</span>
           </div>

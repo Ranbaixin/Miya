@@ -240,6 +240,11 @@ class BasePlatform(ABC):
         self._health.heartbeat_interval = self.health_check_interval
         while self._health.status in (PlatformStatus.ONLINE, PlatformStatus.DEGRADED):
             try:
+                if self._health.last_online:
+                    self._health.uptime_seconds = (
+                        datetime.now() - self._health.last_online
+                    ).total_seconds()
+
                 ok = await self._ping()
                 if not ok:
                     self._health.status = PlatformStatus.DEGRADED
@@ -253,6 +258,21 @@ class BasePlatform(ABC):
                         PlatformEvent.HEALTH_CHECK_FAILED,
                         {"consecutive_failures": cf, "latency_ms": self._health.latency_ms},
                     )
+
+                    max_passive_delay = self.config.get("passive_health_timeout", 0)
+                    if max_passive_delay > 0 and self._health.last_message_received:
+                        since_last_msg = (
+                            datetime.now() - self._health.last_message_received
+                        ).total_seconds()
+                        if since_last_msg < max_passive_delay:
+                            self._health.consecutive_health_failures = 0
+                            self._health.status = PlatformStatus.DEGRADED
+                            logger.debug(
+                                f"[{self.platform_id}] 主动检查失败但最近 {since_last_msg:.0f}s 有消息，维持降级"
+                            )
+                            await asyncio.sleep(self.health_check_interval)
+                            continue
+
                     if self.auto_reconnect:
                         await self._reconnect()
                         self._health.consecutive_health_failures = 0
@@ -328,6 +348,7 @@ class BasePlatform(ABC):
         """记录一条入站消息"""
         self._health.message_count += 1
         self._health.message_in_count += 1
+        self._health.last_message_received = datetime.now()
 
     def _record_message_out(self):
         """记录一条出站消息"""

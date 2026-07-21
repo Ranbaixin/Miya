@@ -272,6 +272,8 @@ async def run_daemon_spine(
         if port_changed:
             logger.warning(f"管理 API 端口已切换: {api_port} → {actual_port}")
         api = ManagementAPI(daemon, host=api_host, port=actual_port)
+        from core.management_api import set_management_api
+        set_management_api(api)
         await api.serve(block=False)
         logger.info(f"管理 API 已启动: http://{api_host}:{actual_port}")
         daemon.registry.on_broadcast(api.broadcast_event)
@@ -403,6 +405,8 @@ async def run_daemon_legacy(
         if port_changed:
             logger.warning(f"管理 API 端口已切换: {api_port} → {actual_port}")
         api = ManagementAPI(daemon, host=api_host, port=actual_port)
+        from core.management_api import set_management_api
+        set_management_api(api)
         await api.serve(block=False)
         logger.info(f"管理 API 已启动: http://{api_host}:{actual_port}")
         daemon.registry.on_broadcast(api.broadcast_event)

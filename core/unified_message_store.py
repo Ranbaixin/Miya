@@ -299,6 +299,66 @@ class UnifiedMessageStore:
             logger.error(f"[MessageStore] 获取消息数失败: {e}")
             return 0
 
+    async def search_messages(
+        self,
+        keyword: str,
+        platform_id: Optional[str] = None,
+        direction: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> List[Dict[str, Any]]:
+        """按关键字搜索消息内容"""
+        try:
+            if not self._initialized:
+                await self.initialize()
+
+            conditions = ["(content LIKE ? OR sender_name LIKE ?)"]
+            params: list = [f"%{keyword}%", f"%{keyword}%"]
+
+            if platform_id:
+                conditions.append("platform_id = ?")
+                params.append(platform_id)
+            if direction:
+                conditions.append("direction = ?")
+                params.append(direction)
+
+            where = f"WHERE {' AND '.join(conditions)}"
+            params.extend([limit, offset])
+
+            rows = await self._exec_fetch(
+                f"""SELECT * FROM platform_messages {where}
+                    ORDER BY created_at DESC LIMIT ? OFFSET ?""",
+                tuple(params),
+            )
+
+            messages = []
+            for row in rows:
+                try:
+                    content = json.loads(row["content"]) if isinstance(row["content"], str) else row["content"]
+                except (json.JSONDecodeError, TypeError):
+                    content = {"text": str(row["content"])}
+
+                messages.append({
+                    "id": row["id"],
+                    "message_id": content.get("message_id", str(row["id"])),
+                    "platform_id": row["platform_id"],
+                    "user_id": row["user_id"],
+                    "sender_id": row["sender_id"],
+                    "sender_name": row["sender_name"],
+                    "content": content.get("text", str(content)),
+                    "raw_content": content,
+                    "direction": row["direction"],
+                    "reply_to_message_id": content.get("reply_to_message_id"),
+                    "timestamp": content.get("timestamp", row["created_at"]),
+                    "created_at": row["created_at"],
+                })
+
+            return messages
+
+        except Exception as e:
+            logger.error(f"[MessageStore] 搜索消息失败: {e}")
+            return []
+
     async def record_miya_reply(
         self,
         platform_id: str,

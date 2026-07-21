@@ -1344,6 +1344,19 @@ class DecisionHub:
                     group_id=str(group_id) if group_id else None,
                     text=content[:2000],
                 )
+                from core.management_api import get_management_api
+                mgmt = get_management_api()
+                if mgmt:
+                    await mgmt.broadcast_message(
+                        content=content[:2000],
+                        platform=platform,
+                        sender_name=sender_name,
+                        sender_id=str(perception.get("sender_id", "")),
+                        user_id=str(user_id) if user_id else "unknown",
+                        direction="in",
+                        message_id=perception.get("message_id", ""),
+                        group_id=str(group_id) if group_id else None,
+                    )
             except Exception as e:
                 logger.debug(f"[MessageStore] 入站记录失败: {e}")
 
@@ -1732,6 +1745,20 @@ class DecisionHub:
                         reply_to_message_id=perception.get("message_id", ""),
                         group_id=str(group_id) if group_id else None,
                     )
+                    from core.management_api import get_management_api
+                    mgmt = get_management_api()
+                    if mgmt:
+                        await mgmt.broadcast_message(
+                            content=response[:2000],
+                            platform=platform,
+                            sender_name="弥娅",
+                            sender_id="miya",
+                            user_id=str(user_id) if user_id else "unknown",
+                            direction="out",
+                            message_id="",
+                            reply_to_message_id=perception.get("message_id", ""),
+                            group_id=str(group_id) if group_id else None,
+                        )
                 except Exception as e:
                     logger.debug(f"[MessageStore] 出站记录失败: {e}")
 

@@ -60,6 +60,7 @@ class PlatformHealth:
     last_heartbeat: Optional[datetime] = None
     heartbeat_interval: float = 30.0
     consecutive_health_failures: int = 0
+    last_message_received: Optional[datetime] = None
     extra: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
@@ -81,4 +82,5 @@ class PlatformHealth:
             "last_heartbeat": self.last_heartbeat.isoformat() if self.last_heartbeat else None,
             "heartbeat_interval": self.heartbeat_interval,
             "consecutive_health_failures": self.consecutive_health_failures,
+            "last_message_received": self.last_message_received.isoformat() if self.last_message_received else None,
         }

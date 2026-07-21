@@ -12,6 +12,7 @@ export interface PlatformInfo {
   last_heartbeat: string | null
   heartbeat_interval: number
   consecutive_health_failures: number
+  last_message_received: string | null
 }
 
 export const PLATFORM_COLORS: Record<string, string> = {

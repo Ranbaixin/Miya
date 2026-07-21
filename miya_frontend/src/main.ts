@@ -20,6 +20,7 @@ const router = createRouter({
     { path: '/openclaw', component: () => import('@/views/OpenClawView.vue') },
     { path: '/screen', component: () => import('@/views/ScreenVisionView.vue') },
     { path: '/platforms', component: () => import('@/views/PlatformsView.vue') },
+    { path: '/inbox', component: () => import('@/views/MessageInbox.vue') },
     { path: '/terminal', component: () => import('@/views/TerminalView.vue') },
     { path: '/live2d', component: () => import('@/views/Live2dConfigView.vue') },
     { path: '/artboard', component: () => import('@/views/ArtboardView.vue') },

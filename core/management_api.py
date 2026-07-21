@@ -39,6 +39,17 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 
 logger = logging.getLogger("Miya.ManagementAPI")
 
+_global_management_api: Optional["ManagementAPI"] = None
+
+
+def set_management_api(api: "ManagementAPI"):
+    global _global_management_api
+    _global_management_api = api
+
+
+def get_management_api() -> Optional["ManagementAPI"]:
+    return _global_management_api
+
 _AP_PANEL_HTML = """<!DOCTYPE html>
 <html lang="zh"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>弥娅 NT 仪表盘</title>
@@ -299,6 +310,34 @@ class ManagementAPI:
                 group_id=body.get("group_id"),
             )
             return {"success": record_id is not None, "id": record_id}
+
+        @app.get("/api/v1/messages/search")
+        async def search_messages(
+            keyword: str = "",
+            platform_id: str = "",
+            direction: str = "",
+            limit: int = 50,
+            offset: int = 0,
+        ):
+            """跨平台消息全文搜索"""
+            if not keyword:
+                return {"messages": [], "total": 0}
+
+            from core.unified_message_store import get_unified_message_store
+
+            store = get_unified_message_store()
+            messages = await store.search_messages(
+                keyword=keyword,
+                platform_id=platform_id or None,
+                direction=direction or None,
+                limit=min(limit, 200),
+                offset=offset,
+            )
+            return {
+                "messages": messages,
+                "total": len(messages),
+                "keyword": keyword,
+            }
 
         # ======== 权限管理 (v7.0) ========
 

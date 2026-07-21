@@ -15,6 +15,7 @@ interface HubCard {
 
 const cards: HubCard[] = [
   { id: 'chat', icon: '◆', title: '弥娅对话', desc: '灵魂共鸣 · AI 深度交流', path: '/chat', color: '#00FFF5' },
+  { id: 'inbox', icon: '✉', title: '消息收件箱', desc: '跨平台消息总览', path: '/inbox', color: '#60a5fa' },
   { id: 'mind', icon: '◇', title: '记忆星河', desc: '3D 认知可视化图谱', path: '/mind', color: '#c084fc', size: 'tall' },
   { id: 'artboard', icon: '⬡', title: '弥娅画板', desc: 'AI 绘画创作工具', path: '/artboard', color: '#f472b6' },
   { id: 'terminal', icon: '▷', title: '终端引擎', desc: 'CCE 命令行交互', path: '/terminal', color: '#38bdf8' },
@@ -22,6 +23,7 @@ const cards: HubCard[] = [
   { id: 'community', icon: '✧', title: '娜迦社区', desc: '发帖 · 交友 · 互动', path: '/community', color: '#7dd3fc', size: 'wide' },
   { id: 'security', icon: '⬢', title: '安全中心', desc: '漏洞扫描与诊断', path: '/security', color: '#ef4444' },
   { id: 'screen', icon: '⊙', title: '屏幕视觉', desc: '截图 · 视觉分析', path: '/screen', color: '#facc15' },
+  { id: 'platforms', icon: '⊡', title: '平台状态', desc: '多平台健康监控', path: '/platforms', color: '#34d399' },
 ]
 
 function navigate(path: string) {
