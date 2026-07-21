@@ -18,7 +18,6 @@ import json
 import logging
 from abc import ABC
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -27,18 +26,7 @@ logger = logging.getLogger(__name__)
 # ==================== 枚举定义 ====================
 
 
-class PlatformType(str, Enum):
-    """平台类型"""
-
-    QQ = "qq"  # QQ
-    QQ_OFFICIAL = "qq_official"  # QQ官方
-    ONEBOT = "onebot"  # OneBot (CQHTTP)
-    FEISHU = "feishu"  # 飞书
-    DINGDING = "dingding"  # 钉钉
-    TELEGRAM = "telegram"  # Telegram
-    DISCORD = "discord"  # Discord
-    SLACK = "slack"  # Slack
-    WECHAT = "wechat"  # 微信
+from core.unified_platform.platform_type import MiyaPlatform as PlatformType
 
 
 # ==================== 消息组件 ====================

@@ -178,6 +178,19 @@ class WeixinIlinkPlatform(MessageMixin, BasePlatform):
             except Exception as e:
                 logger.error("[weixin_ilink] 发送回复失败: %s", e)
 
+    async def send_private_message(self, user_id: str, message: str) -> bool:
+        """发送主动私聊消息 (v8.1)"""
+        if not self._client or not self._client_ready:
+            logger.debug("[weixin_ilink] 主动消息跳过: 客户端未就绪")
+            return False
+        try:
+            await self._client.send_text(str(user_id), message)
+            logger.debug("[weixin_ilink] 主动消息已发送: %s → %s", user_id, message[:30])
+            return True
+        except Exception as e:
+            logger.error("[weixin_ilink] 主动消息发送失败: %s", e)
+            return False
+
     async def _do_disconnect(self):
         self._shutdown_event.set()
         if self._message_task and not self._message_task.done():

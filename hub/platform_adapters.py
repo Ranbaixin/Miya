@@ -577,6 +577,81 @@ class WebAdapter(PlatformAdapter):
         }
 
 
+class MobileAdapter(PlatformAdapter):
+    """手机端平台适配器 (v8.1: 新增)
+
+    弥娅手机端通过 Web API (/api/chat/pending/) 拉取主动消息。
+    该适配器提供工具集定义和消息格式转换。
+    """
+
+    def __init__(self):
+        super().__init__("mobile")
+
+    def to_message(self, user_input: str, context: Dict) -> Message:
+        content = {
+            "input": user_input,
+            "user_id": context.get("user_id", "mobile_user"),
+            "platform": "mobile",
+            "timestamp": context.get("timestamp", datetime.now()),
+            "metadata": context.get("metadata", {}),
+        }
+        return Message(
+            msg_type=MessageType.DATA.value,
+            content=content,
+            source="mobile",
+            destination="decision_hub",
+            priority=1,
+        )
+
+    def from_message(self, message: Message) -> Dict:
+        return {
+            "response": message.content.get("response", ""),
+            "emotion": message.content.get("emotion"),
+            "state": message.content.get("state"),
+        }
+
+    def _get_available_tools(self) -> List[str]:
+        return [
+            "get_current_time",
+            "web_search",
+            "tavily_search",
+            "baiduhot",
+            "douyinhot",
+            "weibohot",
+            "mcp_openclaw_send_message",
+            "mcp_cce_execute",
+            "mcp_cce_get_status",
+            "mcp_code_executor_execute",
+            "mcp_screen_vision_look_screen",
+            "mcp_screen_vision_screenshot",
+            "mcp_filesystem_read_file",
+            "mcp_filesystem_write_file",
+            "mcp_filesystem_list_files",
+            "mcp_filesystem_search_files",
+            "mcp_art_service_generate_image",
+            "mcp_web_search_search",
+            "mcp_web_search_fetch",
+            "search_memory",
+            "get_status",
+        ]
+
+    def _get_restrictions(self) -> Dict:
+        return {
+            "max_message_length": 2000,
+            "supports_media": True,
+            "supports_group_chat": False,
+            "supports_rich_text": False,
+        }
+
+    def _get_capabilities(self) -> Dict:
+        return {
+            "execute_commands": False,
+            "cross_platform_call": True,
+            "real_time_interaction": True,
+            "proactive_messaging": True,
+        }
+
+
 def get_adapter(platform_name: str) -> PlatformAdapter:
     """
     获取平台适配器 (v7.0: 模块级缓存，避免每次消息重建)
@@ -587,7 +662,6 @@ def get_adapter(platform_name: str) -> PlatformAdapter:
             "terminal": TerminalAdapter(),
             "qq": QQAdapter(),
             "pc_ui": PCUIAdapter(),
-            "web": WebAdapter(),
             "desktop": PCUIAdapter(),
             "qq_official": QQAdapter(),
             "qqofficial": QQAdapter(),
@@ -596,13 +670,14 @@ def get_adapter(platform_name: str) -> PlatformAdapter:
             "wecom": QQAdapter(),
             "wechat": QQAdapter(),
             "line": QQAdapter(),
-            "webchat": QQAdapter(),
             "satori": QQAdapter(),
             "discord": QQAdapter(),
             "telegram": QQAdapter(),
             "slack": QQAdapter(),
             "kook": QQAdapter(),
             "aiocqhttp": QQAdapter(),
+            "mobile": MobileAdapter(),
+            "web": WebAdapter(),  # 向后兼容：Web API 层使用
         }
 
     adapter = _adapters_cache.get(platform_name)
@@ -620,5 +695,6 @@ __all__ = [
     "QQAdapter",
     "PCUIAdapter",
     "WebAdapter",
+    "MobileAdapter",
     "get_adapter",
 ]

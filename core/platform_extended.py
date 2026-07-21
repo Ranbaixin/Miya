@@ -8,28 +8,12 @@ import asyncio
 import json
 import logging
 from dataclasses import dataclass
-from enum import Enum
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 
-class PlatformType(str, Enum):
-    """平台类型扩展"""
-
-    QQ = "qq"
-    TELEGRAM = "telegram"
-    FEISHU = "feishu"
-    DINGDING = "dingding"
-    DISCORD = "discord"
-    SLACK = "slack"
-    LINE = "line"
-    WECHAT_WORK = "wechat_work"
-    WECHAT = "wechat"
-    SATORI = "satori"
-    KOOK = "kook"
-    MATTERMOST = "mattermost"
-    MISSKEY = "misskey"
+from core.unified_platform.platform_type import MiyaPlatform as PlatformType
 
 
 @dataclass

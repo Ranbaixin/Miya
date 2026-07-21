@@ -80,10 +80,15 @@ class MiyaDaemon:
 
     def _register_from_config(self, platform_id: str, config: Dict[str, Any]):
         """根据配置注册单个平台"""
-        # 动态构建平台实例
         platform = self._create_platform(platform_id, config)
         if platform:
-            self._registry.register(platform.__class__, config)
+            # v8.1: 对于 GenericPlatform，类 platform_id ("generic") 与真实 platform_id
+            # (如 "desktop"/"mobile") 不一致。直接存实例，不注册类，避免产生幽灵 "generic" 条目。
+            if platform.__class__.platform_id != platform_id:
+                self._registry._instances[platform_id] = platform
+                self._registry._configs[platform_id] = config
+            else:
+                self._registry.register(platform.__class__, config)
             logger.info(f"注册平台: {platform_id} ({platform.platform_name})")
 
     def _create_platform(self, platform_id: str, config: Dict[str, Any]) -> Optional[BasePlatform]:
@@ -100,7 +105,6 @@ class MiyaDaemon:
             SatoriPlatform,
             SlackPlatform,
             TelegramPlatform,
-            WebChatPlatform,
             WeChatOfficialPlatform,
             WeComPlatform,
         )
@@ -111,7 +115,6 @@ class MiyaDaemon:
             "telegram": TelegramPlatform,
             "discord": DiscordPlatform,
             "aiocqhttp": OneBotPlatform,
-            "webchat": WebChatPlatform,
             "lark": LarkPlatform,
             "kook": KOOKPlatform,
             "slack": SlackPlatform,

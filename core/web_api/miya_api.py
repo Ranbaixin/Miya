@@ -822,7 +822,7 @@ class MiyaAPI:
                 "display_name": "新会话",
                 "created_at": datetime.now().isoformat(),
                 "updated_at": datetime.now().isoformat(),
-                "platform_id": "webchat",
+                "platform_id": "desktop",
             }
 
             try:
@@ -910,7 +910,7 @@ class MiyaAPI:
                 message = request_data.get("message", "")
                 session_id = request_data.get("session_id", "default")
                 user_id = request_data.get("user_id") or session_id
-                platform = request_data.get("platform", "web")
+                platform = request_data.get("platform", "desktop")
 
                 image_data = request_data.get("image_data")
                 print(
@@ -1156,7 +1156,6 @@ class MiyaAPI:
                     "mattermost": "Mattermost",
                     "misskey": "Misskey",
                     "satori": "Satori",
-                    "webchat": "网页聊天",
                 }
                 for p_id, name in platform_names.items():
                     platform_i18n[f"platform.{p_id}.name"] = name
@@ -2319,7 +2318,7 @@ class MiyaAPI:
                 "success": True,
                 "data": {
                     "config": {
-                        "platform": ["qqofficial", "webchat"],
+                        "platform": ["qqofficial", "desktop"],
                         "provider": ["deepseek"],
                     }
                 },
@@ -2332,7 +2331,7 @@ class MiyaAPI:
                 "success": True,
                 "data": {
                     "config": {
-                        "platform": ["qqofficial", "webchat"],
+                        "platform": ["qqofficial", "desktop"],
                         "provider": ["deepseek"],
                     }
                 },

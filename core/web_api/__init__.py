@@ -371,7 +371,7 @@ class WebAPI:
             try:
                 from mlink.message import Message
 
-                platform = request.platform or "web"
+                platform = request.platform or "desktop"
 
                 # 用户身份链接处理
                 # 优先使用 usg_id 字段（桌面端专用），其次用 session_id
@@ -830,11 +830,6 @@ class WebAPI:
                         "supports_private_chat": True,
                         "supports_image": True,
                         "supports_voice": True,
-                    },
-                    "webchat": {
-                        "supports_group_chat": False,
-                        "supports_private_chat": True,
-                        "supports_image": True,
                     },
                 },
             }

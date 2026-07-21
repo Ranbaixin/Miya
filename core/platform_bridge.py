@@ -97,7 +97,7 @@ class MiyaPlatformBridge:
                     content = data.get("content", data.get("message", ""))
                     resp = self._core.process_message(
                         content=content,
-                        platform="web",
+                        platform="desktop",
                         user_id=data.get("user_id", "default"),
                         sender_name=data.get("sender_name", "用户"),
                     )

@@ -77,10 +77,6 @@ AVAILABLE_ADAPTERS = {
         "name": "终端",
         "adapter": "TerminalAdapter",
     },
-    "web": {
-        "name": "Web",
-        "adapter": "WebAdapter",
-    },
     "pc": {
         "name": "PC UI",
         "adapter": "PCAdapter",

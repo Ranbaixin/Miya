@@ -32,7 +32,7 @@ export const PLATFORM_COLORS: Record<string, string> = {
   mattermost: '#0058CC',
   misskey: '#86B300',
   satori: '#FF6B9D',
-  webchat: '#FF6B35',
+  mobile: '#FF6B35',
   desktop: '#00ADB5',
   terminal: '#7C8B9E',
   wecom_ai_bot: '#07C160',
@@ -64,9 +64,10 @@ export function getPlatformLabel(platformId: string, platformName?: string): str
     mattermost: 'MM',
     misskey: 'Misskey',
     satori: 'Satori',
-    webchat: 'Web',
-    desktop: '桌面',
+    mobile: '手机端',
+    desktop: '桌面端',
     terminal: '终端',
+    generic: '通用',
   }
   return labels[platformId] || platformId
 }

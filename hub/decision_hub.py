@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from core.text_loader import get_text
+from core.ai_client import AIMessage
 from core.model_pool_manager import TaskType
 
 # 导入辅助模块
@@ -750,79 +751,20 @@ class DecisionHub:
             self.proactive_chat.set_rich_context_provider(_rich_context_provider)
 
             async def _proactive_send_callback(
-                message: str, target_id: int, chat_type: str, platform: str = "terminal"
+                message: str, target_id: int, chat_type: str,
+                platform: str = "terminal", trigger_type: str = ""
             ):
-                """主动聊天消息发送回调 — 跨平台分发 + 记入记忆"""
+                """主动聊天消息发送回调 — 委托到统一分发 (v8.1)"""
                 if not message or not target_id:
                     return
-
-                sent = False
-
-                if self.platform_registry and platform and platform != "terminal":
-                    inst = self.platform_registry.get(platform)
-                    if inst and hasattr(inst, "is_online") and inst.is_online:
-                        if chat_type == "group" and hasattr(inst, "send_group_message"):
-                            sent = await inst.send_group_message(target_id, message)
-                        elif hasattr(inst, "send_private_message"):
-                            sent = await inst.send_private_message(target_id, message)
-
-                # 仅对 QQ 类平台回退到 OneBot，避免将 desktop/terminal 误发到 QQ
-                _qq_platforms = {"aiocqhttp", "qqofficial", "qq"}
-                if not sent and self.onebot_client and platform in _qq_platforms:
-                    if chat_type == "group":
-                        sent = await self.onebot_client.send_group_message(target_id, message)
-                    else:
-                        sent = await self.onebot_client.send_private_message(target_id, message)
-
-                # v8.0: desktop/generic 回退——通过所有活跃平台广播
-                _non_qq_platforms = {"desktop", "generic", "webchat", "terminal"}
-                if not sent and platform in _non_qq_platforms:
-                    for pid in self.platform_registry.list_active() if self.platform_registry else []:
-                        inst = self.platform_registry.get(pid)
-                        if inst and hasattr(inst, "is_online") and inst.is_online:
-                            if hasattr(inst, "send_private_message"):
-                                try:
-                                    sent = await inst.send_private_message(target_id, message)
-                                    if sent:
-                                        logger.info(f"[主动聊天] 回退发送到 {pid}: {message[:50]}")
-                                        break
-                                except Exception:
-                                    pass
-
-                if not sent:
-                    logger.info(f"[主动聊天] 无法发送到 {platform}: {message}")
-
-                # 移动端兜底：存入待发送队列
-                # - platform==mobile: 直接存入对应的 user_id
-                # - 其他平台发送失败: 也存入 "default" 作为兜底
-                if platform == "mobile" or not sent:
-                    _key = str(target_id)
-                    if _key not in self._mobile_pending:
-                        self._mobile_pending[_key] = []
-                    self._mobile_pending[_key].append({
-                        "message": message,
-                        "timestamp": datetime.utcnow().isoformat(),
-                    })
-                # 无论是否已存，总向 "default" 追加一份（手机端兜底）
-                if not sent and platform != "mobile":
-                    if "default" not in self._mobile_pending:
-                        self._mobile_pending["default"] = []
-                    self._mobile_pending["default"].append({
-                        "message": f"[来自{platform}] {message}",
-                        "timestamp": datetime.utcnow().isoformat(),
-                    })
-
-                try:
-                    perception = {
-                        "platform": platform or "terminal",
-                        "user_id": str(target_id),
-                        "group_id": str(target_id) if chat_type == "group" else "0",
-                        "message_type": chat_type,
-                        "response": message,
-                    }
-                    await self.memory_manager.store_unified_memory(perception, role="assistant")
-                except Exception as e:
-                    logger.debug(f"[主动聊天] 记忆存储失败: {e}")
+                await self._dispatch_proactive_message(
+                    message=message,
+                    target_id=target_id,
+                    chat_type=chat_type,
+                    platform=platform,
+                    trigger_type=trigger_type,
+                    store_memory=True,
+                )
 
             self.proactive_chat.set_send_callback(_proactive_send_callback)
 
@@ -868,7 +810,7 @@ class DecisionHub:
         if self.security_service:
             try:
                 platform = perception.get("source", "")
-                if platform in ["qq", "web"]:
+                if platform in ["qq", "mobile"]:
                     user_id = str(perception.get("user_id", perception.get("user_id", "unknown")))
                     result = self.security_service.check(content, user_id)
                     if result.level.value in ["dangerous", "blocked"]:
@@ -890,7 +832,7 @@ class DecisionHub:
         if self.security_service:
             try:
                 platform = perception.get("source", "")
-                if platform in ["qq", "web"]:
+                if platform in ["qq", "mobile"]:
                     user_id = str(perception.get("user_id", perception.get("user_id", "unknown")))
                     result = self.security_service.check(content, user_id)
                     # 检查是否是危险级别
@@ -908,7 +850,7 @@ class DecisionHub:
                     return None, None
 
                 platform = perception.get("source", "")
-                if platform in ["qq", "web"]:
+                if platform in ["qq", "mobile"]:
                     is_injection, reason = await self.ai_injection_detector.detect(content)
                     if is_injection:
                         logger.warning(f"[决策层-AI防注入] 检测到角色扮演诱导: {reason}")
@@ -934,7 +876,7 @@ class DecisionHub:
         try:
             if not self.ai_injection_detector.is_enabled():
                 return None
-            if platform not in ["qq", "web"]:
+            if platform not in ["qq", "mobile"]:
                 return None
             is_injection, reason = await asyncio.wait_for(self.ai_injection_detector.detect(content), timeout=3.0)
             if is_injection:
@@ -1016,58 +958,19 @@ class DecisionHub:
             )
 
             if result and result.should_respond and result.message:
-                # 确定平台（优先使用 result.context 中的平台）
                 ctx_platform = result.context.platform if result.context else None
                 platform = ctx_platform or perception.get("platform", "terminal")
+                target_to_send = result.context.target_id if result.context else target_id
 
-                # 通过平台注册表分发消息
-                sent = False
-                if self.platform_registry and platform and platform != "terminal":
-                    inst = self.platform_registry.get(platform)
-                    if inst and hasattr(inst, "is_online") and inst.is_online:
-                        if chat_type == "group" and hasattr(inst, "send_group_message"):
-                            group_id_to_send = result.context.target_id if result.context else target_id
-                            logger.info(
-                                f"[决策层] [主动聊天] 发送到群 {group_id_to_send} (via {platform}): {result.message}"
-                            )
-                            sent = await inst.send_group_message(group_id_to_send, result.message)
-                        elif hasattr(inst, "send_private_message"):
-                            user_id_to_send = result.context.target_id if result.context else target_id
-                            logger.info(
-                                f"[决策层] [主动聊天] 发送到用户 {user_id_to_send} (via {platform}): {result.message}"
-                            )
-                            sent = await inst.send_private_message(user_id_to_send, result.message)
-
-                # 回退到 OneBot（兼容，仅 QQ 类平台）
-                _qq_platforms = {"aiocqhttp", "qqofficial", "qq"}
-                if not sent and self.onebot_client and platform in _qq_platforms:
-                    if chat_type == "group":
-                        group_id_to_send = result.context.target_id if result.context else target_id
-                        logger.info(f"[决策层] [主动聊天] 发送到群 {group_id_to_send}: {result.message}")
-                        sent = await self.onebot_client.send_group_message(group_id_to_send, result.message)
-                    else:
-                        user_id_to_send = result.context.target_id if result.context else target_id
-                        logger.info(f"[决策层] [主动聊天] 发送到用户 {user_id_to_send}: {result.message}")
-                        sent = await self.onebot_client.send_private_message(user_id_to_send, result.message)
-
-                if not sent:
-                    logger.warning(f"[决策层] [主动聊天] 无法发送到平台 {platform}: {result.message}")
-                else:
-                    # 将主动聊天消息记入记忆/对话上下文
-                    try:
-                        user_id_to_send = result.context.target_id if result.context else target_id
-                        store_perception = {
-                            "platform": platform,
-                            "user_id": str(user_id_to_send),
-                            "group_id": str(result.context.target_id)
-                            if result.context and chat_type == "group"
-                            else "0",
-                            "message_type": chat_type,
-                            "response": result.message,
-                        }
-                        await self.memory_manager.store_unified_memory(store_perception, role="assistant")
-                    except Exception as e:
-                        logger.debug(f"[决策层] [主动聊天] 记忆存储失败: {e}")
+                # 委托统一分发 (v8.1)
+                await self._dispatch_proactive_message(
+                    message=result.message,
+                    target_id=target_to_send,
+                    chat_type=chat_type,
+                    platform=platform,
+                    trigger_type=result.trigger_type,
+                    store_memory=True,
+                )
 
                 return result
 
@@ -1076,6 +979,412 @@ class DecisionHub:
         except Exception as e:
             logger.warning(f"[决策层] 主动聊天处理失败: {e}")
             return None
+
+    async def _dispatch_proactive_message(
+        self,
+        message: str,
+        target_id: int,
+        chat_type: str = "private",
+        platform: str = "terminal",
+        trigger_type: str = "",
+        store_memory: bool = True,
+    ) -> bool:
+        """主动消息跨平台分发 — 统一路由入口 (v8.1)
+
+        分发优先级:
+        1. 平台明确在线 → 直接发送
+        2. QQ 系列 → OneBot 回退
+        3. desktop/generic/webchat/mobile/terminal + trigger_type → AI 感知路由
+        4. 无 trigger_type 的广播平台 → 广播到所有在线支持主动消息的平台
+        5. mobile 或失败 → mobile_pending 兜底队列
+        """
+        sent = False
+
+        # 1) 平台注册表直接发送
+        if self.platform_registry and platform and platform != "terminal":
+            inst = self.platform_registry.get(platform)
+            if inst and hasattr(inst, "is_online") and inst.is_online:
+                if chat_type == "group" and hasattr(inst, "send_group_message"):
+                    logger.info(f"[主动分发] 发送群消息 (via {platform}): {message[:50]}")
+                    sent = await inst.send_group_message(target_id, message)
+                elif hasattr(inst, "send_private_message"):
+                    logger.info(f"[主动分发] 发送私聊消息 (via {platform}): {message[:50]}")
+                    sent = await inst.send_private_message(target_id, message)
+
+        # 2) QQ 系列 → OneBot 回退 (仅 QQ 类平台)
+        _qq_platforms = {"aiocqhttp", "qqofficial", "qq", "qq_official", "onebot"}
+        if not sent and self.onebot_client and platform in _qq_platforms:
+            if chat_type == "group":
+                sent = await self.onebot_client.send_group_message(target_id, message)
+            else:
+                sent = await self.onebot_client.send_private_message(target_id, message)
+
+        # 3) 需要路由判断的平台 → AI 感知 / 优先级 / 广播
+        # 包含内置平台 + 所有直发失败的非 QQ 平台 (v8.1: 消除 weixin_ilink 等的路由死区)
+        if not sent:
+            routing_config = self._get_platform_routing_config()
+            mode = routing_config.get("mode", "ai_aware")
+
+            # 3a) 后台触发 + AI 感知模式 → AI 智能选择
+            if trigger_type and mode == "ai_aware" and routing_config.get("ai_routing", {}).get("enabled", True):
+                selected_platform = await self._ai_select_platform(
+                    message=message,
+                    target_id=target_id,
+                    trigger_type=trigger_type,
+                    routing_config=routing_config,
+                )
+                if selected_platform:
+                    inst = self.platform_registry.get(selected_platform)
+                    if inst and hasattr(inst, "is_online") and inst.is_online:
+                        if hasattr(inst, "send_private_message"):
+                            try:
+                                resolved_id = self._resolve_cross_platform_target_id(
+                                    str(target_id), selected_platform
+                                )
+                                result = await inst.send_private_message(resolved_id, message)
+                                if result:
+                                    logger.info(
+                                        f"[主动分发] AI 路由 → {selected_platform}"
+                                        f"{' (id=' + resolved_id + ')' if resolved_id != str(target_id) else ''}"
+                                        f": {message[:50]}"
+                                    )
+                                    sent = True
+                            except Exception as e:
+                                logger.debug(f"[主动分发] AI 路由发送失败: {e}")
+
+            # 3b) AI 未命中或非 AI 模式 → 优先级排序或广播
+            if not sent:
+                if mode == "priority_only":
+                    sent = await self._send_by_priority(target_id, message, chat_type, routing_config)
+                else:
+                    # broadcast / priority 回退 — 跨平台 ID 翻译
+                    active_ids = (
+                        self.platform_registry.list_active() if self.platform_registry else []
+                    )
+                    for pid in active_ids:
+                        inst = self.platform_registry.get(pid)
+                        if inst and hasattr(inst, "is_online") and inst.is_online:
+                            if hasattr(inst, "send_private_message"):
+                                try:
+                                    resolved_id = self._resolve_cross_platform_target_id(
+                                        str(target_id), pid
+                                    )
+                                    result = await inst.send_private_message(resolved_id, message)
+                                    if result:
+                                        logger.info(
+                                            f"[主动分发] 广播发送到 {pid}"
+                                            f"{' (id=' + resolved_id + ')' if resolved_id != str(target_id) else ''}"
+                                            f": {message[:50]}"
+                                        )
+                                        sent = True
+                                        break
+                                except Exception:
+                                    pass
+
+        # 4) mobile 兜底队列
+        if platform == "mobile" or not sent:
+            _key = str(target_id)
+            if _key not in self._mobile_pending:
+                self._mobile_pending[_key] = []
+            self._mobile_pending[_key].append({
+                "message": message,
+                "timestamp": datetime.utcnow().isoformat(),
+            })
+        if not sent and platform != "mobile":
+            if "default" not in self._mobile_pending:
+                self._mobile_pending["default"] = []
+            self._mobile_pending["default"].append({
+                "message": f"[来自{platform}] {message}",
+                "timestamp": datetime.utcnow().isoformat(),
+            })
+
+        if not sent:
+            logger.info(f"[主动分发] 无法发送到 {platform}: {message[:50]}")
+
+        # 5) 记入记忆
+        if store_memory:
+            try:
+                perception = {
+                    "platform": platform or "terminal",
+                    "user_id": str(target_id),
+                    "group_id": str(target_id) if chat_type == "group" else "0",
+                    "message_type": chat_type,
+                    "response": message,
+                }
+                await self.memory_manager.store_unified_memory(perception, role="assistant")
+            except Exception as e:
+                logger.debug(f"[主动分发] 记忆存储失败: {e}")
+
+        return sent
+
+    def _get_platform_routing_config(self) -> dict:
+        """获取平台路由配置 (从 proactive_chat._config 读取) (v8.1)"""
+        try:
+            if hasattr(self, "proactive_chat") and self.proactive_chat:
+                return self.proactive_chat._config.get("platform_routing", {})
+        except Exception:
+            pass
+        return {}
+
+    def _resolve_cross_platform_target_id(self, target_id: str, target_platform: str) -> str:
+        """跨平台用户 ID 翻译 (v8.1: 修复 desktop_user → QQ ID 等跨平台场景)
+
+        从 permissions.json 读取 linked_to 映射：
+          - desktop_user 的 linked_to 是 "1523878699" → QQ 平台用 "1523878699"
+          - mobile_user 同理
+          - 如果 target_id 本身就是该平台的合法 ID，直接返回
+
+        返回: 适合 target_platform 的用户 ID
+        """
+        if not target_id:
+            return target_id
+
+        # QQ 系列平台的已知 ID 模式
+        _qq_platforms = {"aiocqhttp", "qqofficial", "qq", "qq_official", "onebot"}
+        _is_qq_target = target_platform in _qq_platforms
+
+        # 如果 target_id 已经是纯数字 QQ 号且目标是 QQ 平台，直接返回
+        if _is_qq_target and target_id.isdigit():
+            return target_id
+
+        # 从 permissions.json 查找 linked 映射
+        try:
+            import json
+            from pathlib import Path
+
+            perms_path = Path("config/permissions.json")
+            if perms_path.exists():
+                perms = json.loads(perms_path.read_text(encoding="utf-8"))
+                users = perms.get("users", [])
+
+                # 1) 目标 ID 直接匹配 → 检查该用户的 linked_to
+                for u in users:
+                    if u.get("user_id") == target_id:
+                        linked = u.get("linked_to", "")
+                        if linked and str(linked).isdigit():
+                            logger.debug(f"[跨平台] {target_id} → {linked} (exact linked_to)")
+                            return str(linked)
+                        if _is_qq_target and not target_id.isdigit():
+                            # 该用户无 linked_to，继续到步 3 搜索
+                            break
+
+                # 2) 反向：search linked_to == target_id → 该 ID 本身已经是 QQ 号
+                for u in users:
+                    if str(u.get("linked_to", "")) == str(target_id):
+                        logger.debug(f"[跨平台] {target_id} 是 linked_to，找到用户 {u.get('user_id')}")
+                        return target_id
+
+                # 3) QQ 兜底：target_id 不是纯数字 QQ 号 → 搜索有 linked_to 的用户
+                if _is_qq_target and not target_id.isdigit():
+                    for u in users:
+                        linked = str(u.get("linked_to", ""))
+                        if linked and linked.isdigit():
+                            logger.debug(f"[跨平台] {target_id} → QQ 兜底 {linked} (from user {u.get('user_id')})")
+                            return linked
+                    # 最后手段：找 platform="qq" 的数字用户
+                    for u in users:
+                        uid = str(u.get("user_id", ""))
+                        if u.get("platform") in _qq_platforms and uid.isdigit():
+                            logger.debug(f"[跨平台] {target_id} → QQ 平台用户 {uid}")
+                            return uid
+
+        except Exception as e:
+            logger.debug(f"[跨平台] 用户 ID 翻译失败: {e}")
+
+        return target_id
+
+    def _get_platform_activity(self, target_id: int) -> dict:
+        """获取用户在各平台上的最近活跃时间 (v8.1)
+
+        查询来源: 平台健康数据 (per-platform last_message_received) + 用户活动追踪器
+        返回: { platform_id: seconds_ago (float) }
+        """
+        import time
+
+        result = {}
+        now = time.time()
+
+        # 从 PlatformRegistry 获取各平台最后消息接收时间
+        if self.platform_registry:
+            for pid, inst in self.platform_registry._instances.items():
+                if inst and inst.is_online:
+                    try:
+                        health = getattr(inst, "_health", None)
+                        if health and health.last_message_received:
+                            delta = now - health.last_message_received.timestamp()
+                            result[pid] = round(delta, 1)
+                    except Exception:
+                        pass
+
+        # 补充用户活动追踪器数据 (全局兜底)
+        try:
+            from memory.user_activity_tracker import get_last_active
+
+            last = get_last_active(str(target_id))
+            if last > 0:
+                global_delta = now - last
+                for pid in list(result.keys()):
+                    if result[pid] > global_delta:
+                        result[pid] = min(result[pid], global_delta)
+        except Exception:
+            pass
+
+        return result
+
+    async def _ai_select_platform(
+        self,
+        message: str,
+        target_id: int,
+        trigger_type: str,
+        routing_config: dict,
+    ) -> Optional[str]:
+        """AI 感知平台选择 — 让 AI 从候选平台中挑选最佳发送目标 (v8.1)
+
+        根据: 消息内容 + 触发场景 + 用户活跃度 + 平台优先级
+        返回: 平台 ID 或 None (AI 失败时降级)
+        """
+        if not self.ai_client or not self.platform_registry:
+            return None
+
+        ai_cfg = routing_config.get("ai_routing", {})
+        timeout_seconds = ai_cfg.get("timeout_seconds", 3)
+
+        try:
+            # 收集在线平台及其优先级
+            priority_map = routing_config.get("priority_ranking", {})
+            candidates = []
+
+            for pid in (self.platform_registry.list_active() or []):
+                inst = self.platform_registry.get(pid)
+                if inst and hasattr(inst, "is_online") and inst.is_online:
+                    if hasattr(inst, "send_private_message"):
+                        priority = priority_map.get(pid, priority_map.get(f"{pid}_private", 5))
+                        candidates.append((pid, priority))
+
+            if not candidates:
+                return None
+
+            # 按优先级排序，取 top-N
+            candidates.sort(key=lambda x: x[1], reverse=True)
+            max_cand = ai_cfg.get("max_candidates", 5)
+            candidates = candidates[:max_cand]
+
+            # 获取各平台用户活跃度
+            activity = self._get_platform_activity(target_id)
+
+            # 构建 AI prompt
+            now_str = datetime.now().strftime("%H:%M")
+
+            # 从配置读取文本模板 (v8.1: 消除硬编码)
+            activity_fmts = {
+                "seconds": get_text("platform_routing.activity_format.seconds", " -- {seconds}秒前"),
+                "minutes": get_text("platform_routing.activity_format.minutes", " -- {minutes}分钟前"),
+                "hours": get_text("platform_routing.activity_format.hours", " -- {hours}小时前"),
+                "inactive": get_text("platform_routing.activity_format.inactive", ""),
+            }
+
+            cand_lines = []
+            for pid, priority in candidates:
+                secs_ago = activity.get(pid)
+                active_str = ""
+                if secs_ago is not None:
+                    if secs_ago < 60:
+                        active_str = activity_fmts["seconds"].format(seconds=int(secs_ago))
+                    elif secs_ago < 3600:
+                        active_str = activity_fmts["minutes"].format(minutes=int(secs_ago / 60))
+                    else:
+                        active_str = activity_fmts["hours"].format(hours=round(secs_ago / 3600, 1))
+                else:
+                    active_str = activity_fmts["inactive"]
+                cand_lines.append(f"- {pid} (优先级{priority}){active_str}")
+
+            trigger_desc = get_text(
+                f"platform_routing.trigger_descriptions.{trigger_type}", trigger_type
+            )
+
+            prompt_template = get_text(
+                "platform_routing.ai_prompt_template",
+                "请从候选平台中选出最适合发送此消息的平台。\n\n消息: {message}\n触发原因: {trigger_desc}\n候选:\n{candidates}"
+            )
+            prompt = prompt_template.format(
+                message=message[:200],
+                trigger_desc=trigger_desc,
+                now_str=now_str,
+                candidates=chr(10).join(cand_lines),
+            )
+
+            # 调用 AI
+            response = await asyncio.wait_for(
+                self.ai_client.chat(
+                    messages=[AIMessage(role="user", content=prompt)],
+                    temperature=0.3,
+                    max_tokens=20,
+                ),
+                timeout=timeout_seconds,
+            )
+
+            if response:
+                selected = response.strip().lower()
+                # 验证返回的 ID 是否在候选列表中
+                valid_ids = {c[0] for c in candidates}
+                if selected in valid_ids:
+                    logger.info(f"[AI路由] {trigger_type} → {selected}: {message[:50]}")
+                    return selected
+                # 尝试匹配前缀
+                for pid in valid_ids:
+                    if pid.startswith(selected) or selected.startswith(pid):
+                        logger.info(f"[AI路由] {trigger_type} → {pid} (fuzzy: {selected}): {message[:50]}")
+                        return pid
+
+            logger.debug(f"[AI路由] AI 返回无效平台: {selected}, 候选: {valid_ids}")
+
+        except asyncio.TimeoutError:
+            logger.debug(f"[AI路由] AI 判断超时 ({timeout_seconds}s)，降级到优先级排序")
+        except Exception as e:
+            logger.debug(f"[AI路由] AI 判断失败: {e}")
+
+        return None
+
+    async def _send_by_priority(
+        self,
+        target_id: int,
+        message: str,
+        chat_type: str,
+        routing_config: dict,
+    ) -> bool:
+        """按配置优先级顺序发送消息 (v8.1: priority_only 模式)"""
+        if not self.platform_registry:
+            return False
+
+        priority_map = routing_config.get("priority_ranking", {})
+        active = self.platform_registry.list_active() or []
+
+        scored = []
+        for pid in active:
+            inst = self.platform_registry.get(pid)
+            if inst and hasattr(inst, "is_online") and inst.is_online:
+                if hasattr(inst, "send_private_message"):
+                    score = priority_map.get(pid, priority_map.get(f"{pid}_private", 5))
+                    scored.append((score, pid))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+
+        for _, pid in scored:
+            inst = self.platform_registry.get(pid)
+            try:
+                resolved_id = self._resolve_cross_platform_target_id(str(target_id), pid)
+                sent = await inst.send_private_message(resolved_id, message)
+                if sent:
+                    logger.info(
+                        f"[主动分发] 优先级路由 → {pid}"
+                        f"{' (id=' + resolved_id + ')' if resolved_id != str(target_id) else ''}"
+                        f": {message[:50]}"
+                    )
+                    return True
+            except Exception:
+                pass
+
+        return False
 
     async def start_proactive_background(self):
         """启动主动聊天后台轮询"""

@@ -88,11 +88,6 @@ AVAILABLE_PLATFORMS = {
         "module": "astrbot.core.platform.sources.misskey",
         "adapter": "MisskeyPlatformAdapter",
     },
-    "webchat": {
-        "name": "WebChat",
-        "module": "astrbot.core.platform.sources.webchat",
-        "adapter": "WebChatPlatformAdapter",
-    },
     "weixin_official_account": {
         "name": "微信公众平台",
         "module": "astrbot.core.platform.sources.weixin_official_account",
@@ -114,15 +109,15 @@ AVAILABLE_PLATFORMS = {
         "module": "hub.platform_adapters",
         "adapter": "TerminalAdapter",
     },
-    "web": {
-        "name": "Web",
-        "module": "hub.platform_adapters",
-        "adapter": "WebAdapter",
-    },
-    "pcui": {
-        "name": "PC UI",
+    "desktop": {
+        "name": "桌面端",
         "module": "hub.platform_adapters",
         "adapter": "PCUIAdapter",
+    },
+    "mobile": {
+        "name": "手机端",
+        "module": "hub.platform_adapters",
+        "adapter": "MobileAdapter",
     },
 }
 

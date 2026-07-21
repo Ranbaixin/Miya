@@ -7,7 +7,6 @@ MIYA Platform Adapter (独立版本)
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
 
 import httpx
@@ -15,19 +14,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 
-class PlatformType(str, Enum):
-    """平台类型"""
-
-    QQ = "qq"
-    TELEGRAM = "telegram"
-    FEISHU = "feishu"
-    DINGDING = "dingding"
-    DISCORD = "discord"
-    SLACK = "slack"
-    LINE = "line"
-    WECHAT_WORK = "wechat_work"
-    WECHAT = "wechat"
-    SATORI = "satori"
+from core.unified_platform.platform_type import MiyaPlatform as PlatformType
 
 
 @dataclass

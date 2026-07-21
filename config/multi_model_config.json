@@ -474,7 +474,7 @@
       "qq": "qq",
       "terminal": "terminal",
       "desktop": "desktop",
-      "web": "web"
+      "mobile": "mobile"
     },
     "default_endpoint": "qq",
     "platform_overrides": {

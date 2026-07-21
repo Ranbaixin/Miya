@@ -9,11 +9,13 @@
 """
 
 from .base import BasePlatform
+from .platform_type import MiyaPlatform
 from .reconnect import ExponentialBackoffPolicy, ReconnectPolicy
 from .registry import PlatformRegistry, get_registry, register_platform
 from .status import PlatformEvent, PlatformHealth, PlatformStatus
 
 __all__ = [
+    "MiyaPlatform",
     "PlatformStatus",
     "PlatformHealth",
     "PlatformEvent",

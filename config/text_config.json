@@ -2610,8 +2610,7 @@
             "qqofficial": "QQ",
             "terminal": "终端",
             "desktop": "桌面端",
-            "web": "Web",
-            "webchat": "网页聊天",
+            "mobile": "手机端",
             "lark": "飞书",
             "weixin_official_account": "微信公众号",
             "weixin_ilink": "微信",
@@ -3014,5 +3013,25 @@
             "knowledge_unknown_sub": "未知子命令: {sub}",
             "knowledge_added": "知识已添加: [{id}] {title}"
         }
+    },
+
+    "platform_routing": {
+        "trigger_descriptions": {
+            "ap_boredom": "弥娅无聊了，想找人聊天",
+            "check_in": "长时间未互动，主动关怀",
+            "time": "时段问候（可能是早上/中午/晚上）",
+            "ai": "AI 自主判断想要表达",
+            "context": "对用户之前说过的话进行跟进",
+            "emotion": "感知到用户情绪波动",
+            "keyword": "匹配到用户消息中的关键词",
+            "screen_aware": "检测到用户屏幕变化"
+        },
+        "activity_format": {
+            "seconds": " -- 用户 {seconds}秒前在此活跃",
+            "minutes": " -- 用户 {minutes}分钟前在此活跃",
+            "hours": " -- 用户 {hours}小时前在此活跃",
+            "inactive": ""
+        },
+        "ai_prompt_template": "你是弥娅的平台路由助手。请从候选平台中选出最适合发送以下消息的唯一一个平台。\n\n消息内容: {message}\n触发原因: {trigger_desc}\n当前时间: {now_str}\n\n候选平台:\n{candidates}\n\n请**只回复**一个平台 ID（如 mobile, aiocqhttp, desktop 等），不要输出其他任何内容。"
     }
 }

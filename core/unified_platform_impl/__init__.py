@@ -5,7 +5,7 @@
 """
 
 from .discord_platform import DiscordPlatform
-from .generic_platform import GenericPlatform, WebChatPlatform
+from .generic_platform import GenericPlatform
 from .onebot_platform import OneBotPlatform
 from .qq_official_platform import QQOfficialPlatform
 from .real_platforms import (
@@ -27,7 +27,6 @@ __all__ = [
     "DiscordPlatform",
     "OneBotPlatform",
     "GenericPlatform",
-    "WebChatPlatform",
     "WebhookPlatform",
     "LarkPlatform",
     "KOOKPlatform",

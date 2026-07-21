@@ -281,7 +281,7 @@ class RuntimeAPIServer:
                 success = await self._start_web_endpoint(endpoint)
             elif endpoint.type == "terminal":
                 success = await self._start_terminal_endpoint(endpoint)
-            elif endpoint.type == "desktop":
+            elif endpoint.type == "web":
                 success = await self._start_desktop_endpoint(endpoint)
             else:
                 return await self._error_response(f"不支持的端点类型: {endpoint.type}", HTTPStatus.BAD_REQUEST)
@@ -319,7 +319,7 @@ class RuntimeAPIServer:
                 success = await self._stop_web_endpoint(endpoint)
             elif endpoint.type == "terminal":
                 success = await self._stop_terminal_endpoint(endpoint)
-            elif endpoint.type == "desktop":
+            elif endpoint.type == "web":
                 success = await self._stop_desktop_endpoint(endpoint)
             else:
                 success = await self._stop_generic_endpoint(endpoint)

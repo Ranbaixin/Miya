@@ -169,6 +169,7 @@ def _normalize_config(raw: dict) -> dict:
         "check_interval": raw.get("check_interval", 45),
         "continuity_trigger": raw.get("continuity_trigger", {}),
         "scene": _normalize_scene_config(raw.get("scene_awareness", {})),
+        "platform_routing": _normalize_platform_routing_config(raw.get("platform_routing", {})),
     }
 
 
@@ -179,6 +180,21 @@ def _normalize_scene_config(raw: dict) -> dict:
         "platform_multipliers": raw.get("platform_multipliers", {}),
         "group_activity": raw.get("group_activity", {}),
         "mixed_strategy": raw.get("mixed_strategy", {}),
+    }
+
+
+def _normalize_platform_routing_config(raw: dict) -> dict:
+    """归一化平台路由配置 (v8.1)"""
+    return {
+        "enabled": raw.get("enabled", True),
+        "mode": raw.get("mode", "ai_aware"),
+        "priority_ranking": raw.get("priority_ranking", {}),
+        "ai_routing": {
+            "enabled": raw.get("ai_routing", {}).get("enabled", True),
+            "max_candidates": raw.get("ai_routing", {}).get("max_candidates", 5),
+            "timeout_seconds": raw.get("ai_routing", {}).get("timeout_seconds", 3),
+            "cache_ttl_seconds": raw.get("ai_routing", {}).get("cache_ttl_seconds", 30),
+        },
     }
 
 
@@ -542,7 +558,10 @@ class ProactiveChatSystem:
             return ""
 
     def set_send_callback(self, callback):
-        """设置消息发送回调函数 (async func: message, target_id, chat_type -> None)"""
+        """设置消息发送回调函数
+        callback(message, target_id, chat_type, platform, trigger_type=None)
+        trigger_type: context/emotion/keyword/time/check_in/ai/ap_boredom/screen_aware (v8.1)
+        """
         self._send_callback = callback
 
     def set_memory_context_provider(self, provider):
@@ -854,7 +873,10 @@ class ProactiveChatSystem:
                                 platform = ctx.platform if ctx else "terminal"
 
                                 try:
-                                    await self._send_callback(result.message, target, chat_type, platform)
+                                    await self._send_callback(
+                                        result.message, target, chat_type, platform,
+                                        result.trigger_type
+                                    )
                                     logger.info(
                                         f"[主动聊天] [后台] [{result.trigger_type}] "
                                         f"target={target_id} -> {result.message[:30]}"
@@ -1779,7 +1801,10 @@ class ProactiveChatSystem:
                 intent.continuation_history.append(message)
                 if self._send_callback:
                     try:
-                        await self._send_callback(message, intent.target_id, intent.chat_type, intent.platform)
+                        await self._send_callback(
+                            message, intent.target_id, intent.chat_type, intent.platform,
+                            intent.intent_type  # intent_type = comfort/task/reminder...
+                        )
                         logger.info(
                             f"[意图持续] [{intent.intent_type}/{intent.progression_type}] "
                             f"推进 #{intent.turns_taken}: {message[:50]}"

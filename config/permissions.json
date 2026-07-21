@@ -114,13 +114,12 @@
 
   "platform_defaults": {
     "terminal": ["Terminal"],
-    "web": ["Web"],
+    "mobile": ["Mobile"],
     "desktop": ["Desktop"],
     "qq": ["QQ"],
     "qqofficial": ["QQ"],
     "aiocqhttp": ["QQ"],
     "lark": ["QQ"],
-    "webchat": ["Web"],
     "discord": ["Default"],
     "telegram": ["Default"],
     "weixin_ilink": ["QQ"]
@@ -133,14 +132,6 @@
       "platform": "terminal",
       "permission_groups": ["Admin"],
       "description": "终端平台的默认管理员用户",
-      "created_at": "2026-03-11T00:00:00"
-    },
-    {
-      "user_id": "web_default",
-      "username": "默认Web用户",
-      "platform": "web",
-      "permission_groups": ["Web"],
-      "description": "Web平台的默认用户",
       "created_at": "2026-03-11T00:00:00"
     },
     {
@@ -309,7 +300,7 @@
       "allowed_groups": [],
       "forbidden_groups": []
     },
-    "web": {
+    "mobile": {
       "allowed_groups": [],
       "forbidden_groups": ["Terminal"]
     },

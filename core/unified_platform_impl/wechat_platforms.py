@@ -206,6 +206,29 @@ class WeixinOfficialAccountPlatform(WebhookPlatform):
         self._crypto = None
         self._client = None
 
+    async def send_private_message(self, user_id: str, message: str) -> bool:
+        """发送主动私聊消息 (v8.1: 使用微信公众号客服消息API)"""
+        if not self._active_send_mode:
+            logger.debug("[weixin_offacc] 主动消息跳过: active_send_mode=False")
+            return False
+        if not self._client:
+            logger.debug("[weixin_offacc] 主动消息跳过: 客户端未就绪")
+            return False
+        try:
+            import asyncio
+
+            await asyncio.get_running_loop().run_in_executor(
+                None,
+                self._client.message.send_text,
+                str(user_id),
+                message,
+            )
+            logger.debug("[weixin_offacc] 主动消息已发送: %s → %s", user_id, message[:30])
+            return True
+        except Exception as e:
+            logger.error("[weixin_offacc] 主动消息发送失败: %s", e)
+            return False
+
     async def _do_connect(self) -> bool:
         try:
             from wechatpy import WeChatClient

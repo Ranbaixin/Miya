@@ -20,7 +20,6 @@
   - Mattermost (mattermost)
   - Misskey (misskey)
   - Satori (satori)
-  - 网页聊天 (webchat)
   - OneBot/NapCat (aiocqhttp)
 
 使用方法:
@@ -322,18 +321,6 @@ SATORI_CONFIG = {
     # "token": "",
 }
 
-# ==================== 网页聊天 ====================
-# 说明: 内置的网页聊天界面，无需申请
-# 访问: http://localhost:8080
-
-WEBCHAT_CONFIG = {
-    "enabled": True,
-    "port": 8080,
-    # 可选: 主题和语言
-    # "theme": "default",
-    # "language": "zh-CN",
-}
-
 # ==================== OneBot / NapCat ====================
 # 说明: 使用 OneBot v11 协议连接 NapCat/go-cqhttp
 # NapCat: https://github.com/NapNeko/NapCatQQ
@@ -362,7 +349,21 @@ AIOCQHTTP_CONFIG = {
 
 DESKTOP_CONFIG = {
     "enabled": True,
+    "name": "桌面端",
     "description": "弥娅桌面应用 - MIYA Desktop",
+}
+
+
+# ==================== 手机端 ====================
+# 弥娅手机端应用 (React Native / Expo)
+# 通过 Web API (/api/chat/pending/) 拉取主动消息
+# 通过 Web API (/api/chat/send) 发送用户消息
+
+MOBILE_CONFIG = {
+    "enabled": True,
+    "name": "手机端",
+    "description": "弥娅手机端 - MIYA Mobile",
+    "support_proactive_message": True,
 }
 
 
@@ -394,8 +395,8 @@ ALL_PLATFORMS = {
     "misskey": MISSKEY_CONFIG,
     "satori": SATORI_CONFIG,
     # 内置平台
-    "webchat": WEBCHAT_CONFIG,
     "desktop": DESKTOP_CONFIG,
+    "mobile": MOBILE_CONFIG,
 }
 
 

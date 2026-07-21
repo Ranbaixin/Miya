@@ -133,7 +133,7 @@ export function useMIYARealtime() {
     const content = msg.content || msg.text || msg.message || ''
     const sender = msg.sender_name || msg.sender || msg.platform || '未知'
     const platform = msg.platform || data.platform || ''
-    const platformName = getPlatformLabel(platform)
+    const platformName = getPlatformLabel(platform, data.platform_name || msg.platform_name)
     const direction = msg.direction || (platform === 'desktop' ? 'in' : 'in')
     const messageId = msg.message_id || msg.msg_id || undefined
     const timestamp = msg.timestamp || msg.time || null

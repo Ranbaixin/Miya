@@ -71,7 +71,7 @@ class ChatRoutes:
                 from mlink.message import Message
 
                 # 确定平台类型（优先使用请求中的platform，否则默认为web）
-                platform = request.platform or "web"
+                platform = request.platform or "desktop"
 
                 perception = {
                     "platform": platform,
@@ -180,7 +180,7 @@ class ChatRoutes:
         """
         from mlink.message import Message
 
-        platform = request.platform or "web"
+        platform = request.platform or "desktop"
         perception = {
             "platform": platform,
             "content": request.message,

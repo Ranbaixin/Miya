@@ -77,27 +77,32 @@ class PlatformRegistry:
         如果平台未实例化则先实例化，然后调用 connect()
         """
         async with self._lock:
-            cls = self._platform_classes.get(platform_id)
-            if not cls:
-                logger.error(f"[Registry] 未知平台: {platform_id}")
-                return False
-
             inst = self._instances.get(platform_id)
             if inst and inst.is_online:
                 logger.info(f"[Registry] {platform_id} 已在线")
                 return True
 
-            if not inst:
-                config = self._configs.get(platform_id, {})
-                inst = cls(config=config)
-                inst.on(PlatformEvent.CONNECTED, self._on_platform_event)
-                inst.on(PlatformEvent.DISCONNECTED, self._on_platform_event)
-                inst.on(PlatformEvent.ERROR, self._on_platform_event)
-                inst.on(PlatformEvent.RECONNECTING, self._on_platform_event)
-                inst.on(PlatformEvent.RECONNECTED, self._on_platform_event)
-                inst.on(PlatformEvent.RECONNECT_FAILED, self._on_platform_event)
-                inst.on(PlatformEvent.SHUTDOWN, self._on_platform_event)
-                self._instances[platform_id] = inst
+            # v8.1: 实例已预创建但未连接 (如 desktop/mobile 用 GenericPlatform)
+            if inst:
+                if miya_core and hasattr(inst, "set_miya_core"):
+                    inst.set_miya_core(miya_core)
+                return await inst.connect()
+
+            cls = self._platform_classes.get(platform_id)
+            if not cls:
+                logger.error(f"[Registry] 未知平台: {platform_id}")
+                return False
+
+            config = self._configs.get(platform_id, {})
+            inst = cls(config=config)
+            inst.on(PlatformEvent.CONNECTED, self._on_platform_event)
+            inst.on(PlatformEvent.DISCONNECTED, self._on_platform_event)
+            inst.on(PlatformEvent.ERROR, self._on_platform_event)
+            inst.on(PlatformEvent.RECONNECTING, self._on_platform_event)
+            inst.on(PlatformEvent.RECONNECTED, self._on_platform_event)
+            inst.on(PlatformEvent.RECONNECT_FAILED, self._on_platform_event)
+            inst.on(PlatformEvent.SHUTDOWN, self._on_platform_event)
+            self._instances[platform_id] = inst
 
             # 注入 Miya 核心引用（连接前，避免消息到达时核心未就绪）
             if miya_core and hasattr(inst, "set_miya_core"):
@@ -132,8 +137,10 @@ class PlatformRegistry:
     async def start_all(
         self, platform_ids: Optional[List[str]] = None, miya_core=None
     ) -> Dict[str, bool]:
-        """启动所有（或指定）平台"""
-        ids = platform_ids or list(self._platform_classes.keys())
+        """启动所有（或指定）平台 (v8.1: 包含预创建实例)"""
+        ids = platform_ids or list(
+            set(self._platform_classes.keys()) | set(self._instances.keys())
+        )
         results = {}
         for pid in ids:
             results[pid] = await self.start(pid, miya_core=miya_core)
@@ -174,11 +181,16 @@ class PlatformRegistry:
     def get_all_stats(self) -> List[Dict[str, Any]]:
         """获取所有平台统计信息"""
         stats = []
+        seen = set()
+
         for pid, cls in self._platform_classes.items():
+            seen.add(pid)
             inst = self._instances.get(pid)
             if inst:
                 stats.append(inst.get_stats())
             else:
+                if any(isinstance(i, cls) for i in self._instances.values()):
+                    continue
                 stats.append(
                     {
                         "platform_id": pid,
@@ -195,6 +207,12 @@ class PlatformRegistry:
                         "uptime_seconds": 0.0,
                     }
                 )
+
+        # v8.1: 包含直接存储在 _instances 中的平台 (如 desktop/mobile)
+        for pid, inst in self._instances.items():
+            if pid not in seen:
+                stats.append(inst.get_stats())
+
         return stats
 
     def list_registered(self) -> List[Dict[str, str]]:
@@ -202,6 +220,29 @@ class PlatformRegistry:
         return [
             {"id": pid, "name": cls.platform_name}
             for pid, cls in self._platform_classes.items()
+        ]
+
+    def list_active(self) -> List[str]:
+        """列出所有已实例化且在线的平台 ID 列表（v8.1: 新增，修复阻断 Bug）"""
+        return [pid for pid, inst in self._instances.items() if inst.is_online]
+
+    def list_online_ids(self) -> List[str]:
+        """list_active() 的显式别名"""
+        return self.list_active()
+
+    def supports_proactive(self, platform_id: str) -> bool:
+        """检查平台是否支持主动消息"""
+        inst = self._instances.get(platform_id)
+        if inst and inst.is_online:
+            return getattr(inst, "support_proactive_message", False)
+        return False
+
+    def proactive_capable_platforms(self) -> List[str]:
+        """返回所有支持主动消息的在线平台 ID"""
+        return [
+            pid
+            for pid, inst in self._instances.items()
+            if inst.is_online and getattr(inst, "support_proactive_message", False)
         ]
 
     # ==================== 事件广播 ====================

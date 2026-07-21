@@ -1,5 +1,5 @@
 """
-通用平台适配器 (含 WebChat)
+通用平台适配器
 
 用于 SDK 暂不可用或需要以 webhook 模式运行的平台。
 """
@@ -42,28 +42,3 @@ class GenericPlatform(MessageMixin, BasePlatform):
 
     async def _do_health_check(self) -> bool:
         return self._connected
-
-
-class WebChatPlatform(MessageMixin, BasePlatform):
-    """内置网页聊天平台"""
-
-    platform_id = "webchat"
-    platform_name = "网页聊天"
-    health_check_interval = 30.0
-
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        BasePlatform.__init__(self, config)
-        self._initialized = False
-
-    async def _do_connect(self) -> bool:
-        port = self.config.get("port", 5000)
-        host = self.config.get("host", "0.0.0.0")
-        logger.info(f"[webchat] 网页聊天就绪 ({host}:{port})")
-        self._initialized = True
-        return True
-
-    async def _do_disconnect(self):
-        logger.info("[webchat] 网页聊天已停止")
-
-    async def _do_health_check(self) -> bool:
-        return True

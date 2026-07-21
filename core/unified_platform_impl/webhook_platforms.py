@@ -133,6 +133,46 @@ class LarkPlatform(WebhookPlatform):
             except Exception as e:
                 logger.warning(f"[lark] 回复失败: {e}")
 
+    async def send_private_message(self, user_id: str, message: str) -> bool:
+        """发送主动私聊消息 (v8.1)"""
+        if not self._app_id or not self._app_secret:
+            logger.debug("[lark] 主动消息跳过: 未配置 app_id/app_secret")
+            return False
+        try:
+            import json
+
+            import lark_oapi as lark
+            from lark_oapi.api.im.v1 import (
+                CreateMessageRequest,
+                CreateMessageRequestBody,
+            )
+
+            body = (
+                CreateMessageRequestBody.builder()
+                .receive_id(str(user_id))
+                .msg_type("text")
+                .content(json.dumps({"text": message}))
+                .build()
+            )
+            req = (
+                CreateMessageRequest.builder()
+                .receive_id_type("open_id")
+                .request_body(body)
+                .build()
+            )
+            client = (
+                lark.Client.builder()
+                .app_id(self._app_id)
+                .app_secret(self._app_secret)
+                .build()
+            )
+            client.im.v1.message.create(req)
+            logger.debug("[lark] 主动消息已发送: %s → %s", user_id, message[:30])
+            return True
+        except Exception as e:
+            logger.error("[lark] 主动消息发送失败: %s", e)
+            return False
+
     async def _do_disconnect(self):
         if self._ws_client:
             with contextlib.suppress(Exception):

@@ -13,7 +13,7 @@ proactive_chat:
     - qq_group      # QQ群聊
     - qq_private    # QQ私聊
     - terminal      # 终端
-    - web           # Web API
+    - mobile        # 手机端
 
   # 上下文触发 - 行为期望跟进
   context_trigger:
@@ -453,12 +453,20 @@ proactive_chat:
     # 平台衰减乘数 (1.0 = 全概率, 0.0 = 不触发)
     platform_multipliers:
       terminal: 0.9
-      webchat: 0.8
+      mobile: 0.95
+      desktop: 0.85
       aiocqhttp_private: 1.0
       aiocqhttp_group: 0.35
       qqofficial_private: 0.9
       qqofficial_group: 0.3
       lark: 0.25
+      dingtalk: 0.20
+      discord: 0.30
+      telegram: 0.25
+      slack: 0.20
+      wecom: 0.20
+      weixin_ilink: 0.35
+      satori: 0.15
       generic: 0.15
 
     # 群聊活跃度影响
@@ -474,3 +482,41 @@ proactive_chat:
       enabled: true
       layer1_min_probability: 0.3   # Layer1 概率低于此值直接跳过
       layer2_ai_judge: true         # Layer2 让 AI 做最终判决
+
+  # ============================================================
+  #  平台路由配置 (v8.1: AI 感知路由)
+  # ============================================================
+  platform_routing:
+    enabled: true
+
+    # 路由模式:
+    #   "ai_aware"    — AI 综合感知: 用户活跃度 + 消息内容 + 时间 + 平台特性 → 选择最佳平台
+    #   "priority_only" — 纯配置优先级排序，选最高优先级的在线平台
+    #   "broadcast"  — 广播到所有在线平台 (兼容旧行为)
+    mode: "ai_aware"
+
+    # 平台优先级排序 (数值越高越优先)
+    # AI 感知模式下作为初始排序参考，priority_only 模式下直接选最高分
+    priority_ranking:
+      aiocqhttp_private: 100
+      mobile: 95
+      desktop: 85
+      qqofficial_private: 85
+      weixin_ilink: 75
+      aiocqhttp_group: 50
+      qqofficial_group: 40
+      lark: 30
+      dingtalk: 25
+      discord: 20
+      telegram: 20
+      slack: 15
+      wecom: 15
+      satori: 10
+      generic: 5
+
+    # AI 感知路由参数
+    ai_routing:
+      enabled: true
+      max_candidates: 5        # 最多给 AI 展示多个候选平台 (按优先级 top-N)
+      timeout_seconds: 3       # AI 判断超时 → 降级到 priority_only
+      cache_ttl_seconds: 30    # 同 target+trigger 的路由结果缓存时间

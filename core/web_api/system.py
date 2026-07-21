@@ -65,7 +65,7 @@ class SystemRoutes:
                     # 获取Web平台适配器的自动检测结果
                     from hub.platform_adapters import get_adapter
 
-                    web_adapter = get_adapter("web")
+                    web_adapter = get_adapter("desktop")
                     platform_info = web_adapter.get_platform_info()
 
                     # 获取终端工具统计
@@ -175,7 +175,7 @@ class SystemRoutes:
             try:
                 from hub.platform_adapters import get_adapter
 
-                web_adapter = get_adapter("web")
+                web_adapter = get_adapter("desktop")
                 capabilities = web_adapter.detect_system_capabilities()
 
                 # 获取更多实时数据
@@ -342,7 +342,7 @@ class SystemRoutes:
             try:
                 from hub.platform_adapters import get_adapter
 
-                web_adapter = get_adapter("web")
+                web_adapter = get_adapter("desktop")
                 capabilities = web_adapter.detect_system_capabilities()
 
                 return {

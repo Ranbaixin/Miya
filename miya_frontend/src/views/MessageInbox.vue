@@ -72,8 +72,8 @@ function platformColor(pid: string) {
   return getPlatformColor(pid)
 }
 
-function platformName(pid: string) {
-  return getPlatformLabel(pid)
+function platformName(pid: string, pname?: string) {
+  return getPlatformLabel(pid, pname)
 }
 
 function togglePlatform(pid: string) {
@@ -167,7 +167,7 @@ onUnmounted(() => {
           :style="{ '--pc': platformColor(p.platform_id) }"
           @click="togglePlatform(p.platform_id)"
         >
-          {{ platformName(p.platform_id) }}
+          {{ platformName(p.platform_id, p.platform_name) }}
         </button>
         <button
           v-if="filterPlatform.length > 0"

@@ -21,7 +21,7 @@ class MessageSource(Enum):
     QQ = "qq"
     TELEGRAM = "telegram"
     DISCORD = "discord"
-    WEB = "web"
+    DESKTOP = "desktop"
 
 
 class MessageType(Enum):
@@ -95,7 +95,7 @@ class UnifiedMessagePipeline:
             MessageSource.QQ: self._parse_qq_message,
             MessageSource.TELEGRAM: self._parse_telegram_message,
             MessageSource.DISCORD: self._parse_discord_message,
-            MessageSource.WEB: self._parse_web_message,
+            MessageSource.DESKTOP: self._parse_desktop_message,
         }
 
     async def _register_processors(self):
@@ -241,16 +241,16 @@ class UnifiedMessagePipeline:
             timestamp=datetime.now(),
         )
 
-    async def _parse_web_message(self, raw: Any) -> UnifiedMessage:
-        """解析Web消息"""
+    async def _parse_desktop_message(self, raw: Any) -> UnifiedMessage:
+        """解析桌面端/手机端消息"""
         return UnifiedMessage(
             id=str(id(raw)),
             msg_type=MessageType.TEXT,
             content=str(raw),
-            sender="web_user",
+            sender="desktop_user",
             receiver="miya",
-            source=MessageSource.WEB,
-            platform="web",
+            source=MessageSource.DESKTOP,
+            platform="desktop",
             timestamp=datetime.now(),
         )
 
