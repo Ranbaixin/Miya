@@ -179,17 +179,38 @@ class WeixinIlinkPlatform(MessageMixin, BasePlatform):
                 logger.error("[weixin_ilink] 发送回复失败: %s", e)
 
     async def send_private_message(self, user_id: str, message: str) -> bool:
-        """发送主动私聊消息 (v8.1)"""
+        """发送主动私聊消息 (v8.1: 含诊断日志 + 重试)"""
         if not self._client or not self._client_ready:
-            logger.debug("[weixin_ilink] 主动消息跳过: 客户端未就绪")
+            logger.warning(
+                "[weixin_ilink] 主动消息拒绝: client=%s, ready=%s",
+                self._client is not None,
+                self._client_ready,
+            )
             return False
-        try:
-            await self._client.send_text(str(user_id), message)
-            logger.debug("[weixin_ilink] 主动消息已发送: %s → %s", user_id, message[:30])
-            return True
-        except Exception as e:
-            logger.error("[weixin_ilink] 主动消息发送失败: %s", e)
-            return False
+        uid = str(user_id)
+        msg_preview = message[:60]
+        logger.info(
+            "[weixin_ilink] 主动消息发送中: uid=%s, msg_len=%d, preview=%s",
+            uid,
+            len(message),
+            msg_preview,
+        )
+        for attempt in range(2):
+            try:
+                await self._client.send_text(uid, message)
+                logger.info("[weixin_ilink] 主动消息已发送 (attempt=%d): %s → %s", attempt + 1, uid, msg_preview)
+                return True
+            except Exception as e:
+                logger.warning(
+                    "[weixin_ilink] 主动消息发送失败 (attempt=%d/%d): uid=%s, error=%s",
+                    attempt + 1,
+                    2,
+                    uid,
+                    e,
+                )
+                if attempt == 0:
+                    await asyncio.sleep(1.0)
+        return False
 
     async def _do_disconnect(self):
         self._shutdown_event.set()

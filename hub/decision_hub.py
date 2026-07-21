@@ -1000,7 +1000,7 @@ class DecisionHub:
         """
         sent = False
 
-        # 1) 平台注册表直接发送
+        # 1) 平台注册表直接发送 (v8.2: 启用跨平台 ID 翻译)
         if self.platform_registry and platform and platform != "terminal":
             inst = self.platform_registry.get(platform)
             if inst and hasattr(inst, "is_online") and inst.is_online:
@@ -1008,8 +1008,15 @@ class DecisionHub:
                     logger.info(f"[主动分发] 发送群消息 (via {platform}): {message[:50]}")
                     sent = await inst.send_group_message(target_id, message)
                 elif hasattr(inst, "send_private_message"):
-                    logger.info(f"[主动分发] 发送私聊消息 (via {platform}): {message[:50]}")
-                    sent = await inst.send_private_message(target_id, message)
+                    resolved_id = self._resolve_cross_platform_target_id(
+                        str(target_id), platform
+                    )
+                    logger.info(
+                        f"[主动分发] 发送私聊消息 (via {platform}"
+                        f"{', resolved_id=' + resolved_id if resolved_id != str(target_id) else ''})"
+                        f": {message[:50]}"
+                    )
+                    sent = await inst.send_private_message(resolved_id, message)
 
         # 2) QQ 系列 → OneBot 回退 (仅 QQ 类平台)
         _qq_platforms = {"aiocqhttp", "qqofficial", "qq", "qq_official", "onebot"}
@@ -1052,34 +1059,9 @@ class DecisionHub:
                             except Exception as e:
                                 logger.debug(f"[主动分发] AI 路由发送失败: {e}")
 
-            # 3b) AI 未命中或非 AI 模式 → 优先级排序或广播
+            # 3b) AI 未命中或非 AI 模式 → 用户活跃度优先级路由 (v8.2)
             if not sent:
-                if mode == "priority_only":
-                    sent = await self._send_by_priority(target_id, message, chat_type, routing_config)
-                else:
-                    # broadcast / priority 回退 — 跨平台 ID 翻译
-                    active_ids = (
-                        self.platform_registry.list_active() if self.platform_registry else []
-                    )
-                    for pid in active_ids:
-                        inst = self.platform_registry.get(pid)
-                        if inst and hasattr(inst, "is_online") and inst.is_online:
-                            if hasattr(inst, "send_private_message"):
-                                try:
-                                    resolved_id = self._resolve_cross_platform_target_id(
-                                        str(target_id), pid
-                                    )
-                                    result = await inst.send_private_message(resolved_id, message)
-                                    if result:
-                                        logger.info(
-                                            f"[主动分发] 广播发送到 {pid}"
-                                            f"{' (id=' + resolved_id + ')' if resolved_id != str(target_id) else ''}"
-                                            f": {message[:50]}"
-                                        )
-                                        sent = True
-                                        break
-                                except Exception:
-                                    pass
+                sent = await self._send_by_priority(target_id, message, chat_type, routing_config)
 
         # 4) mobile 兜底队列
         if platform == "mobile" or not sent:
@@ -1127,11 +1109,11 @@ class DecisionHub:
         return {}
 
     def _resolve_cross_platform_target_id(self, target_id: str, target_platform: str) -> str:
-        """跨平台用户 ID 翻译 (v8.1: 修复 desktop_user → QQ ID 等跨平台场景)
+        """跨平台用户 ID 翻译 (v8.2: 支持 superadmin 配置反向查找)
 
-        从 permissions.json 读取 linked_to 映射：
+        从 permissions.json 读取 linked_to 映射 + superadmin 配置:
           - desktop_user 的 linked_to 是 "1523878699" → QQ 平台用 "1523878699"
-          - mobile_user 同理
+          - canonical QQ ID → 其它平台时，从 superadmin.ids 反向查平台特定 ID
           - 如果 target_id 本身就是该平台的合法 ID，直接返回
 
         返回: 适合 target_platform 的用户 ID
@@ -1143,11 +1125,15 @@ class DecisionHub:
         _qq_platforms = {"aiocqhttp", "qqofficial", "qq", "qq_official", "onebot"}
         _is_qq_target = target_platform in _qq_platforms
 
-        # 如果 target_id 已经是纯数字 QQ 号且目标是 QQ 平台，直接返回
+        # QQ 纯数字 ID：OneBot/NapCat 可用 QQ 号，qqofficial 需要 openid
         if _is_qq_target and target_id.isdigit():
+            if target_platform == "qqofficial":
+                openid = self._find_qqofficial_openid(target_id)
+                if openid:
+                    logger.info(f"[跨平台] qqofficial QQ号 {target_id} → openid {openid}")
+                    return openid
             return target_id
 
-        # 从 permissions.json 查找 linked 映射
         try:
             import json
             from pathlib import Path
@@ -1165,8 +1151,24 @@ class DecisionHub:
                             logger.debug(f"[跨平台] {target_id} → {linked} (exact linked_to)")
                             return str(linked)
                         if _is_qq_target and not target_id.isdigit():
-                            # 该用户无 linked_to，继续到步 3 搜索
                             break
+
+                # 4) v8.2: superadmin 反向查找 — canonical QQ ID → 目标平台的特定 ID
+                # (必须在 step 2 之前，否则 desktop_user.linked_to 会截胡)
+                if not _is_qq_target and target_id.isdigit():
+                    superadmins = perms.get("superadmins", {})
+                    for _sa_name, sa_info in superadmins.items():
+                        ids_by_platform = sa_info.get("ids", {})
+                        for src_platform, id_list in ids_by_platform.items():
+                            if target_id in [str(i) for i in id_list]:
+                                target_ids = ids_by_platform.get(target_platform, [])
+                                if target_ids and target_ids[0]:
+                                    resolved = str(target_ids[0])
+                                    logger.info(
+                                        f"[跨平台] canonical {target_id} → "
+                                        f"{target_platform} ID {resolved} (from superadmin config)"
+                                    )
+                                    return resolved
 
                 # 2) 反向：search linked_to == target_id → 该 ID 本身已经是 QQ 号
                 for u in users:
@@ -1181,7 +1183,6 @@ class DecisionHub:
                         if linked and linked.isdigit():
                             logger.debug(f"[跨平台] {target_id} → QQ 兜底 {linked} (from user {u.get('user_id')})")
                             return linked
-                    # 最后手段：找 platform="qq" 的数字用户
                     for u in users:
                         uid = str(u.get("user_id", ""))
                         if u.get("platform") in _qq_platforms and uid.isdigit():
@@ -1193,10 +1194,40 @@ class DecisionHub:
 
         return target_id
 
-    def _get_platform_activity(self, target_id: int) -> dict:
-        """获取用户在各平台上的最近活跃时间 (v8.1)
+    @staticmethod
+    def _find_qqofficial_openid(qq_number: str) -> str:
+        """从 superadmin 配置中查找 QQ 号对应的 qqofficial openid (v8.2)
 
-        查询来源: 平台健康数据 (per-platform last_message_received) + 用户活动追踪器
+        QQ 官方 Bot API 的 post_c2c_message 需要 openid (hex 字符串)，
+        不能直接使用 QQ 号。从 permissions.json 的 superadmin 配置中查找映射。
+        """
+        try:
+            import json
+            from pathlib import Path
+
+            perms_path = Path("config/permissions.json")
+            if not perms_path.exists():
+                return ""
+            perms = json.loads(perms_path.read_text(encoding="utf-8"))
+            superadmins = perms.get("superadmins", {})
+            for _sa_name, sa_info in superadmins.items():
+                ids_by_platform = sa_info.get("ids", {})
+                qqofficial_ids = ids_by_platform.get("qqofficial", [])
+                if qq_number in [str(i) for i in qqofficial_ids]:
+                    for qid in qqofficial_ids:
+                        sid = str(qid)
+                        if not sid.isdigit() and len(sid) >= 10:
+                            return sid
+                    if qqofficial_ids:
+                        return str(qqofficial_ids[-1])
+        except Exception:
+            pass
+        return ""
+
+    def _get_platform_activity(self, target_id: int) -> dict:
+        """获取用户在任平台上的最近活跃时间 (v8.2: 用户级数据优先)
+
+        查询来源: user_platform_activity 模块 (用户×平台二维矩阵) → 平台全局健康数据 (兜底)
         返回: { platform_id: seconds_ago (float) }
         """
         import time
@@ -1204,10 +1235,22 @@ class DecisionHub:
         result = {}
         now = time.time()
 
-        # 从 PlatformRegistry 获取各平台最后消息接收时间
+        # v8.2: 优先读取用户级跨平台活跃度
+        try:
+            from memory.user_platform_activity import get_all_user_platform_activity
+
+            user_activity = get_all_user_platform_activity(str(target_id), now=now)
+            for pid, activity in user_activity.items():
+                seconds_ago = activity.get("seconds_ago", float("inf"))
+                if seconds_ago != float("inf"):
+                    result[pid] = round(seconds_ago, 1)
+        except Exception:
+            pass
+
+        # 兜底：平台全局健康数据 (补充用户级未覆盖的平台)
         if self.platform_registry:
             for pid, inst in self.platform_registry._instances.items():
-                if inst and inst.is_online:
+                if pid not in result and inst and inst.is_online:
                     try:
                         health = getattr(inst, "_health", None)
                         if health and health.last_message_received:
@@ -1215,19 +1258,6 @@ class DecisionHub:
                             result[pid] = round(delta, 1)
                     except Exception:
                         pass
-
-        # 补充用户活动追踪器数据 (全局兜底)
-        try:
-            from memory.user_activity_tracker import get_last_active
-
-            last = get_last_active(str(target_id))
-            if last > 0:
-                global_delta = now - last
-                for pid in list(result.keys()):
-                    if result[pid] > global_delta:
-                        result[pid] = min(result[pid], global_delta)
-        except Exception:
-            pass
 
         return result
 
@@ -1238,12 +1268,16 @@ class DecisionHub:
         trigger_type: str,
         routing_config: dict,
     ) -> Optional[str]:
-        """AI 感知平台选择 — 让 AI 从候选平台中挑选最佳发送目标 (v8.1)
+        """AI 感知平台选择 — 让 AI 从候选平台中挑选最佳发送目标 (v8.2)
 
         根据: 消息内容 + 触发场景 + 用户活跃度 + 平台优先级
         返回: 平台 ID 或 None (AI 失败时降级)
         """
-        if not self.ai_client or not self.platform_registry:
+        if not self.ai_client:
+            logger.warning("[AI路由] AI 客户端未初始化，跳过平台选择")
+            return None
+        if not self.platform_registry:
+            logger.warning("[AI路由] 平台注册表未就绪，跳过平台选择")
             return None
 
         ai_cfg = routing_config.get("ai_routing", {})
@@ -1262,6 +1296,7 @@ class DecisionHub:
                         candidates.append((pid, priority))
 
             if not candidates:
+                logger.warning("[AI路由] 无可用候选平台（无在线且支持 send_private_message 的平台）")
                 return None
 
             # 按优先级排序，取 top-N
@@ -1275,13 +1310,17 @@ class DecisionHub:
             # 构建 AI prompt
             now_str = datetime.now().strftime("%H:%M")
 
-            # 从配置读取文本模板 (v8.1: 消除硬编码)
+            # 从配置读取文本模板
             activity_fmts = {
-                "seconds": get_text("platform_routing.activity_format.seconds", " -- {seconds}秒前"),
-                "minutes": get_text("platform_routing.activity_format.minutes", " -- {minutes}分钟前"),
-                "hours": get_text("platform_routing.activity_format.hours", " -- {hours}小时前"),
+                "seconds": get_text("platform_routing.activity_format.seconds", ""),
+                "minutes": get_text("platform_routing.activity_format.minutes", ""),
+                "hours": get_text("platform_routing.activity_format.hours", ""),
                 "inactive": get_text("platform_routing.activity_format.inactive", ""),
             }
+            cand_line_fmt = get_text(
+                "platform_routing.candidate_line_format",
+                ""
+            )
 
             cand_lines = []
             for pid, priority in candidates:
@@ -1296,52 +1335,70 @@ class DecisionHub:
                         active_str = activity_fmts["hours"].format(hours=round(secs_ago / 3600, 1))
                 else:
                     active_str = activity_fmts["inactive"]
-                cand_lines.append(f"- {pid} (优先级{priority}){active_str}")
+                if cand_line_fmt:
+                    cand_lines.append(cand_line_fmt.format(
+                        platform_id=pid, priority=priority, activity=active_str
+                    ))
+                else:
+                    cand_lines.append(f"- {pid} (优先级{priority}){active_str}")
 
             trigger_desc = get_text(
                 f"platform_routing.trigger_descriptions.{trigger_type}", trigger_type
             )
 
+            # v8.2: 从配置读取 most_active_hint 模板
+            most_active_hint = ""
+            hint_threshold = routing_config.get("activity_boost", {}).get("most_active_hint_threshold", 300)
+            if activity:
+                best_pid = min(activity, key=lambda k: activity.get(k, float("inf")))
+                best_secs = activity.get(best_pid, float("inf"))
+                if best_secs != float("inf") and best_secs < hint_threshold:
+                    hint_template = get_text("platform_routing.most_active_hint", "")
+                    if hint_template:
+                        most_active_hint = hint_template.format(
+                            platform_id=best_pid, seconds_ago=int(best_secs)
+                        )
+
             prompt_template = get_text(
                 "platform_routing.ai_prompt_template",
-                "请从候选平台中选出最适合发送此消息的平台。\n\n消息: {message}\n触发原因: {trigger_desc}\n候选:\n{candidates}"
+                ""
             )
             prompt = prompt_template.format(
                 message=message[:200],
                 trigger_desc=trigger_desc,
                 now_str=now_str,
+                most_active_hint=most_active_hint,
                 candidates=chr(10).join(cand_lines),
             )
 
-            # 调用 AI
             response = await asyncio.wait_for(
                 self.ai_client.chat(
                     messages=[AIMessage(role="user", content=prompt)],
-                    temperature=0.3,
-                    max_tokens=20,
+                    use_miya_prompt=False,
                 ),
                 timeout=timeout_seconds,
             )
 
             if response:
                 selected = response.strip().lower()
-                # 验证返回的 ID 是否在候选列表中
                 valid_ids = {c[0] for c in candidates}
                 if selected in valid_ids:
                     logger.info(f"[AI路由] {trigger_type} → {selected}: {message[:50]}")
                     return selected
-                # 尝试匹配前缀
                 for pid in valid_ids:
                     if pid.startswith(selected) or selected.startswith(pid):
                         logger.info(f"[AI路由] {trigger_type} → {pid} (fuzzy: {selected}): {message[:50]}")
                         return pid
 
-            logger.debug(f"[AI路由] AI 返回无效平台: {selected}, 候选: {valid_ids}")
+            if response:
+                logger.warning(f"[AI路由] AI 返回无效平台: '{selected}', 候选: {valid_ids}")
+            else:
+                logger.warning("[AI路由] AI 返回空响应，降级到优先级路由")
 
         except asyncio.TimeoutError:
-            logger.debug(f"[AI路由] AI 判断超时 ({timeout_seconds}s)，降级到优先级排序")
+            logger.warning(f"[AI路由] AI 判断超时 ({timeout_seconds}s)，降级到优先级排序")
         except Exception as e:
-            logger.debug(f"[AI路由] AI 判断失败: {e}")
+            logger.warning(f"[AI路由] AI 判断失败: {e}，降级到优先级排序")
 
         return None
 
@@ -1352,33 +1409,71 @@ class DecisionHub:
         chat_type: str,
         routing_config: dict,
     ) -> bool:
-        """按配置优先级顺序发送消息 (v8.1: priority_only 模式)"""
+        """按用户活跃度 + 配置优先级排序发送消息 (v8.2)
+
+        用户最近活跃的平台获得大幅加权，确保主动消息发到用户真正在用的平台。
+        """
         if not self.platform_registry:
             return False
 
+        import time as _time
+
+        now = _time.time()
         priority_map = routing_config.get("priority_ranking", {})
         active = self.platform_registry.list_active() or []
+
+        user_activity = {}
+        try:
+            from memory.user_platform_activity import get_all_user_platform_activity
+
+            user_activity = get_all_user_platform_activity(str(target_id), now=now)
+        except Exception:
+            pass
 
         scored = []
         for pid in active:
             inst = self.platform_registry.get(pid)
             if inst and hasattr(inst, "is_online") and inst.is_online:
                 if hasattr(inst, "send_private_message"):
-                    score = priority_map.get(pid, priority_map.get(f"{pid}_private", 5))
-                    scored.append((score, pid))
+                    base_score = priority_map.get(pid, priority_map.get(f"{pid}_private", 5))
+
+                    activity = user_activity.get(pid, {})
+                    seconds_ago = activity.get("seconds_ago", float("inf"))
+                    activity_boost = 0
+                    # v8.2: 从配置读取活跃度加权阈值
+                    boost_thresholds = routing_config.get("activity_boost", {}).get("thresholds", [])
+                    if boost_thresholds:
+                        for threshold in boost_thresholds:
+                            if seconds_ago < threshold.get("seconds", 0):
+                                activity_boost = max(activity_boost, threshold.get("boost", 0))
+                    else:
+                        if seconds_ago < 60:
+                            activity_boost = 80
+                        elif seconds_ago < 300:
+                            activity_boost = 60
+                        elif seconds_ago < 600:
+                            activity_boost = 40
+                        elif seconds_ago < 1800:
+                            activity_boost = 20
+                        elif seconds_ago < 3600:
+                            activity_boost = 10
+
+                    adjusted_score = base_score + activity_boost
+                    scored.append((adjusted_score, base_score, activity_boost, pid))
 
         scored.sort(key=lambda x: x[0], reverse=True)
 
-        for _, pid in scored:
+        for adj_score, base_score, boost, pid in scored:
             inst = self.platform_registry.get(pid)
             try:
                 resolved_id = self._resolve_cross_platform_target_id(str(target_id), pid)
-                sent = await inst.send_private_message(resolved_id, message)
-                if sent:
+                success = await inst.send_private_message(resolved_id, message)
+                if success:
+                    boost_hint = f" (boost={boost})" if boost > 0 else ""
                     logger.info(
                         f"[主动分发] 优先级路由 → {pid}"
                         f"{' (id=' + resolved_id + ')' if resolved_id != str(target_id) else ''}"
-                        f": {message[:50]}"
+                        f": {message[:50]}{boost_hint}"
                     )
                     return True
             except Exception:

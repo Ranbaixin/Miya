@@ -51,6 +51,7 @@ class BasePlatform(ABC):
     reconnect_policy: Optional[ReconnectPolicy] = None
     health_check_interval: float = 30.0
     auto_reconnect: bool = True
+    support_proactive_message: bool = True  # v8.1: 默认支持主动消息（有 send_private_message 即视为支持）
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}

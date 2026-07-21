@@ -156,7 +156,7 @@ class LarkPlatform(WebhookPlatform):
             )
             req = (
                 CreateMessageRequest.builder()
-                .receive_id_type("open_id")
+                .receive_id_type("user_id")  # v8.2: 修复 — 入站 user_id 不能当 open_id 用
                 .request_body(body)
                 .build()
             )

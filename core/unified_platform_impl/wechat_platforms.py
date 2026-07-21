@@ -194,6 +194,7 @@ class WeixinOfficialAccountPlatform(WebhookPlatform):
     platform_id = "weixin_official_account"
     platform_name = "微信公众号"
     health_check_interval = 120.0
+    support_proactive_message = False  # 微信公众号受被动回复限制，不支持无条件主动消息
 
     def __init__(self, config=None):
         super().__init__(config)

@@ -3032,6 +3032,8 @@
             "hours": " -- 用户 {hours}小时前在此活跃",
             "inactive": ""
         },
-        "ai_prompt_template": "你是弥娅的平台路由助手。请从候选平台中选出最适合发送以下消息的唯一一个平台。\n\n消息内容: {message}\n触发原因: {trigger_desc}\n当前时间: {now_str}\n\n候选平台:\n{candidates}\n\n请**只回复**一个平台 ID（如 mobile, aiocqhttp, desktop 等），不要输出其他任何内容。"
+        "ai_prompt_template": "你是弥娅的平台路由助手。请从候选平台中选出最适合发送以下消息的唯一一个平台。\n\n消息内容: {message}\n触发原因: {trigger_desc}\n当前时间: {now_str}{most_active_hint}\n\n候选平台:\n{candidates}\n\n请**只回复**一个平台 ID（如 mobile, aiocqhttp, desktop 等），不要输出其他任何内容。",
+        "most_active_hint": "\n用户最近在 {platform_id} 平台活跃（{seconds_ago}秒前），优先考虑此平台。",
+        "candidate_line_format": "- {platform_id} (优先级{priority}){activity}"
     }
 }

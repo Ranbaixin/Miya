@@ -261,6 +261,14 @@ class MessageMixin:
             if extra:
                 perception_data.update(extra)
 
+            # v8.1: 记录用户跨平台活跃度（主动消息路由精准分发用）
+            try:
+                from memory.user_platform_activity import record_platform_activity
+
+                record_platform_activity(str(user_id), self.platform_id)
+            except Exception:
+                pass
+
             mlink_msg = Message(
                 msg_type="data",
                 content=perception_data,

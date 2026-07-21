@@ -466,6 +466,10 @@ proactive_chat:
       slack: 0.20
       wecom: 0.20
       weixin_ilink: 0.35
+      kook: 0.15
+      line: 0.15
+      misskey: 0.10
+      mattermost: 0.10
       satori: 0.15
       generic: 0.15
 
@@ -511,6 +515,10 @@ proactive_chat:
       telegram: 20
       slack: 15
       wecom: 15
+      kook: 15
+      line: 15
+      misskey: 10
+      mattermost: 10
       satori: 10
       generic: 5
 
@@ -520,3 +528,20 @@ proactive_chat:
       max_candidates: 5        # 最多给 AI 展示多个候选平台 (按优先级 top-N)
       timeout_seconds: 3       # AI 判断超时 → 降级到 priority_only
       cache_ttl_seconds: 30    # 同 target+trigger 的路由结果缓存时间
+
+    # 用户活跃度加权 (v8.2: 用于 _send_by_priority 优先级路由)
+    # 用户在平台上的最近活跃时间 < 阈值 → 获得对应 boost 分
+    activity_boost:
+      thresholds:
+        - seconds: 60       # 1分钟内活跃
+          boost: 80
+        - seconds: 300      # 5分钟内活跃
+          boost: 60
+        - seconds: 600      # 10分钟内活跃
+          boost: 40
+        - seconds: 1800     # 30分钟内活跃
+          boost: 20
+        - seconds: 3600     # 1小时内活跃
+          boost: 10
+      # most_active_hint 触发阈值 (秒): 用户最近活跃低于此值才注入提示
+      most_active_hint_threshold: 300
