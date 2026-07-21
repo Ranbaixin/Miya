@@ -97,12 +97,12 @@ class UnifiedMessageStore:
             cursor = await self._db.execute(sql, params) if params else await self._db.execute(sql)
             rows = await cursor.fetchall()
             cols = [desc[0] for desc in cursor.description] if cursor.description else []
-            return [dict(zip(cols, row)) for row in rows]
+            return [dict(zip(cols, row, strict=False)) for row in rows]
         else:
             cursor = self._conn.execute(sql, params) if params else self._conn.execute(sql)
             rows = cursor.fetchall()
             cols = [desc[0] for desc in cursor.description] if cursor.description else []
-            return [dict(zip(cols, row)) for row in rows]
+            return [dict(zip(cols, row, strict=False)) for row in rows]
 
     async def _exec_one(self, sql: str, params: tuple = ()):
         """查询单条"""
@@ -111,14 +111,14 @@ class UnifiedMessageStore:
             row = await cursor.fetchone()
             if row:
                 cols = [desc[0] for desc in cursor.description] if cursor.description else []
-                return dict(zip(cols, row))
+                return dict(zip(cols, row, strict=False))
             return None
         else:
             cursor = self._conn.execute(sql, params) if params else self._conn.execute(sql)
             row = cursor.fetchone()
             if row:
                 cols = [desc[0] for desc in cursor.description] if cursor.description else []
-                return dict(zip(cols, row))
+                return dict(zip(cols, row, strict=False))
             return None
 
     async def record_message(

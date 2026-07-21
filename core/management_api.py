@@ -39,15 +39,15 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 
 logger = logging.getLogger("Miya.ManagementAPI")
 
-_global_management_api: Optional["ManagementAPI"] = None
+_global_management_api: Optional[ManagementAPI] = None
 
 
-def set_management_api(api: "ManagementAPI"):
+def set_management_api(api: ManagementAPI):
     global _global_management_api
     _global_management_api = api
 
 
-def get_management_api() -> Optional["ManagementAPI"]:
+def get_management_api() -> Optional[ManagementAPI]:
     return _global_management_api
 
 _AP_PANEL_HTML = """<!DOCTYPE html>
