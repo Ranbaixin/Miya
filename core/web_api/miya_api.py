@@ -646,19 +646,43 @@ class MiyaAPI:
         # ========== 人格 ==========
         @self.router.get("/api/persona/list")
         async def get_persona_list():
-            """人格列表"""
-            return {
-                "success": True,
-                "personas": [
-                    {"id": "default", "name": "默认人格", "enabled": True},
-                    {"id": "gentle", "name": "温柔人格", "enabled": False},
-                    {"id": "playful", "name": "调皮人格", "enabled": False},
-                ],
-            }
+            """人格列表 - 从 YAML 配置目录动态读取"""
+            try:
+                from core.personality_loader import get_personality_loader
+
+                loader = get_personality_loader()
+                personas = loader.list_available()
+                return {
+                    "success": True,
+                    "personas": [
+                        {"id": p, "name": p, "enabled": True} for p in personas
+                    ],
+                }
+            except Exception as e:
+                logger.warning(f"[MiyaAPI] 读取人格列表失败: {e}")
+                return {
+                    "success": True,
+                    "personas": [
+                        {"id": "default", "name": "默认人格", "enabled": True},
+                    ],
+                }
 
         @self.router.get("/api/persona/current")
         async def get_current_persona():
-            """当前人格"""
+            """当前人格 - 从 DecisionHub 动态读取"""
+            try:
+                if self.decision_hub and self.decision_hub.personality:
+                    profile = self.decision_hub.personality.get_profile()
+                    return {
+                        "success": True,
+                        "persona": {
+                            "id": profile.get("current_form", "default"),
+                            "name": profile.get("current_form", "default"),
+                            "traits": profile.get("vectors", {}),
+                        },
+                    }
+            except Exception as e:
+                logger.warning(f"[MiyaAPI] 读取当前人格失败: {e}")
             return {
                 "success": True,
                 "persona": {
@@ -669,9 +693,21 @@ class MiyaAPI:
             }
 
         @self.router.post("/api/persona/switch")
-        async def switch_persona():
-            """切换人格"""
-            return {"success": True, "message": "人格已切换"}
+        async def switch_persona(request_data: dict = None):
+            """切换人格 - 调用 DecisionHub 实际切换"""
+            if request_data is None:
+                request_data = {}
+            form_name = request_data.get("persona_id") or request_data.get("form", "")
+            if not form_name:
+                return {"success": False, "message": "缺少 persona_id 参数"}
+            try:
+                if self.decision_hub and self.decision_hub.personality:
+                    self.decision_hub.personality.set_form(form_name)
+                    return {"success": True, "message": f"已切换至 {form_name}"}
+            except Exception as e:
+                logger.warning(f"[MiyaAPI] 切换人格失败: {e}")
+                return {"success": False, "message": str(e)}
+            return {"success": False, "message": "人格系统未初始化"}
 
         # ========== 提供商 ==========
         @self.router.get("/api/provider/list")
@@ -831,10 +867,21 @@ class MiyaAPI:
 
         @self.router.get("/api/chat/get_session")
         async def get_session(session_id: str):
-            """获取会话历史"""
+            """获取会话历史 - 从记忆系统动态读取"""
+            history = []
+            try:
+                if self.decision_hub and hasattr(self.decision_hub, "memory_net"):
+                    memory_net = self.decision_hub.memory_net
+                    if memory_net and hasattr(memory_net, "conversation_history"):
+                        conv_history = memory_net.conversation_history
+                        raw = await conv_history.get_session(session_id)
+                        if raw:
+                            history = raw
+            except Exception as e:
+                logger.warning(f"[MiyaAPI] 获取会话历史失败: {e}")
             return {
                 "success": True,
-                "data": {"session_id": session_id, "history": [], "threads": []},
+                "data": {"session_id": session_id, "history": history, "threads": []},
             }
 
         @self.router.post("/api/chat/update_session_display_name")
@@ -1261,12 +1308,26 @@ class MiyaAPI:
         # ========== 工具 ==========
         @self.router.get("/api/tools")
         async def get_tools():
-            """可用工具列表"""
-            return {
-                "success": True,
-                "tools": [],
-                "total": 0,
-            }
+            """可用工具列表 - 从 ToolNet 动态读取"""
+            try:
+                from webnet.ToolNet.registry import get_registry
+
+                registry = get_registry()
+                tools = []
+                for name, tool in registry.tools.items():
+                    tools.append({
+                        "name": name,
+                        "description": getattr(tool, "description", "") or name,
+                        "enabled": True,
+                    })
+                return {
+                    "success": True,
+                    "tools": tools,
+                    "total": len(tools),
+                }
+            except Exception as e:
+                logger.warning(f"[MiyaAPI] 获取工具列表失败: {e}")
+                return {"success": True, "tools": [], "total": 0}
 
         @self.router.get("/api/agents")
         async def get_agents():
@@ -2100,17 +2161,52 @@ class MiyaAPI:
         # ========== 日志 ==========
         @self.router.get("/api/live-log")
         async def live_log():
-            """实时日志"""
+            """实时日志 - 流式推送最近的日志文件"""
 
             async def log_generator():
+                try:
+                    log_dir = Path("logs")
+                    if log_dir.exists():
+                        log_files = sorted(
+                            log_dir.glob("*.log"),
+                            key=lambda p: p.stat().st_mtime,
+                            reverse=True,
+                        )
+                        if log_files:
+                            latest = log_files[0]
+                            with open(latest, "r", encoding="utf-8", errors="replace") as f:
+                                lines = f.readlines()[-100:]
+                                for line in lines:
+                                    yield f"data: {line.strip()}\n\n"
+                except Exception:
+                    pass
                 yield "data: \n\n"
 
             return StreamingResponse(log_generator(), media_type="text/event-stream")
 
         @self.router.get("/api/logs")
-        async def get_logs():
-            """日志列表"""
-            return {"success": True, "logs": [], "total": 0}
+        async def get_logs(limit: int = 100):
+            """日志列表 - 从日志文件动态读取"""
+            log_lines = []
+            try:
+                log_dir = Path("logs")
+                if log_dir.exists():
+                    log_files = sorted(
+                        log_dir.glob("*.log"),
+                        key=lambda p: p.stat().st_mtime,
+                        reverse=True,
+                    )
+                    for log_file in log_files[:5]:
+                        with open(log_file, "r", encoding="utf-8", errors="replace") as f:
+                            file_lines = f.readlines()[-limit:]
+                            for line in file_lines:
+                                log_lines.append({
+                                    "file": log_file.name,
+                                    "line": line.strip(),
+                                })
+            except Exception as e:
+                logger.warning(f"[MiyaAPI] 读取日志失败: {e}")
+            return {"success": True, "logs": log_lines, "total": len(log_lines)}
 
         @self.router.get("/api/config/provider/list")
         async def get_provider_list(provider_type: str = ""):
