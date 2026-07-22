@@ -567,31 +567,26 @@ class MiyaMineradioService:
         if not tracks:
             return json.dumps({"ok": False, "error": "Playlist has no tracks"}, ensure_ascii=False)
 
-        await self._send_command("clear_queue", {})
+        # Send all tracks in a single batch command
+        batch = []
+        for track in tracks[:200]:
+            batch.append({
+                "id": str(track.get("id", "")),
+                "name": track.get("name", ""),
+                "artist": track.get("artist", ""),
+                "cover": track.get("cover", ""),
+                "source": source,
+            })
 
-        for i, track in enumerate(tracks[:200]):
-            if i == 0:
-                await self._send_command("play_song", {
-                    "song_id": str(track.get("id", "")),
-                    "source": source,
-                    "title": track.get("name", ""),
-                    "artist": track.get("artist", ""),
-                    "cover": track.get("cover", ""),
-                })
-            else:
-                await self._send_command("add_to_queue", {
-                    "song_id": str(track.get("id", "")),
-                    "source": source,
-                    "title": track.get("name", ""),
-                    "artist": track.get("artist", ""),
-                    "cover": track.get("cover", ""),
-                })
+        resp = await self._send_command("play_multiple", {"tracks": batch, "source": source})
+        data = resp.get("data") or {}
 
         return json.dumps({
-            "ok": True,
+            "ok": data.get("ok", True),
             "playlist_id": playlist_id,
             "total_tracks": total,
             "queued": min(len(tracks), 200),
+            "playing": data.get("playing", False),
             "message": f"Playing playlist with {min(len(tracks), 200)} tracks",
         }, ensure_ascii=False, indent=2)
 
