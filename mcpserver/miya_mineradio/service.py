@@ -151,6 +151,30 @@ class MiyaMineradioService:
                 "inputSchema": {"type": "object", "properties": {}, "required": []},
             },
             {
+                "name": "mineradio_get_playlist_tracks",
+                "description": "获取指定歌单中的歌曲列表。需要 playlist_id 和 source(netease/qq)。拿到曲目后，用 mineradio_play_song 播放第一首，用 mineradio_add_to_queue 把剩余歌曲加入队列，这样就能切歌了。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "playlist_id": {"type": "string", "description": "歌单 ID"},
+                        "source": {"type": "string", "description": "音乐源: netease 或 qq"},
+                    },
+                    "required": ["playlist_id", "source"],
+                },
+            },
+            {
+                "name": "mineradio_play_list",
+                "description": "自动获取歌单全部曲目并开始播放。传入 playlist_id 和 source，工具会自动拉取所有歌曲加入队列并开始播放第一首。之后用户就可以用 mineradio_next/mineradio_prev 切歌。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "playlist_id": {"type": "string", "description": "歌单 ID"},
+                        "source": {"type": "string", "description": "音乐源: netease 或 qq"},
+                    },
+                    "required": ["playlist_id", "source"],
+                },
+            },
+            {
                 "name": "mineradio_get_lyrics",
                 "description": "获取 Mineradio 当前播放歌曲的歌词",
                 "inputSchema": {"type": "object", "properties": {}, "required": []},
@@ -168,6 +192,34 @@ class MiyaMineradioService:
                 "name": "mineradio_like_song",
                 "description": "在 Mineradio 中红心收藏当前歌曲",
                 "inputSchema": {"type": "object", "properties": {}, "required": []},
+            },
+            {
+                "name": "mineradio_unlike_song",
+                "description": "取消红心收藏当前歌曲",
+                "inputSchema": {"type": "object", "properties": {}, "required": []},
+            },
+            {
+                "name": "mineradio_create_playlist",
+                "description": "在 Mineradio 中创建新歌单",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {"name": {"type": "string", "description": "歌单名称"}},
+                    "required": ["name"],
+                },
+            },
+            {
+                "name": "mineradio_shuffle_queue",
+                "description": "随机打乱 Mineradio 当前播放队列",
+                "inputSchema": {"type": "object", "properties": {}, "required": []},
+            },
+            {
+                "name": "mineradio_remove_from_queue",
+                "description": "从 Mineradio 播放队列中移除指定位置的歌曲",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {"index": {"type": "integer", "description": "队列索引（从0开始）"}},
+                    "required": ["index"],
+                },
             },
             {
                 "name": "mineradio_launch",
@@ -212,9 +264,15 @@ class MiyaMineradioService:
             "mineradio_clear_queue": self._clear_queue,
             "mineradio_get_queue": self._get_queue,
             "mineradio_get_playlists": self._get_playlists,
+            "mineradio_get_playlist_tracks": self._get_playlist_tracks,
+            "mineradio_play_list": self._play_list,
             "mineradio_get_lyrics": self._get_lyrics,
             "mineradio_set_mode": self._set_mode,
             "mineradio_like_song": self._like_song,
+            "mineradio_unlike_song": self._unlike_song,
+            "mineradio_create_playlist": self._create_playlist,
+            "mineradio_shuffle_queue": self._shuffle_queue,
+            "mineradio_remove_from_queue": self._remove_from_queue,
             "mineradio_launch": self._launch,
             "mineradio_health": self._health,
         }
@@ -487,6 +545,56 @@ class MiyaMineradioService:
         resp = await self._send_command("get_playlists")
         return json.dumps(resp.get("data", resp), ensure_ascii=False, indent=2)
 
+    async def _get_playlist_tracks(self, args: dict) -> str:
+        playlist_id = args.get("playlist_id", "")
+        source = args.get("source", "netease")
+        resp = await self._send_command("get_playlist_tracks", {
+            "playlist_id": playlist_id, "source": source,
+        })
+        return json.dumps(resp.get("data", resp), ensure_ascii=False, indent=2)
+
+    async def _play_list(self, args: dict) -> str:
+        playlist_id = args.get("playlist_id", "")
+        source = args.get("source", "netease")
+
+        tracks_resp = await self._send_command("get_playlist_tracks", {
+            "playlist_id": playlist_id, "source": source,
+        })
+        tracks_data = tracks_resp.get("data", {})
+        tracks = tracks_data.get("tracks", [])
+        total = tracks_data.get("total", len(tracks))
+
+        if not tracks:
+            return json.dumps({"ok": False, "error": "Playlist has no tracks"}, ensure_ascii=False)
+
+        await self._send_command("clear_queue", {})
+
+        for i, track in enumerate(tracks[:200]):
+            if i == 0:
+                await self._send_command("play_song", {
+                    "song_id": str(track.get("id", "")),
+                    "source": source,
+                    "title": track.get("name", ""),
+                    "artist": track.get("artist", ""),
+                    "cover": track.get("cover", ""),
+                })
+            else:
+                await self._send_command("add_to_queue", {
+                    "song_id": str(track.get("id", "")),
+                    "source": source,
+                    "title": track.get("name", ""),
+                    "artist": track.get("artist", ""),
+                    "cover": track.get("cover", ""),
+                })
+
+        return json.dumps({
+            "ok": True,
+            "playlist_id": playlist_id,
+            "total_tracks": total,
+            "queued": min(len(tracks), 200),
+            "message": f"Playing playlist with {min(len(tracks), 200)} tracks",
+        }, ensure_ascii=False, indent=2)
+
     async def _get_lyrics(self, args: dict) -> str:
         resp = await self._send_command("get_lyrics")
         return json.dumps(resp.get("data", resp), ensure_ascii=False, indent=2)
@@ -500,6 +608,24 @@ class MiyaMineradioService:
 
     async def _like_song(self, args: dict) -> str:
         resp = await self._send_command("like")
+        return json.dumps(resp, ensure_ascii=False)
+
+    async def _unlike_song(self, args: dict) -> str:
+        resp = await self._send_command("unlike")
+        return json.dumps(resp, ensure_ascii=False)
+
+    async def _create_playlist(self, args: dict) -> str:
+        name = args.get("name", "")
+        resp = await self._send_command("create_playlist", {"name": name})
+        return json.dumps(resp, ensure_ascii=False)
+
+    async def _shuffle_queue(self, args: dict) -> str:
+        resp = await self._send_command("shuffle_queue")
+        return json.dumps(resp, ensure_ascii=False)
+
+    async def _remove_from_queue(self, args: dict) -> str:
+        index = int(args.get("index", -1))
+        resp = await self._send_command("remove_from_queue", {"index": index})
         return json.dumps(resp, ensure_ascii=False)
 
     async def _launch(self, args: dict) -> str:
