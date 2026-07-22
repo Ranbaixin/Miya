@@ -756,10 +756,37 @@ class MiyaAPI:
 
         # ========== 提供商 ==========
         @self.router.get("/api/provider/list")
-        async def get_provider_list():
+        async def get_provider_list(provider_type: str = ""):
             """提供商列表 - 从模型池动态获取"""
+
+            providers = []
             try:
                 from core.model_pool_manager import get_model_pool
+
+                pool = get_model_pool()
+                if pool and hasattr(pool, "models"):
+                    for model_id, model_info in pool.models.items():
+                        provider_name = getattr(model_info, "provider", "unknown")
+                        if provider_type and provider_name not in provider_type:
+                            continue
+                        providers.append({
+                            "id": model_id,
+                            "name": getattr(model_info, "name", model_id),
+                            "provider_type": "chat_completion" if getattr(model_info, "type", "") == "text" else "embedding",
+                            "provider_source_id": provider_name,
+                            "model": getattr(model_info, "id", model_id),
+                            "enabled": True,
+                        })
+            except ImportError:
+                pass
+            except Exception as e:
+                logger.warning(f"[MiyaAPI] 获取提供商列表失败: {e}")
+
+            return {
+                "success": True,
+                "providers": providers,
+                "provider_sources": [],
+            }
 
                 pool = get_model_pool()
                 models = pool._models if hasattr(pool, "_models") else {}
