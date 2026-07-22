@@ -363,37 +363,51 @@ class MiyaAPI:
         # ========== 自主决策 API ==========
         @self.router.get("/api/autonomy/settings")
         async def get_autonomy_settings():
-            """获取自主决策设置"""
+            """获取自主决策设置 - 从 AutonomyManager 动态读取"""
             try:
-                if hasattr(self, "decision_hub") and self.decision_hub:
-                    return {
-                        "success": True,
-                        "enabled": True,
-                        "主动聊天": True,
-                        "主动问候": True,
-                        "记忆优化": True,
-                        "情绪响应": True,
-                        "threshold": 0.5,
-                    }
+                from core.autonomy_manager import get_autonomy_manager
+
+                mgr = get_autonomy_manager()
+                status = mgr.get_status()
+                return {
+                    "success": True,
+                    "enabled": status.get("auto_improvement_enabled", False),
+                    "主动聊天": status.get("auto_improvement_enabled", False),
+                    "主动问候": status.get("auto_improvement_enabled", False),
+                    "记忆优化": status.get("auto_improvement_enabled", False),
+                    "情绪响应": status.get("auto_improvement_enabled", False),
+                    "threshold": 0.5,
+                    "engine": status.get("engine", {}),
+                    "optimizer": status.get("optimizer", {}),
+                }
             except Exception as e:
                 logger.warning(f"[API] 获取自主决策设置失败: {e}")
             return {
                 "success": True,
-                "enabled": True,
-                "主动聊天": True,
-                "主动问候": True,
-                "记忆优化": True,
-                "情绪响应": True,
+                "enabled": False,
+                "主动聊天": False,
+                "主动问候": False,
+                "记忆优化": False,
+                "情绪响应": False,
                 "threshold": 0.5,
             }
 
         @self.router.post("/api/autonomy/settings")
         async def save_autonomy_settings(request_data: dict = None):
-            """保存自主决策设置"""
+            """保存自主决策设置 - 写入 AutonomyManager"""
             if request_data is None:
                 request_data = {}
             try:
-                enabled = request_data.get("enabled", True)
+                from core.autonomy_manager import get_autonomy_manager
+
+                mgr = get_autonomy_manager()
+                enabled = request_data.get("enabled", False)
+
+                if enabled:
+                    mgr.enable_auto_improvement()
+                else:
+                    mgr.disable_auto_improvement()
+
                 logger.info(f"[API] 自主决策设置已更新: enabled={enabled}")
                 return {"success": True, "message": "设置已保存"}
             except Exception as e:
@@ -402,30 +416,61 @@ class MiyaAPI:
 
         @self.router.get("/api/autonomy/logs")
         async def get_autonomy_logs(limit: int = 50):
-            """获取自主决策日志"""
-            return {
-                "success": True,
-                "logs": [
-                    {
+            """获取自主决策日志 - 从引擎决策历史读取"""
+            try:
+                from core.autonomy_manager import get_autonomy_manager
+
+                mgr = get_autonomy_manager()
+                status = mgr.get_status()
+                engine = status.get("engine", {})
+                logs = []
+                if engine.get("total_decisions", 0) > 0:
+                    logs.append({
+                        "time": datetime.now().isoformat(),
+                        "action": f"总决策: {engine.get('total_decisions', 0)}",
+                        "result": f"成功修复: {engine.get('successful_fixes', 0)}, 失败: {engine.get('failed_fixes', 0)}",
+                    })
+                if not logs:
+                    logs.append({
                         "time": datetime.now().isoformat(),
                         "action": "系统运行中",
                         "result": "正常",
-                    },
-                ],
-                "total": 1,
-            }
+                    })
+                return {"success": True, "logs": logs, "total": len(logs)}
+            except Exception as e:
+                logger.warning(f"[API] 读取自主决策日志失败: {e}")
+                return {"success": True, "logs": [], "total": 0}
 
         @self.router.get("/api/autonomy/stats")
         async def get_autonomy_stats():
-            """获取自主决策统计"""
-            return {
-                "success": True,
-                "stats": {
-                    "total_decisions": 0,
-                    "success_rate": 0,
-                    "avg_response_time": 0,
-                },
-            }
+            """获取自主决策统计 - 从引擎统计数据读取"""
+            try:
+                from core.autonomy_manager import get_autonomy_manager
+
+                mgr = get_autonomy_manager()
+                status = mgr.get_status()
+                engine = status.get("engine", {})
+                return {
+                    "success": True,
+                    "stats": {
+                        "total_decisions": engine.get("total_decisions", 0),
+                        "auto_decisions": engine.get("auto_decisions", 0),
+                        "manual_decisions": engine.get("manual_decisions", 0),
+                        "successful_fixes": engine.get("successful_fixes", 0),
+                        "failed_fixes": engine.get("failed_fixes", 0),
+                        "improvements_made": engine.get("improvements_made", 0),
+                    },
+                }
+            except Exception as e:
+                logger.warning(f"[API] 读取自主决策统计失败: {e}")
+                return {
+                    "success": True,
+                    "stats": {
+                        "total_decisions": 0,
+                        "success_rate": 0,
+                        "avg_response_time": 0,
+                    },
+                }
 
         # ========== 语音 API ==========
         @self.router.get("/api/voice/config")

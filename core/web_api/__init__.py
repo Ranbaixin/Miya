@@ -295,7 +295,24 @@ class WebAPI:
 
         @self.router.get("/api/queue/stats")
         async def get_queue_stats():
-            """获取消息队列统计"""
+            """获取消息队列统计 - 从 MLink 动态读取"""
+            try:
+                if self.miya_instance and self.miya_instance.mlink:
+                    mlink = self.miya_instance.mlink
+                    queue_size = 0
+                    processing = False
+                    if mlink.message_queue:
+                        queue_size = mlink.message_queue.size() if hasattr(mlink.message_queue, "size") else len(getattr(mlink.message_queue, "queue", []))
+                        processing = getattr(mlink.message_queue, "processing", False)
+                    return {
+                        "size": queue_size,
+                        "processing": processing,
+                        "model": "default",
+                        "interval": 5,
+                        "last_process_time_ms": 0,
+                    }
+            except Exception as e:
+                logger.warning(f"[WebAPI] 获取队列统计失败: {e}")
             return {
                 "size": 0,
                 "processing": False,
