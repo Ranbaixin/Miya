@@ -155,6 +155,12 @@ class PlatformToolsManager:
             "mcp_miya_mineradio_mineradio_like_song",
             "mcp_miya_mineradio_mineradio_launch",
             "mcp_miya_mineradio_mineradio_health",
+            "mcp_miya_mineradio_mineradio_get_playlist_tracks",
+            "mcp_miya_mineradio_mineradio_play_list",
+            "mcp_miya_mineradio_mineradio_unlike_song",
+            "mcp_miya_mineradio_mineradio_create_playlist",
+            "mcp_miya_mineradio_mineradio_shuffle_queue",
+            "mcp_miya_mineradio_mineradio_remove_from_queue",
         ],
         # 飞书平台工具
         "lark": [
@@ -191,6 +197,12 @@ class PlatformToolsManager:
             "mcp_miya_mineradio_mineradio_like_song",
             "mcp_miya_mineradio_mineradio_launch",
             "mcp_miya_mineradio_mineradio_health",
+            "mcp_miya_mineradio_mineradio_get_playlist_tracks",
+            "mcp_miya_mineradio_mineradio_play_list",
+            "mcp_miya_mineradio_mineradio_unlike_song",
+            "mcp_miya_mineradio_mineradio_create_playlist",
+            "mcp_miya_mineradio_mineradio_shuffle_queue",
+            "mcp_miya_mineradio_mineradio_remove_from_queue",
         ],
         # 钉钉平台工具
         "dingtalk": [
@@ -227,6 +239,12 @@ class PlatformToolsManager:
             "mcp_miya_mineradio_mineradio_like_song",
             "mcp_miya_mineradio_mineradio_launch",
             "mcp_miya_mineradio_mineradio_health",
+            "mcp_miya_mineradio_mineradio_get_playlist_tracks",
+            "mcp_miya_mineradio_mineradio_play_list",
+            "mcp_miya_mineradio_mineradio_unlike_song",
+            "mcp_miya_mineradio_mineradio_create_playlist",
+            "mcp_miya_mineradio_mineradio_shuffle_queue",
+            "mcp_miya_mineradio_mineradio_remove_from_queue",
         ],
         # 企业微信工具
         "wecom": [
@@ -263,6 +281,12 @@ class PlatformToolsManager:
             "mcp_miya_mineradio_mineradio_like_song",
             "mcp_miya_mineradio_mineradio_launch",
             "mcp_miya_mineradio_mineradio_health",
+            "mcp_miya_mineradio_mineradio_get_playlist_tracks",
+            "mcp_miya_mineradio_mineradio_play_list",
+            "mcp_miya_mineradio_mineradio_unlike_song",
+            "mcp_miya_mineradio_mineradio_create_playlist",
+            "mcp_miya_mineradio_mineradio_shuffle_queue",
+            "mcp_miya_mineradio_mineradio_remove_from_queue",
         ],
         # LINE平台工具
         "line": [
@@ -299,6 +323,12 @@ class PlatformToolsManager:
             "mcp_miya_mineradio_mineradio_like_song",
             "mcp_miya_mineradio_mineradio_launch",
             "mcp_miya_mineradio_mineradio_health",
+            "mcp_miya_mineradio_mineradio_get_playlist_tracks",
+            "mcp_miya_mineradio_mineradio_play_list",
+            "mcp_miya_mineradio_mineradio_unlike_song",
+            "mcp_miya_mineradio_mineradio_create_playlist",
+            "mcp_miya_mineradio_mineradio_shuffle_queue",
+            "mcp_miya_mineradio_mineradio_remove_from_queue",
         ],
         # Discord平台工具
         "discord": [
@@ -335,6 +365,12 @@ class PlatformToolsManager:
             "mcp_miya_mineradio_mineradio_like_song",
             "mcp_miya_mineradio_mineradio_launch",
             "mcp_miya_mineradio_mineradio_health",
+            "mcp_miya_mineradio_mineradio_get_playlist_tracks",
+            "mcp_miya_mineradio_mineradio_play_list",
+            "mcp_miya_mineradio_mineradio_unlike_song",
+            "mcp_miya_mineradio_mineradio_create_playlist",
+            "mcp_miya_mineradio_mineradio_shuffle_queue",
+            "mcp_miya_mineradio_mineradio_remove_from_queue",
         ],
         # Telegram平台工具
         "telegram": [
@@ -371,6 +407,12 @@ class PlatformToolsManager:
             "mcp_miya_mineradio_mineradio_like_song",
             "mcp_miya_mineradio_mineradio_launch",
             "mcp_miya_mineradio_mineradio_health",
+            "mcp_miya_mineradio_mineradio_get_playlist_tracks",
+            "mcp_miya_mineradio_mineradio_play_list",
+            "mcp_miya_mineradio_mineradio_unlike_song",
+            "mcp_miya_mineradio_mineradio_create_playlist",
+            "mcp_miya_mineradio_mineradio_shuffle_queue",
+            "mcp_miya_mineradio_mineradio_remove_from_queue",
         ],
         # Slack平台工具
         "slack": [
@@ -407,6 +449,12 @@ class PlatformToolsManager:
             "mcp_miya_mineradio_mineradio_like_song",
             "mcp_miya_mineradio_mineradio_launch",
             "mcp_miya_mineradio_mineradio_health",
+            "mcp_miya_mineradio_mineradio_get_playlist_tracks",
+            "mcp_miya_mineradio_mineradio_play_list",
+            "mcp_miya_mineradio_mineradio_unlike_song",
+            "mcp_miya_mineradio_mineradio_create_playlist",
+            "mcp_miya_mineradio_mineradio_shuffle_queue",
+            "mcp_miya_mineradio_mineradio_remove_from_queue",
         ],
         # KOOK平台工具
         "kook": [
@@ -443,6 +491,12 @@ class PlatformToolsManager:
             "mcp_miya_mineradio_mineradio_like_song",
             "mcp_miya_mineradio_mineradio_launch",
             "mcp_miya_mineradio_mineradio_health",
+            "mcp_miya_mineradio_mineradio_get_playlist_tracks",
+            "mcp_miya_mineradio_mineradio_play_list",
+            "mcp_miya_mineradio_mineradio_unlike_song",
+            "mcp_miya_mineradio_mineradio_create_playlist",
+            "mcp_miya_mineradio_mineradio_shuffle_queue",
+            "mcp_miya_mineradio_mineradio_remove_from_queue",
         ],
         # 手机端 (mobile)
         "mobile": [
@@ -492,6 +546,12 @@ class PlatformToolsManager:
             "mcp_miya_mineradio_mineradio_like_song",
             "mcp_miya_mineradio_mineradio_launch",
             "mcp_miya_mineradio_mineradio_health",
+            "mcp_miya_mineradio_mineradio_get_playlist_tracks",
+            "mcp_miya_mineradio_mineradio_play_list",
+            "mcp_miya_mineradio_mineradio_unlike_song",
+            "mcp_miya_mineradio_mineradio_create_playlist",
+            "mcp_miya_mineradio_mineradio_shuffle_queue",
+            "mcp_miya_mineradio_mineradio_remove_from_queue",
         ],
         # Satori协议工具
         "satori": [
@@ -528,6 +588,12 @@ class PlatformToolsManager:
             "mcp_miya_mineradio_mineradio_like_song",
             "mcp_miya_mineradio_mineradio_launch",
             "mcp_miya_mineradio_mineradio_health",
+            "mcp_miya_mineradio_mineradio_get_playlist_tracks",
+            "mcp_miya_mineradio_mineradio_play_list",
+            "mcp_miya_mineradio_mineradio_unlike_song",
+            "mcp_miya_mineradio_mineradio_create_playlist",
+            "mcp_miya_mineradio_mineradio_shuffle_queue",
+            "mcp_miya_mineradio_mineradio_remove_from_queue",
         ],
         # 微信开放平台
         "weixin_oc": [
@@ -564,6 +630,12 @@ class PlatformToolsManager:
             "mcp_miya_mineradio_mineradio_like_song",
             "mcp_miya_mineradio_mineradio_launch",
             "mcp_miya_mineradio_mineradio_health",
+            "mcp_miya_mineradio_mineradio_get_playlist_tracks",
+            "mcp_miya_mineradio_mineradio_play_list",
+            "mcp_miya_mineradio_mineradio_unlike_song",
+            "mcp_miya_mineradio_mineradio_create_playlist",
+            "mcp_miya_mineradio_mineradio_shuffle_queue",
+            "mcp_miya_mineradio_mineradio_remove_from_queue",
         ],
         # 微信公众号
         "weixin_official_account": [
@@ -600,6 +672,12 @@ class PlatformToolsManager:
             "mcp_miya_mineradio_mineradio_like_song",
             "mcp_miya_mineradio_mineradio_launch",
             "mcp_miya_mineradio_mineradio_health",
+            "mcp_miya_mineradio_mineradio_get_playlist_tracks",
+            "mcp_miya_mineradio_mineradio_play_list",
+            "mcp_miya_mineradio_mineradio_unlike_song",
+            "mcp_miya_mineradio_mineradio_create_playlist",
+            "mcp_miya_mineradio_mineradio_shuffle_queue",
+            "mcp_miya_mineradio_mineradio_remove_from_queue",
         ],
         "weixin_ilink": [
             "send_message",
@@ -635,6 +713,12 @@ class PlatformToolsManager:
             "mcp_miya_mineradio_mineradio_like_song",
             "mcp_miya_mineradio_mineradio_launch",
             "mcp_miya_mineradio_mineradio_health",
+            "mcp_miya_mineradio_mineradio_get_playlist_tracks",
+            "mcp_miya_mineradio_mineradio_play_list",
+            "mcp_miya_mineradio_mineradio_unlike_song",
+            "mcp_miya_mineradio_mineradio_create_playlist",
+            "mcp_miya_mineradio_mineradio_shuffle_queue",
+            "mcp_miya_mineradio_mineradio_remove_from_queue",
         ],
         "terminal": [
             # CCE 执行引擎 — 弥娅的「手」
@@ -709,6 +793,12 @@ class PlatformToolsManager:
             "mcp_miya_mineradio_mineradio_like_song",
             "mcp_miya_mineradio_mineradio_launch",
             "mcp_miya_mineradio_mineradio_health",
+            "mcp_miya_mineradio_mineradio_get_playlist_tracks",
+            "mcp_miya_mineradio_mineradio_play_list",
+            "mcp_miya_mineradio_mineradio_unlike_song",
+            "mcp_miya_mineradio_mineradio_create_playlist",
+            "mcp_miya_mineradio_mineradio_shuffle_queue",
+            "mcp_miya_mineradio_mineradio_remove_from_queue",
         ],
         # Desktop 平台使用与 QQ 相同的工具集（桌面端=超级管理员）
         # 复制 QQ 的工具列表，确保完全一致
@@ -803,6 +893,12 @@ class PlatformToolsManager:
             "mcp_miya_mineradio_mineradio_like_song",
             "mcp_miya_mineradio_mineradio_launch",
             "mcp_miya_mineradio_mineradio_health",
+            "mcp_miya_mineradio_mineradio_get_playlist_tracks",
+            "mcp_miya_mineradio_mineradio_play_list",
+            "mcp_miya_mineradio_mineradio_unlike_song",
+            "mcp_miya_mineradio_mineradio_create_playlist",
+            "mcp_miya_mineradio_mineradio_shuffle_queue",
+            "mcp_miya_mineradio_mineradio_remove_from_queue",
         ],
         "web": [
             "send_to_qq",
@@ -862,6 +958,12 @@ class PlatformToolsManager:
             "mcp_miya_mineradio_mineradio_like_song",
             "mcp_miya_mineradio_mineradio_launch",
             "mcp_miya_mineradio_mineradio_health",
+            "mcp_miya_mineradio_mineradio_get_playlist_tracks",
+            "mcp_miya_mineradio_mineradio_play_list",
+            "mcp_miya_mineradio_mineradio_unlike_song",
+            "mcp_miya_mineradio_mineradio_create_playlist",
+            "mcp_miya_mineradio_mineradio_shuffle_queue",
+            "mcp_miya_mineradio_mineradio_remove_from_queue",
         ],
     }
 
