@@ -123,13 +123,20 @@ class IntelligentExecutor:
             # 构建完整命令
             command = self._build_command(parsed_command, context)
             
-            # 执行命令
-            process = await asyncio.create_subprocess_shell(
-                command,
+            # 执行命令（使用 create_subprocess_exec 避免 shell 注入）
+            # 用 shlex 安全解析命令字符串为参数列表
+            try:
+                cmd_parts = shlex.split(command)
+            except ValueError:
+                cmd_parts = command.split()
+            if not cmd_parts:
+                return {"success": False, "error": "空命令"}
+
+            process = await asyncio.create_subprocess_exec(
+                *cmd_parts,
                 cwd=self.working_directory,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                shell=True,
                 env=os.environ.copy()
             )
             

@@ -250,7 +250,7 @@ class LifeBook:
                     encoding="utf-8")
 
     async def record_user_fact(self, fact: str, category: str = "other"):
-        """记录关于user的重要事实"""
+        """记录关于user的重要事实（线程安全 + 追加模式避免 O(n²)）"""
         date_key = self._get_date_key()
         user_file = self._get_daily_file(date_key, "user")
 
@@ -263,21 +263,29 @@ class LifeBook:
 *记录于: {datetime.now().strftime("%H:%M")}*
 """
 
-        if user_file.exists():
-            existing = user_file.read_text(encoding="utf-8")
-            if f"# {date_key} user的日记" not in existing:
-                content = f"# {date_key} user的日记\n\n> 记录关于user的点点滴滴。\n\n{entry_md}"
+        # 获取或创建文件级锁（复用 _diary_locks 模式）
+        if not hasattr(self, '_diary_locks'):
+            self._diary_locks = {}
+        lock = self._diary_locks.setdefault(str(user_file), asyncio.Lock())
+
+        async with lock:
+            if user_file.exists():
+                existing = user_file.read_text(encoding="utf-8")
+                if f"# {date_key} user的日记" not in existing:
+                    content = f"# {date_key} user的日记\n\n> 记录关于user的点点滴滴。\n\n{entry_md}"
+                    user_file.write_text(content, encoding="utf-8")
+                else:
+                    # 追加模式，避免 O(n²) 全量读写
+                    with open(user_file, "a", encoding="utf-8") as f:
+                        f.write(entry_md)
             else:
-                content = existing + entry_md
-        else:
-            content = f"""# {date_key} user的日记
+                content = f"""# {date_key} user的日记
 
 > 记录关于user的点点滴滴。
 
 {entry_md}
 """
-
-        user_file.write_text(content, encoding="utf-8")
+                user_file.write_text(content, encoding="utf-8")
 
         if date_key not in self._index:
             self._index[date_key] = {

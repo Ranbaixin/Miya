@@ -1701,21 +1701,21 @@ class DecisionHub:
                 # 兼容 ReplySegment 对象和字典
                 if hasattr(reply_info, "get"):
                     sender_name = reply_info.get("sender_name", "未知")
-                    content = reply_info.get("content", "")[:100]
+                    reply_content = reply_info.get("content", "")[:100]
                     image_url = reply_info.get("image_url")
                 elif hasattr(reply_info, "sender_name"):
                     sender_name = getattr(reply_info, "sender_name", "未知")
-                    content = getattr(reply_info, "content", "")[:100]
+                    reply_content = getattr(reply_info, "content", "")[:100]
                     image_url = getattr(reply_info, "image_url", None)
                 else:
                     sender_name = "未知"
-                    content = ""
+                    reply_content = ""
                     image_url = None
 
                 if image_url:
-                    reply_context = f"\n[引用消息] 来自: {sender_name}\n内容: {content}\n图片URL: {image_url}"
+                    reply_context = f"\n[引用消息] 来自: {sender_name}\n内容: {reply_content}\n图片URL: {image_url}"
                 else:
-                    reply_context = f"\n[引用消息] 来自: {sender_name}\n内容: {content}"
+                    reply_context = f"\n[引用消息] 来自: {sender_name}\n内容: {reply_content}"
 
             # 获取文件信息
             files_info = context.get("files", [])

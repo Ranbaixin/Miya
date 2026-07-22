@@ -343,9 +343,10 @@ class Miya:
         try:
             from webnet.memory import MemoryNet
 
-            # 初始化 M-Link
-            self.mlink = MLinkCore()
-            self.logger.info("M-Link 初始化成功")
+            # M-Link 已在 __init__ 中创建，此处直接复用
+            if self.mlink is None:
+                self.logger.warning("M-Link 未初始化，跳过 MemoryNet 创建")
+                return
 
             # 初始化 MemoryNet 全局记忆子网
             self.memory_net = MemoryNet(self.mlink)
@@ -356,7 +357,6 @@ class Miya:
 
         except Exception as e:
             self.logger.error(f"全局记忆系统初始化失败: {e}")
-            self.mlink = None
             self.memory_net = None
 
         # 初始化统一记忆系统
@@ -803,12 +803,67 @@ class Miya:
         return status
 
     def shutdown(self) -> None:
-        """关闭系统"""
+        """关闭系统 - 优雅释放所有资源"""
         self.logger.info("弥娅系统正在关闭...")
 
-        # 清理资源
+        # 1. 调度器（停止定时任务）
+        if hasattr(self, 'scheduler') and self.scheduler:
+            try:
+                # Scheduler.stop() 是 async 方法，需要在事件循环中运行
+                import asyncio
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        asyncio.create_task(self.scheduler.stop())
+                    else:
+                        loop.run_until_complete(self.scheduler.stop())
+                except RuntimeError:
+                    pass
+            except Exception as e:
+                self.logger.debug(f"调度器关闭失败: {e}")
+
+        # 2. 决策中枢
+        if hasattr(self, 'decision_hub') and self.decision_hub:
+            try:
+                if hasattr(self.decision_hub, 'shutdown'):
+                    self.decision_hub.shutdown()
+            except Exception as e:
+                self.logger.debug(f"DecisionHub 关闭失败: {e}")
+
+        # 3. M-Link 消息总线
+        if self.mlink:
+            try:
+                if hasattr(self.mlink, 'close'):
+                    self.mlink.close()
+                elif hasattr(self.mlink, 'shutdown'):
+                    self.mlink.shutdown()
+            except Exception as e:
+                self.logger.debug(f"M-Link 关闭失败: {e}")
+
+        # 4. MemoryNet
+        if self.memory_net:
+            try:
+                if hasattr(self.memory_net, 'close'):
+                    self.memory_net.close()
+                elif hasattr(self.memory_net, 'shutdown'):
+                    self.memory_net.shutdown()
+            except Exception as e:
+                self.logger.debug(f"MemoryNet 关闭失败: {e}")
+
+        # 5. AI 客户端（关闭 HTTP 会话）
+        if self.ai_client:
+            try:
+                if hasattr(self.ai_client, 'close'):
+                    self.ai_client.close()
+            except Exception as e:
+                self.logger.debug(f"AI 客户端关闭失败: {e}")
+
+        # 6. Redis（关闭连接，不丢数据）
         if self.redis:
-            self.redis.flushdb()
+            try:
+                self.redis.close()
+            except Exception as e:
+                self.logger.debug(f"Redis 关闭失败: {e}")
 
         self.logger.info("弥娅系统已关闭")
 

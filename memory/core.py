@@ -538,11 +538,11 @@ class JsonBackend(MemoryBackend):
         self._query_cache[key] = results
 
     async def load(self, memory_id: str) -> Optional[MemoryItem]:
-        """加载记忆"""
-        if memory_id not in self._index:
-            return None
-
+        """加载记忆（线程安全）"""
         async with self._index_lock:
+            if memory_id not in self._index:
+                return None
+
             try:
                 file_path = Path(self._index[memory_id]["file_path"])
                 if not file_path.exists():
@@ -830,6 +830,12 @@ class MiyaMemoryCore:
 
         # MemoryEnhancer（延迟加载）
         self._enhancer = None
+
+        # 过期清理并发锁
+        self._expire_lock = asyncio.Lock()
+
+        # 备份文件并发锁
+        self._backup_lock = asyncio.Lock()
 
         logger.info(f"[MiyaMemoryCore] 初始化完成, 数据目录: {self.data_dir}")
 
@@ -1283,9 +1289,10 @@ class MiyaMemoryCore:
         return memory.id
 
     def _flush_index(self):
-        """批量刷新索引进磁盘"""
+        """批量刷新索引进磁盘（同时保存 _index 和 _tag_index）"""
         if self._index_dirty:
             self.backend._save_index()
+            self.backend._save_tag_index()
             self._index_dirty = False
             self._store_count_since_save = 0
             logger.debug("[MiyaMemoryCore] 批量索引已刷新")
@@ -1823,52 +1830,53 @@ class MiyaMemoryCore:
     # ==================== 批量操作 ====================
 
     async def delete_expired(self) -> int:
-        """删除过期记忆 - 同时清理缓存和磁盘文件"""
-        count = 0
-        expired_ids = []
+        """删除过期记忆 - 同时清理缓存和磁盘文件（线程安全）"""
+        async with self._expire_lock:
+            count = 0
+            expired_ids = []
 
-        # 1. 清理缓存中的过期记忆
-        for memory_id, memory in list(self._cache.items()):
-            if memory.is_expired():
-                expired_ids.append(memory_id)
+            # 1. 清理缓存中的过期记忆
+            for memory_id, memory in list(self._cache.items()):
+                if memory.is_expired():
+                    expired_ids.append(memory_id)
 
-        for memory_id in expired_ids:
-            await self.delete(memory_id)
-            count += 1
+            for memory_id in expired_ids:
+                await self.delete(memory_id)
+                count += 1
 
-        # 2. 扫描磁盘文件，清理过期的短期记忆
-        short_term_dir = self.backend.short_term_dir
-        if short_term_dir.exists():
-            datetime.now()
-            for file_path in short_term_dir.rglob("*.json"):
-                try:
-                    with open(file_path, "r", encoding="utf-8") as f:
-                        data = json.load(f)
-                    memory = MemoryItem.from_dict(data)
-                    if memory and memory.is_expired():
-                        file_path.unlink()
-                        # 从索引中移除
-                        if memory.id in self.backend._index:
-                            del self.backend._index[memory.id]
-                        for tag in memory.tags:
-                            self.backend._tag_index[tag].discard(memory.id)
-                        if memory.id in self._cache:
-                            del self._cache[memory.id]
-                        self._user_index[memory.user_id].discard(memory.id)
-                        for tag in memory.tags:
-                            self._tag_index[tag].discard(memory.id)
-                        count += 1
-                except Exception:
-                    continue
+            # 2. 扫描磁盘文件，清理过期的短期记忆
+            short_term_dir = self.backend.short_term_dir
+            if short_term_dir.exists():
+                datetime.now()
+                for file_path in short_term_dir.rglob("*.json"):
+                    try:
+                        with open(file_path, "r", encoding="utf-8") as f:
+                            data = json.load(f)
+                        memory = MemoryItem.from_dict(data)
+                        if memory and memory.is_expired():
+                            file_path.unlink()
+                            # 从索引中移除
+                            if memory.id in self.backend._index:
+                                del self.backend._index[memory.id]
+                            for tag in memory.tags:
+                                self.backend._tag_index[tag].discard(memory.id)
+                            if memory.id in self._cache:
+                                del self._cache[memory.id]
+                            self._user_index[memory.user_id].discard(memory.id)
+                            for tag in memory.tags:
+                                self._tag_index[tag].discard(memory.id)
+                            count += 1
+                    except Exception:
+                        continue
 
-        # 保存更新后的索引
-        self.backend._save_index()
-        self.backend._save_tag_index()
+            # 保存更新后的索引
+            self.backend._save_index()
+            self.backend._save_tag_index()
 
-        if count > 0:
-            logger.info(f"[MiyaMemoryCore] 清理了 {count} 条过期记忆 (含磁盘)")
+            if count > 0:
+                logger.info(f"[MiyaMemoryCore] 清理了 {count} 条过期记忆 (含磁盘)")
 
-        return count
+            return count
 
     async def archive_old(self, days: int = 90) -> int:
         """归档旧记忆"""
@@ -2114,41 +2122,42 @@ class MiyaMemoryCore:
             logger.warning(f"[MiyaMemoryCore] 向量生成失败: {e}")
 
     async def _backup_memory(self, memory: MemoryItem):
-        """备份记忆 - 按周归档，避免数据丢失"""
-        backup_dir = self.data_dir / "backups"
-        backup_dir.mkdir(parents=True, exist_ok=True)
+        """备份记忆 - 按周归档，避免数据丢失（线程安全）"""
+        async with self._backup_lock:
+            backup_dir = self.data_dir / "backups"
+            backup_dir.mkdir(parents=True, exist_ok=True)
 
-        iso_year, iso_week, _ = datetime.now().isocalendar()
-        week_key = f"{iso_year}-W{iso_week:02d}"
-        backup_file = backup_dir / f"{week_key}.json"
+            iso_year, iso_week, _ = datetime.now().isocalendar()
+            week_key = f"{iso_year}-W{iso_week:02d}"
+            backup_file = backup_dir / f"{week_key}.json"
 
-        try:
-            backups = []
-            if backup_file.exists():
-                with open(backup_file, "r", encoding="utf-8") as f:
-                    backups = json.load(f)
+            try:
+                backups = []
+                if backup_file.exists():
+                    with open(backup_file, "r", encoding="utf-8") as f:
+                        backups = json.load(f)
 
-            backups.append(memory.to_dict())
+                backups.append(memory.to_dict())
 
-            # 每周最多10000条，超出后归档旧数据到archive
-            if len(backups) > 10000:
-                archive_dir = backup_dir / "archive"
-                archive_dir.mkdir(parents=True, exist_ok=True)
-                overflow = backups[:5000]
-                backups = backups[5000:]
-                archive_file = archive_dir / f"{week_key}_overflow_{len(overflow)}.json"
-                with open(archive_file, "w", encoding="utf-8") as f:
-                    json.dump(overflow, f, ensure_ascii=False, indent=2)
-                logger.info(f"[MiyaMemoryCore] 备份溢出已归档: {archive_file}")
+                # 每周最多10000条，超出后归档旧数据到archive
+                if len(backups) > 10000:
+                    archive_dir = backup_dir / "archive"
+                    archive_dir.mkdir(parents=True, exist_ok=True)
+                    overflow = backups[:5000]
+                    backups = backups[5000:]
+                    archive_file = archive_dir / f"{week_key}_overflow_{len(overflow)}.json"
+                    with open(archive_file, "w", encoding="utf-8") as f:
+                        json.dump(overflow, f, ensure_ascii=False, indent=2)
+                    logger.info(f"[MiyaMemoryCore] 备份溢出已归档: {archive_file}")
 
-            # 保存
-            with open(backup_file, "w", encoding="utf-8") as f:
-                json.dump(backups, f, ensure_ascii=False, indent=2)
+                # 保存
+                with open(backup_file, "w", encoding="utf-8") as f:
+                    json.dump(backups, f, ensure_ascii=False, indent=2)
 
-            # 清理超过8周的旧备份文件
-            self._cleanup_old_backups(backup_dir)
-        except Exception as e:
-            logger.warning(f"[MiyaMemoryCore] 备份失败: {e}")
+                # 清理超过8周的旧备份文件
+                self._cleanup_old_backups(backup_dir)
+            except Exception as e:
+                logger.warning(f"[MiyaMemoryCore] 备份失败: {e}")
 
     def _cleanup_old_backups(self, backup_dir: Path):
         """清理超过8周的备份文件"""

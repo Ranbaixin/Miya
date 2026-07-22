@@ -467,6 +467,16 @@ class PromptManager:
                             f"[PromptManager] 替换占位符 {placeholder} = {value}"
                         )
 
+        # 兜底替换：清理所有未被替换的占位符（防止模板变量泄露到模型 prompt）
+        common_placeholders = {
+            "{status_prompt}": "",
+            "{emotion_reasoning_prompt}": "",
+        }
+        for placeholder, default in common_placeholders.items():
+            if placeholder in system_prompt:
+                system_prompt = system_prompt.replace(placeholder, default)
+                logger.debug(f"[PromptManager] 兜底替换: {placeholder} → 空")
+
         # 添加防护提示（如果有注入风险）
         if additional_context and additional_context.get("protection_prompt"):
             protection = additional_context["protection_prompt"]
