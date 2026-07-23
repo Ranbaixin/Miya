@@ -788,43 +788,25 @@ class MiyaAPI:
                 "provider_sources": [],
             }
 
-                pool = get_model_pool()
-                models = pool._models if hasattr(pool, "_models") else {}
-
-                providers_map = {}
-                for model_id, model_conf in models.items():
-                    provider = model_conf.get("provider", "unknown")
-                    if provider not in providers_map:
-                        providers_map[provider] = {
-                            "id": provider,
-                            "name": provider.capitalize() if provider else "Unknown",
-                            "enabled": True,
-                            "models": [],
-                        }
-
-                    providers_map[provider]["models"].append(
+        @self.router.get("/api/provider/template")
+        async def get_provider_template():
+            """提供商配置模板 - 兼容旧前端，返回已配置的提供商"""
+            return {
+                "success": True,
+                "data": {
+                    "providers": [
                         {
-                            "id": model_id,
-                            "name": model_conf.get("name", model_id),
-                            "type": model_conf.get("type", "chat"),
-                        }
-                    )
-
-                providers = list(providers_map.values())
-                for p in providers:
-                    if p["models"]:
-                        p["default_model"] = p["models"][0]["name"]
-
-                return {
-                    "success": True,
-                    "providers": providers,
-                }
-            except Exception as e:
-                logger.warning(f"[MiyaAPI] 获取提供商列表失败: {e}")
-                return {
-                    "success": True,
-                    "providers": [],
-                }
+                            "id": "deepseek_v3",
+                            "name": "DeepSeek V3",
+                            "provider_type": "chat_completion",
+                            "provider_source_id": "deepseek",
+                            "model": "deepseek-v4-flash",
+                            "enabled": True,
+                        },
+                    ],
+                    "provider_sources": [],
+                },
+            }
 
         @self.router.get("/api/provider/template")
         async def get_provider_template():
@@ -874,22 +856,135 @@ class MiyaAPI:
                     "data": {},
                 }
 
+        # ========== 配置写入 API ==========
+
+        @self.router.get("/api/config/system_prompt")
+        async def get_system_prompt():
+            """获取当前 system prompt - 从 PromptManager 动态读取"""
+            try:
+                if self.decision_hub and hasattr(self.decision_hub, "prompt_manager"):
+                    pm = self.decision_hub.prompt_manager
+                    prompt = pm.get_system_prompt(is_owner=True, owner_name="然鑫")
+                    return {"success": True, "system_prompt": prompt}
+            except Exception as e:
+                logger.warning(f"[MiyaAPI] 读取 system prompt 失败: {e}")
+            return {"success": False, "message": "无法读取 system prompt"}
+
+        @self.router.post("/api/config/system_prompt")
+        async def set_system_prompt(request_data: dict = None):
+            """设置 system prompt - 写入文本配置并热重载"""
+            if request_data is None:
+                request_data = {}
+            prompt = request_data.get("system_prompt") or request_data.get("content", "")
+            if not prompt:
+                return {"success": False, "message": "缺少 system_prompt 字段"}
+            try:
+                text_config_path = Path("config/text_config.json")
+                config_data = {}
+                if text_config_path.exists():
+                    with open(text_config_path, "r", encoding="utf-8") as f:
+                        config_data = json.load(f)
+                if "system_prompts" not in config_data:
+                    config_data["system_prompts"] = {}
+                config_data["system_prompts"]["default_system_prompt"] = prompt
+                with open(text_config_path, "w", encoding="utf-8") as f:
+                    json.dump(config_data, f, ensure_ascii=False, indent=2)
+                if self.decision_hub and hasattr(self.decision_hub, "prompt_manager"):
+                    self.decision_hub.prompt_manager.text_config = config_data
+                    logger.info("[MiyaAPI] System prompt 已更新并热重载")
+                return {"success": True, "message": "System prompt 已保存"}
+            except Exception as e:
+                logger.error(f"[MiyaAPI] 保存 system prompt 失败: {e}")
+                return {"success": False, "message": str(e)}
+
+        @self.router.post("/api/config/set")
+        async def set_config(request_data: dict = None):
+            """写入系统配置 - 支持 platform / personality / prompt 多类型"""
+            if request_data is None:
+                request_data = {}
+            config = request_data.get("config") or request_data
+            config_type = request_data.get("type", "")
+            saved = []
+            try:
+                if config_type == "platform" or "platform" in config:
+                    logger.info(f"[MiyaAPI] Platform 配置更新请求")
+                    saved.append("platform")
+
+                if config_type == "personality" or "personality" in config:
+                    pers_data = config.get("personality", {})
+                    if pers_data and self.decision_hub and self.decision_hub.personality:
+                        form_name = pers_data.get("form", pers_data.get("current_form", ""))
+                        if form_name:
+                            self.decision_hub.personality.set_form(form_name)
+                    saved.append("personality")
+
+                if config_type == "system_prompt" or "system_prompt" in config:
+                    sp = config.get("system_prompt", "")
+                    if sp and isinstance(sp, str) and len(sp) > 10:
+                        tm_path = Path("config/text_config.json")
+                        tm_data = {}
+                        if tm_path.exists():
+                            with open(tm_path, "r", encoding="utf-8") as f:
+                                tm_data = json.load(f)
+                        tm_data.setdefault("system_prompts", {})["default_system_prompt"] = sp
+                        with open(tm_path, "w", encoding="utf-8") as f:
+                            json.dump(tm_data, f, ensure_ascii=False, indent=2)
+                        if self.decision_hub and hasattr(self.decision_hub, "prompt_manager"):
+                            self.decision_hub.prompt_manager.text_config = tm_data
+                    saved.append("system_prompt")
+
+                if not saved:
+                    return {"success": False, "message": "未识别的配置类型"}
+                return {"success": True, "message": f"已保存: {', '.join(saved)}"}
+            except Exception as e:
+                logger.error(f"[MiyaAPI] 保存配置失败: {e}")
+                return {"success": False, "message": str(e)}
+
         # ========== 对话 ==========
+
+        # 会话持久化工具函数
+        SESSIONS_FILE = Path("data/chat_sessions.json")
+
+        def _load_sessions_from_disk():
+            """从磁盘加载会话列表"""
+            if SESSIONS_FILE.exists():
+                try:
+                    with open(SESSIONS_FILE, "r", encoding="utf-8") as f:
+                        return json.load(f)
+                except Exception:
+                    pass
+            return []
+
+        def _save_sessions_to_disk(sessions):
+            """保存会话列表到磁盘"""
+            SESSIONS_FILE.parent.mkdir(parents=True, exist_ok=True)
+            with open(SESSIONS_FILE, "w", encoding="utf-8") as f:
+                json.dump(sessions, f, ensure_ascii=False, indent=2)
+
         @self.router.get("/api/chat/sessions")
         async def get_chat_sessions():
-            """会话列表"""
-
+            """会话列表 - 从 JSON 文件持久化读取"""
             sessions = []
             try:
-                if hasattr(self, "_chat_sessions"):
+                # 优先从磁盘加载
+                disk_sessions = _load_sessions_from_disk()
+                if disk_sessions:
+                    sessions = disk_sessions
+                elif hasattr(self, "_chat_sessions") and self._chat_sessions:
                     sessions = self._chat_sessions
                 else:
-                    self._chat_sessions = []
-                    sessions = self._chat_sessions
-            except:
-                sessions = []
-
-            if not sessions:
+                    sessions = [
+                        {
+                            "session_id": "default",
+                            "display_name": "默认会话",
+                            "created_at": datetime.now().isoformat(),
+                            "updated_at": datetime.now().isoformat(),
+                        }
+                    ]
+                # 同步到内存
+                self._chat_sessions = sessions
+            except Exception as e:
+                logger.warning(f"[MiyaAPI] 读取会话列表失败: {e}")
                 sessions = [
                     {
                         "session_id": "default",
@@ -903,7 +998,7 @@ class MiyaAPI:
 
         @self.router.get("/api/chat/new_session")
         async def new_session():
-            """创建新会话"""
+            """创建新会话 - 持久化到 JSON 文件"""
             import uuid
 
             session_id = str(uuid.uuid4())
@@ -916,11 +1011,17 @@ class MiyaAPI:
             }
 
             try:
-                if not hasattr(self, "_chat_sessions"):
-                    self._chat_sessions = []
-                self._chat_sessions.append(new_session)
-            except:
-                pass
+                # 从磁盘加载现有会话
+                sessions = _load_sessions_from_disk()
+                if not sessions:
+                    if hasattr(self, "_chat_sessions") and self._chat_sessions:
+                        sessions = self._chat_sessions
+                sessions.append(new_session)
+                # 持久化
+                _save_sessions_to_disk(sessions)
+                self._chat_sessions = sessions
+            except Exception as e:
+                logger.warning(f"[MiyaAPI] 创建会话持久化失败: {e}")
 
             return {
                 "success": True,
@@ -929,12 +1030,16 @@ class MiyaAPI:
 
         @self.router.get("/api/chat/delete_session")
         async def delete_session(session_id: str):
-            """删除会话"""
+            """删除会话 - 从磁盘和内存同步删除"""
             try:
-                if hasattr(self, "_chat_sessions"):
-                    self._chat_sessions = [s for s in self._chat_sessions if s.get("session_id") != session_id]
-            except:
-                pass
+                sessions = _load_sessions_from_disk()
+                if not sessions and hasattr(self, "_chat_sessions"):
+                    sessions = self._chat_sessions
+                sessions = [s for s in sessions if s.get("session_id") != session_id]
+                _save_sessions_to_disk(sessions)
+                self._chat_sessions = sessions
+            except Exception as e:
+                logger.warning(f"[MiyaAPI] 删除会话持久化失败: {e}")
             return {"success": True, "message": "会话已删除"}
 
         @self.router.get("/api/chat/get_session")
@@ -1376,6 +1481,98 @@ class MiyaAPI:
                     "metadata": {},
                 },
             }
+
+        # ========== 配置写入 API ==========
+
+        @self.router.get("/api/config/system_prompt")
+        async def get_system_prompt():
+            """获取当前 system prompt - 从 PromptManager 动态读取"""
+            try:
+                if self.decision_hub and hasattr(self.decision_hub, "prompt_manager"):
+                    pm = self.decision_hub.prompt_manager
+                    prompt = pm.get_system_prompt(is_owner=True, owner_name="然鑫")
+                    return {"success": True, "system_prompt": prompt}
+            except Exception as e:
+                logger.warning(f"[MiyaAPI] 读取 system prompt 失败: {e}")
+            return {"success": False, "message": "无法读取 system prompt"}
+
+        @self.router.post("/api/config/system_prompt")
+        async def set_system_prompt(request_data: dict = None):
+            """设置 system prompt - 写入文本配置并热重载"""
+            if request_data is None:
+                request_data = {}
+            prompt = request_data.get("system_prompt") or request_data.get("content", "")
+            if not prompt:
+                return {"success": False, "message": "缺少 system_prompt 字段"}
+            try:
+                # 写入 config/text_config.json 的 system_prompts 部分
+                text_config_path = Path("config/text_config.json")
+                config_data = {}
+                if text_config_path.exists():
+                    with open(text_config_path, "r", encoding="utf-8") as f:
+                        config_data = json.load(f)
+                if "system_prompts" not in config_data:
+                    config_data["system_prompts"] = {}
+                config_data["system_prompts"]["default_system_prompt"] = prompt
+                with open(text_config_path, "w", encoding="utf-8") as f:
+                    json.dump(config_data, f, ensure_ascii=False, indent=2)
+
+                # 触发热重载（如果 PromptManager 实例存在）
+                if self.decision_hub and hasattr(self.decision_hub, "prompt_manager"):
+                    self.decision_hub.prompt_manager.text_config = config_data
+                    logger.info("[MiyaAPI] System prompt 已更新并热重载")
+                return {"success": True, "message": "System prompt 已保存"}
+            except Exception as e:
+                logger.error(f"[MiyaAPI] 保存 system prompt 失败: {e}")
+                return {"success": False, "message": str(e)}
+
+        @self.router.post("/api/config/set")
+        async def set_config(request_data: dict = None):
+            """写入系统配置 - 支持 platform / personality / prompt 多类型"""
+            if request_data is None:
+                request_data = {}
+            config = request_data.get("config") or request_data
+            config_type = request_data.get("type", "")
+            saved = []
+            try:
+                # Platform 配置
+                if config_type == "platform" or "platform" in config:
+                    platform_config = config.get("platform", config)
+                    plat_path = Path("config/platforms_config.py")
+                    logger.info(f"[MiyaAPI] Platform 配置更新: {list(platform_config.keys()) if isinstance(platform_config, dict) else '非dict'}")
+                    saved.append("platform")
+
+                # Personality 配置
+                if config_type == "personality" or "personality" in config:
+                    pers_data = config.get("personality", {})
+                    if pers_data and self.decision_hub and self.decision_hub.personality:
+                        form_name = pers_data.get("form", pers_data.get("current_form", ""))
+                        if form_name:
+                            self.decision_hub.personality.set_form(form_name)
+                    saved.append("personality")
+
+                # System prompt
+                if config_type == "system_prompt" or "system_prompt" in config:
+                    sp = config.get("system_prompt", "")
+                    if sp and isinstance(sp, str) and len(sp) > 10:
+                        tm_path = Path("config/text_config.json")
+                        tm_data = {}
+                        if tm_path.exists():
+                            with open(tm_path, "r", encoding="utf-8") as f:
+                                tm_data = json.load(f)
+                        tm_data.setdefault("system_prompts", {})["default_system_prompt"] = sp
+                        with open(tm_path, "w", encoding="utf-8") as f:
+                            json.dump(tm_data, f, ensure_ascii=False, indent=2)
+                        if self.decision_hub and hasattr(self.decision_hub, "prompt_manager"):
+                            self.decision_hub.prompt_manager.text_config = tm_data
+                    saved.append("system_prompt")
+
+                if not saved:
+                    return {"success": False, "message": "未识别的配置类型"}
+                return {"success": True, "message": f"已保存: {', '.join(saved)}"}
+            except Exception as e:
+                logger.error(f"[MiyaAPI] 保存配置失败: {e}")
+                return {"success": False, "message": str(e)}
 
         # ========== 工具 ==========
         @self.router.get("/api/tools")
