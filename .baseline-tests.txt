@@ -1,0 +1,145 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "F:\PY\Lib\site-packages\pytest\__main__.py", line 9, in <module>
+    raise SystemExit(pytest.console_main())
+                     ~~~~~~~~~~~~~~~~~~~^^
+  File "F:\PY\Lib\site-packages\_pytest\config\__init__.py", line 201, in console_main
+    code = main()
+  File "F:\PY\Lib\site-packages\_pytest\config\__init__.py", line 175, in main
+    ret: ExitCode | int = config.hook.pytest_cmdline_main(config=config)
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "F:\PY\Lib\site-packages\pluggy\_hooks.py", line 512, in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\PY\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\PY\Lib\site-packages\pluggy\_callers.py", line 167, in _multicall
+    raise exception
+  File "F:\PY\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+    res = hook_impl.function(*args)
+  File "F:\PY\Lib\site-packages\_pytest\main.py", line 336, in pytest_cmdline_main
+    return wrap_session(config, _main)
+  File "F:\PY\Lib\site-packages\_pytest\main.py", line 331, in wrap_session
+    config._ensure_unconfigure()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "F:\PY\Lib\site-packages\_pytest\config\__init__.py", line 1131, in _ensure_unconfigure
+    self._cleanup_stack.close()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "F:\PY\Lib\contextlib.py", line 627, in close
+    self.__exit__(None, None, None)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "F:\PY\Lib\contextlib.py", line 619, in __exit__
+    raise exc
+  File "F:\PY\Lib\contextlib.py", line 604, in __exit__
+    if cb(*exc_details):
+       ~~^^^^^^^^^^^^^^
+  File "F:\PY\Lib\contextlib.py", line 482, in _exit_wrapper
+    callback(*args, **kwds)
+    ~~~~~~~~^^^^^^^^^^^^^^^
+  File "F:\PY\Lib\site-packages\_pytest\capture.py", line 778, in stop_global_capturing
+    self._global_capturing.pop_outerr_to_orig()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "F:\PY\Lib\site-packages\_pytest\capture.py", line 659, in pop_outerr_to_orig
+    out, err = self.readouterr()
+               ~~~~~~~~~~~~~~~^^
+  File "F:\PY\Lib\site-packages\_pytest\capture.py", line 706, in readouterr
+    out = self.out.snap() if self.out else ""
+          ~~~~~~~~~~~~~^^
+  File "F:\PY\Lib\site-packages\_pytest\capture.py", line 591, in snap
+    self.tmpfile.seek(0)
+    ~~~~~~~~~~~~~~~~~^^^
+ValueError: I/O operation on closed file.
+============================= test session starts =============================
+platform win32 -- Python 3.13.6, pytest-8.4.2, pluggy-1.6.0
+rootdir: F:\Ranxin\Miya
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.10.0, langsmith-0.3.45, cov-7.1.0
+collected 66 items / 1 error
+
+<Dir Miya>
+  <Dir tests>
+    <Dir core>
+      <Module test_config_hot_reload.py>
+        <Class TestConfigHotReload>
+          <Function test_init>
+          <Function test_is_value_changed_none>
+          <Function test_is_value_changed_dict>
+          <Function test_is_value_changed_list>
+          <Function test_is_value_changed_scalar>
+          <Function test_is_dict_changed>
+          <Function test_deep_copy_config>
+          <Function test_detect_config_changes>
+          <Function test_apply_updates_queue_manager>
+          <Function test_apply_updates_personality>
+          <Function test_update_webapi_config>
+          <Function test_update_terminal_config>
+          <Function test_update_iot_config>
+          <Function test_trigger_config_update_event>
+          <Function test_start_without_watcher>
+          <Function test_stop_without_observer>
+    <Module test_cognitive.py>
+      <Function test_jobqueue_enqueue_dequeue>
+      <Function test_jobqueue_retry_flow>
+      <Function test_jobqueue_fail>
+      <Function test_profile_storage_write_read>
+      <Function test_profile_storage_delete>
+      <Function test_cognitive_service_record_observation>
+      <Function test_cognitive_service_add_event>
+      <Function test_cognitive_service_build_context>
+      <Function test_cognitive_service_update_profile>
+      <Function test_cognitive_service_empty_search>
+      <Function test_profile_storage_nonexistent>
+    <Module test_dynamic_system.py>
+      <Function test_dynamic_system>
+      <Function test_time_awareness_plugin>
+    <Module test_emoji_manager.py>
+      <Function test_emoji_config>
+      <Function test_emoji_directory>
+      <Function test_qq_emoji_config>
+      <Function test_message_handler_poke>
+    <Module test_enhanced_memory.py>
+      <Function test_enhanced_memory>
+    <Module test_memory_core.py>
+      <Function test_1_init>
+      <Function test_2_store>
+      <Function test_3_retrieve>
+      <Function test_4_update_delete>
+      <Function test_5_profile>
+      <Function test_6_adapter>
+      <Function test_7_auto_extract>
+      <Function test_8_convenience>
+      <Function test_9_performance>
+      <Function test_10_edge_cases>
+    <Module test_memory_system.py>
+      <Function test_memory_system>
+    <Module test_memory_verify.py>
+      <Function test_all>
+    <Module test_miya_memory.py>
+      <Function test_basic_operations>
+      <Function test_retrieval>
+      <Function test_update_delete>
+      <Function test_statistics>
+      <Function test_adapter>
+      <Function test_auto_extract>
+      <Function test_cross_platform>
+    <Module test_proactive_chat.py>
+      <Function test_proactive_chat>
+    <Module test_qq_config.py>
+      <Function test_qq_config_loader>
+      <Function test_unified_qq_config>
+      <Function test_qq_net_config_loading>
+      <Function test_yaml_config_file>
+      <Function test_config_structure>
+    <Module test_skills.py>
+      <Function test_auto_pipeline_register_and_match>
+      <Function test_auto_pipeline_disabled_rule>
+      <Function test_auto_pipeline_priority_order>
+      <Function test_auto_pipeline_list_rules>
+      <Function test_hot_reload_detect_change>
+      <Function test_hot_reload_no_change>
+      <Function test_intro_generator_hash>
+
+==================== 66 tests collected, 1 error in 0.80s =====================

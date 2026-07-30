@@ -1,0 +1,6 @@
+2717	BLE001	blind-except
+ 168	S110  	try-except-pass
+  92	E722  	bare-except
+  37	S112  	try-except-continue
+   6	      	invalid-syntax
+Found 3020 errors.

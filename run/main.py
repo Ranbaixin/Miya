@@ -556,6 +556,8 @@ class Miya:
 
     def _start_api_server(self):
         """启动 API 服务器（后台线程）"""
+        if os.getenv("MIYA_SMOKE"):
+            return  # 冒烟测试模式 —— 不占端口
         try:
             import threading
             from pathlib import Path
