@@ -176,10 +176,25 @@ class IntelligentExecutor:
     async def _safe_execution(self, parsed_command: Dict,
                              context: Dict,
                              safety_report: Dict) -> Dict[str, Any]:
-        """安全执行（需要确认）"""
-        # 这里可以实现确认逻辑
-        # 暂时使用直接执行
-        return await self._direct_execution(parsed_command, context)
+        """安全执行（需要确认）
+
+        安全性: fail-closed。
+        确认通道未实现之前，阻止所有标记为 SAFE 模式的操作。
+        这比静默直通 _direct_execution 更安全 ——
+        最坏后果是自动化流程被阻止，而非未经确认就执行。
+        """
+        command = parsed_command.get("command", str(parsed_command)[:200])
+        return {
+            "success": False,
+            "output": "",
+            "error": (
+                "安全确认通道未实现，此操作已被阻止。"
+                f"待执行命令: {command}。请人工审核后手动执行。"
+            ),
+            "exit_code": -1,
+            "execution_time": 0,
+            "requires_confirmation": True,
+        }
     
     async def _simulate_execution(self, parsed_command: Dict,
                                  context: Dict) -> Dict[str, Any]:

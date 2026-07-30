@@ -178,10 +178,11 @@ class BilibiliMusicSource(MusicSource):
         self.download_dir: str = ""
 
     def initialize(self, config: dict) -> bool:
+        from core.singing._paths import find_singing_python
         self.timeout = config.get("timeout", 30)
         self.python_exe = config.get(
             "bilibili_python",
-            r"D:\AIvoice\RVC20240604Nvidia50x0\RVC20240604Nvidia50x0\runtime\python.exe",
+            find_singing_python() or "",
         )
         self.download_dir = config.get("download_dir", "data/singing_bili_dl")
         os.makedirs(self.download_dir, exist_ok=True)

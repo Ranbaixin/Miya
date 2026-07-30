@@ -181,9 +181,9 @@ class DingTalkPlatform(WebhookPlatform):
         if not self._client_id:
             return True
         try:
-            import sys
-
-            sys.path.insert(0, r"D:\AI_MIYA_Facyory\dingtalk-stream-sdk-python")
+            # P4 清理: 钉钉平台将被下线，此文件届时整体删除。
+            # 在删除前，dingtalk_stream SDK 可通过 pip install dingtalk-stream 安装，
+            # 不再依赖 D:\AI_MIYA_Facyory 的硬编码路径。
             from dingtalk_stream import ChatbotHandler, Credential, DingTalkStreamClient
 
             platform = self

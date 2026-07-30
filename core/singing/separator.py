@@ -172,26 +172,32 @@ class UVR5Separator(VocalSeparator):
         self.timeout: int = 600
 
     def initialize(self, config: dict) -> bool:
+        from core.singing._paths import find_singing_python
         self.python_exe = config.get(
             "uvr5_python",
-            r"D:\AIvoice\GPT-SoVITS-v2pro-20250604-nvidia50\GPT-SoVITS-v2pro-20250604-nvidia50\runtime\python.exe",
+            find_singing_python() or "",
         )
         self.cli_script = config.get(
             "uvr5_cli",
             os.path.join(os.path.dirname(os.path.abspath(__file__)), "uvr5_cli.py"),
         )
-        self.models = config.get(
-            "uvr5_models",
-            [
+        from core.singing._paths import find_models_dir
+        _models_dir = find_models_dir()
+        _default_models = []
+        if _models_dir:
+            _default_models = [
                 {
                     "type": "bs_roformer",
-                    "path": r"D:\AIvoice\GPT-SoVITS-v2pro-20250604-nvidia50\GPT-SoVITS-v2pro-20250604-nvidia50\tools\uvr5\uvr5_weights\model_bs_roformer_ep_317_sdr_12.9755.ckpt",
+                    "path": os.path.join(_models_dir, "tools", "uvr5", "uvr5_weights",
+                                         "model_bs_roformer_ep_317_sdr_12.9755.ckpt"),
                 },
                 {
                     "type": "vr",
-                    "path": r"D:\AIvoice\GPT-SoVITS-v2pro-20250604-nvidia50\GPT-SoVITS-v2pro-20250604-nvidia50\tools\uvr5\uvr5_weights\HP5_only_main_vocal.pth",
+                    "path": os.path.join(_models_dir, "tools", "uvr5", "uvr5_weights",
+                                         "HP5_only_main_vocal.pth"),
                 },
-            ],
+            ]
+        self.models = config.get("uvr5_models", _default_models)
         )
         self.device = config.get("uvr5_device", "cuda")
         self.timeout = config.get("uvr5_timeout", 600)
@@ -365,13 +371,13 @@ async def _ffmpeg_fallback(
 
 
 def _find_ffmpeg() -> str:
-    known = [
-        "ffmpeg",
-        r"D:\AIvoice\RVC20240604Nvidia50x0\RVC20240604Nvidia50x0\ffmpeg.exe",
-        r"D:\AIvoice\RVC20240604Nvidia50x0\RVC20240604Nvidia50x0\ffmpeg\ffmpeg.exe",
-    ]
+    """查找 ffmpeg: 优先系统 PATH，其次 MIYA_FFMPEG_PATH 环境变量。"""
     import shutil as _su
-
+    import os as _os
+    known = ["ffmpeg"]
+    env_path = _os.getenv("MIYA_FFMPEG_PATH", "")
+    if env_path:
+        known.append(env_path)
     for p in known:
         if _su.which(p):
             return p

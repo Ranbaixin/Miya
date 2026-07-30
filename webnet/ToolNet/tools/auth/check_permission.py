@@ -41,22 +41,23 @@ class CheckPermissionTool(BaseTool):
         }
 
     async def execute(self, args: Dict[str, Any], context) -> str:
-        """执行权限检查"""
-        try:
-            # 占位实现 - 权限检查暂时允许执行
-            args.get('user_id')
-            args.get('permission')
-            args.get('list_mode', False)
-            
-            return json.dumps({
-                "success": True,
-                "allowed": True,
-                "message": "权限检查功能占位实现，暂允许所有操作"
-            }, ensure_ascii=False)
-                
-        except Exception as e:
-            logger.error(f"权限检查失败: {e}")
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            }, ensure_ascii=False)
+        """执行权限检查
+
+        安全性: fail-closed 默认拒绝。
+        真实现接入前 (P6)，所有权限检查返回 False。
+        最坏后果是自动化流程被阻止，而不是越权执行。
+        """
+        user_id = args.get('user_id', 'unknown')
+        permission = args.get('permission', 'unknown')
+        logger.warning(
+            f"[SECURITY] 权限检查不可用, 默认拒绝: user={user_id} perm={permission}"
+        )
+        return json.dumps({
+            "success": False,
+            "allowed": False,
+            "error": "permission_check_unavailable",
+            "message": (
+                "权限检查服务暂不可用，出于安全默认拒绝此操作。"
+                "请人工确认后再执行。"
+            ),
+        }, ensure_ascii=False)

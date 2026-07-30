@@ -375,11 +375,10 @@ class SingingWorkflow:
         def do_mix():
             try:
                 import os as _os
+                from core.singing._paths import find_ffmpeg
 
-                _ffmpeg_path = (
-                    r"D:\AIvoice\RVC20240604Nvidia50x0\RVC20240604Nvidia50x0\ffmpeg.exe"
-                )
-                if _os.path.exists(_ffmpeg_path):
+                _ffmpeg_path = find_ffmpeg()
+                if _ffmpeg_path and _os.path.exists(_ffmpeg_path):
                     _os.environ["PATH"] = (
                         _os.path.dirname(_ffmpeg_path)
                         + ";"

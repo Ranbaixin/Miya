@@ -101,9 +101,10 @@ class BuiltinSingingEngine(SingingEngine):
             self.mix_chord_enabled = config.get("mix_chord_enabled", True)
             self.mix_chord_volume = config.get("mix_chord_volume", 50)
 
+            from core.singing._paths import find_singing_python
             self.uvr5_python = config.get(
                 "uvr5_python",
-                r"D:\AIvoice\GPT-SoVITS-v2pro-20250604-nvidia50\GPT-SoVITS-v2pro-20250604-nvidia50\runtime\python.exe",
+                find_singing_python() or "",
             )
             self.uvr5_cli = config.get(
                 "uvr5_cli",
@@ -154,7 +155,7 @@ class BuiltinSingingEngine(SingingEngine):
                 demucs_cfg = {
                     "demucs_python": config.get(
                         "demucs_python",
-                        r"D:\AIvoice\RVC20240604Nvidia50x0\RVC20240604Nvidia50x0\runtime\python.exe",
+                        find_singing_python() or "",
                     ),
                     "demucs_models": config.get("demucs_models", ["htdemucs_ft", "htdemucs"]),
                     "demucs_timeout": config.get("demucs_timeout", 300),
@@ -237,7 +238,7 @@ class BuiltinSingingEngine(SingingEngine):
         try:
             _sp.run(
                 [
-                    shutil.which("ffmpeg") or r"D:\AIvoice\RVC20240604Nvidia50x0\RVC20240604Nvidia50x0\ffmpeg.exe",
+                    shutil.which("ffmpeg") or os.getenv("MIYA_FFMPEG_PATH") or "ffmpeg",
                     "-y",
                     "-i",
                     src_abs,

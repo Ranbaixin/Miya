@@ -3,9 +3,10 @@ import os
 import sys
 import time
 
-base = (
-    r"D:\AIvoice\GPT-SoVITS-v2pro-20250604-nvidia50\GPT-SoVITS-v2pro-20250604-nvidia50"
-)
+base = os.getenv("MIYA_SINGING_MODELS_DIR", "")
+if not base:
+    print("ERROR: MIYA_SINGING_MODELS_DIR 环境变量未设置", file=sys.stderr)
+    sys.exit(1)
 sys.path.insert(0, base)
 sys.path.insert(0, os.path.join(base, "tools", "uvr5"))
 os.chdir(base)
