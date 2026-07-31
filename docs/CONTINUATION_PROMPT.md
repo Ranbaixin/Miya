@@ -41,76 +41,37 @@
 
 ## 待完成（本次会话目标）
 
-### P9 — 异常吞噬治理（详见 `docs/PHASE9_EXCEPTION_SWALLOWING.md`）
+### P9 — 异常吞噬治理 ✅（2026-07-31 完成，4 个 Sprint 独立提交）
 
-**现状（2026-07-31 ruff 实测，`select S110,S112,BLE001,E722`）**：
-- E722 裸 `except:` **96 处**
-- S110 try-except-pass **124 处**
-- S112 try-except-continue **17 处**
-- BLE001 盲 `except Exception`（多数已有日志）**1379 处**
+**治理结果**：memory/、core/unified_platform_impl/、hub/、webnet/、core/ 共
+**280+ 文件、约 1600 处** S110/S112/BLE001/E722 违规清零，全部从 per-file-ignores
+豁免表摘除。豁免表仅剩范围外目录（scripts/mcpserver/tests/plugins/utils/config/
+setup/run/examples）的 57 条历史条目（之后只减不增）。
 
-**治理规则（三级分类）**：
+**提交**：
+- `cdd785d2` Sprint 1 止血：ruff 规则激活 + 豁免表 + CI invariants gate + 2 处语法错误修复
+- `9ea9a0eb` Sprint 2：memory/ + unified_platform_impl/（含计划 #1/#2/#3 改 raise）
+- `ae8e146c` Sprint 3：hub/ + webnet/（保守策略，0 处新增 raise）
+- `8e0ba05a` Sprint 4：core/ 其余 + `scripts/scan_swallowed_exceptions.py`
 
-| 级 | 判定 | 处置 |
-|---|---|---|
-| **Level 1 必须上抛** | 数据写入、消息发送、配置加载、权限判定 | `logger.exception()` + `raise` |
-| **Level 2 记日志即可** | 可选功能降级（TTS、表情包、Live2D） | `logger.warning(..., exc_info=True)` |
-| **Level 3 确实可吞** | 清理路径、best-effort 通知 | 加 `# noqa: S110 — <理由>` |
+**关键修复（被吞异常隐藏的 bug）**：
+- `core/web_api/miya_api.py` 缺 `from pathlib import Path` 导致 NameError 被宽 except
+  吞掉 → 168 条路由从未挂载。已修复并验证
+- `core/web_api/auth.py` 权限校验异常静默放行（fail-open）→ 改为 401 拒绝
+- `core/web_api/miya_api.py` 会话创建/删除/重命名假成功（计划 #9）→ 检查持久化结果
+- `skills/marketplace.py` 写盘失败改 logger.exception + raise（Level 1）
 
-**Sprint 1: 止血 — ruff baseline 模式（~1d）**
-1. `pyproject.toml`：从 `extend-ignore` **移除 `E722`**；`select` 加 `"S110", "S112", "BLE001"`
-2. 为当前存量生成 `[tool.ruff.lint.per-file-ignores]` 豁免表（一次性全量，之后只减不增）
-3. CI 加 `invariants` job：`ruff check . --select S110,S112,BLE001,E722 --diff`（只查 diff 新增）
-4. 验收：`ruff check . --select S110,S112,BLE001,E722` 有输出但全部来自豁免
+**验收**：`ruff check . --select S110,S112,BLE001,E722` 全绿（仅剩豁免）；
+`scan_swallowed_exceptions.py --min-score 8` 输出为空；`pytest tests/unit/` 27 passed；
+smoke 5/5；import_graph exit 0。
 
-**Sprint 2: memory/ + core/unified_platform_impl/（~1.5d）** — 前置：P8 记忆测试已就位
-逐文件：读 → 理解每个 `except` 意图 → Level 1 改 `raise` → 跑 `uv run pytest tests/unit/memory/` 确认不回归 → 从 `per-file-ignores` 摘除该文件。
-**顺序**：`memory/core.py` → `core/unified_platform_impl/message_mixin.py` → `core/unified_platform_impl/onebot_platform.py`
-
-**Sprint 3: hub/ + webnet/（~1.5d）**
-同上流程，但 `hub/decision_hub.py` 和 `webnet/` 下多为 Level 2（可选功能降级），大规模改 raise 风险高。**优先 Level 1，其余加日志**。
-
-**Sprint 4: core/ 其余（~1.5d）**
-按文件大小和引用频率排序，优先高频调用文件。**新建 `scripts/scan_swallowed_exceptions.py`**（AST 评分：写操作 +5 / 网络调用 +3 / 权限 +4 / 空 pass +2 / 裸 except +2，总分 ≥8 打印）。Level 3 只加注释不改行为。
-
-**P9 最危险 10 处（行号已核实准确，优先处理）**：
-
-| # | 文件:行 | 问题 | 处置 |
-|---|---|---|---|
-| 1 | `memory/core.py` ~2006 | 记忆衰减写盘失败被双层 `except: pass` 吞 | `logger.error` + `raise` |
-| 2 | `memory/core.py` ~1892 | 归档写盘失败被吞但仍计数成功 | `logger.error` + `raise` |
-| 3 | `memory/core.py` ~707, ~1649 | 裸 `except:` 导致记忆被错误过滤 | `except (TypeError, ValueError)` 精确捕获 |
-| 4 | `core/web_api/miya_api.py` ~949 | 会话列表 `json.load` 失败被吞 | `logger.exception` + 返回 500 |
-| 5 | `core/unified_platform_impl/message_mixin.py` ~111 | `handle_session_end` 失败被吞 | `logger.error` + `raise` |
-| 6 | `core/unified_platform_impl/message_mixin.py` ~124 | `lifebook.record_interaction` 失败被吞 | `logger.warning`（Level 2） |
-| 7 | `hub/decision_hub.py` ~1557 | 灵魂模型客户端创建失败被吞 | `logger.error` + `raise` |
-| 8 | `core/proactive_chat.py` ~634 | 主动聊天配置加载失败被吞 | `logger.error` + `raise` |
-| 9 | `core/web_api/miya_api.py` ~1071 | 会话重命名/删除假成功 | 检查返回值，失败返回 4xx |
-| 10 | `core/web_api/miya_api.py` ~2680 | 已在 P6 修复，跳过 | — |
-
-**P9 验收**：
-```bash
-# Sprint 1
-ruff check . --select S110,S112,BLE001,E722
-# 期望: 有输出但全部来自 per-file-ignores 豁免
-
-# Sprint 2
-ruff check memory/ core/unified_platform_impl/ --select S110,S112,BLE001,E722
-# 期望: 无输出
-uv run pytest tests/unit/memory/ -q
-# 期望: 全绿
-
-# Sprint 4
-uv run python scripts/scan_swallowed_exceptions.py --min-score 8
-# 期望: 空
-uv run pytest tests/unit/ -q
-# 期望: P8 的 27 个测试全部仍绿
-```
-
-**P9 风险与缓解**：`pass → raise` 让静默降级路径崩溃 → 必须依赖 P8 测试安全网；Level 2 只加日志不改 raise；每批独立 commit；`per-file-ignores` 只减不增。
-
----
-
+**遗留 issue（P9 或后续处理，本次未做）**：
+1. `core/platforms_config.py` 双轨制 —— 与 `config/platforms_config.py` 两套 API；
+   仅被 4 个死代码文件引用。建议删除 core 版 + 4 死消费方，移 test_config_topology 进 tests/unit/config/
+2. 平台 `send_message` 统一契约缺失 —— 契约测试已记录现状快照
+3. `set_global_audit_logger` 与装饰器单例脱节（仅保留兼容）
+4. 范围外目录 57 条豁免（scripts/mcpserver/tests/plugins/utils/config/setup/run/examples）
+   若后续收紧规则需逐目录治理
 ## 关键命令
 
 ```bash
@@ -121,7 +82,8 @@ uv run python scripts/smoke_test.py --fast     # 快速验证 (5/5 必须通过)
 uv run python scripts/import_graph.py --check  # 静态可达性 (exit 0 必须通过)
 uv run pytest tests/unit/ -q                   # P8 基线 (27 passed)
 uv run pytest tests/unit/memory/ -q            # 记忆测试 (P9 Sprint 2 安全网)
-ruff check . --select S110,S112,BLE001,E722    # P9 异常吞噬存量
+ruff check . --select S110,S112,BLE001,E722    # P9 后应全绿（仅剩范围外豁免）
+uv run python scripts/scan_swallowed_exceptions.py --min-score 8   # P9 危险站点扫描（应为空）
 ```
 
 > ⚠️ 所有 python 命令必须用 `uv run`（`uv sync --group dev` 后可用）。裸 `python`/`venv/` 无项目依赖。
@@ -145,8 +107,3 @@ ruff check . --select S110,S112,BLE001,E722    # P9 异常吞噬存量
 - `beautifulsoup4` 已在主依赖
 - pytest 收集有个已知 1 error（`_pytest/capture.py` "I/O operation on closed file"，pytest 9.x 自身问题，非项目代码），不影响测试执行
 
-## 遗留 issue（P9 或后续处理）
-
-1. **`core/platforms_config.py` 双轨制** —— 与 `config/platforms_config.py` 是两套 API（`get_default_platforms` vs `get_enabled_platforms`）；仅被 4 个死代码文件引用（`core/dashboard_api.py` / `core/miya_core.py` / `core/miya_system.py` / `core/miya_unified_config.py`，均 0 活跃调用）。`tests/test_config_topology.py::test_only_one_platforms_config` 因此失败。**建议 P9 清理时删除 core 版 + 4 个死消费方，再把 test_config_topology 移入 tests/unit/config/**
-2. **平台 `send_message` 统一契约缺失** —— 所有平台均未覆写 `BasePlatform.send_message`；Telegram/Discord/Lark 无发送实现。契约测试已记录现状快照，后续需补齐发送能力
-3. **`set_global_audit_logger` 与装饰器单例脱节**（P7.3 后无调用者，仅保留兼容）
