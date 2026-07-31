@@ -62,16 +62,21 @@ setup/run/examples）的 57 条历史条目（之后只减不增）。
 - `skills/marketplace.py` 写盘失败改 logger.exception + raise（Level 1）
 
 **验收**：`ruff check . --select S110,S112,BLE001,E722` 全绿（仅剩豁免）；
-`scan_swallowed_exceptions.py --min-score 8` 输出为空；`pytest tests/unit/` 27 passed；
+`scan_swallowed_exceptions.py --min-score 8` 输出为空；`pytest tests/unit/` 30 passed；
 smoke 5/5；import_graph exit 0。
 
-**遗留 issue（P9 或后续处理，本次未做）**：
-1. `core/platforms_config.py` 双轨制 —— 与 `config/platforms_config.py` 两套 API；
-   仅被 4 个死代码文件引用。建议删除 core 版 + 4 死消费方，移 test_config_topology 进 tests/unit/config/
-2. 平台 `send_message` 统一契约缺失 —— 契约测试已记录现状快照
-3. `set_global_audit_logger` 与装饰器单例脱节（仅保留兼容）
-4. 范围外目录 57 条豁免（scripts/mcpserver/tests/plugins/utils/config/setup/run/examples）
+**后续提交（P9 验收后，2026-08-01）**：
+- `32f82e7d` 修复 6 处既有非 P9 lint 错误（F841/E401/E701）—— CI quality-checks 变绿
+- `2a2ee4b8` 修复收集错误（test_queue_manager 孤儿导入）+ CI unit-tests 对齐 tests/unit/
+- `8aac954d` 清理 platforms_config 双轨制死代码（遗留 issue #1）+ 迁移拓扑测试
+
+**遗留 issue（P9 或后续处理）**：
+1. 平台 `send_message` 统一契约缺失 —— 契约测试已记录现状快照
+2. `set_global_audit_logger` 与装饰器单例脱节（仅保留兼容）
+3. 范围外目录 57 条豁免（scripts/mcpserver/tests/plugins/utils/config/setup/run/examples）
    若后续收紧规则需逐目录治理
+4. `tests/` 根目录遗留失败测试（test_skills/test_miya_memory/test_memory_core 等，
+   引用 P6 已删除模块）—— CI 已切到 tests/unit/，可择机清理
 ## 关键命令
 
 ```bash
@@ -101,9 +106,14 @@ uv run python scripts/scan_swallowed_exceptions.py --min-score 8   # P9 危险�
 ## 环境状态（2026-07-31 校准，已就绪）
 
 - 项目实际 Python **3.11.x**；正确运行方式 `uv run`（hatch build 配置已修复）
-- pytest 在 `[dependency-groups] dev`，需 `uv sync --group dev`
+- pytest 在 `[dependency-groups] dev`，需 `uv sync --group dev`；pyproject 与
+  `setup/dependencies/dev.txt` 双源均 pin `pytest>=7.4.0,<9`（装 8.4.2）
+- **CI unit-tests 只跑 `tests/unit/`**（P8/P9 可信回归基线）；`tests/` 根目录
+  遗留失败测试（引用已删模块的死代码，如 test_skills/test_miya_memory 等）
+  为独立清理项，不阻塞 CI
 - `run/`、`utils/` 已是正规包（`__init__.py`），editable 用 `.pth` 链接源目录，**改源码即时生效**
 - `webnet/ToolNet/tools/__init__.py` 已惰性化（不再强制加载全部可选依赖）
 - `beautifulsoup4` 已在主依赖
-- pytest 收集有个已知 1 error（`_pytest/capture.py` "I/O operation on closed file"，pytest 9.x 自身问题，非项目代码），不影响测试执行
+- pytest 收集错误已解决（根因是 `tests/test_queue_manager.py` 孤儿导入
+  `services.queue_manager`，已改为 importorskip 守护；「pytest 9.x 问题」诊断有误）
 
