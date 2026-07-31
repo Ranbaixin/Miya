@@ -41,6 +41,35 @@ jobs:
       run: bandit -r core/ hub/ run/ -ll -f custom
       continue-on-error: true
 
+  invariants:
+    name: Exception Swallowing Invariants
+    runs-on: ubuntu-latest
+    needs: quality-checks
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install ruff
+      run: pip install "ruff>=0.14.0,<0.15.0"
+
+    # P9 防线：存量违规已被 per-file-ignores 一次性豁免，本 job 只检查
+    # diff 实际新增的行是否引入新的 S110/S112/BLE001/E722 违规（豁免表只减不增）。
+    - name: Check for new exception-swallowing violations
+      env:
+        BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
+      run: |
+        BASE="${BASE_REF:-HEAD~1}"
+        echo "diff base: ${BASE}"
+        python scripts/check_new_swallowed.py "$BASE"
+
   dead-code-guard:
     name: Dead Code Guard
     runs-on: ubuntu-latest

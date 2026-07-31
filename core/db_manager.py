@@ -94,7 +94,7 @@ class DatabaseManager:
             )
         """)
 
-        cursor.execute("""
+            cursor.execute("""
             CREATE TABLE IF NOT EXISTS conversation_messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 session_id TEXT NOT NULL,
@@ -104,15 +104,15 @@ class DatabaseManager:
                 metadata TEXT,
                 FOREIGN KEY (session_id) REFERENCES sessions(session_id)
             )
-        """)
+            """)
 
-        cursor.execute("""
+            cursor.execute("""
             CREATE TABLE IF NOT EXISTS config (
                 key TEXT PRIMARY KEY,
                 value TEXT,
                 updated_at TEXT NOT NULL
             )
-        """)
+            """)
 
         finally:
             cursor.close()

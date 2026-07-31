@@ -198,7 +198,6 @@ class UVR5Separator(VocalSeparator):
                 },
             ]
         self.models = config.get("uvr5_models", _default_models)
-        )
         self.device = config.get("uvr5_device", "cuda")
         self.timeout = config.get("uvr5_timeout", 600)
         self.is_initialized = True
