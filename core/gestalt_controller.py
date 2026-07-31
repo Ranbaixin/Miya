@@ -278,7 +278,6 @@ class GestaltController:
 
 # 全局单例
 _gestalt_controller: Optional[GestaltController] = None
-_gestalt_enhanced: Optional[Any] = None
 
 
 def get_gestalt_controller() -> GestaltController:
@@ -293,22 +292,6 @@ def get_gestalt_controller() -> GestaltController:
     return _gestalt_controller
 
 
-def get_gestalt_controller_enhanced() -> Any:
-    """
-    获取增强版格式塔控制器
-    """
-    global _gestalt_enhanced
-
-    try:
-        from core.gestalt_enhanced import (
-            get_gestalt_controller_enhanced as enhanced_getter,
-        )
-
-        return enhanced_getter()
-    except ImportError:
-        return get_gestalt_controller()
-
-
 async def initialize_gestalt(tool_subnet=None) -> GestaltController:
     """
     初始化格式塔控制器
@@ -321,15 +304,3 @@ async def initialize_gestalt(tool_subnet=None) -> GestaltController:
     await controller.initialize(tool_subnet)
 
     return controller
-
-
-async def initialize_gestalt_enhanced(tool_subnet=None, mcp_config: Any = None) -> Any:
-    """
-    初始化增强版格式塔控制器
-    """
-    try:
-        from core.gestalt_enhanced import initialize_gestalt_enhanced as enhanced_init
-
-        return await enhanced_init(tool_subnet, mcp_config)
-    except ImportError:
-        return await initialize_gestalt(tool_subnet)

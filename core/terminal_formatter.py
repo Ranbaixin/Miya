@@ -144,7 +144,7 @@ class TerminalFormatter:
     @classmethod
     def tool_call(cls, tool_name: str, args: dict = None) -> str:
         """工具调用信息 — 天蓝图标 + 白色名称"""
-        from core.gestalt import get_gestalt_controller
+        from core.gestalt_controller import get_gestalt_controller
 
         gestalt = get_gestalt_controller()
         tool_source = gestalt.get_tool_source(tool_name)
