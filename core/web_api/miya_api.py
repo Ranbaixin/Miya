@@ -2689,7 +2689,7 @@ class MiyaAPI:
         try:
             if hasattr(self.decision_hub, "emotion") and self.decision_hub.emotion:
                 return self.decision_hub.emotion.get_emotion_state()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 状态获取为 best-effort，失败返回回退字典
             logger.warning(f"获取情绪状态失败: {e}", exc_info=True)
         return {
             "emotion_name": "unknown",
@@ -2704,7 +2704,7 @@ class MiyaAPI:
         try:
             if hasattr(self.decision_hub, "personality") and self.decision_hub.personality:
                 return self.decision_hub.personality.get_profile()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 状态获取为 best-effort，失败返回回退字典
             logger.warning(f"获取人格状态失败: {e}", exc_info=True)
         return {"current_personality": "unknown", "traits": {}, "available": False}
 
@@ -2713,7 +2713,7 @@ class MiyaAPI:
         try:
             if hasattr(self.decision_hub, "memory_engine") and self.decision_hub.memory_engine:
                 return self.decision_hub.memory_engine.get_memory_stats()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 状态获取为 best-effort，失败返回回退字典
             logger.warning(f"获取记忆统计失败: {e}", exc_info=True)
         return {"total": None, "available": False, "error": "记忆统计不可用"}
 
