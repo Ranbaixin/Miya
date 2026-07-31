@@ -98,7 +98,7 @@ class ToolAdapter:
             self.enable_native = True
             self.logger.info("✅ 已启用原生M-Link模式")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 启用原生模式失败已记录日志
             self.logger.error(f"启用原生模式失败: {e}")
             self.enable_native = False
 
@@ -150,7 +150,7 @@ class ToolAdapter:
                         # 添加降级提示
                         result += "\n\n[注: 由于跨端工具不可用，已使用替代方式执行]"
                         break
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 降级工具失败已记录日志
                     logger.warning(f"[降级机制] 降级工具 {fallback_tool} 也失败: {e}")
                     continue
             else:
@@ -299,14 +299,14 @@ class ToolAdapter:
                         # 兜底：尝试新版签名
                         result = await tool.execute(args, tool_context)
 
-                except Exception:
+                except Exception:  # noqa: BLE001 — 签名检测失败尝试其他签名
                     # 如果检测失败，尝试两种常见签名
                     try:
                         result = await tool.execute(args, tool_context)
                     except TypeError:
                         try:
                             result = await tool.execute(tool_context, **args)
-                        except Exception as e2:
+                        except Exception as e2:  # noqa: BLE001 — 签名适配失败已记录日志
                             logger.warning(f"工具签名适配失败: {e2}, 尝试直接调用")
                             result = await tool.execute(args, tool_context)
 

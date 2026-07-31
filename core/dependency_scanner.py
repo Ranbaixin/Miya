@@ -129,7 +129,7 @@ class DependencyScanner(BaseScanner):
                         confidence=0.6,
                     ))
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 解析依赖文件失败已记录日志
             self.logger.warning(f"分析 {req_file} 失败: {e}")
 
         return problems
@@ -188,7 +188,7 @@ class DependencyScanner(BaseScanner):
                         confidence=0.6,
                     ))
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 解析包文件失败已记录日志
             self.logger.warning(f"分析 {package_file} 失败: {e}")
 
         return problems
@@ -228,7 +228,7 @@ class DependencyScanner(BaseScanner):
                     confidence=0.7,
                 ))
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 解析go.mod失败已记录日志
             self.logger.warning(f"分析 {go_mod_file} 失败: {e}")
 
         return problems
@@ -269,7 +269,7 @@ class DependencyScanner(BaseScanner):
                         if node.id not in imported_modules:
                             missing_imports.append(node.id)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 检查缺失导入失败已记录日志
             self.logger.warning(f"检查 {file_path} 导入失败: {e}")
 
         return missing_imports

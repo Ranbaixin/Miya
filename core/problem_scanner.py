@@ -129,21 +129,21 @@ class ProblemScanner:
             # Linter 扫描器
             from core.linter_scanner import LinterScanner
             self.register_scanner('linter', LinterScanner())
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — LinterScanner 初始化失败
             self.logger.warning(f"LinterScanner 初始化失败: {e}")
 
         try:
             # 依赖扫描器
             from core.dependency_scanner import DependencyScanner
             self.register_scanner('dependency', DependencyScanner())
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — DependencyScanner 初始化失败
             self.logger.warning(f"DependencyScanner 初始化失败: {e}")
 
         try:
             # 配置扫描器
             from core.config_scanner import ConfigScanner
             self.register_scanner('config', ConfigScanner())
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — ConfigScanner 初始化失败
             self.logger.warning(f"ConfigScanner 初始化失败: {e}")
 
         self.logger.info(f"问题扫描器初始化完成，已加载 {len(self.scanners)} 个扫描器")

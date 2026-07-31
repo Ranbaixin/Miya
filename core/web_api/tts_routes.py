@@ -28,7 +28,7 @@ def _load_tts_config():
     try:
         with open("config/tts_config.json", "r", encoding="utf-8") as f:
             return json.load(f)
-    except Exception:
+    except (OSError, ValueError):
         return {}
 
 
@@ -200,7 +200,7 @@ class TTSRoutes:
                 raise HTTPException(
                     status_code=500, detail=f"{engine} dependencies missing"
                 )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — TTS 合成失败，上抛 500
                 logger.error(f"[TTS] {engine} 合成失败: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
 

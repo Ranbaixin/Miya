@@ -91,7 +91,7 @@ class HookManager:
                 if rule:
                     self.rules.append(rule)
                     logger.info(f"[Hooks] 加载规则: {rule.name}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 规则加载失败跳过
                 logger.warning(f"[Hooks] 加载规则失败 {rule_file}: {e}")
 
     def _parse_rule_file(self, file_path: Path) -> Optional[HookRule]:

@@ -36,7 +36,7 @@ class Personality:
             self.titles = self._current_config.get("titles", {"default": ["然鑫"]})
             self.quotes = self._current_config.get("quotes", {"being": "我在。"})
             self._load_core_config()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — YAML加载失败回退默认，已记录日志
             import logging
 
             logging.getLogger(__name__).warning(f"[Personality] YAML加载失败: {e}")
@@ -125,8 +125,10 @@ class Personality:
             }
             with open(self._last_form_file, "w", encoding="utf-8") as f:
                 json.dump(state, f, ensure_ascii=False, indent=2)
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001 — 保存形态状态失败，best-effort
+            import logging
+
+            logging.getLogger(__name__).debug(f"[Personality] 保存形态状态失败: {e}")
 
     def _restore_last_form(self):
         try:
@@ -142,15 +144,19 @@ class Personality:
                 available = self._loader.list_available()
                 if available and last_form in available:
                     self.set_form(last_form)
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001 — 恢复形态失败，best-effort
+            import logging
+
+            logging.getLogger(__name__).debug(f"[Personality] 恢复上次形态失败: {e}")
 
     def get_form_config(self, form_name: str) -> Dict:
         if self._use_yaml and self._loader:
             try:
                 return self._loader.load(form_name)
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001 — 加载形态失败返回默认，best-effort
+                import logging
+
+                logging.getLogger(__name__).debug(f"[Personality] 加载形态 {form_name} 失败: {e}")
         return {"name": "normal", "description": "默认人格"}
 
     def get_chat_key(self, user_id: str, group_id: str = "") -> str:
@@ -165,7 +171,7 @@ class Personality:
             return False
         try:
             self._loader.load(form_name)
-        except Exception:
+        except Exception:  # noqa: BLE001 — 形态校验失败返回 False
             return False
         chat_key = self.get_chat_key(user_id, group_id)
         self._chat_forms[chat_key] = form_name
@@ -233,7 +239,7 @@ class Personality:
             return False
         try:
             target_config = self._loader.load(target_form)
-        except Exception:
+        except Exception:  # noqa: BLE001 — 加载目标形态失败返回 False
             return False
 
         weights = target_config.get("weights", {})
@@ -553,6 +559,6 @@ class Personality:
             if "core_beliefs" in config:
                 self.core_beliefs = config["core_beliefs"]
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 导入失败已打印错误
             print(f"错误：从JSON导入人格配置失败：{e}")
             return False

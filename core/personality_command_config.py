@@ -36,7 +36,7 @@ def _load_all_forms() -> Dict[str, Any]:
                 form_data = yaml.safe_load(f)
                 if form_data and "name" in form_data:
                     forms[yaml_file.stem] = form_data
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载形态配置失败已记录日志
             logger.warning(f"加载形态配置失败 {yaml_file}: {e}")
 
     return forms
@@ -50,7 +50,7 @@ def _load_base_config() -> Dict[str, Any]:
         try:
             with open(base_file, "r", encoding="utf-8") as f:
                 return yaml.safe_load(f) or {}
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载基础配置失败已记录日志
             logger.warning(f"加载基础配置失败: {e}")
 
     return {}
@@ -64,7 +64,7 @@ def _load_default_form() -> Dict[str, Any]:
         try:
             with open(default_file, "r", encoding="utf-8") as f:
                 return yaml.safe_load(f) or {}
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载默认形态失败已记录日志
             logger.warning(f"加载默认形态失败: {e}")
 
     return {}

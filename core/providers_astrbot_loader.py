@@ -41,7 +41,7 @@ class AstrBotProviderLoader:
         for source_file in source_files:
             try:
                 await self._load_provider_from_file(source_file)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 加载Provider失败已记录日志
                 logger.error(f"Failed to load provider from {source_file}: {e}")
 
         logger.info(f"Loaded {len(self._providers)} AstrBot providers")
@@ -189,7 +189,7 @@ class AstrBotProviderManager:
             logger.info(f"Created provider: {provider_id}")
             return instance
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 创建Provider失败已记录日志
             logger.error(f"Failed to create provider {provider_id}: {e}")
             return None
 

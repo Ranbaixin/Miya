@@ -115,7 +115,7 @@ class SkillMarketplace:
                     for item in data.values():
                         self._listings[item["skill_id"]] = SkillListing(**item)
                 logger.info(f"[Marketplace] 加载了 {len(self._listings)} 个技能")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 技能列表加载失败降级
                 logger.warning(f"[Marketplace] 加载失败: {e}")
 
         # 加载评论
@@ -125,7 +125,7 @@ class SkillMarketplace:
                     data = json.load(f)
                     for skill_id, reviews in data.items():
                         self._reviews[skill_id] = [SkillReview(**r) for r in reviews]
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 评论加载失败降级
                 logger.warning(f"[Marketplace] 加载评论失败: {e}")
 
     def _save_data(self):
@@ -135,8 +135,9 @@ class SkillMarketplace:
             data = {sid: listing.__dict__ for sid, listing in self._listings.items()}
             with open(self._listings_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            logger.error(f"[Marketplace] 保存失败: {e}")
+        except Exception:
+            logger.exception("[Marketplace] 保存失败")
+            raise
 
         # 保存评论
         try:
@@ -146,8 +147,9 @@ class SkillMarketplace:
             }
             with open(self._reviews_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            logger.error(f"[Marketplace] 保存评论失败: {e}")
+        except Exception:
+            logger.exception("[Marketplace] 保存评论失败")
+            raise
 
     def publish_skill(
         self,

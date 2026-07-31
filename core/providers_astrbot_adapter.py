@@ -45,7 +45,7 @@ class AstrBotProviderAdapter(ABC):
                 await self._astrbot_provider.initialize()
             self._initialized = True
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — AstrBot适配器初始化失败已记录日志
             logger.error(f"[{self.provider_id}] 初始化失败: {e}")
             return False
 

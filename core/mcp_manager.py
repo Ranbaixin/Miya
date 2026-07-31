@@ -104,7 +104,7 @@ class MCPManager:
             try:
                 await self.initialize()
                 await self._sync_toolnet_mcp_tools()
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 懒初始化失败已记录日志
                 logger.error(f"[MCP] 懒初始化失败: {e}")
 
     async def initialize(self):
@@ -118,7 +118,7 @@ class MCPManager:
             logger.info(
                 f"[MCP] 初始化完成，已注册 {len(registered)} 个服务: {registered}"
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 初始化失败已记录日志
             logger.error(f"[MCP] 初始化失败: {e}")
 
     async def _sync_toolnet_mcp_tools(self):
@@ -140,7 +140,7 @@ class MCPManager:
                 added += 1
             if added:
                 logger.info(f"[MCP] ToolNet 同步完成，新增 {added} 个 MCP 工具")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — ToolNet 同步失败已记录日志
             logger.warning(f"[MCP] ToolNet 同步失败: {e}")
 
     async def scan_and_register(self) -> List[str]:
@@ -163,7 +163,7 @@ class MCPManager:
                         f"[MCP] ✅ 注册服务: {manifest.name} ({manifest.display_name})"
                     )
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 处理manifest失败已记录日志
                 logger.error(f"[MCP] 处理manifest失败 {manifest_file}: {e}")
 
         return registered
@@ -184,7 +184,7 @@ class MCPManager:
                 version=data.get("version", "1.0.0"),
                 enabled=data.get("enabled", True),
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载manifest失败已记录日志
             logger.error(f"[MCP] 加载manifest失败 {manifest_path}: {e}")
             return None
 
@@ -210,7 +210,7 @@ class MCPManager:
             self._manifests[manifest.name] = manifest
 
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 注册服务失败已记录日志
             logger.error(f"[MCP] 注册服务失败 {manifest.name}: {e}")
             return False
 
@@ -230,7 +230,7 @@ class MCPManager:
             instance = agent_class()
             return instance
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 创建实例失败已记录日志
             logger.error(f"[MCP] 创建实例失败 {manifest.name}: {e}")
             return None
 
@@ -278,7 +278,7 @@ class MCPManager:
         for hook in self._pre_call_hooks:
             try:
                 await hook(service_name, tool_name, tool_call)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 前置钩子失败已记录日志
                 logger.warning(f"[MCP] 前置钩子执行失败: {e}")
 
         # 执行调用
@@ -298,12 +298,12 @@ class MCPManager:
             for hook in self._post_call_hooks:
                 try:
                     await hook(service_name, tool_name, call_result)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 后置钩子失败已记录日志
                     logger.warning(f"[MCP] 后置钩子执行失败: {e}")
 
             return call_result
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 调用服务失败已记录日志
             execution_time = time.time() - start_time
             logger.error(f"[MCP] 调用服务失败 {service_name}: {e}")
 

@@ -196,7 +196,7 @@ class EmbeddingClient:
                             logger.warning(
                                 f"[Embedding] GPU compute capability {cap} not supported, using CPU"
                             )
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 — GPU检测失败已记录日志
                         logger.warning(
                             f"[Embedding] GPU detection failed: {e}, using CPU"
                         )
@@ -219,7 +219,7 @@ class EmbeddingClient:
                     )
                     logger.warning("[EmbeddingClient] 使用CPU重新生成向量成功")
                     return vector.tolist()
-                except:
+                except Exception:  # noqa: S110, BLE001 — CPU重试失败时忽略，保留原异常上抛
                     pass
             raise
 
@@ -261,7 +261,7 @@ class EmbeddingClient:
                         cap = torch.cuda.get_device_capability(0)
                         if cap[0] >= 5:
                             device = "cuda"
-                    except:
+                    except Exception:  # noqa: S110, BLE001 — GPU探测失败静默跳过
                         pass
                 vectors_batch = self._client.encode(
                     texts, convert_to_numpy=True, device=device

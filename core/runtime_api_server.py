@@ -45,7 +45,7 @@ def is_port_available(port: int) -> bool:
             result = s.connect_ex(("127.0.0.1", port))
             # result == 0 表示连接成功，说明端口被占用
             return result != 0
-    except:
+    except (OSError, ValueError):
         return False
 
 
@@ -145,10 +145,10 @@ class RuntimeAPIServer:
                                     f"[Runtime API] AI客户端初始化成功: {model_id}"
                                 )
                                 break
-                            except Exception as e:
+                            except Exception as e:  # noqa: BLE001 — 单个模型初始化失败则尝试下一个
                                 logger.debug(f"尝试模型 {model_id} 失败: {e}")
                                 continue
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — AI 客户端为可选组件，失败降级
                 logger.warning(f"AI客户端初始化失败: {e}")
 
             # 初始化提示词管理器
@@ -157,7 +157,7 @@ class RuntimeAPIServer:
 
                 cls._global_prompt_manager = PromptManager()
                 logger.info("[Runtime API] 提示词管理器初始化成功")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 提示词管理器为可选组件，失败降级
                 logger.warning(f"提示词管理器初始化失败: {e}")
 
             # 初始化记忆系统
@@ -167,7 +167,7 @@ class RuntimeAPIServer:
                 memory_initializer = await get_memory_system_initializer()
                 cls._global_memory_engine = await memory_initializer.get_memory_engine()
                 logger.info("[Runtime API] 记忆系统初始化成功")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 记忆系统为可选组件，失败降级
                 logger.warning(f"记忆系统初始化失败: {e}")
 
             # 初始化工具系统
@@ -183,14 +183,14 @@ class RuntimeAPIServer:
                 logger.info(
                     f"[Runtime API] 工具系统初始化成功，已加载 {len(cls._global_tool_subnet.registry.tools)} 个工具"
                 )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 工具系统为可选组件，失败降级
                 logger.warning(f"工具系统初始化失败: {e}")
 
             cls._global_initialized = True
             logger.info("[Runtime API] 全局初始化完成")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 全局初始化失败，返回 False 由调用方处理
             logger.error(f"全局初始化失败: {e}")
             return False
 
@@ -421,7 +421,7 @@ class RuntimeAPIServer:
                     await websocket.send_text(f"收到: {data}")
             except WebSocketDisconnect:
                 logger.info("WebSocket 断开连接")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — WebSocket 连接错误，记录后关闭
                 logger.error(f"WebSocket 错误: {e}")
 
         # 系统状态
@@ -472,7 +472,7 @@ class RuntimeAPIServer:
                     user_id=user_id,
                 )
                 return {"events": events}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 记忆查询失败，降级返回空列表
                 logger.error("[认知记忆查询] error=%s", e, exc_info=True)
                 return {"events": []}
 
@@ -484,7 +484,7 @@ class RuntimeAPIServer:
             try:
                 profiles = await self._cognitive_service.get_profiles(user_id=user_id)
                 return {"profiles": profiles}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 侧写查询失败，降级返回空列表
                 logger.error("[侧写查询] error=%s", e, exc_info=True)
                 return {"profiles": []}
 
@@ -499,7 +499,7 @@ class RuntimeAPIServer:
                 try:
                     stats = await self._agent_manager.get_all_stats()
                     return {"stats": stats}
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — Agent 统计失败，降级返回空
                     logger.error("[Agent统计] error=%s", e, exc_info=True)
             return {"stats": {}}
 
@@ -524,14 +524,14 @@ class RuntimeAPIServer:
                 try:
                     memory_initializer = await get_memory_system_initializer()
                     memory_stats = await memory_initializer.get_statistics()
-                except:
+                except Exception:  # noqa: BLE001 — 记忆统计获取失败，降级为 None
                     memory_stats = None
 
                 # 初始化工具系统
                 try:
                     tool_subnet = ToolSubnet()
                     tools_count = len(tool_subnet.registry.tools)
-                except:
+                except Exception:  # noqa: BLE001 — 工具统计获取失败，降级为 0
                     tools_count = 0
 
                 # 获取人设
@@ -539,7 +539,7 @@ class RuntimeAPIServer:
                     prompt_manager = PromptManager()
                     system_prompt = prompt_manager.get_system_prompt()
                     prompt_length = len(system_prompt)
-                except:
+                except Exception:  # noqa: BLE001 — 人设获取失败，降级为 0
                     prompt_length = 0
 
                 return {
@@ -549,7 +549,7 @@ class RuntimeAPIServer:
                     "personality": {"prompt_length": prompt_length, "status": "loaded"},
                     "timestamp": datetime.now().isoformat(),
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 状态查询失败，返回错误响应
                 logger.error(f"获取弥娅状态失败: {e}")
                 return {
                     "status": "error",
@@ -571,7 +571,7 @@ class RuntimeAPIServer:
                     "data": stats,
                     "timestamp": datetime.now().isoformat(),
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 记忆统计失败，返回错误响应
                 logger.error(f"获取记忆统计失败: {e}")
                 return {"status": "error", "error": str(e)}
 
@@ -594,7 +594,7 @@ class RuntimeAPIServer:
                                 "type": tool_config.get("type", "unknown"),
                             }
                         )
-                    except:
+                    except Exception:  # noqa: BLE001 — 工具配置读取失败，降级处理
                         tools.append(
                             {
                                 "name": tool_name,
@@ -609,7 +609,7 @@ class RuntimeAPIServer:
                     "count": len(tools),
                     "timestamp": datetime.now().isoformat(),
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 工具列表失败，返回错误响应
                 logger.error(f"获取工具列表失败: {e}")
                 return {"status": "error", "error": str(e)}
 
@@ -633,7 +633,7 @@ class RuntimeAPIServer:
                     },
                     "timestamp": datetime.now().isoformat(),
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 人设查询失败，返回错误响应
                 logger.error(f"获取人设配置失败: {e}")
                 return {"status": "error", "error": str(e)}
 
@@ -684,7 +684,7 @@ class RuntimeAPIServer:
                         "models": [],
                         "count": 0,
                     }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 模型信息失败，返回错误响应
                 logger.error(f"获取模型信息失败: {e}")
                 return {"status": "error", "error": str(e), "models": [], "count": 0}
 
@@ -720,7 +720,7 @@ class RuntimeAPIServer:
                                 )
                                 if len(logs) >= limit:
                                     break
-                        except Exception as e:
+                        except Exception as e:  # noqa: BLE001 — 单个日志文件读取失败则跳过
                             logger.debug(f"读取日志文件失败: {e}")
 
                 return {
@@ -729,7 +729,7 @@ class RuntimeAPIServer:
                     "count": len(logs[-limit:]),
                     "timestamp": datetime.now().isoformat(),
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 日志读取失败，返回错误响应
                 logger.error(f"获取日志失败: {e}")
                 return {"status": "error", "error": str(e), "logs": [], "count": 0}
 
@@ -760,7 +760,7 @@ class RuntimeAPIServer:
                 if prompt_manager:
                     try:
                         system_prompt = prompt_manager.get_system_prompt()
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 — 提示词获取失败，使用默认提示词
                         logger.debug(f"获取提示词失败: {e}")
 
                 # 添加工具使用说明
@@ -773,7 +773,7 @@ class RuntimeAPIServer:
                             tool_config = tool.config if hasattr(tool, "config") else {}
                             description = tool_config.get("description", "无描述")
                             tools_info.append(f"- {tool_name}: {description}")
-                        except:
+                        except (AttributeError, KeyError, TypeError, ValueError):  # noqa: S110 — 工具配置异常时跳过该工具
                             pass
 
                     if tools_info:
@@ -798,7 +798,7 @@ class RuntimeAPIServer:
                                     content=f"记忆上下文:\n{memory_context}",
                                 )
                             )
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 — 记忆上下文获取失败，降级无记忆
                         logger.debug(f"获取记忆上下文失败: {e}")
 
                 messages.append(AIMessage(role="user", content=message))
@@ -843,9 +843,9 @@ class RuntimeAPIServer:
                                     )
                                     tool_call_result = result
                                     break
-                            except Exception as tool_error:
+                            except Exception as tool_error:  # noqa: BLE001 — 单个工具执行失败则尝试下一个
                                 logger.debug(f"工具 {tool_name} 执行失败: {tool_error}")
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 — 工具检测失败，降级直接对话
                         logger.debug(f"工具检测失败: {e}")
 
                 # 调用AI生成响应
@@ -867,7 +867,7 @@ class RuntimeAPIServer:
                             response_text = response.content
                         else:
                             response_text = str(response)
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 — AI 调用失败，返回降级回复
                         logger.error(f"AI调用失败: {e}")
                         response_text = tool_call_result or "抱歉，AI服务暂时不可用。"
                 else:
@@ -879,7 +879,7 @@ class RuntimeAPIServer:
                         await memory_engine.add_conversation(
                             session_id, message, response_text
                         )
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 — 记忆保存失败不影响本次回复
                         logger.debug(f"保存对话记忆失败: {e}")
 
                 response_data = {
@@ -893,7 +893,7 @@ class RuntimeAPIServer:
                 logger.info(f"[终端聊天] 发送响应: {response_text[:100]}...")
                 return response_data
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 聊天请求异常，返回错误响应
                 logger.error(f"[终端聊天] 处理请求时出错: {e}", exc_info=True)
                 # 返回错误响应而不是崩溃
                 return {

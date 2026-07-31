@@ -204,7 +204,7 @@ class SensitiveWordFilter:
             self.sensitive_words.update(config.get("sensitive_words", []))
             self.blocked_words.update(config.get("blocked_words", []))
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载配置失败
             logger.error(f"[SensitiveWordFilter] 加载配置失败: {e}")
 
     def check(self, content: str) -> SecurityCheckResult:

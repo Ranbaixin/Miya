@@ -126,7 +126,7 @@ class BasePlatform(ABC):
                     )
                     return False
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 连接异常设置错误状态已记录日志
                 self._set_status(PlatformStatus.ERROR)
                 self._health.last_error = str(e)
                 self._health.error_count += 1
@@ -149,7 +149,7 @@ class BasePlatform(ABC):
 
             try:
                 await self._do_disconnect()
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 断开异常
                 logger.warning(f"[{self.platform_id}] 断开异常: {e}")
 
             self._health.last_offline = datetime.now()
@@ -181,7 +181,7 @@ class BasePlatform(ABC):
         async def try_connect() -> bool:
             try:
                 return await self._do_connect()
-            except Exception:
+            except Exception:  # noqa: BLE001 — 连接探测失败返回False由上层重试
                 return False
 
         success = await run_reconnect_loop(
@@ -252,7 +252,7 @@ class BasePlatform(ABC):
                         self._health.status = PlatformStatus.ONLINE
                         await self._emit(PlatformEvent.HEALTH_CHECK_RECOVERED, {})
                     consecutive_failures = 0
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 健康检查异常
                 logger.debug(f"[{self.platform_id}] 健康检查异常: {e}")
 
             await asyncio.sleep(self.health_check_interval)
@@ -330,7 +330,7 @@ class BasePlatform(ABC):
         for listener in self._event_listeners.get(event, []):
             try:
                 await listener(payload)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 事件监听器异常
                 logger.error(f"[{self.platform_id}] 事件监听器异常: {e}")
 
     # ==================== 状态方法 ====================

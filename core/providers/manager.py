@@ -69,7 +69,7 @@ class ProviderManager:
         for config in self.provider_config:
             try:
                 await self.load_provider(config)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 加载 Provider 失败
                 logger.error(
                     f"[ProviderManager] 加载 Provider {config.get('id')} 失败: {e}"
                 )
@@ -220,7 +220,7 @@ class ProviderManager:
                 await inst.test()
                 results[provider_id] = True
                 logger.info(f"[ProviderManager] {provider_id} 测试通过")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 测试Provider失败已记录日志
                 results[provider_id] = False
                 logger.error(f"[ProviderManager] {provider_id} 测试失败: {e}")
 

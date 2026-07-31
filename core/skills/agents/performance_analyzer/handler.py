@@ -3,9 +3,12 @@ Performance Analyzer Agent - 性能分析
 分析代码性能问题
 """
 
+import logging
 import re
 from pathlib import Path
 from typing import Any, Dict
+
+logger = logging.getLogger(__name__)
 
 
 async def handler(args: Dict[str, Any], context: Dict[str, Any]) -> str:
@@ -63,8 +66,8 @@ async def _analyze_performance(terminal, target: str) -> str:
                                     "code": line.strip()[:60],
                                 }
                             )
-            except:
-                pass
+            except (OSError, ValueError) as exc:
+                logger.debug("[PerfAnalyzer] 读取文件失败: %s: %s", file, exc)
 
     if not issues:
         return "✅ 未发现明显性能问题"

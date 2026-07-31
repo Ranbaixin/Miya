@@ -207,7 +207,7 @@ class UnifiedPlatformManager:
             self._platforms[platform_id] = platform
             logger.info(f"[PlatformManager] 创建 Miya 平台: {platform_id}")
             return platform
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 创建 Miya 平台失败
             logger.error(f"[PlatformManager] 创建 Miya 平台失败: {e}")
             return None
 
@@ -219,7 +219,7 @@ class UnifiedPlatformManager:
         for platform_id, platform in self._platforms.items():
             try:
                 asyncio.create_task(platform.run())
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 启动平台失败
                 logger.error(f"[PlatformManager] 启动平台失败 {platform_id}: {e}")
 
         logger.info("[PlatformManager] 所有平台已启动")
@@ -232,7 +232,7 @@ class UnifiedPlatformManager:
         for platform_id, platform in self._platforms.items():
             try:
                 await platform.terminate()
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 停止平台失败
                 logger.error(f"[PlatformManager] 停止平台失败 {platform_id}: {e}")
 
         self._platforms.clear()

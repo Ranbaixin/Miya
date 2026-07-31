@@ -24,7 +24,7 @@ def _load_commands_from_config() -> Dict[str, Any]:
             with open(config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
             return config.get("command_keywords", {})
-    except Exception as e:
+    except (OSError, ValueError) as e:
         print(f"Warning: Failed to load command config: {e}")
     return {}
 

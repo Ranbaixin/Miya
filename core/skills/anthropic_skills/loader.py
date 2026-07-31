@@ -96,7 +96,7 @@ def parse_skill_md(skill_md_path: Path) -> AnthropicSkillItem | None:
 
     try:
         content = skill_md_path.read_text(encoding="utf-8")
-    except Exception as exc:
+    except (OSError, ValueError) as exc:
         logger.error("读取 SKILL.md 失败: %s: %s", skill_md_path, exc)
         return None
 

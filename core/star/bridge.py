@@ -54,7 +54,7 @@ class StarBridge:
         try:
             logger.info(f"[StarBridge] 加载插件: {name}")
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载失败已记录日志
             logger.error(f"[StarBridge] 加载失败 {name}: {e}")
             return False
 
@@ -82,7 +82,7 @@ class StarBridge:
                     await handler(**kwargs)
                 else:
                     handler(**kwargs)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 事件处理失败已记录日志
                 logger.error(f"[StarBridge] 事件处理失败 {event_type}: {e}")
 
     def list_stars(self) -> List[Dict]:

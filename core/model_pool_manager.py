@@ -161,7 +161,7 @@ class ModelPoolManager:
                 config = json.load(f)
             logger.info("[ModelPoolManager] 从 multi_model_config.json 加载配置")
             self._parse_config(config)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载配置失败回退默认，已记录日志
             logger.error(f"[ModelPoolManager] 加载配置失败: {e}")
             self._set_default_config()
 
@@ -235,7 +235,7 @@ class ModelPoolManager:
                 with open(task_config_path, encoding="utf-8") as f:
                     task_config = json.load(f)
                 self._task_classification = task_config.get("task_classification", {})
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 任务分类加载失败已记录日志
             logger.debug(f"[ModelPoolManager] 任务分类加载失败: {e}")
 
         logger.info(
@@ -372,7 +372,7 @@ class ModelPoolManager:
                 base_url=model_config.base_url,
             )
             return client
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 创建AI客户端失败已记录日志
             logger.error(f"[ModelPoolManager] 创建AI客户端失败: {e}")
             return None
 

@@ -864,7 +864,7 @@ class OpenAIClient(BaseAIClient):
                             )
                             if final_resp.choices and final_resp.choices[0].message:
                                 return final_resp.choices[0].message.content or ""
-                        except Exception as e:
+                        except Exception as e:  # noqa: BLE001 — 最终回复生成失败
                             logger.warning(f"[AIClient] 最终回复生成失败: {e}")
                         return ""
                 else:
@@ -891,7 +891,7 @@ class OpenAIClient(BaseAIClient):
                                 )
                                 if final_resp.choices and final_resp.choices[0].message:
                                     return final_resp.choices[0].message.content or ""
-                            except Exception as e:
+                            except Exception as e:  # noqa: BLE001 — 最终回复生成失败
                                 logger.warning(f"[AIClient] 最终回复生成失败: {e}")
                             return ""
                         elif final_marker:
@@ -952,7 +952,7 @@ class OpenAIClient(BaseAIClient):
 
                 iteration += 1
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — OpenAI API调用失败
                 logger.error(f"OpenAI API调用失败: {e}")
                 from openai import AuthenticationError as OpenAIAuthError
 
@@ -1203,7 +1203,7 @@ class DeepSeekClient(BaseAIClient):
                                 )
                                 if final_resp.choices and final_resp.choices[0].message:
                                     return final_resp.choices[0].message.content or ""
-                            except Exception as e:
+                            except Exception as e:  # noqa: BLE001 — 最终回复生成失败
                                 logger.warning(f"[AIClient] 最终回复生成失败: {e}")
                             return ""
                         elif final_marker:
@@ -1229,7 +1229,7 @@ class DeepSeekClient(BaseAIClient):
                 # 更新迭代计数
                 iteration += 1
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — DeepSeek API调用失败
                 logger.error(f"DeepSeek API调用失败: {e}")
                 from openai import AuthenticationError as OpenAIAuthError
 

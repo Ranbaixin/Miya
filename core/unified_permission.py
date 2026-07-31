@@ -67,7 +67,7 @@ class UnifiedPermissionEngine:
             self._config_mtime = mtime
             self._rebuild_superadmin_cache()
             logger.debug("权限配置已加载")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 权限配置加载失败回退默认配置（fail-closed）
             logger.error(f"加载权限配置失败: {e}")
             self._config = self._default_config()
 
@@ -461,7 +461,7 @@ class UnifiedPermissionEngine:
             if not silent:
                 logger.info("权限配置已保存")
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 保存权限配置失败返回False，由调用方处理
             logger.error(f"保存权限配置失败: {e}")
             return False
 

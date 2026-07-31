@@ -132,7 +132,7 @@ class ConfigHotReloader:
             observer.start()
             self.observers.append(observer)
             logger.debug(f"已设置文件监视器: {path}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 设置监视器失败已记录日志
             logger.error(f"设置文件监视器失败: {e}")
     
     def add_change_handler(self, handler: Callable[[ConfigChange], None]):
@@ -249,8 +249,8 @@ class ConfigHotReloader:
                 
                 await self._notify_change_handlers(change)
                 logger.info(f"配置文件已重新加载: {file_path}")
-            
-        except Exception as e:
+
+        except Exception as e:  # noqa: BLE001 — 处理文件变更失败已记录日志
             logger.error(f"处理文件变更失败: {e}")
     
     def _calculate_file_checksum(self, file_path: str) -> str:
@@ -259,7 +259,7 @@ class ConfigHotReloader:
             with open(file_path, 'rb') as f:
                 content = f.read()
                 return hashlib.md5(content).hexdigest()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 计算校验和失败已记录日志
             logger.error(f"计算文件校验和失败: {e}")
             return ""
     
@@ -300,8 +300,8 @@ class ConfigHotReloader:
                 # 尝试作为文本文件加载
                 with open(file_path, 'r', encoding='utf-8') as f:
                     return f.read()
-                
-        except Exception as e:
+
+        except Exception as e:  # noqa: BLE001 — 加载配置文件失败已记录日志
             logger.error(f"加载配置文件失败: {e}")
             return None
     
@@ -313,7 +313,7 @@ class ConfigHotReloader:
                     await handler(change)
                 else:
                     handler(change)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 变更处理器失败已记录日志
                 logger.error(f"变更处理器执行失败: {e}")
     
     async def manual_reload(self, file_path: str) -> bool:
@@ -332,8 +332,8 @@ class ConfigHotReloader:
             
             await self._process_file_change(file_path, ConfigChangeType.RELOADED)
             return True
-            
-        except Exception as e:
+
+        except Exception as e:  # noqa: BLE001 — 手动重新加载失败已记录日志
             logger.error(f"手动重新加载失败: {e}")
             return False
     
@@ -352,7 +352,7 @@ class ConfigHotReloader:
                     await asyncio.sleep(self.config.watch_interval)
                 except asyncio.CancelledError:
                     break
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 监视循环错误已记录日志
                     logger.error(f"监视循环错误: {e}")
                     await asyncio.sleep(5.0)
         
@@ -465,7 +465,7 @@ class HotReloadableConfig:
             merged_config.update(loaded_config)
             return merged_config
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载配置失败返回默认配置
             logger.error(f"加载配置失败: {e}")
             return self.default_config.copy()
     
@@ -479,7 +479,7 @@ class HotReloadableConfig:
             for handler in self._change_handlers:
                 try:
                     handler(self.current_config)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 变更处理器执行失败已记录日志
                     logger.error(f"配置变更处理器执行失败: {e}")
             
             logger.info(f"配置已热重载: {self.config_path}")
@@ -522,8 +522,8 @@ class HotReloadableConfig:
             
             logger.info(f"配置已保存: {self.config_path}")
             return True
-            
-        except Exception as e:
+
+        except Exception as e:  # noqa: BLE001 — 保存配置失败已记录日志
             logger.error(f"保存配置失败: {e}")
             return False
     

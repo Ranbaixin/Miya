@@ -127,7 +127,7 @@ async def emit_event(event_type: str, **kwargs) -> None:
                 await handler(**kwargs)
             else:
                 handler(**kwargs)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 事件处理失败已记录日志
             logger.error(f"[Star] 事件处理错误 {event_type}: {e}")
 
 

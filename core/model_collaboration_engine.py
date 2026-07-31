@@ -123,7 +123,7 @@ def _load_collaboration_config() -> Dict:
             with open(config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
             return config.get("collaboration", {})
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — 加载配置失败已记录日志
         logger.warning(f"[协作引擎] 加载配置失败: {e}")
     return {}
 
@@ -281,7 +281,7 @@ class ModelCollaborationEngine:
                 "persona_description": description,
                 "persona_prompt": prompt,
             }
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 获取人格信息失败已记录日志
             logger.warning(f"[协作引擎] 获取人格信息失败: {e}")
             return {
                 "persona_name": "弥娅",
@@ -372,7 +372,7 @@ class ModelCollaborationEngine:
 
             return ai_emotion_context
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 情绪上下文处理失败已记录日志
             logger.debug(f"[协作-灵魂] 处理失败: {e}")
             return ""
 
@@ -461,7 +461,7 @@ class ModelCollaborationEngine:
                     tools,
                     ai_client_factory,
                 )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 协作失败降级单模型，已记录日志
             logger.warning(f"[协作引擎] 协作执行失败，降级为单模型: {e}")
             result = await self._fallback_to_single(
                 message,
@@ -865,7 +865,7 @@ class ModelCollaborationEngine:
                 response = reasoning_result if reasoning_result else self.msg_empty_response
 
             return response
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 第三阶段执行失败已记录日志
             logger.error("[协作引擎] 第三阶段执行失败: %s", e)
             return reasoning_result if reasoning_result else self.msg_error_call_failed.format(error=e)
 
@@ -956,7 +956,7 @@ class ModelCollaborationEngine:
             # 显示思考过程到终端
             try:
                 print(TerminalFormatter.thinking_block(thinking_result[:300]))
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 显示思考过程失败已记录日志
                 logger.debug(f"[协作引擎] 显示思考过程失败: {e}")
 
         # 【灵魂发生器】获取情绪上下文（统一方法）
@@ -1210,7 +1210,7 @@ class ModelCollaborationEngine:
             )
             self._fallback_depth = 0
             return result
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 回退单模型失败返回兜底回复
             self._fallback_depth = 0
             return CollaborationResult(
                 response="抱歉，我暂时无法处理这个消息。请稍后再试~",
@@ -1302,7 +1302,7 @@ class ModelCollaborationEngine:
             if not isinstance(response, str):
                 return str(response)
             return response
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — AI 调用失败已记录日志
             logger.error(f"[协作引擎] AI 调用失败: {e}")
             return self.msg_error_call_failed.format(error=e)
 

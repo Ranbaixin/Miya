@@ -50,7 +50,7 @@ class APIRouter:
 
             self._providers = get_default_providers()
             logger.info(f"[DashboardAPI] Provider: {len(self._providers)} 个")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 可选 Provider 加载失败，降级运行
             logger.warning(f"[DashboardAPI] Provider 加载失败: {e}")
 
         try:
@@ -58,7 +58,7 @@ class APIRouter:
 
             self._platforms = get_default_platforms()
             logger.info(f"[DashboardAPI] Platform: {len(self._platforms)} 个")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 可选 Platform 加载失败，降级运行
             logger.warning(f"[DashboardAPI] Platform 加载失败: {e}")
 
     def _register_all_routes(self):
@@ -196,7 +196,7 @@ class APIRouter:
         """登录 - 默认账号 astrbot/astrbot"""
         try:
             body = await request.json()
-        except:
+        except (ValueError, OSError):
             body = {}
 
         username = body.get("username", "")
@@ -327,7 +327,7 @@ class APIRouter:
 
             stars = StarManager.get_all()
             return {"plugins": stars, "total": len(stars)}
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 插件列表查询失败，降级返回空
             return {"plugins": [], "total": 0, "error": str(e)}
 
     async def install_plugin(self, request) -> Dict:
@@ -352,7 +352,7 @@ class APIRouter:
 
             personalities = Personality.get_all()
             return {"personalities": personalities, "total": len(personalities)}
-        except Exception:
+        except Exception:  # noqa: BLE001 — 人格列表查询失败，降级返回默认
             return {
                 "personalities": [
                     {"id": "default", "name": "弥娅默认", "description": "弥娅默认人格"}
@@ -383,7 +383,7 @@ class APIRouter:
             kb_manager = KnowledgeBaseManager()
             kbs = kb_manager.list_all()
             return {"knowledge_bases": kbs, "total": len(kbs)}
-        except Exception:
+        except Exception:  # noqa: BLE001 — 知识库列表查询失败，降级返回空
             return {"knowledge_bases": [], "total": 0}
 
     async def create_knowledge_base(self, request) -> Dict:
@@ -425,7 +425,7 @@ class APIRouter:
 
             sessions = get_session_manager().list_sessions()
             return {"conversations": sessions, "total": len(sessions)}
-        except Exception:
+        except Exception:  # noqa: BLE001 — 会话列表查询失败，降级返回空
             return {"conversations": [], "total": 0}
 
     async def get_conversation(self, request) -> Dict:
@@ -567,7 +567,7 @@ async def handle_request(route: str, request, body: Dict = None) -> Dict:
         return {"error": "Route not found", "route": route}
     try:
         return await handler(request)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — 统一错误响应包装，返回给调用方
         return {"error": str(e)}
 
 

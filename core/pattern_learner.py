@@ -455,7 +455,7 @@ class PatternLearner:
 
             self.logger.info(f"模式已保存: {file_path}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 保存模式失败
             self.logger.error(f"保存模式失败: {e}")
 
     def load(self, file_path: str = ".memory/patterns.json"):
@@ -484,7 +484,7 @@ class PatternLearner:
 
             self.logger.info(f"模式已加载: {file_path}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载模式失败
             self.logger.error(f"加载模式失败: {e}")
 
 

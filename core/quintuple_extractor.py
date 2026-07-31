@@ -112,7 +112,7 @@ async def extract_quintuples_async(text: str, ai_client) -> List[Quintuple]:
             logger.warning(f"五元组提取超时 (尝试 {attempt + 1}/{max_retries + 1})")
             if attempt < max_retries:
                 await asyncio.sleep(1)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 五元组提取失败
             logger.error(f"五元组提取失败: {e}")
             if attempt < max_retries:
                 await asyncio.sleep(1)
@@ -159,7 +159,7 @@ def _parse_quintuples(content: str) -> List[Quintuple]:
                             object_type=str(item[4]),
                         )
                     )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — 解析五元组失败
         logger.error(f"解析五元组失败: {e}")
 
     return quintuples
@@ -192,7 +192,7 @@ def extract_quintuples_sync(text: str, ai_client) -> List[Quintuple]:
         content = response.choices[0].message.content.strip()
         return _parse_quintuples(content)
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — 同步五元组提取失败
         logger.error(f"同步五元组提取失败: {e}")
         return []
 

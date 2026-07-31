@@ -98,7 +98,7 @@ class AudioConsistencyManager:
             logger.info(f"[Audio] 添加说话人参考: {speaker_id}")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 添加参考失败已记录日志
             logger.error(f"[Audio] 添加说话人参考失败: {e}")
             return False
 
@@ -353,7 +353,7 @@ class AudioConsistencyManager:
             self.speaker_references[ref_id] = ref
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载参考失败已记录日志
             logger.error(f"[Audio] 加载参考失败: {e}")
             return False
 

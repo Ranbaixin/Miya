@@ -646,7 +646,7 @@ class SystemMemory:
 
             self.logger.info(f"记忆已保存: {file_path}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 保存记忆失败
             self.logger.error(f"保存记忆失败: {e}")
 
     def load(self, file_path: Optional[str] = None):
@@ -690,7 +690,7 @@ class SystemMemory:
 
             self.logger.info(f"记忆已加载: {file_path}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载记忆失败
             self.logger.error(f"加载记忆失败: {e}")
 
 

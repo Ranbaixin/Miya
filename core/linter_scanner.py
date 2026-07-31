@@ -82,7 +82,7 @@ class LinterScanner(BaseScanner):
             # 使用工具执行器调用 read_lints
             result = await self._tool_executor('read_lints', {'paths': path})
             return self._parse_lints_response(result)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 通过工具执行器调用 read_lints 失败
             self.logger.error(f"通过工具执行器调用 read_lints 失败: {e}")
             # 降级：尝试直接调用
             return await self._read_lints_direct(path)
@@ -134,7 +134,7 @@ class LinterScanner(BaseScanner):
                                 'column': int(parts[2]),
                                 'message': parts[3].strip()
                             })
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 解析 lints 响应失败
             self.logger.warning(f"解析 lints 响应失败: {e}")
 
         return linter_errors
@@ -188,7 +188,7 @@ class LinterScanner(BaseScanner):
 
             return problem
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 解析 linter 结果失败
             self.logger.error(f"解析 linter 结果失败: {e}")
             return None
 

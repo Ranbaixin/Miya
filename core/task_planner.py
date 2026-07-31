@@ -195,7 +195,7 @@ class TaskPlanner:
             # 解析AI返回的任务列表
             return self._parse_tasks_from_ai(response)
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 任务分解失败已记录日志
             logger.error(f"任务分解失败: {e}")
             # 降级：创建一个单任务
             task = Task(
@@ -436,7 +436,7 @@ class TaskPlanner:
             logger.info(f"任务已保存到 {save_path}")
             return True
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 保存任务失败已记录日志
             logger.error(f"保存任务失败: {e}")
             return False
     
@@ -463,7 +463,7 @@ class TaskPlanner:
             logger.info(f"从 {load_path} 加载了 {len(self.tasks)} 个任务")
             return True
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载任务失败已记录日志
             logger.error(f"加载任务失败: {e}")
             return False
     

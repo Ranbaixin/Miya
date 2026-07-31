@@ -165,7 +165,7 @@ class PromptCacheAdapter:
         try:
             value = asyncio.run(unified_cache_get("prompt_cache", key))
             return value
-        except:
+        except Exception:  # noqa: BLE001 — 缓存读取失败返回 None
             return None
     
     def set(self, context: Dict[str, Any], prompt: str) -> None:
@@ -186,14 +186,14 @@ class PromptCacheAdapter:
         # 存入统一缓存
         try:
             asyncio.run(unified_cache_set("prompt_cache", key, prompt, self.ttl_seconds))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 缓存设置失败已记录日志
             logger.error(f"提示词缓存设置失败: {e}")
     
     def clear(self) -> None:
         """清空缓存"""
         try:
             asyncio.run(unified_cache_clear("prompt_cache"))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 缓存清空失败已记录日志
             logger.error(f"提示词缓存清空失败: {e}")
     
     def get_stats(self) -> Dict[str, Any]:
@@ -244,7 +244,7 @@ def cached_decorator(ttl: Optional[float] = None, key_prefix: str = ""):
                 cached_value = asyncio.run(cache.get(cache_key))
                 if cached_value is not None:
                     return cached_value
-            except:
+            except Exception:  # noqa: S110, BLE001 — 缓存读取失败静默跳过
                 pass
             
             # 调用原函数

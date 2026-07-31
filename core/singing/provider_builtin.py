@@ -190,7 +190,7 @@ class BuiltinSingingEngine(SingingEngine):
                 f"effects={self.effects_enabled} chord_mix={self.mix_chord_enabled}"
             )
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 引擎初始化失败降级
             logger.error(f"BuiltinSingingEngine init failed: {e}")
             return False
 
@@ -256,7 +256,7 @@ class BuiltinSingingEngine(SingingEngine):
             if os.path.exists(wav_input) and os.path.getsize(wav_input) > 0:
                 src_abs = wav_input
                 logger.info(f"[UVR5 stage] WAV 预转换: {os.path.getsize(wav_input)}B")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — WAV预转换失败跳过
             logger.warning(f"[UVR5 stage] WAV 预转换跳过: {e}")
 
         if not os.path.exists(model_path):
@@ -286,7 +286,7 @@ class BuiltinSingingEngine(SingingEngine):
                     errors="replace",
                 ),
             )
-        except (_sp.TimeoutExpired, Exception) as e:
+        except (_sp.TimeoutExpired, Exception) as e:  # noqa: BLE001 — UVR5阶段失败降级
             logger.warning(f"[UVR5 stage] error: {e}")
             return None
 
@@ -377,7 +377,7 @@ class BuiltinSingingEngine(SingingEngine):
             data, sr = sf.read(vocal_path, dtype="float32")
             if data.ndim == 1:
                 data = data.reshape(-1, 1)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 音频读取失败降级
             logger.warning(f"[效果] 读取失败: {e}")
             return vocal_path
 
@@ -457,7 +457,7 @@ class BuiltinSingingEngine(SingingEngine):
                 f"→Gain(+{self.effects_gain_db}dB)→Reverb(wet={self.effects_reverb_wet})"
             )
             return out_path
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — numpy效果回退失败
             logger.warning(f"[效果] numpy 回退失败: {e}")
             return vocal_path
 
@@ -504,7 +504,7 @@ class BuiltinSingingEngine(SingingEngine):
 
             sf.write(out_path, data, sr, subtype="PCM_16")
             return out_path
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 归一化失败降级
             logger.warning(f"[归一化] 失败: {e}")
             return vocal_path
 
@@ -541,7 +541,7 @@ class BuiltinSingingEngine(SingingEngine):
 
             logger.warning("[质量] ffmpeg 转换失败，用原始人声")
             return vocal_path
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 质量检测失败降级
             logger.warning(f"[质量] 检测失败: {e}")
             return vocal_path
 
@@ -575,7 +575,7 @@ class BuiltinSingingEngine(SingingEngine):
                 model_ok = True
             else:
                 logger.warning(f"[RVC] set_model HTTP {resp.status_code}: {resp.text[:200]}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — RVC切模型失败继续
             logger.warning(f"[RVC] set_model failed: {e}")
 
         if not model_ok:
@@ -583,7 +583,8 @@ class BuiltinSingingEngine(SingingEngine):
                 models_resp = requests.get(f"{self.rvc_api_url}/speakers", timeout=5)
                 models = models_resp.json() if models_resp.text else []
                 logger.warning(f"[RVC] 可用模型: {models}, 目标: {self.rvc_model}")
-            except Exception:
+            except Exception:  # noqa: BLE001 — RVC模型列表获取失败忽略
+                logger.debug("[RVC] 获取可用模型失败")
                 pass
 
         try:
@@ -609,7 +610,7 @@ class BuiltinSingingEngine(SingingEngine):
                 f.write(resp.content)
             logger.info(f"[RVC] OK: {output_path} ({len(resp.content)} bytes)")
             return output_path
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — RVC换声失败降级
             logger.error(f"[RVC] failed: {e}")
             return None
 
@@ -639,7 +640,7 @@ class BuiltinSingingEngine(SingingEngine):
                 orig_ch = data.shape[1]
                 data = data[:, 0:1]
                 logger.info(f"[净化] 立体声→单声道: 取左通道 ({orig_ch}→1ch)")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 净化读取失败降级
             logger.warning(f"[净化] 读取失败: {e}")
             return vocal_path
 
@@ -681,7 +682,7 @@ class BuiltinSingingEngine(SingingEngine):
             logger.warning("[净化] scipy 不可用，跳过降噪")
             sf.write(out_path, data, sr, subtype="PCM_16")
             return out_path
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 净化失败降级
             logger.warning(f"[净化] 失败: {e}")
             sf.write(out_path, data, sr, subtype="PCM_16")
             return out_path
@@ -720,7 +721,7 @@ class BuiltinSingingEngine(SingingEngine):
         except ImportError:
             logger.warning("[净化] scipy 不可用，跳过降噪")
             return vocal_path
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 净化失败降级
             logger.warning(f"[净化] 失败: {e}")
             return vocal_path
 

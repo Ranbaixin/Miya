@@ -86,7 +86,7 @@ class SecurityRoutes:
                     return {"detected": True, "event": event}
                 else:
                     return {"detected": False, "event": None}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 安全扫描失败，上抛 500
                 logger.error(f"[SecurityRoutes] 安全扫描失败: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
         
@@ -116,7 +116,7 @@ class SecurityRoutes:
                 }
             except HTTPException:
                 raise
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — IP 封禁失败，上抛 500
                 logger.error(f"[SecurityRoutes] IP 封禁失败: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
 

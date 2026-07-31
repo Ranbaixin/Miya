@@ -139,5 +139,5 @@ class ConfigEventPublisher:
                     'changes': event.changes,
                     'source': event.source
                 })
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — WebSocket通知失败已记录日志
             logger.debug(f"[配置事件] WebSocket通知失败: {e}")

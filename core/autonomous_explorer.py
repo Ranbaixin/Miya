@@ -174,7 +174,7 @@ class AutonomousExplorer:
                 # 分析结果，更新发现
                 await self._analyze_result(step, plan)
                 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 执行步骤失败已记录日志
                 logger.error(f"执行步骤失败: {e}")
                 step.result = f"错误: {str(e)}"
             
@@ -236,7 +236,7 @@ class AutonomousExplorer:
             
             return self._parse_decision(response)
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — AI决策失败回退启发式，已记录日志
             logger.error(f"AI决策失败，使用启发式策略: {e}")
             return self._heuristic_decide(plan)
     
@@ -284,7 +284,7 @@ class AutonomousExplorer:
                 confidence=data.get('confidence', 0.0)
             )
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 解析决策失败已记录日志
             logger.error(f"解析决策失败: {e}")
             # 默认思考
             return ExplorationStep(
@@ -427,7 +427,7 @@ class AutonomousExplorer:
             
             return "是" in response.lower()
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 判断目标达成失败已记录日志
             logger.error(f"判断目标达成失败: {e}")
             return False
     
@@ -510,7 +510,7 @@ class AutonomousExplorer:
             logger.info(f"探索计划已保存到 {path}")
             return True
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 保存探索计划失败已记录日志
             logger.error(f"保存探索计划失败: {e}")
             return False
     
@@ -546,6 +546,6 @@ class AutonomousExplorer:
             logger.info(f"探索计划已从 {path} 加载")
             return plan
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载探索计划失败已记录日志
             logger.error(f"加载探索计划失败: {e}")
             return None

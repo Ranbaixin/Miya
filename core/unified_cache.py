@@ -113,7 +113,7 @@ class BaseCacheLayer(ABC):
         """估算值的大小"""
         try:
             return len(json.dumps(value, ensure_ascii=False))
-        except:
+        except (TypeError, ValueError):
             return len(str(value))
 
     def _check_ttl(self, entry: CacheEntry) -> bool:
@@ -334,7 +334,7 @@ class BaseCacheLayer(ABC):
                     await self.cleanup()
                 except asyncio.CancelledError:
                     break
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 缓存清理任务失败
                     logger.error(f"缓存清理任务失败: {e}")
 
         self._cleanup_task = asyncio.create_task(_cleanup_loop())
@@ -385,7 +385,7 @@ class BaseCacheLayer(ABC):
             logger.info(f"缓存已持久化: {persist_file}")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 缓存持久化失败
             logger.error(f"缓存持久化失败: {e}")
             return False
 
@@ -429,7 +429,7 @@ class BaseCacheLayer(ABC):
             logger.info(f"缓存已加载: {persist_file}")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 缓存加载失败
             logger.error(f"缓存加载失败: {e}")
             return False
 

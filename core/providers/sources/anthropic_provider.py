@@ -35,7 +35,7 @@ class AnthropicProvider(BaseProvider):
                 base_url=self.config.base_url,
             )
             logger.info(f"[AnthropicProvider] 初始化完成: {self.config.id}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — Anthropic初始化失败已记录日志
             logger.error(f"[AnthropicProvider] 初始化失败: {e}")
 
     async def chat(

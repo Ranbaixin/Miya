@@ -21,7 +21,7 @@ def _load_config():
     try:
         with open(config_path, "r", encoding="utf-8") as f:
             return json.load(f)
-    except Exception:
+    except (OSError, ValueError):
         return {}
 
 
@@ -58,12 +58,12 @@ async def synthesize(text: str, engine: str = None) -> str | None:
             path = await _synthesize_api_tts(config, text)
         else:
             path = await _synthesize_edge_tts(config, text)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — TTS失败回退edge-tts
         logger.warning(f"TTS {engine} 失败: {e}，回退 edge-tts")
         if engine != "edge_tts":
             try:
                 path = await _synthesize_edge_tts(config, text)
-            except Exception:
+            except Exception:  # noqa: BLE001 — edge-tts回退失败降级
                 return None
         else:
             return None
@@ -93,7 +93,7 @@ def _archive_audio(audio_path: str, text: str, config: dict):
     try:
         shutil.copy2(audio_path, dest)
         logger.info(f"[TTS] 音频已存档: {dest}")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — TTS存档失败降级
         logger.warning(f"[TTS] 存档失败: {e}")
 
 

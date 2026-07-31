@@ -158,7 +158,7 @@ class ToolRoutes:
                 # 读取CSV文件
                 try:
                     df = pd.read_csv(file_path)
-                except Exception as e:
+                except (OSError, ValueError) as e:
                     return {"success": False, "error": f"读取文件失败: {str(e)}"}
 
                 # 执行分析
@@ -201,7 +201,7 @@ class ToolRoutes:
                             x_column = str_cols[0]
                         if numeric_cols:
                             y_column = numeric_cols[0]
-                    except Exception as e:
+                    except (OSError, ValueError) as e:
                         return {"success": False, "error": f"读取CSV失败: {str(e)}"}
                 elif data:
                     # 转换为DataFrame
@@ -244,7 +244,7 @@ class ToolRoutes:
                             result = chart_method(
                                 data=df, title=title, output_path=output_path
                             )
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 — 图表生成失败，降级返回错误串
                         result = f"生成图表失败: {str(e)}"
                 else:
                     result = f"不支持的图表类型: {chart_type}"
@@ -320,7 +320,7 @@ class ToolRoutes:
                         }
                     except subprocess.TimeoutExpired:
                         return {"success": False, "error": "命令执行超时"}
-                    except Exception as e:
+                    except (OSError, ValueError) as e:
                         return {"success": False, "error": str(e)}
 
                 if (

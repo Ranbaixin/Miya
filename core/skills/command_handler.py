@@ -25,7 +25,7 @@ def _load_command_config() -> Dict[str, Any]:
             with open(config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
             return config.get("command_keywords", {})
-    except Exception as e:
+    except (OSError, ValueError) as e:
         logger.warning(f"加载命令配置失败: {e}")
     return {}
 
@@ -109,7 +109,7 @@ class CommandHandler:
         if handler:
             try:
                 return await handler(args[1:] if len(args) > 1 else [])
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 命令执行失败返回错误结果
                 logger.error(f"命令执行失败: {command} - {e}")
                 return CommandResult(False, f"执行失败: {str(e)[:50]}")
 
@@ -133,7 +133,7 @@ class CommandHandler:
                     lines.append(f"{lane}: {count}")
 
             return CommandResult(True, "\n".join(lines))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 队列状态获取失败返回错误
             return CommandResult(False, f"获取队列状态失败: {e}")
 
     async def _handle_stats_memory(self, args: list) -> CommandResult:
@@ -148,7 +148,7 @@ class CommandHandler:
                 return CommandResult(True, f"【记忆统计】\n{stats}")
 
             return CommandResult(True, "记忆系统正常")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 记忆统计获取失败返回错误
             return CommandResult(False, f"获取记忆统计失败: {e}")
 
     async def _handle_stats_session(self, args: list) -> CommandResult:
@@ -164,7 +164,7 @@ class CommandHandler:
             admin_qq = settings.QQ_SUPERADMIN_QQ
 
             return CommandResult(True, f"【管理员列表】\n超级管理员: {admin_qq}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 管理员获取失败返回错误
             return CommandResult(False, f"获取管理员失败: {e}")
 
     async def _handle_admin_add(self, args: list) -> CommandResult:
@@ -228,8 +228,8 @@ class CommandHandler:
             mq = get_message_queue()
             snapshot = mq.snapshot()
             lines.append(f"队列: {snapshot.get('processors', 0)} 处理器")
-        except:
-            pass
+        except Exception:  # noqa: BLE001 — 队列快照失败忽略
+            logger.debug("获取消息队列快照失败")
 
         return CommandResult(True, "\n".join(lines))
 
@@ -238,7 +238,7 @@ class CommandHandler:
         try:
 
             return CommandResult(True, "配置已重载")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 重载失败返回错误
             return CommandResult(False, f"重载失败: {e}")
 
     async def _handle_system_restart(self, args: list) -> CommandResult:

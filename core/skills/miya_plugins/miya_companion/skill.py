@@ -27,7 +27,7 @@ class MiyaCompanion:
             loader = get_personality_loader()
             config = loader.load("_default")
             return config
-        except Exception:
+        except Exception:  # noqa: BLE001 — 配置加载失败降级
             return {}
 
     async def handle_handoff(self, tool_call: Dict[str, Any]) -> str:

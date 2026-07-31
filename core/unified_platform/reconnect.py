@@ -162,7 +162,7 @@ async def run_reconnect_loop(
                     with contextlib.suppress(Exception):
                         await on_reconnected(attempt + 1)
                 return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 重连尝试失败已记录日志
             logger.warning(f"重连尝试 {attempt + 1} 失败: {e}")
             if on_error:
                 with contextlib.suppress(Exception):

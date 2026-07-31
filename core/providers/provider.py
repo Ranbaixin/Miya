@@ -170,7 +170,7 @@ class Provider(abc.ABC):
                 self.text_chat(prompt="REPLY `PONG` ONLY"),
                 timeout=timeout,
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 包装Provider测试异常并上抛
             raise Exception(f"Provider 测试失败: {e}")
 
     # ===== 辅助方法 =====

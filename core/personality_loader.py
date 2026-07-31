@@ -36,7 +36,7 @@ class PersonalityLoader:
                 with open(base_path, "r", encoding="utf-8") as f:
                     self._base_config = yaml.safe_load(f)
                 logger.info("[人格加载器] 加载基础配置成功")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 加载基础配置失败已记录日志
                 logger.warning(f"[人格加载器] 加载基础配置失败: {e}")
                 self._base_config = {}
         else:
@@ -53,7 +53,7 @@ class PersonalityLoader:
         try:
             with open(text_config_path, "r", encoding="utf-8") as f:
                 self._text_config = json.load(f)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载 text_config 失败已记录日志
             logger.warning(f"[人格加载器] 加载 text_config.json 失败: {e}")
             self._text_config = {}
         return self._text_config
@@ -149,7 +149,7 @@ class PersonalityLoader:
             try:
                 with open(self._user_overrides_path, "r", encoding="utf-8") as f:
                     return json.load(f)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 加载用户覆盖失败已记录日志
                 logger.warning(f"[人格加载器] 加载用户覆盖失败: {e}")
         return {}
 
@@ -158,7 +158,7 @@ class PersonalityLoader:
         try:
             with open(self._user_overrides_path, "w", encoding="utf-8") as f:
                 json.dump(self._user_overrides, f, ensure_ascii=False, indent=2)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 保存用户覆盖失败已记录日志
             logger.error(f"[人格加载器] 保存用户覆盖失败: {e}")
 
     def load(self, name: str) -> Dict:
@@ -236,7 +236,7 @@ class PersonalityLoader:
             name = yaml_file.stem
             try:
                 personalities[name] = self.load(name)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 加载人格失败已记录日志
                 logger.error(f"[人格加载器] 加载人格失败 {name}: {e}")
         return personalities
 
@@ -272,7 +272,7 @@ class PersonalityLoader:
             with open(path, "r", encoding="utf-8") as f:
                 self._core_traits = yaml.safe_load(f)
             return self._core_traits
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载核心特质失败回退默认
             logger.error(f"[人格加载器] 加载核心特质失败: {e}")
             return self._get_default_core_traits()
 

@@ -131,7 +131,7 @@ class NeteaseMusicSource(MusicSource):
                 artist=s.get("ar", [{}])[0].get("name", ""),
                 source="netease",
             )
-        except Exception:
+        except Exception:  # noqa: BLE001 — 网易云搜索失败降级
             return None
 
     async def download(self, song: SongResult, output_dir: str) -> Optional[str]:
@@ -163,7 +163,7 @@ class NeteaseMusicSource(MusicSource):
                 f"Netease: {song.song_name} ({os.path.getsize(path)}B, q={self.quality})"
             )
             return path
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 网易云下载失败降级
             logger.warning(f"Netease download failed: {e}")
             return None
 
@@ -226,7 +226,7 @@ class BilibiliMusicSource(MusicSource):
                 artist=v.get("author", ""),
                 source="bilibili",
             )
-        except Exception:
+        except Exception:  # noqa: BLE001 — B站搜索失败降级
             return None
 
     async def download(self, song: SongResult, output_dir: str) -> Optional[str]:
@@ -262,7 +262,7 @@ class BilibiliMusicSource(MusicSource):
                     timeout=120,
                 ),
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — B站下载失败降级
             logger.warning(f"Bilibili yutto failed: {e}")
             return None
 
@@ -297,7 +297,7 @@ class AutoMusicSource(MusicSource):
                 src = cls()
                 if src.initialize(config):
                     self.sources.append(src)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 单源初始化失败降级
                 logger.warning(f"Auto: {cls.__name__} init failed: {e}")
         if not self.sources:
             logger.error("Auto: no sources available")
@@ -314,7 +314,8 @@ class AutoMusicSource(MusicSource):
                     logger.info(f"Auto search [{src.name}]: {result.song_name}")
                     result.source = f"auto:{src.name}"
                     return result
-            except Exception:
+            except Exception:  # noqa: BLE001 — 单源搜索失败继续尝试其他源
+                logger.debug(f"Auto search [{src.name}] failed")
                 continue
         return None
 
@@ -332,7 +333,8 @@ class AutoMusicSource(MusicSource):
                 path = await src.download(song, output_dir)
                 if path and os.path.exists(path):
                     return path
-            except Exception:
+            except Exception:  # noqa: BLE001 — 单源下载失败继续尝试其他源
+                logger.debug(f"Auto download [{src.name}] failed")
                 continue
         return None
 

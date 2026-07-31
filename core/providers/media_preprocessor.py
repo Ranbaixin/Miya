@@ -92,7 +92,7 @@ class MediaPreprocessor:
 
             return target_path, need_cleanup
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 下载失败
             logger.warning(f"[MediaPreprocessor] 下载失败 {url}: {e}")
             return url, False
 
@@ -122,7 +122,7 @@ class MediaPreprocessor:
             data = image_ref.replace("base64://", "")
             try:
                 image_bytes = base64.b64decode(data)
-            except Exception:
+            except (ValueError, TypeError):
                 return None
 
             # 保存为临时文件
@@ -257,7 +257,7 @@ class MediaPreprocessor:
         try:
             suffix = Path(file_path).suffix.lower().lstrip(".")
             return suffix in SUPPORTED_IMAGE_FORMATS
-        except Exception:
+        except (OSError, ValueError, TypeError):
             return False
 
     def is_audio_file(self, file_path: str) -> bool:
@@ -265,7 +265,7 @@ class MediaPreprocessor:
         try:
             suffix = Path(file_path).suffix.lower().lstrip(".")
             return suffix in SUPPORTED_AUDIO_FORMATS
-        except Exception:
+        except (OSError, ValueError, TypeError):
             return False
 
     async def extract_images_from_context(

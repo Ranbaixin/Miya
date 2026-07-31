@@ -95,7 +95,7 @@ class ConversationHistoryManager:
         except json.JSONDecodeError as e:
             logger.warning(f"会话历史文件JSON格式错误 {session_id}: {e}")
             return []
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载会话历史失败
             logger.error(f"加载会话历史失败 {session_id}: {e}")
             return []
 
@@ -136,7 +136,7 @@ class ConversationHistoryManager:
                     with open(file_path, 'w', encoding='utf-8') as f:
                         json.dump(data, f, ensure_ascii=False, indent=2)
                     logger.info(f"同步保存会话历史 {session_id}: {len(messages)} 条消息")
-                except:
+                except Exception:  # noqa: BLE001 — 同步保存兜底失败已记录日志
                     logger.error(f"同步保存失败: {session_id}")
             except Exception as e:
                 logger.error(f"保存会话历史失败 {session_id}: {e}", exc_info=True)
@@ -146,8 +146,8 @@ class ConversationHistoryManager:
                     with open(file_path, 'w', encoding='utf-8') as f:
                         json.dump(data, f, ensure_ascii=False, indent=2)
                     logger.info(f"同步保存会话历史 {session_id}: {len(messages)} 条消息")
-                except:
-                    pass
+                except Exception as e:  # noqa: BLE001 — 同步保存兜底失败已记录日志
+                    logger.warning(f"同步保存兜底失败 {session_id}: {e}")
 
     async def add_message(
         self,
@@ -268,7 +268,7 @@ class ConversationHistoryManager:
             try:
                 file_path.unlink()
                 logger.info(f"删除会话历史文件: {session_id}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 删除会话历史文件失败
                 logger.error(f"删除会话历史文件失败 {session_id}: {e}")
 
         # 更新统计
@@ -369,7 +369,7 @@ class ConversationHistoryManager:
                     file_path.unlink()
                     deleted_count += 1
                     logger.info(f"删除旧会话历史: {file_path.name}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 删除旧会话历史失败
                 logger.error(f"删除旧会话历史失败 {file_path}: {e}")
 
         logger.info(f"清理完成，删除 {deleted_count} 个旧会话历史文件")

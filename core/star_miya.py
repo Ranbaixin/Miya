@@ -211,7 +211,7 @@ class StarManager:
             self._stars[name] = star
             logger.info(f"[StarManager] 已加载: {name}")
             return star
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载失败已记录日志
             logger.error(f"[StarManager] 加载失败 {name}: {e}")
             return None
 
@@ -223,7 +223,7 @@ class StarManager:
                 await star.deactivate()
                 del self._stars[name]
                 logger.info(f"[StarManager] 已卸载: {name}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 卸载失败已记录日志
                 logger.error(f"[StarManager] 卸载失败 {name}: {e}")
 
     async def enable_star(self, name: str):
@@ -292,7 +292,7 @@ class StarManager:
                     await handler(context)
                 elif handler:
                     handler(context)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 事件处理失败已记录日志
                 logger.error(f"[StarManager] 事件处理失败 {name}: {e}")
 
     async def handle_command(
@@ -308,7 +308,7 @@ class StarManager:
                     result = await star.on_command(context, command, args)
                     if result is not None:
                         return result
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 命令处理失败已记录日志
                     logger.error(f"[StarManager] 命令处理失败 {name}: {e}")
 
         # 再尝试全局命令
@@ -319,7 +319,7 @@ class StarManager:
                     return await handler(context, *args)
                 else:
                     return handler(context, *args)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 命令执行失败已记录日志
                 logger.error(f"[StarManager] 命令执行失败: {e}")
 
         return None
@@ -350,7 +350,7 @@ def star(
             try:
                 sm = get_star_manager()
                 sm.register_star_class(cls, cls.name)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 延迟注册失败已记录日志
                 logger.warning(f"Star 注册延迟: {e}")
 
         # 保存到待注册列表
@@ -375,7 +375,7 @@ def command(
             try:
                 sm = get_star_manager()
                 sm.register_command(name, func, description, aliases)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 延迟注册失败已记录日志
                 logger.warning(f"Command 注册延迟: {e}")
 
         if not hasattr(func, "_register_callback"):
@@ -394,7 +394,7 @@ def on_event(event_type: StarEventType):
             try:
                 sm = get_star_manager()
                 sm.register_event_handler(event_type, func)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 延迟注册失败已记录日志
                 logger.warning(f"Event handler 注册延迟: {e}")
 
         if not hasattr(func, "_register_callback"):

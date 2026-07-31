@@ -265,7 +265,7 @@ class ConfigHotReload:
                         "source": event.source,
                     }
                 )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — WebSocket通知失败已记录日志
             logger.debug(f"[配置热更新] WebSocket通知失败: {e}")
 
     async def _on_config_changed(self) -> None:
@@ -650,7 +650,7 @@ class ConfigHotReload:
                         if hasattr(self.context.config_manager, "api_key"):
                             self.context.config_manager.api_key = api_key
                             logger.info("[配置热更新] 配置管理器API密钥已更新")
-                except Exception as key_error:
+                except Exception as key_error:  # noqa: BLE001 — API密钥更新失败已记录日志
                     logger.warning(f"[配置热更新] API密钥更新失败: {key_error}")
 
             model = config.get("model")
@@ -662,7 +662,7 @@ class ConfigHotReload:
                         if hasattr(self.context.agent_manager, "model"):
                             self.context.agent_manager.model = model
                             logger.info(f"[配置热更新] AI模型已切换到: {model}")
-                except Exception as model_error:
+                except Exception as model_error:  # noqa: BLE001 — 模型切换失败已记录日志
                     logger.warning(f"[配置热更新] 模型切换失败: {model_error}")
 
         except Exception as e:
@@ -695,7 +695,7 @@ class ConfigHotReload:
                         logger.info(f"[配置热更新] TTS引擎已切换到: {engine}")
                     else:
                         logger.warning("[配置热更新] 未找到TTS引擎实例，无法切换引擎")
-                except Exception as tts_error:
+                except Exception as tts_error:  # noqa: BLE001 — TTS引擎切换失败已记录日志
                     logger.warning(f"[配置热更新] TTS引擎切换失败: {tts_error}")
 
             voice = config.get("voice")
@@ -721,7 +721,7 @@ class ConfigHotReload:
                         logger.info(f"[配置热更新] TTS音色已切换到: {voice}")
                     else:
                         logger.warning("[配置热更新] 未找到TTS引擎实例，无法切换音色")
-                except Exception as voice_error:
+                except Exception as voice_error:  # noqa: BLE001 — TTS音色切换失败已记录日志
                     logger.warning(f"[配置热更新] TTS音色切换失败: {voice_error}")
 
         except Exception as e:
@@ -747,7 +747,7 @@ class ConfigHotReload:
                         logger.info("[配置热更新] WebAPI密钥已安全更新")
                     else:
                         logger.warning("[配置热更新] WebAPI实例不支持动态更新API密钥")
-                except Exception as webapi_key_error:
+                except Exception as webapi_key_error:  # noqa: BLE001 — WebAPI密钥更新失败已记录日志
                     logger.warning(f"[配置热更新] WebAPI密钥更新失败: {webapi_key_error}")
 
             # 更新CORS配置
@@ -784,7 +784,7 @@ class ConfigHotReload:
                                 logger.warning("[配置热更新] 未找到CORS中间件，无法更新CORS配置")
                         else:
                             logger.warning("[配置热更新] WebAPI实例不支持动态更新CORS配置")
-                except Exception as cors_error:
+                except Exception as cors_error:  # noqa: BLE001 — CORS源更新失败已记录日志
                     logger.warning(f"[配置热更新] CORS源更新失败: {cors_error}")
 
             # 更新速率限制
@@ -833,7 +833,7 @@ class ConfigHotReload:
 
                     logger.info(f"[配置热更新] API速率限制已更新: {rate_limit}/分钟")
 
-                except Exception as rate_limit_error:
+                except Exception as rate_limit_error:  # noqa: BLE001 — 速率限制更新失败已记录日志
                     logger.warning(f"[配置热更新] API速率限制更新失败: {rate_limit_error}")
 
         except Exception as e:
@@ -873,7 +873,7 @@ class ConfigHotReload:
                             f"[配置热更新] 已更新{len(self.context.terminal_manager.active_terminals)}个活跃终端的超时"
                         )
 
-                except Exception as timeout_error:
+                except Exception as timeout_error:  # noqa: BLE001 — 终端超时更新失败已记录日志
                     logger.warning(f"[配置热更新] 终端超时更新失败: {timeout_error}")
 
             # 更新终端缓冲区大小
@@ -898,7 +898,7 @@ class ConfigHotReload:
                     # 注意：缓冲区大小通常只影响新创建的终端
                     logger.debug("[配置热更新] 缓冲区大小更改仅影响新创建的终端")
 
-                except Exception as buffer_error:
+                except Exception as buffer_error:  # noqa: BLE001 — 缓冲区更新失败已记录日志
                     logger.warning(f"[配置热更新] 终端缓冲区大小更新失败: {buffer_error}")
 
             # 更新默认shell
@@ -926,7 +926,7 @@ class ConfigHotReload:
                     # 注意：默认shell更改仅影响新创建的终端
                     logger.debug("[配置热更新] 默认shell更改仅影响新创建的终端")
 
-                except Exception as shell_error:
+                except Exception as shell_error:  # noqa: BLE001 — 默认shell更新失败已记录日志
                     logger.warning(f"[配置热更新] 默认shell更新失败: {shell_error}")
 
         except Exception as e:
@@ -976,7 +976,7 @@ class ConfigHotReload:
                                 if hasattr(self.context.iot_manager, "start_heartbeat"):
                                     self.context.iot_manager.start_heartbeat()
                                     logger.info(f"[配置热更新] 已使用新间隔重启心跳定时器: {heartbeat_interval}秒")
-                            except Exception as heartbeat_error:
+                            except Exception as heartbeat_error:  # noqa: BLE001 — 心跳重启失败已记录日志
                                 logger.warning(f"[配置热更新] 重启心跳定时器失败: {heartbeat_error}")
 
                     elif hasattr(self.context.iot_manager, "set_heartbeat_interval"):
@@ -992,7 +992,7 @@ class ConfigHotReload:
 
                     logger.info(f"[配置热更新] IoT心跳间隔已更新: {heartbeat_interval}秒")
 
-                except Exception as heartbeat_error:
+                except Exception as heartbeat_error:  # noqa: BLE001 — IoT心跳更新失败已记录日志
                     logger.warning(f"[配置热更新] IoT心跳间隔更新失败: {heartbeat_error}")
 
             # 更新自动化规则
@@ -1054,7 +1054,7 @@ class ConfigHotReload:
                                 )
                                 return
 
-                        except Exception as validate_error:
+                        except Exception as validate_error:  # noqa: BLE001 — 规则验证失败回滚，已记录日志
                             # 验证或加载失败，回滚
                             if old_rules is not None:
                                 self.context.iot_manager.automation_rules = old_rules
@@ -1063,7 +1063,7 @@ class ConfigHotReload:
 
                     logger.info(f"[配置热更新] IoT自动化规则已更新: {len(rules_dict)}条")
 
-                except Exception as automation_error:
+                except Exception as automation_error:  # noqa: BLE001 — 自动化规则更新失败已记录日志
                     logger.warning(f"[配置热更新] IoT自动化规则更新失败: {automation_error}")
 
         except Exception as e:

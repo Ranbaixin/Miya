@@ -85,7 +85,7 @@ class ProviderConfigLoader:
             )
             return self._configs
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载Provider配置失败返回空
             logger.error(f"[ProviderConfigLoader] 加载配置失败: {e}")
             return {}
 
@@ -137,7 +137,7 @@ class ProviderConfigLoader:
             )
             return self._configs
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载AstrBot配置失败
             logger.error(f"[ProviderConfigLoader] 加载AstrBot配置失败: {e}")
             return {}
 

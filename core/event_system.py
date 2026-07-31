@@ -109,7 +109,7 @@ class EventBus:
                     await handler(event)
                 else:
                     handler(event)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 事件处理失败已记录日志
                 logger.error(f"[EventBus] 事件处理失败: {e}")
 
     async def _dispatcher_loop(self):
@@ -122,7 +122,7 @@ class EventBus:
                 await self.dispatch(event)
             except asyncio.TimeoutError:
                 continue
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 事件处理异常已记录日志
                 logger.error(f"[EventBus] 事件处理异常: {e}")
 
     async def start(self):
@@ -203,7 +203,7 @@ class CronJob:
             else:
                 self.handler()
             logger.info(f"[CronJob] 执行任务: {self.name}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 任务执行失败已记录日志
             logger.error(f"[CronJob] 任务执行失败: {e}")
 
 
@@ -296,7 +296,7 @@ class Pipeline:
         for step in self.steps:
             try:
                 result = await step(result) or result if asyncio.iscoroutinefunction(step) else step(result) or result
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 步骤执行失败已记录日志
                 logger.error(f"[Pipeline] 步骤执行失败: {e}")
 
         return result

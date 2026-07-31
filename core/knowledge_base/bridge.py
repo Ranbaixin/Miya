@@ -38,7 +38,7 @@ class KnowledgeBaseBridge:
                 "doc_count": 0,
             }
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 创建失败
             logger.error(f"[KBBridge] 创建失败: {e}")
             return False
 
@@ -57,7 +57,7 @@ class KnowledgeBaseBridge:
             self._kbs[kb_name]["doc_count"] += 1
             logger.debug(f"[KBBridge] 添加文档到 {kb_name}")
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 添加失败
             logger.error(f"[KBBridge] 添加失败: {e}")
             return False
 

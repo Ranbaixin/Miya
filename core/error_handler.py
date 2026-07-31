@@ -122,7 +122,7 @@ def retry_on_error(
                     
                     return await func(*args, **kwargs)
                     
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 异步调用包装异常已记录日志
                     last_exception = e
                     
                     # 检查是否需要重试
@@ -162,7 +162,7 @@ def retry_on_error(
                     
                     return func(*args, **kwargs)
                     
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 同步调用包装异常已记录日志
                     last_exception = e
                     
                     # 检查是否需要重试

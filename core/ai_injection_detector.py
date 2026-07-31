@@ -20,7 +20,7 @@ def _get_security_config() -> dict:
         config = _load_config()
         security = config.get("security", {})
         return security.get("ai_injection_detection", {})
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — 加载安全配置失败
         logger.warning(f"加载安全配置失败: {e}")
         return {}
 
@@ -121,7 +121,7 @@ class AIInjectionDetector:
         if self.ai_client:
             try:
                 return await self._ai_detect(content)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — AI检测失败
                 logger.warning(f"[AI注入检测] AI检测失败: {e}")
 
         return False, ""
@@ -206,7 +206,7 @@ class AIInjectionDetector:
 
             return is_injection, result if is_injection else ""
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — AI检测异常
             logger.warning(f"[AI注入检测] AI检测异常: {e}")
             return False, ""
 

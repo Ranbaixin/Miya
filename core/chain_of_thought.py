@@ -248,7 +248,7 @@ class ChainOfThought:
             if json_match:
                 return json.loads(json_match.group())
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — AI增强思考失败已记录日志
             logger.warning(f"AI增强思考失败: {e}")
         
         return {
@@ -496,7 +496,7 @@ class ChainOfThought:
             logger.info(f"回溯到步骤 {step_id}")
             return True
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 回溯失败已记录日志
             logger.error(f"回溯失败: {e}")
             return False
     
@@ -513,7 +513,7 @@ class ChainOfThought:
             logger.info(f"思维链已保存到 {path}")
             return True
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 保存思维链失败已记录日志
             logger.error(f"保存思维链失败: {e}")
             return False
     
@@ -556,7 +556,7 @@ class ChainOfThought:
             logger.info(f"思维链已从 {path} 加载")
             return chain
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载思维链失败已记录日志
             logger.error(f"加载思维链失败: {e}")
             return None
     

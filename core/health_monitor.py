@@ -319,16 +319,16 @@ class HealthMonitor:
                 timestamp=time.time()
             )
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 单项检查异常，降级为不健康结果
             duration = time.time() - start_time
-            
+
             with self._lock:
                 check.last_check = time.time()
                 check.last_result = False
                 check.last_duration = duration
                 check.total_checks += 1
                 check.failure_count += 1
-            
+
             logger.error(f"健康检查执行失败: {name} - {e}")
             
             return HealthCheckResult(
@@ -483,7 +483,7 @@ class HealthMonitor:
                 uptime=uptime
             )
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 指标收集失败，降级返回空指标
             logger.error(f"收集系统指标失败: {e}")
             return SystemMetrics()
     
@@ -495,7 +495,7 @@ class HealthMonitor:
             with open('pyproject.toml', 'rb') as f:
                 config = tomli.load(f)
                 return config.get('project', {}).get('version', '1.0.0')
-        except Exception:
+        except (OSError, ValueError, ImportError):
             return "1.0.0"
     
     # 默认检查函数
@@ -571,7 +571,7 @@ class HealthMonitor:
                     "test_port": 53
                 }
             }
-        except Exception as e:
+        except OSError as e:
             return {
                 "status": False,
                 "message": f"网络连接失败: {str(e)}",
@@ -617,7 +617,7 @@ class HealthMonitor:
                     
                 except asyncio.CancelledError:
                     break
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 检查循环错误，记录日志后继续
                     logger.error(f"健康检查循环错误: {e}")
                     await asyncio.sleep(5.0)
         
@@ -645,7 +645,7 @@ class HealthMonitor:
                     
                 except asyncio.CancelledError:
                     break
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 指标循环错误，记录日志后继续
                     logger.error(f"指标收集循环错误: {e}")
                     await asyncio.sleep(10.0)
         

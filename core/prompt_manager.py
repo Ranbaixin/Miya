@@ -69,7 +69,7 @@ class PromptManager:
             else:
                 logger.warning("[PromptManager] 配置文件不存在")
                 self.text_config = {}
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 配置加载失败已记录日志
             logger.warning(f"[PromptManager] 配置加载失败: {e}")
             self.text_config = {}
 
@@ -159,8 +159,8 @@ class PromptManager:
                     name = person.get("name", "")
                     if name:
                         return name
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001 — 读取所有者名失败，回退默认
+            logger.debug(f"[PromptManager] 读取所有者名失败: {e}")
         return "然鑫"  # 最终回退
 
     def get_system_prompt(self, is_owner: bool = True, owner_name: str = "然鑫") -> str:
@@ -446,7 +446,7 @@ class PromptManager:
                     template = Template(system_prompt)
                     system_prompt = template.render(**additional_context)
                     logger.debug("[PromptManager] Jinja2模板渲染成功")
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 模板渲染失败回退简单替换
                     logger.warning(
                         f"[PromptManager] Jinja2模板渲染失败: {e}, 回退到简单替换"
                     )
@@ -553,8 +553,8 @@ class PromptManager:
                     search_prefix = templates.get(
                         "search_context_prefix", search_prefix
                     )
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001 — 搜索前缀配置加载失败，保留默认
+                logger.debug(f"[PromptManager] 加载搜索前缀失败: {e}")
 
             extra_context = ""
             if awareness_text:
@@ -692,7 +692,7 @@ class PromptManager:
 
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载失败已打印错误
             print(f"错误：从JSON加载配置失败：{e}")
             return False
 
@@ -722,7 +722,7 @@ class PromptManager:
 
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 保存失败已打印错误
             print(f"错误：保存配置到JSON失败：{e}")
             return False
 

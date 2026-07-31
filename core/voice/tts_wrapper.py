@@ -56,7 +56,7 @@ class TTSWrapper:
             # 等待结果（最多30秒）
             result = future.result(timeout=30)
             return result
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 主TTS失败转回退方案
             logger.error(f"[TTSWrapper] 生成语音失败: {e}")
             return self._fallback_generate(text, voice, response_format, speed)
     
@@ -77,8 +77,8 @@ class TTSWrapper:
         try:
             import os
             os.remove(temp_path)
-        except:
-            pass
+        except OSError:
+            logger.debug(f"[TTSWrapper] 删除临时文件失败: {temp_path}")
         
         return audio_data
     
@@ -113,7 +113,7 @@ class TTSWrapper:
                     data = f.read()
                 os.remove(tmp_path)
                 return data
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 回退方案失败降级
             logger.error(f"[TTSWrapper] 回退方案失败: {e}")
         
         return None

@@ -74,7 +74,7 @@ class MiyaPluginManager:
                         entry_class=info.get("entry_class", ""),
                     )
                 logger.info(f"已加载 {len(self._plugins)} 个插件配置")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 加载插件配置失败已记录日志
                 logger.warning(f"加载插件配置失败: {e}")
 
     def _save_plugin_config(self):
@@ -130,7 +130,7 @@ class MiyaPluginManager:
             logger.info(f"插件 {plugin_name} 安装成功")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 安装插件失败已记录日志
             logger.error(f"安装插件 {plugin_name} 失败: {e}")
             return False
 
@@ -158,7 +158,7 @@ class MiyaPluginManager:
                             if len(desc) > 10:
                                 description = desc[:200]
                                 break
-                        except:
+                        except (IndexError, ValueError):  # noqa: S110 — 解析描述失败静默跳过
                             pass
 
         for py_file in plugin_dir.rglob("*.py"):
@@ -171,7 +171,7 @@ class MiyaPluginManager:
                         try:
                             entry_class = line.split("class")[1].split("(")[0].strip()
                             break
-                        except:
+                        except (IndexError, ValueError):  # noqa: S110 — 解析类名失败静默跳过
                             pass
                 break
 
@@ -203,7 +203,7 @@ class MiyaPluginManager:
             logger.info(f"插件 {plugin_name} 已卸载")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 卸载插件失败已记录日志
             logger.error(f"卸载插件 {plugin_name} 失败: {e}")
             return False
 
@@ -246,7 +246,7 @@ class MiyaPluginManager:
                 importlib.reload(mod)
                 logger.info(f"插件 {plugin_name} 已重载")
                 return True
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 重载插件失败已记录日志
                 logger.error(f"重载插件 {plugin_name} 失败: {e}")
                 return False
         return False

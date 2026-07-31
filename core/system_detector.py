@@ -142,7 +142,7 @@ class SystemDetector:
                         version = line.split(':')[1].strip()
                 return distro, version
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 发行版检测失败已记录日志
             logger.warning(f"检测 Linux 发行版失败: {e}")
 
         return "unknown", "unknown"
@@ -166,7 +166,7 @@ class SystemDetector:
                 )
                 if result.returncode == 0:
                     return 'pwsh' if 'PowerShell Core' in result.stdout else 'powershell'
-            except:
+            except (OSError, subprocess.SubprocessError):  # noqa: S110 — 探测命令不存在时静默跳过
                 pass
 
         # 默认返回系统默认 Shell
@@ -191,7 +191,7 @@ class SystemDetector:
                 version = result.stdout.strip()
                 # 移除 'v' 前缀
                 return version.lstrip('v')
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 未安装时探测失败已记录日志
             logger.debug(f"未检测到 Node.js: {e}")
 
         return "not_installed"
@@ -217,7 +217,7 @@ class SystemDetector:
                 )
                 if result.returncode == 0:
                     managers.append('yarn')
-            except:
+            except (OSError, subprocess.SubprocessError):  # noqa: S110 — 探测命令不存在时静默跳过
                 pass
 
             # 检测 pnpm
@@ -230,7 +230,7 @@ class SystemDetector:
                 )
                 if result.returncode == 0:
                     managers.append('pnpm')
-            except:
+            except (OSError, subprocess.SubprocessError):  # noqa: S110 — 探测命令不存在时静默跳过
                 pass
 
         # Windows 包管理器
@@ -245,7 +245,7 @@ class SystemDetector:
                 )
                 if result.returncode == 0:
                     managers.append('winget')
-            except:
+            except (OSError, subprocess.SubprocessError):  # noqa: S110 — 探测命令不存在时静默跳过
                 pass
 
             # Chocolatey
@@ -258,7 +258,7 @@ class SystemDetector:
                 )
                 if result.returncode == 0:
                     managers.append('choco')
-            except:
+            except (OSError, subprocess.SubprocessError):  # noqa: S110 — 探测命令不存在时静默跳过
                 pass
 
             # Scoop
@@ -271,7 +271,7 @@ class SystemDetector:
                 )
                 if result.returncode == 0:
                     managers.append('scoop')
-            except:
+            except (OSError, subprocess.SubprocessError):  # noqa: S110 — 探测命令不存在时静默跳过
                 pass
 
         # Linux 包管理器
@@ -307,7 +307,7 @@ class SystemDetector:
                 )
                 if result.returncode == 0:
                     managers.append('brew')
-            except:
+            except (OSError, subprocess.SubprocessError):  # noqa: S110 — 探测命令不存在时静默跳过
                 pass
 
         logger.info(f"检测到的包管理器: {', '.join(managers)}")

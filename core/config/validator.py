@@ -85,7 +85,7 @@ class TerminalConfig(BaseModel):
             if not path.exists():
                 raise ValueError(f"工作目录不存在: {v}")
             return str(path)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 转换为具名异常上抛
             raise ValueError(f"无效的工作目录: {v} - {e}")
 
 
@@ -191,7 +191,7 @@ class AppConfig(BaseSettings):
 
         try:
             return cls()  # Pydantic会自动处理.env文件
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 转换为具名异常上抛
             raise ConfigError(
                 code=ErrorCode.CONFIG_INVALID,
                 message=f"配置加载失败: {e}",
@@ -230,7 +230,7 @@ class AppConfig(BaseSettings):
                 raise ValueError(f"不支持的配置文件格式: {config_file.suffix}")
 
             return cls(**data)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 转换为具名异常上抛
             raise ConfigError(
                 code=ErrorCode.CONFIG_INVALID,
                 message=f"配置文件解析失败: {e}",
@@ -381,7 +381,7 @@ class ConfigManager:
                     f.write(self._config.to_yaml())
             else:
                 raise ValueError(f"不支持的格式: {format}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 转换为具名异常上抛
             raise ConfigError(
                 code=ErrorCode.CONFIG_ENCRYPTION_ERROR,
                 message=f"保存配置失败: {e}",
@@ -473,7 +473,7 @@ def validate_config_file(filepath: Union[str, Path]) -> Tuple[bool, Optional[str
         config = AppConfig.from_file(filepath)
         config.validate()
         return True, None
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — 校验失败返回错误信息
         return False, str(e)
 
 

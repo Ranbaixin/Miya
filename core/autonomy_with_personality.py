@@ -172,7 +172,7 @@ class AutonomyWithPersonality:
                             'timestamp': datetime.now().isoformat(),
                         }
                     )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 记录修复开始失败
                 self.logger.warning(f"记录修复开始失败: {e}")
 
         def on_fix_complete(decision, problem, result):
@@ -206,7 +206,7 @@ class AutonomyWithPersonality:
                         success=True,
                         execution_time=result.execution_time if hasattr(result, 'execution_time') else 0.5
                     )
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 记录修复结果失败
                     self.logger.warning(f"记录修复结果失败: {e}")
             else:
                 if self.emotion:
@@ -232,7 +232,7 @@ class AutonomyWithPersonality:
                             'timestamp': datetime.now().isoformat(),
                         }
                     )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 记录修复完成失败
                 self.logger.warning(f"记录修复完成失败: {e}")
 
         self.autonomy.engine.on_decision = on_decision

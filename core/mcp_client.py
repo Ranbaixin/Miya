@@ -105,7 +105,7 @@ class MCPToolRegistry:
             logger.info(f"[MCPToolRegistry] 加载了 {len(servers)} 个 MCP 服务器配置")
             return servers
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载 MCP 配置失败已记录日志
             logger.error(f"[MCPToolRegistry] 加载 MCP 配置失败: {e}")
             return []
 
@@ -135,7 +135,7 @@ class MCPToolRegistry:
             logger.info(f"[MCPToolRegistry] MCP 服务器连接成功: {config.name}")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 连接失败已记录日志
             server.status = MCPConnectionStatus.ERROR
             server.error_message = str(e)
             self.servers[config.name] = server
@@ -156,7 +156,7 @@ class MCPToolRegistry:
             try:
                 server.process.terminate()
                 await server.process.wait()
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 断开服务器失败已记录日志
                 logger.error(f"[MCPToolRegistry] 断开服务器失败: {e}")
 
         server.status = MCPConnectionStatus.DISCONNECTED
@@ -231,7 +231,7 @@ class MCPToolRegistry:
 
             return json.dumps(result, ensure_ascii=False)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 工具执行失败已记录日志
             logger.error(f"[MCPToolRegistry] 工具执行失败: {e}")
             return f"工具执行失败: {str(e)}"
 

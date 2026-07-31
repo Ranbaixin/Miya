@@ -8,12 +8,14 @@ import asyncio
 import json
 import logging
 from datetime import datetime
+from pathlib import Path
 from typing import Dict
 
 logger = logging.getLogger(__name__)
 
 try:
     from fastapi import APIRouter, HTTPException
+    from fastapi.responses import JSONResponse
     from starlette.responses import StreamingResponse
 
     FASTAPI_AVAILABLE = True
@@ -102,7 +104,7 @@ class MiyaAPI:
                     "timestamp": datetime.utcnow().isoformat(),
                 }
                 return status
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 状态获取失败降级返回
                 logger.error(f"[MiyaAPI] 获取状态失败: {e}")
                 return {"success": False, "error": str(e)}
 
@@ -130,7 +132,7 @@ class MiyaAPI:
                         "current_form": profile.get("current_form", "default"),
                         "dominant": profile.get("dominant", ""),
                     }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 人格向量读取失败降级默认值
                 logger.error(f"[API] 获取人格向量失败: {e}")
             return {
                 "success": True,
@@ -153,7 +155,7 @@ class MiyaAPI:
                 if hasattr(self, "decision_hub") and self.decision_hub and hasattr(self.decision_hub, "personality"):
                     forms = self.decision_hub.personality.get_available_forms()
                     return {"success": True, "forms": forms}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 人格表单读取失败降级默认值
                 logger.error(f"[API] 获取人格表单失败: {e}")
             return {"success": True, "forms": ["default", "yae", "kafka"]}
 
@@ -167,7 +169,7 @@ class MiyaAPI:
                 if hasattr(self, "decision_hub") and self.decision_hub and hasattr(self.decision_hub, "personality"):
                     self.decision_hub.personality.switch_form(form)
                     return {"success": True, "message": f"已切换到形态: {form}"}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 切换表单失败已返回错误
                 logger.error(f"[API] 切换人格表单失败: {e}")
             return {"success": False, "message": "切换失败"}
 
@@ -211,7 +213,7 @@ class MiyaAPI:
                         )
                     conn.close()
                     logger.info(f"[Memory] 从SQLite加载 {len(all_memories)} 条记忆")
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — SQLite读取失败降级空列表
                     logger.warning(f"[Memory] SQLite读取失败: {e}")
 
             all_memories.sort(key=lambda x: x.get("created_at", ""), reverse=True)
@@ -249,7 +251,7 @@ class MiyaAPI:
                     "message": "记忆已添加",
                     "memory_id": memory_id,
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 添加记忆失败已返回错误
                 logger.error(f"[MiyaAPI] 添加记忆失败: {e}")
                 return {"success": False, "message": str(e)}
 
@@ -282,7 +284,7 @@ class MiyaAPI:
                     "memories": memories,
                     "total": len(memories),
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 搜索记忆失败已返回错误
                 logger.error(f"[MiyaAPI] 搜索记忆失败: {e}")
                 return {"success": False, "memories": [], "message": str(e)}
 
@@ -311,7 +313,7 @@ class MiyaAPI:
             except ImportError:
                 logger.warning("[API] Alkaid KB 模块未安装，知识库功能不可用")
                 return {"success": True, "data": []}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 知识库列表失败降级空数据
                 logger.warning(f"[API] 知识库列表获取失败: {e}")
                 return {"success": True, "data": []}
 
@@ -336,7 +338,7 @@ class MiyaAPI:
                 }
             except ImportError:
                 return {"success": False, "message": "知识库功能未安装"}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 创建知识库失败已返回错误
                 logger.error(f"[API] 创建知识库失败: {e}")
                 return {"success": False, "message": str(e)}
 
@@ -356,7 +358,7 @@ class MiyaAPI:
                 return {"success": True, "results": results}
             except ImportError:
                 return {"success": False, "message": "知识库功能未安装"}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 查询知识库失败已返回错误
                 logger.error(f"[API] 查询知识库失败: {e}")
                 return {"success": False, "message": str(e)}
 
@@ -380,7 +382,7 @@ class MiyaAPI:
                     "engine": status.get("engine", {}),
                     "optimizer": status.get("optimizer", {}),
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 自主决策设置读取失败降级默认值
                 logger.warning(f"[API] 获取自主决策设置失败: {e}")
             return {
                 "success": True,
@@ -410,7 +412,7 @@ class MiyaAPI:
 
                 logger.info(f"[API] 自主决策设置已更新: enabled={enabled}")
                 return {"success": True, "message": "设置已保存"}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 保存自主决策设置失败已返回错误
                 logger.error(f"[API] 保存自主决策设置失败: {e}")
                 return {"success": False, "message": str(e)}
 
@@ -437,7 +439,7 @@ class MiyaAPI:
                         "result": "正常",
                     })
                 return {"success": True, "logs": logs, "total": len(logs)}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 决策日志读取失败降级空日志
                 logger.warning(f"[API] 读取自主决策日志失败: {e}")
                 return {"success": True, "logs": [], "total": 0}
 
@@ -461,7 +463,7 @@ class MiyaAPI:
                         "improvements_made": engine.get("improvements_made", 0),
                     },
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 决策统计读取失败降级默认值
                 logger.warning(f"[API] 读取自主决策统计失败: {e}")
                 return {
                     "success": True,
@@ -497,7 +499,7 @@ class MiyaAPI:
                 request_data.get("speed", 1.0)
                 logger.info(f"[API] 语音配置已更新: provider={provider}, voice_id={voice_id}")
                 return {"success": True, "message": "语音配置已保存"}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 保存语音配置失败已返回错误
                 logger.error(f"[API] 保存语音配置失败: {e}")
                 return {"success": False, "message": str(e)}
 
@@ -524,7 +526,7 @@ class MiyaAPI:
                     users = ["default", "1523878699"]
 
                 return {"status": "ok", "data": users}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 用户列表获取失败降级默认值
                 logger.warning(f"[MiyaAPI] 获取用户列表失败: {e}")
                 return {"status": "ok", "data": ["default", "1523878699"]}
 
@@ -549,7 +551,7 @@ class MiyaAPI:
                     nodes.append([f"node_{node_id}", {"name": node_label, "_label": label}])
 
                 return {"status": "ok", "data": {"nodes": nodes, "edges": edges}}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 记忆图谱获取失败降级空图
                 logger.warning(f"[MiyaAPI] 获取记忆图谱失败: {e}")
                 return {"status": "ok", "data": {"nodes": [], "edges": []}}
 
@@ -568,7 +570,7 @@ class MiyaAPI:
                     data[doc_id] = {"text": mem.content, "score": 1.0 - (i * 0.1)}
 
                 return {"status": "ok", "data": data}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 图谱搜索失败降级空数据
                 logger.warning(f"[MiyaAPI] 搜索记忆失败: {e}")
                 return {"status": "ok", "data": {}}
 
@@ -593,7 +595,7 @@ class MiyaAPI:
                     "message": "记忆添加成功",
                     "memory_id": memory_id,
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 添加记忆失败已返回错误
                 logger.warning(f"[MiyaAPI] 添加记忆失败: {e}")
                 return {"status": "error", "message": str(e)}
 
@@ -619,7 +621,7 @@ class MiyaAPI:
                         }
 
                 return {"status": "ok", "data": {}}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 记忆详情获取失败降级空数据
                 logger.warning(f"[MiyaAPI] 获取记忆详情失败: {e}")
                 return {"status": "ok", "data": {}}
 
@@ -684,7 +686,7 @@ class MiyaAPI:
                         "platforms": platforms,
                     },
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 平台统计失败已返回错误
                 logger.error(f"[MiyaAPI] 获取平台统计失败: {e}")
                 return {"status": "error", "data": {"platforms": []}, "message": str(e)}
 
@@ -703,7 +705,7 @@ class MiyaAPI:
                         {"id": p, "name": p, "enabled": True} for p in personas
                     ],
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 人格列表读取失败降级默认值
                 logger.warning(f"[MiyaAPI] 读取人格列表失败: {e}")
                 return {
                     "success": True,
@@ -726,7 +728,7 @@ class MiyaAPI:
                             "traits": profile.get("vectors", {}),
                         },
                     }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 当前人格读取失败降级默认值
                 logger.warning(f"[MiyaAPI] 读取当前人格失败: {e}")
             return {
                 "success": True,
@@ -749,7 +751,7 @@ class MiyaAPI:
                 if self.decision_hub and self.decision_hub.personality:
                     self.decision_hub.personality.set_form(form_name)
                     return {"success": True, "message": f"已切换至 {form_name}"}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 切换人格失败已返回错误
                 logger.warning(f"[MiyaAPI] 切换人格失败: {e}")
                 return {"success": False, "message": str(e)}
             return {"success": False, "message": "人格系统未初始化"}
@@ -779,7 +781,7 @@ class MiyaAPI:
                         })
             except ImportError:
                 pass
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 提供商列表失败降级空列表
                 logger.warning(f"[MiyaAPI] 获取提供商列表失败: {e}")
 
             return {
@@ -849,7 +851,7 @@ class MiyaAPI:
                     "success": True,
                     "data": result,
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 模型模板获取失败降级空数据
                 logger.warning(f"[MiyaAPI] 获取模型模板失败: {e}")
                 return {
                     "success": True,
@@ -866,7 +868,7 @@ class MiyaAPI:
                     pm = self.decision_hub.prompt_manager
                     prompt = pm.get_system_prompt(is_owner=True, owner_name="然鑫")
                     return {"success": True, "system_prompt": prompt}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — system prompt读取失败降级错误提示
                 logger.warning(f"[MiyaAPI] 读取 system prompt 失败: {e}")
             return {"success": False, "message": "无法读取 system prompt"}
 
@@ -893,7 +895,7 @@ class MiyaAPI:
                     self.decision_hub.prompt_manager.text_config = config_data
                     logger.info("[MiyaAPI] System prompt 已更新并热重载")
                 return {"success": True, "message": "System prompt 已保存"}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 保存system prompt失败已返回错误
                 logger.error(f"[MiyaAPI] 保存 system prompt 失败: {e}")
                 return {"success": False, "message": str(e)}
 
@@ -936,7 +938,7 @@ class MiyaAPI:
                 if not saved:
                     return {"success": False, "message": "未识别的配置类型"}
                 return {"success": True, "message": f"已保存: {', '.join(saved)}"}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 保存配置失败已返回错误
                 logger.error(f"[MiyaAPI] 保存配置失败: {e}")
                 return {"success": False, "message": str(e)}
 
@@ -951,8 +953,9 @@ class MiyaAPI:
                 try:
                     with open(SESSIONS_FILE, "r", encoding="utf-8") as f:
                         return json.load(f)
-                except Exception:
-                    pass
+                except (OSError, ValueError) as e:
+                    logger.exception(f"[MiyaAPI] 读取会话列表文件失败: {e}")
+                    raise
             return []
 
         def _save_sessions_to_disk(sessions):
@@ -964,7 +967,6 @@ class MiyaAPI:
         @self.router.get("/api/chat/sessions")
         async def get_chat_sessions():
             """会话列表 - 从 JSON 文件持久化读取"""
-            sessions = []
             try:
                 # 优先从磁盘加载
                 disk_sessions = _load_sessions_from_disk()
@@ -983,16 +985,9 @@ class MiyaAPI:
                     ]
                 # 同步到内存
                 self._chat_sessions = sessions
-            except Exception as e:
-                logger.warning(f"[MiyaAPI] 读取会话列表失败: {e}")
-                sessions = [
-                    {
-                        "session_id": "default",
-                        "display_name": "默认会话",
-                        "created_at": datetime.now().isoformat(),
-                        "updated_at": datetime.now().isoformat(),
-                    }
-                ]
+            except Exception as e:  # noqa: BLE001 — 会话读取失败返回HTTP 500
+                logger.exception(f"[MiyaAPI] 读取会话列表失败: {e}")
+                return JSONResponse(status_code=500, content={"success": False, "error": f"读取会话列表失败: {e}"})
 
             return {"success": True, "data": sessions}
 
@@ -1020,13 +1015,13 @@ class MiyaAPI:
                 # 持久化
                 _save_sessions_to_disk(sessions)
                 self._chat_sessions = sessions
-            except Exception as e:
-                logger.warning(f"[MiyaAPI] 创建会话持久化失败: {e}")
-
-            return {
-                "success": True,
-                "data": {"session_id": session_id, "platform_id": "webchat"},
-            }
+                return {
+                    "success": True,
+                    "data": {"session_id": session_id, "platform_id": "webchat"},
+                }
+            except Exception as e:  # noqa: BLE001 — 创建会话持久化失败返回500
+                logger.exception(f"[MiyaAPI] 创建会话持久化失败: {e}")
+                return JSONResponse(status_code=500, content={"success": False, "message": f"创建会话失败: {e}"})
 
         @self.router.get("/api/chat/delete_session")
         async def delete_session(session_id: str):
@@ -1038,9 +1033,10 @@ class MiyaAPI:
                 sessions = [s for s in sessions if s.get("session_id") != session_id]
                 _save_sessions_to_disk(sessions)
                 self._chat_sessions = sessions
-            except Exception as e:
-                logger.warning(f"[MiyaAPI] 删除会话持久化失败: {e}")
-            return {"success": True, "message": "会话已删除"}
+                return {"success": True, "message": "会话已删除"}
+            except Exception as e:  # noqa: BLE001 — 删除会话失败返回500
+                logger.exception(f"[MiyaAPI] 删除会话持久化失败: {e}")
+                return JSONResponse(status_code=500, content={"success": False, "message": f"删除会话失败: {e}"})
 
         @self.router.get("/api/chat/get_session")
         async def get_session(session_id: str):
@@ -1054,7 +1050,7 @@ class MiyaAPI:
                         raw = await conv_history.get_session(session_id)
                         if raw:
                             history = raw
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 会话历史读取失败降级空历史
                 logger.warning(f"[MiyaAPI] 获取会话历史失败: {e}")
             return {
                 "success": True,
@@ -1068,15 +1064,24 @@ class MiyaAPI:
             display_name = request_data.get("display_name", "")
 
             try:
-                if hasattr(self, "_chat_sessions"):
-                    for s in self._chat_sessions:
-                        if s.get("session_id") == session_id:
-                            s["display_name"] = display_name
-                            s["updated_at"] = datetime.now().isoformat()
-            except:
-                pass
-
-            return {"success": True, "message": "会话名称已更新"}
+                sessions = _load_sessions_from_disk()
+                if not sessions and hasattr(self, "_chat_sessions"):
+                    sessions = self._chat_sessions
+                found = False
+                for s in sessions:
+                    if s.get("session_id") == session_id:
+                        s["display_name"] = display_name
+                        s["updated_at"] = datetime.now().isoformat()
+                        found = True
+                        break
+                if not found:
+                    return JSONResponse(status_code=404, content={"success": False, "message": "会话不存在"})
+                _save_sessions_to_disk(sessions)
+                self._chat_sessions = sessions
+                return {"success": True, "message": "会话名称已更新"}
+            except Exception as e:  # noqa: BLE001 — 重命名会话失败返回500
+                logger.exception(f"[MiyaAPI] 更新会话名称失败: {e}")
+                return JSONResponse(status_code=500, content={"success": False, "message": f"更新会话名称失败: {e}"})
 
         @self.router.post("/api/chat/batch_delete_sessions")
         async def batch_delete_sessions(request_data: dict):
@@ -1084,19 +1089,23 @@ class MiyaAPI:
             session_ids = request_data.get("session_ids", [])
 
             try:
-                if hasattr(self, "_chat_sessions"):
-                    self._chat_sessions = [s for s in self._chat_sessions if s.get("session_id") not in session_ids]
-            except:
-                pass
-
-            return {
-                "success": True,
-                "data": {
-                    "deleted_count": len(session_ids),
-                    "failed_count": 0,
-                    "failed_items": [],
-                },
-            }
+                sessions = _load_sessions_from_disk()
+                if not sessions and hasattr(self, "_chat_sessions"):
+                    sessions = self._chat_sessions
+                sessions = [s for s in sessions if s.get("session_id") not in session_ids]
+                _save_sessions_to_disk(sessions)
+                self._chat_sessions = sessions
+                return {
+                    "success": True,
+                    "data": {
+                        "deleted_count": len(session_ids),
+                        "failed_count": 0,
+                        "failed_items": [],
+                    },
+                }
+            except Exception as e:  # noqa: BLE001 — 批量删除会话失败返回500
+                logger.exception(f"[MiyaAPI] 批量删除会话失败: {e}")
+                return JSONResponse(status_code=500, content={"success": False, "message": f"批量删除会话失败: {e}"})
 
         @self.router.post("/api/chat/stop")
         async def stop_chat(session_id: str):
@@ -1147,8 +1156,8 @@ class MiyaAPI:
                         if engine and engine.is_superadmin(check_id, platform=platform):
                             perception["is_owner"] = True
                             perception["canonical_user_id"] = check_id
-                    except Exception:
-                        pass
+                    except Exception as e:  # noqa: BLE001 — 权限判定失败降级为非owner
+                        logger.warning(f"[MiyaAPI] 权限判定失败: {e}")
 
                 message_obj = Message(
                     msg_type="data",
@@ -1201,11 +1210,11 @@ class MiyaAPI:
                                     logger.info("[TTS] 桌面端播放完成")
                                 except ImportError:
                                     logger.warning("[TTS] 缺少依赖")
-                                except Exception as ex:
+                                except Exception as ex:  # noqa: BLE001 — TTS播放失败仅告警
                                     logger.warning(f"[TTS] 失败: {ex}")
 
                             asyncio.ensure_future(_tts_play())
-                    except Exception as ex:
+                    except Exception as ex:  # noqa: BLE001 — TTS配置检查失败仅告警
                         logger.warning(f"[TTS] 配置检查失败: {ex}")
 
                 emotion_state = None
@@ -1340,7 +1349,7 @@ class MiyaAPI:
                         "platform_i18n_translations": platform_i18n,
                     },
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 获取配置失败降级空配置
                 logger.error(f"[MiyaAPI] 获取配置失败: {e}")
                 return {
                     "success": True,
@@ -1397,7 +1406,8 @@ class MiyaAPI:
                     "status": "ok",
                     "message": f"提供商 {provider_id} 添加成功（需重启生效）",
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 新增提供商失败已返回错误
+                logger.error(f"[MiyaAPI] 新增提供商失败: {e}")
                 return {"status": "error", "message": str(e)}
 
         @self.router.post("/api/config/provider/update")
@@ -1411,7 +1421,8 @@ class MiyaAPI:
                 request_data.get("config", {})
 
                 return {"status": "ok", "message": f"提供商 {provider_id} 更新成功"}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 更新提供商失败已返回错误
+                logger.error(f"[MiyaAPI] 更新提供商失败: {e}")
                 return {"status": "error", "message": str(e)}
 
         @self.router.get("/api/config/provider/check_one")
@@ -1492,7 +1503,7 @@ class MiyaAPI:
                     pm = self.decision_hub.prompt_manager
                     prompt = pm.get_system_prompt(is_owner=True, owner_name="然鑫")
                     return {"success": True, "system_prompt": prompt}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — system prompt读取失败降级错误提示
                 logger.warning(f"[MiyaAPI] 读取 system prompt 失败: {e}")
             return {"success": False, "message": "无法读取 system prompt"}
 
@@ -1522,7 +1533,7 @@ class MiyaAPI:
                     self.decision_hub.prompt_manager.text_config = config_data
                     logger.info("[MiyaAPI] System prompt 已更新并热重载")
                 return {"success": True, "message": "System prompt 已保存"}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 保存system prompt失败已返回错误
                 logger.error(f"[MiyaAPI] 保存 system prompt 失败: {e}")
                 return {"success": False, "message": str(e)}
 
@@ -1570,7 +1581,7 @@ class MiyaAPI:
                 if not saved:
                     return {"success": False, "message": "未识别的配置类型"}
                 return {"success": True, "message": f"已保存: {', '.join(saved)}"}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 保存配置失败已返回错误
                 logger.error(f"[MiyaAPI] 保存配置失败: {e}")
                 return {"success": False, "message": str(e)}
 
@@ -1594,7 +1605,7 @@ class MiyaAPI:
                     "tools": tools,
                     "total": len(tools),
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 工具列表获取失败降级空列表
                 logger.warning(f"[MiyaAPI] 获取工具列表失败: {e}")
                 return {"success": True, "tools": [], "total": 0}
 
@@ -1622,7 +1633,7 @@ class MiyaAPI:
                     "agents": agents,
                     "total": len(agents),
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — Agent列表获取失败降级空列表
                 logger.warning(f"[MiyaAPI] 获取 Agent 列表失败: {e}")
                 return {
                     "success": True,
@@ -1670,7 +1681,7 @@ class MiyaAPI:
                     "servers": [],
                     "total": 0,
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — MCP列表获取失败降级空列表
                 logger.warning(f"[MiyaAPI] 获取 MCP 列表失败: {e}")
                 return {
                     "success": True,
@@ -1814,7 +1825,7 @@ class MiyaAPI:
                     "skills": [],
                     "total": 0,
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 技能列表获取失败降级空列表
                 logger.warning(f"[MiyaAPI] 获取技能列表失败: {e}")
                 return {
                     "success": True,
@@ -1853,7 +1864,7 @@ class MiyaAPI:
                     "data": plugin_list,
                     "total": len(plugin_list),
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 插件市场获取失败已返回错误
                 logger.error(f"[MiyaAPI] 获取插件市场失败: {e}")
                 return {
                     "success": False,
@@ -1888,7 +1899,7 @@ class MiyaAPI:
                     "data": plugin_list,
                     "total": len(plugin_list),
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 已安装插件获取失败已返回错误
                 logger.error(f"[MiyaAPI] 获取已安装插件失败: {e}")
                 return {
                     "success": False,
@@ -1956,7 +1967,7 @@ class MiyaAPI:
 
                 return {"success": False, "message": "未找到插件下载链接"}
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 安装插件失败已返回错误
                 logger.error(f"[MiyaAPI] 安装插件失败: {e}")
                 return {"success": False, "message": str(e)}
 
@@ -1980,7 +1991,7 @@ class MiyaAPI:
                 else:
                     return {"success": False, "message": "卸载失败"}
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 卸载插件失败已返回错误
                 logger.error(f"[MiyaAPI] 卸载插件失败: {e}")
                 return {"success": False, "message": str(e)}
 
@@ -2004,7 +2015,7 @@ class MiyaAPI:
                 else:
                     return {"success": False, "message": "启用失败"}
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 启用插件失败已返回错误
                 logger.error(f"[MiyaAPI] 启用插件失败: {e}")
                 return {"success": False, "message": str(e)}
 
@@ -2028,7 +2039,7 @@ class MiyaAPI:
                 else:
                     return {"success": False, "message": "禁用失败"}
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 禁用插件失败已返回错误
                 logger.error(f"[MiyaAPI] 禁用插件失败: {e}")
                 return {"success": False, "message": str(e)}
 
@@ -2078,7 +2089,7 @@ class MiyaAPI:
                     "data": jobs,
                     "total": len(jobs),
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 定时任务列表获取失败降级空列表
                 logger.warning(f"[MiyaAPI] 获取定时任务失败: {e}")
                 return {
                     "success": True,
@@ -2131,7 +2142,7 @@ class MiyaAPI:
                     "message": f"定时任务 {job_id} 已创建",
                     "job_id": job_id,
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 创建定时任务失败已返回错误
                 logger.error(f"[MiyaAPI] 创建定时任务失败: {e}")
                 return {"success": False, "message": str(e)}
 
@@ -2158,7 +2169,7 @@ class MiyaAPI:
                     "success": True,
                     "message": f"定时任务 {job_id} 已更新",
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 更新定时任务失败已返回错误
                 logger.error(f"[MiyaAPI] 更新定时任务失败: {e}")
                 return {"success": False, "message": str(e)}
 
@@ -2179,7 +2190,7 @@ class MiyaAPI:
                     "success": True,
                     "message": f"定时任务 {job_id} 已删除",
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 删除定时任务失败已返回错误
                 logger.error(f"[MiyaAPI] 删除定时任务失败: {e}")
                 return {"success": False, "message": str(e)}
 
@@ -2447,8 +2458,8 @@ class MiyaAPI:
                                 lines = f.readlines()[-100:]
                                 for line in lines:
                                     yield f"data: {line.strip()}\n\n"
-                except Exception:
-                    pass
+                except Exception as e:  # noqa: BLE001 — 日志流读取失败降级空流
+                    logger.warning(f"[MiyaAPI] 日志流读取失败: {e}")
                 yield "data: \n\n"
 
             return StreamingResponse(log_generator(), media_type="text/event-stream")
@@ -2473,7 +2484,7 @@ class MiyaAPI:
                                     "file": log_file.name,
                                     "line": line.strip(),
                                 })
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 日志读取失败降级空日志
                 logger.warning(f"[MiyaAPI] 读取日志失败: {e}")
             return {"success": True, "logs": log_lines, "total": len(log_lines)}
 
@@ -2606,7 +2617,7 @@ class MiyaAPI:
                         "note": "conversation/message/user 统计暂未接入",
                     },
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 统计获取失败降级错误提示
                 logger.warning(f"[MiyaAPI] 获取统计失败: {e}")
                 return {
                     "success": False,
@@ -2649,7 +2660,7 @@ class MiyaAPI:
                     "success": True,
                     "message": "配置已更新（映射到弥娅系统）",
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 更新AstrBot配置失败已返回错误
                 logger.error(f"[MiyaAPI] 更新配置失败: {e}")
                 return {"success": False, "message": str(e)}
 
@@ -2721,7 +2732,8 @@ class MiyaAPI:
                 "enabled_count": len(enabled),
                 "total_count": len(platforms),
             }
-        except:
+        except Exception as e:  # noqa: BLE001 — 平台信息读取失败降级返回
+            logger.warning(f"获取平台信息失败: {e}")
             return {"platforms": [], "enabled_count": 0, "total_count": 0}
 
     def _get_full_status(self) -> Dict:
@@ -2760,7 +2772,7 @@ class MiyaAPI:
                 },
                 "timestamp": datetime.utcnow().isoformat(),
             }
-        except:
+        except (ImportError, OSError):
             return {
                 "success": True,
                 "monitor": {},
@@ -2795,10 +2807,8 @@ class MiyaAPI:
             logger.info("[TTS] 桌面端本地播放完成")
         except ImportError:
             logger.warning("[TTS] 缺少依赖 (simpleaudio)")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — TTS失败仅告警
             logger.warning(f"[TTS] 失败: {e}")
-        except Exception:
-            pass
 
     def get_router(self):
         """获取路由器"""

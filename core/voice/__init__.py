@@ -71,7 +71,7 @@ class MiyaVoiceManager:
                 logger.info("[VoiceManager] GPT-SoVITS 可用（需配置）")
             
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 语音初始化失败降级
             logger.error(f"[VoiceManager] 初始化失败: {e}")
             return False
     
@@ -83,7 +83,7 @@ class MiyaVoiceManager:
             try:
                 audio = self._wrapper.generate_speech_safe(text, self._edge_voice)
                 return TTSResult(success=bool(audio), audio_data=audio, engine="edge_tts")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 语音合成失败降级
                 return TTSResult(success=False, error=str(e), engine="edge_tts")
         
         return TTSResult(success=False, error="Engine not available", engine=engine.value)

@@ -183,7 +183,7 @@ class GestaltController:
 
             self._agent_tools_loaded = True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载 Agent 工具失败
             logger.error(f"[格式塔] 加载 Agent 工具失败: {e}")
 
     def get_tool_source(self, tool_name: str) -> Optional[str]:

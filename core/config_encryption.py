@@ -320,7 +320,7 @@ class ConfigEncryption:
                             )
                             decrypted = self.decrypt(encrypted)
                             decrypted_config[key] = decrypted
-                        except Exception:
+                        except Exception:  # noqa: BLE001 — 解密失败回退原值，已记录日志
                             logger.warning(f"[配置加密] 解密失败,使用原值: {key}")
                             decrypted_config[key] = value
                     else:
@@ -344,7 +344,7 @@ class ConfigEncryption:
             decoded = base64.b64decode(value)
             # 检查长度是否合理(加密后通常会变长)
             return len(decoded) > len(value) * 0.8
-        except:
+        except (ValueError, TypeError):
             return False
 
     def _try_env_fallback(self, key: str) -> Optional[str]:

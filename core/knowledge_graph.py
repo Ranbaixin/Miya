@@ -66,7 +66,7 @@ class KnowledgeGraphManager:
             logger.info(f"[知识图谱] 添加了 {len(quintuples)} 个五元组")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 添加五元组失败
             logger.error(f"[知识图谱] 添加五元组失败: {e}")
             return False
 
@@ -112,7 +112,7 @@ class KnowledgeGraphManager:
                     for r in records
                 ]
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 查询失败
             logger.error(f"[知识图谱] 查询失败: {e}")
             return []
 
@@ -159,7 +159,7 @@ class KnowledgeGraphManager:
                     for r in records
                 ]
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 实体查询失败
             logger.error(f"[知识图谱] 实体查询失败: {e}")
             return []
 
@@ -197,7 +197,7 @@ class KnowledgeGraphManager:
                     for r in records
                 ]
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 获取最近记忆失败
             logger.error(f"[知识图谱] 获取最近记忆失败: {e}")
             return []
 

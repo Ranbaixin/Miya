@@ -198,7 +198,7 @@ class EventBatcher:
                 # 在线程池中执行同步函数
                 loop = asyncio.get_event_loop()
                 await loop.run_in_executor(self._executor, subscriber, event)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 订阅者通知失败
             logger.error(f"[事件批处理] 订阅者通知失败: {e}")
 
     async def _safe_notify_batched(self, subscriber: Callable, batched_event: BatchedEvent):
@@ -210,7 +210,7 @@ class EventBatcher:
                 # 在线程池中执行同步函数
                 loop = asyncio.get_event_loop()
                 await loop.run_in_executor(self._executor, subscriber, batched_event)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 订阅者通知失败
             logger.error(f"[事件批处理] 订阅者通知失败: {e}")
 
     def subscribe(self, event_type: str, subscriber: Callable):

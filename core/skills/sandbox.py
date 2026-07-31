@@ -171,7 +171,7 @@ class SkillSandbox:
 
             raise SandboxError(error_msg)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 沙箱执行异常转为SandboxError
             error_msg = f"执行错误: {str(e)}"
             logger.error(f"[Sandbox] {error_msg}")
 

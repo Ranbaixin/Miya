@@ -225,7 +225,7 @@ class AutoFixer:
 
             self.logger.info(f"修复成功: {problem.title} (耗时 {time_taken:.2f}秒)")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 修复失败已记录日志
             time_taken = (datetime.now() - start_time).total_seconds()
             error_msg = f"修复失败: {str(e)}"
 
@@ -304,7 +304,7 @@ class AutoFixer:
             self.logger.info(f"备份已创建: {backup_path}")
             return str(backup_path)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 创建备份失败
             self.logger.error(f"创建备份失败: {e}")
             return None
 
@@ -446,7 +446,7 @@ class AutoFixer:
             self.logger.info(f"已从备份恢复: {backup_path} -> {target_path}")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 恢复备份失败
             self.logger.error(f"恢复备份失败: {e}")
             return False
 
@@ -477,6 +477,6 @@ class AutoFixer:
             self.logger.info(f"备份已创建: {backup_path}")
             return str(backup_path)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 创建备份失败
             self.logger.error(f"创建备份失败: {e}")
             return None

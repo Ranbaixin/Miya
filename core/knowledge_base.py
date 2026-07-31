@@ -338,7 +338,7 @@ class DocumentParser:
                 for page in reader.pages:
                     text += page.extract_text() or ""
             return text
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — PDF解析失败
             logger.warning(f"PDF解析失败: {e}")
             return ""
 
@@ -350,7 +350,7 @@ class DocumentParser:
 
             book = epub_parser.parse_file(file_path)
             return book.get_text()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — EPUB解析失败
             logger.warning(f"EPUB解析失败: {e}")
             return ""
 

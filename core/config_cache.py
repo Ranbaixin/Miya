@@ -99,7 +99,7 @@ class ConfigCacheLayer:
                     async_mode=True
                 )
                 self._unified_cache = get_cache(self.cache_name, cache_config)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 统一缓存失败降级内存缓存，已记录日志
                 logger.warning(f"[配置缓存] 统一缓存初始化失败，使用内存缓存: {e}")
                 self._unified_cache = None
             
@@ -109,7 +109,7 @@ class ConfigCacheLayer:
             
             return True
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 初始化失败已记录日志
             logger.error(f"[配置缓存] 初始化失败: {e}")
             return False
     
@@ -128,7 +128,7 @@ class ConfigCacheLayer:
         """获取文件修改时间"""
         try:
             return file_path.stat().st_mtime
-        except Exception:
+        except Exception:  # noqa: BLE001 — 获取修改时间失败返回 0.0
             return 0.0
     
     def _evict_lru(self) -> int:
@@ -234,7 +234,7 @@ class ConfigCacheLayer:
                             self._cache.move_to_end(cache_key)
                             
                             return entry.config_data
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 统一缓存获取失败已记录日志
                 logger.debug(f"[配置缓存] 统一缓存获取失败: {e}")
         
         return None
@@ -263,7 +263,7 @@ class ConfigCacheLayer:
                 try:
                     with open(file_path, 'r', encoding='utf-8') as f:
                         config_data = json.load(f)
-                except:
+                except (OSError, ValueError):
                     # 作为文本文件处理
                     with open(file_path, 'r', encoding='utf-8') as f:
                         content = f.read().strip()
@@ -274,7 +274,7 @@ class ConfigCacheLayer:
             
             return config_data or {}
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载配置失败已记录日志
             logger.error(f"[配置缓存] 加载配置文件失败: {file_path}, error: {e}")
             return {}
     
@@ -314,7 +314,7 @@ class ConfigCacheLayer:
                     "file_mtime": file_mtime
                 }
                 await self._unified_cache.set(cache_key, cache_value, self.default_ttl)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 统一缓存设置失败已记录日志
                 logger.debug(f"[配置缓存] 统一缓存设置失败: {e}")
     
     async def _setup_file_watch(
@@ -342,7 +342,7 @@ class ConfigCacheLayer:
                 if callback:
                     try:
                         await callback()
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 — 回调失败已记录日志
                         logger.error(f"[配置缓存] 回调执行失败: {e}")
             
             # 注册监听
@@ -354,7 +354,7 @@ class ConfigCacheLayer:
             self._file_watchers[str(file_path)] = True
             logger.debug(f"[配置缓存] 文件监听已设置: {file_path}")
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 设置文件监听失败已记录日志
             logger.error(f"[配置缓存] 设置文件监听失败: {e}")
     
     async def invalidate_config(self, file_path: Path) -> bool:

@@ -38,7 +38,7 @@ def _load_vision_config():
                 logger.info(
                     "[MultiVisionAnalyzer] 已从 multi_model_config.json 加载视觉配置"
                 )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载视觉配置失败回退默认
             logger.warning(f"[MultiVisionAnalyzer] 加载视觉配置失败: {e}, 使用默认配置")
             _vision_config = {}
     return _vision_config
@@ -394,7 +394,7 @@ class MultiVisionAnalyzer:
                     processing_time_ms=processing_time_ms,
                 )
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 模型分析失败已记录日志
                 logger.warning(
                     f"[MultiVisionAnalyzer] {selected_model.name} 分析失败: {e}"
                 )
@@ -765,7 +765,7 @@ class MultiVisionAnalyzer:
 
         except httpx.TimeoutException:
             raise ValueError(f"{model_config.name} API调用超时")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 转换为具名异常上抛
             raise ValueError(f"{model_config.name} API调用异常: {str(e)[:100]}")
 
     def _simple_image_analysis(self, image_data: bytes) -> Dict[str, Any]:
@@ -928,7 +928,7 @@ class MultiVisionAnalyzer:
                 "text_confidence": 0.0,
             }
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 简单分析失败已记录日志
             logger.warning(f"简单图片分析失败: {e}")
             config = _load_vision_config()
             config.get("fallback", {})

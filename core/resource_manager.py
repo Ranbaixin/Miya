@@ -197,7 +197,7 @@ class ResourceManager:
             if resource.cleanup_func:
                 try:
                     resource.cleanup_func()
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 资源注销执行失败已记录日志
                     logger.error(f"资源清理函数执行失败: {resource_id} - {e}")
             
             # 更新状态
@@ -430,7 +430,7 @@ class ResourceManager:
                 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 资源监控错误
                 logger.error(f"资源监控错误: {e}")
                 await asyncio.sleep(10.0)
     
@@ -449,7 +449,7 @@ class ResourceManager:
                     await asyncio.sleep(self._cleanup_interval)
                 except asyncio.CancelledError:
                     break
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 资源清理循环错误
                     logger.error(f"资源清理循环错误: {e}")
                     await asyncio.sleep(10.0)
         

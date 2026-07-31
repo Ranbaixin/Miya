@@ -28,7 +28,7 @@ def _load_config() -> Dict[str, Any]:
             "error_messages": get_text("error_messages", {}),
         }
         logger.info("QQ命令配置加载成功（从 text_config.json）")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — 加载QQ命令配置失败，使用空配置
         logger.warning(f"加载QQ命令配置失败: {e}，使用空配置")
         _config = {}
 

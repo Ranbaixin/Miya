@@ -199,7 +199,7 @@ class QQAdapter(PlatformAdapter):
             self._connected = True
             logger.info("[QQAdapter] 已连接")
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 连接失败已记录日志
             logger.error(f"[QQAdapter] 连接失败: {e}")
             return False
 
@@ -279,7 +279,7 @@ class TelegramAdapter(PlatformAdapter):
             self._connected = True
             logger.info("[TelegramAdapter] 已连接")
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 连接失败已记录日志
             logger.error(f"[TelegramAdapter] 连接失败: {e}")
             return False
 

@@ -239,7 +239,7 @@ class StarManager:
                 del self._stars[star_name]
                 self._enabled_stars.discard(star_name)
                 logger.info(f"[StarManager] 已卸载: {star_name}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 卸载失败已记录日志
                 logger.error(f"[StarManager] 卸载失败 {star_name}: {e}")
 
     async def load_all(self, config: Optional[Dict] = None):
@@ -247,7 +247,7 @@ class StarManager:
         for star_cls in self._star_classes:
             try:
                 await self.load_star(star_cls, config)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 加载失败已记录日志
                 logger.error(f"[StarManager] 加载 {star_cls.name} 失败: {e}")
 
     async def unload_all(self):
@@ -294,7 +294,7 @@ class StarManager:
                         await handler(context)
                     else:
                         handler(context)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 事件处理失败已记录日志
                     logger.error(f"[StarManager] 事件处理失败: {e}")
 
     async def handle_command(
@@ -308,7 +308,7 @@ class StarManager:
                     result = await star.on_command(context, command, args)
                     if result is not None:
                         return result
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 命令处理失败已记录日志
                     logger.error(f"[StarManager] 命令处理失败: {e}")
 
         # 再尝试全局命令
@@ -319,7 +319,7 @@ class StarManager:
                     return await handler(context, *args)
                 else:
                     return handler(context, *args)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 命令执行失败已记录日志
                 logger.error(f"[StarManager] 命令执行失败: {e}")
 
         return None

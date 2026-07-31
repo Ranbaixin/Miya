@@ -127,7 +127,7 @@ class ActivityAwareness:
                 is_active = diteng.is_user_active_with_bot(group_id, user_id)
                 summary = diteng.get_layered_context(group_id)
                 summary = f"\n[群聊动态]\n{summary}" if summary else "\n[群聊动态] 暂无近期消息"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 谛听检查失败已记录日志
             logger.debug(f"[意识] 谛听检查失败: {e}")
 
         # 2. 如果不活跃，通过用户活跃追踪器检查衰减层级（最可靠）
@@ -152,9 +152,9 @@ class ActivityAwareness:
                             last_topic = get_last_topic(str(user_id))
                             if last_topic:
                                 summary = f"\n[上次对话] {last_topic[:80]}"
-                        except Exception:
-                            pass
-            except Exception as e:
+                        except Exception as e:  # noqa: BLE001 — 话题追踪 best-effort，失败跳过
+                            logger.debug(f"[意识] 获取上次话题失败: {e}", exc_info=True)
+            except Exception as e:  # noqa: BLE001 — 活跃追踪失败已记录日志
                 logger.debug(f"[意识] 活跃追踪检查失败: {e}")
 
         if is_active:

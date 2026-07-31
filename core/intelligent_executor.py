@@ -161,7 +161,7 @@ class IntelligentExecutor:
                 "execution_time": execution_time
             }
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 直接执行失败已记录日志
             execution_time = time.time() - start_time
             logger.error(f"直接执行失败: {e}")
             
@@ -320,7 +320,7 @@ class IntelligentExecutor:
             
             return result
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 执行脚本失败已记录日志
             logger.error(f"执行脚本失败: {e}")
             
             # 清理临时文件
@@ -407,7 +407,7 @@ class CommandParser:
         # 分词
         try:
             parts = shlex.split(clean_input)
-        except:
+        except (ValueError, TypeError):
             parts = clean_input.split()
         
         if not parts:
@@ -484,7 +484,7 @@ class ContextManager:
                 f.write("test")
             os.remove(test_file)
             context["writable"] = True
-        except:
+        except OSError:
             context["writable"] = False
             context["sudo_required"] = True
         
@@ -559,7 +559,7 @@ class ExecutionMonitor:
                 except psutil.NoSuchProcess:
                     # 进程已结束
                     break
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 监控进程失败已记录日志
                     logger.error(f"监控进程{process_id}失败: {e}")
                     break
             
@@ -573,7 +573,7 @@ class ExecutionMonitor:
                     lambda: self._cleanup_process(process_id)
                 ).start()
                 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 监控线程异常已记录日志
             logger.error(f"监控线程异常: {e}")
     
     def _cleanup_process(self, process_id: int):

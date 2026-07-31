@@ -93,7 +93,7 @@ class ConnectionPool:
                 wrapper = await self._create_connection()
                 if wrapper:
                     self._available_connections.put(wrapper)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 初始化连接失败
                 logger.error(f"[连接池] 初始化连接失败: {e}")
 
         logger.info(f"[连接池] 初始化完成, 可用连接数={self._available_connections.qsize()}")
@@ -125,7 +125,7 @@ class ConnectionPool:
             logger.debug("[连接池] 创建新连接")
             return wrapper
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 创建连接失败
             logger.error(f"[连接池] 创建连接失败: {e}")
             return None
 
@@ -243,7 +243,7 @@ class ConnectionPool:
                 self.stats["health_checks"] += 1
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 健康检查失败
             logger.warning(f"[连接池] 健康检查失败: {e}")
             with self._lock:
                 self.stats["failed_checks"] += 1
@@ -266,7 +266,7 @@ class ConnectionPool:
 
             logger.debug("[连接池] 连接已关闭")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 关闭连接失败
             logger.error(f"[连接池] 关闭连接失败: {e}")
 
     async def health_check_task(self):
@@ -296,7 +296,7 @@ class ConnectionPool:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 健康检查任务错误
                 logger.error(f"[连接池] 健康检查任务错误: {e}")
 
         logger.info("[连接池] 健康检查任务停止")
@@ -459,7 +459,7 @@ async def shutdown_all_pools():
     for name, pool in _global_pools.items():
         try:
             await pool.shutdown()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 关闭连接池失败已记录日志
             logger.error(f"[连接池] 关闭连接池失败: {name}, 错误: {e}")
 
     _global_pools.clear()

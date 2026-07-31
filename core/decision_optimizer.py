@@ -299,7 +299,7 @@ class DecisionOptimizer:
 
             self.logger.info(f"决策模式已保存: {file_path}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 保存决策模式失败
             self.logger.error(f"保存决策模式失败: {e}")
 
     def load_patterns(self, file_path: str = ".decision_patterns.json"):
@@ -337,7 +337,7 @@ class DecisionOptimizer:
 
             self.logger.info(f"已加载 {len(self.patterns)} 个决策模式")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载决策模式失败
             self.logger.error(f"加载决策模式失败: {e}")
 
     def generate_optimization_summary(self) -> str:

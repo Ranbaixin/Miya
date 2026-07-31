@@ -186,7 +186,7 @@ class MemorySystemInitializer:
                     output_dir / f"conversation_{session_id}_{timestamp}.json",
                 )
                 export_files[f"conversation_{session_id}"] = str(file_path)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 导出对话历史失败
             logger.error(f"导出对话历史失败: {e}")
 
         # 2. 导出 Undefined 记忆
@@ -200,7 +200,7 @@ class MemorySystemInitializer:
                     [m.__dict__ for m in memories], f, ensure_ascii=False, indent=2
                 )
             export_files["undefined_memory"] = str(undefined_file)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 导出Undefined记忆失败已记录日志
             logger.error(f"导出 Undefined 记忆失败: {e}")
 
         logger.info(f"导出完成，共 {len(export_files)} 个文件到: {output_dir}")

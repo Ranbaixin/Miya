@@ -120,7 +120,7 @@ class SystemRoutes:
                                 else "N/A",
                                 "status": "ready",
                             }
-                        except Exception as e:
+                        except Exception as e:  # noqa: BLE001 — 终端统计获取失败，降级默认
                             logger.warning(f"[SystemRoutes] 获取终端统计失败: {e}")
 
                     # 获取自主决策引擎统计
@@ -140,7 +140,7 @@ class SystemRoutes:
                                     ),
                                     "total_fixes": auto_stats.get("total_fixes", 0),
                                 }
-                        except Exception as e:
+                        except Exception as e:  # noqa: BLE001 — 自主决策统计获取失败，降级默认
                             logger.warning(f"[SystemRoutes] 获取自主决策统计失败: {e}")
 
                     # 获取安全统计
@@ -167,7 +167,7 @@ class SystemRoutes:
                                 ),
                                 "total_events": len(security_events),
                             }
-                        except Exception as e:
+                        except Exception as e:  # noqa: BLE001 — 安全统计获取失败，降级默认
                             logger.warning(f"[SystemRoutes] 获取安全统计失败: {e}")
 
                     # 转换为前端需要的格式
@@ -349,7 +349,7 @@ class SystemRoutes:
 
                                 if len(activities) >= limit:
                                     break
-                        except Exception as e:
+                        except Exception as e:  # noqa: BLE001 — 日志读取失败，跳过该文件
                             logger.warning(f"[SystemRoutes] 读取日志失败: {e}")
 
                 # 如果没有从日志提取到活动，提供默认活动

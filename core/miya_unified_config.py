@@ -74,7 +74,7 @@ class Config:
                 api_port=int(get_constant("API_PORT", "8765")),
                 web_port=int(get_constant("WEB_PORT", "8000")),
             )
-        except Exception:
+        except Exception:  # noqa: BLE001 — 配置加载失败使用默认值
             # 使用默认值
             self._config = MIYAConfig(
                 project_root=PROJECT_ROOT,

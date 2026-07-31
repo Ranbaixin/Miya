@@ -774,7 +774,7 @@ class RuntimeAPIServer:
                 "percent": process.memory_percent(),  # 内存使用百分比
                 "available_mb": psutil.virtual_memory().available / 1024 / 1024,  # 可用内存
             }
-        except Exception:
+        except Exception:  # noqa: BLE001 — 内存统计失败，降级返回错误信息
             return {"error": "无法获取内存统计"}
 
     def _get_performance_stats(self) -> Dict[str, Any]:
@@ -790,7 +790,7 @@ class RuntimeAPIServer:
                 "open_files": len(process.open_files()),
                 "connections": len(process.connections()),
             }
-        except Exception:
+        except Exception:  # noqa: BLE001 — 性能统计失败，降级返回错误信息
             return {"error": "无法获取性能统计"}
 
     async def _process_with_decision_hub(

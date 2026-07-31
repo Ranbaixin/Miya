@@ -32,7 +32,7 @@ def _load_config() -> Dict[str, Any]:
         else:
             logger.warning(f"文本配置文件不存在: {config_path}")
             _config = _get_default_config()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — 加载文本配置失败，使用默认配置
         logger.warning(f"加载文本配置失败: {e}，使用默认配置")
         _config = _get_default_config()
 
@@ -56,7 +56,7 @@ def load_permission_config() -> Dict[str, Any]:
         else:
             logger.warning(f"权限配置文件不存在: {config_path}")
             _permission_config = {}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — 加载权限配置失败
         logger.warning(f"加载权限配置失败: {e}")
         _permission_config = {}
 

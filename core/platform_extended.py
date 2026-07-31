@@ -582,7 +582,7 @@ class PlatformManager:
             logger.info(f"[PlatformManager] {platform_type.value} 加载成功")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 平台加载失败已记录日志
             logger.error(f"[PlatformManager] 加载 {platform_type.value} 失败: {e}")
             return False
 

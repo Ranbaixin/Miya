@@ -78,7 +78,7 @@ class HotPatchManager:
                 item_path = os.path.join(self.patch_dir, item)
                 if os.path.isdir(item_path):
                     patches.append(item)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 扫描补丁失败
             logger.error(f"[HotPatch] 扫描补丁失败: {e}")
         
         return patches
@@ -118,7 +118,7 @@ class HotPatchManager:
             else:
                 logger.warning(f"[HotPatch] 补丁缺少 __init__.py: {patch_name}")
                 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载补丁失败
             logger.error(f"[HotPatch] 加载补丁失败: {e}")
         
         return False
@@ -155,7 +155,7 @@ class HotPatchManager:
             logger.info(f"[HotPatch] 已卸载补丁: {patch_name}")
             return True
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 卸载补丁失败
             logger.error(f"[HotPatch] 卸载补丁失败: {e}")
             return False
     

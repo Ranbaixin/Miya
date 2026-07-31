@@ -75,7 +75,7 @@ class ManagementAPI:
                         )
                     self.app.include_router(router)
                     logger.info(f"[Webhook] 注册 {_pid} ({prefix})")
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — Webhook 注册失败，跳过该实例
                     logger.warning(f"[Webhook] {_pid} 注册失败: {e}")
 
     def _setup_middleware(self):
@@ -186,7 +186,7 @@ class ManagementAPI:
         async def grant_role(user_id: str, request: Request):
             try:
                 body = await request.json()
-            except Exception:
+            except (ValueError, OSError):
                 return {"error": "需要 JSON body: {platform, groups, username?}"}
             engine = self.daemon.permission_engine
             ok = engine.grant_role(
@@ -201,7 +201,7 @@ class ManagementAPI:
         async def revoke_role(user_id: str, request: Request):
             try:
                 body = await request.json()
-            except Exception:
+            except (ValueError, OSError):
                 body = {}
             engine = self.daemon.permission_engine
             ok = engine.revoke_role(user_id=user_id, groups=body.get("groups"))
@@ -284,7 +284,7 @@ class ManagementAPI:
         for ws in self._ws_clients:
             try:
                 await ws.send_json(payload)
-            except Exception:
+            except Exception:  # noqa: BLE001 — 广播失败，标记连接失效以便清理
                 dead.add(ws)
         self._ws_clients -= dead
 

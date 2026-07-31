@@ -105,7 +105,7 @@ class ConfigScanner(BaseScanner):
 
         try:
             return scanner_func(config_file)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 扫描失败已记录日志
             self.logger.warning(f"扫描 {config_file} 失败: {e}")
             return []
 
@@ -173,7 +173,7 @@ class ConfigScanner(BaseScanner):
                         confidence=0.6,
                     ))
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 分析失败已记录日志
             self.logger.warning(f"分析 {env_file} 失败: {e}")
 
         return problems
@@ -207,7 +207,7 @@ class ConfigScanner(BaseScanner):
             sensitive_issues = self._check_sensitive_in_dict(data, str(json_file))
             problems.extend(sensitive_issues)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 分析失败已记录日志
             self.logger.warning(f"分析 {json_file} 失败: {e}")
 
         return problems
@@ -234,7 +234,7 @@ class ConfigScanner(BaseScanner):
                     confidence=0.5,
                 ))
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 分析失败已记录日志
             self.logger.warning(f"分析 {yaml_file} 失败: {e}")
 
         return problems
@@ -271,7 +271,7 @@ class ConfigScanner(BaseScanner):
                             confidence=0.7,
                         ))
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 分析失败已记录日志
             self.logger.warning(f"分析 {ini_file} 失败: {e}")
 
         return problems
@@ -311,7 +311,7 @@ class ConfigScanner(BaseScanner):
                             confidence=0.8,
                         ))
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 分析失败已记录日志
             self.logger.warning(f"分析 {toml_file} 失败: {e}")
 
         return problems

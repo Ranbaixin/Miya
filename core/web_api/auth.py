@@ -47,7 +47,7 @@ class AuthRoutes:
                     password=user_data.password,
                 )
                 return result
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 注册失败记录日志并上抛 500
                 logger.error(f"[WebAPI] 用户注册失败: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
 
@@ -82,7 +82,7 @@ class AuthRoutes:
                     username=username, password=password
                 )
                 return result
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 登录异常显式返回错误，不放行
                 logger.error(f"[WebAPI] 用户登录失败: {e}")
                 return {"status": "error", "message": "用户名或密码错误"}
 
@@ -94,7 +94,7 @@ class AuthRoutes:
                 # 这里可以添加登出日志记录
                 logger.info("[WebAPI] 用户登出")
                 return {"success": True, "message": "登出成功"}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 登出失败记录日志并上抛 500
                 logger.error(f"[WebAPI] 用户登出失败: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
 
@@ -131,7 +131,7 @@ class AuthRoutes:
                             "created_at": user_info.get("created_at", ""),
                             "last_login": user_info.get("last_login", ""),
                         }
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 用户详情获取失败，降级返回基础信息
                     logger.warning(f"[WebAPI] 从数据库获取用户信息失败: {e}")
 
                 # 返回基本用户信息
@@ -146,7 +146,7 @@ class AuthRoutes:
                 }
             except HTTPException:
                 raise
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 获取当前用户异常，上抛 500
                 logger.error(f"[WebAPI] 获取当前用户失败: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
 
@@ -173,7 +173,7 @@ class AuthRoutes:
 
             except HTTPException:
                 raise
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 权限检查异常，上抛 500
                 logger.error(f"[WebAPI] 权限检查失败: {e}")
                 raise HTTPException(status_code=500, detail="权限检查失败")
 
@@ -200,8 +200,10 @@ class AuthRoutes:
             perm_core = PermissionCore()
             if perm_core.check_permission(f"web_{token}", "api.access"):
                 return token
-        except:
-            pass
+        except Exception:
+            # 权限校验异常时显式拒绝，避免静默放行（fail-closed）
+            logger.exception("[WebAPI] 权限校验失败，拒绝访问")
+            raise HTTPException(status_code=401, detail="权限校验失败")
 
         # 如果是已知的管理员 token
         admin_tokens = ["admin", "system", "test"]

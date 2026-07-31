@@ -60,7 +60,7 @@ class BlogRoutes:
                     tag=tag
                 )
                 return result
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 博客列表获取失败，上抛 500
                 logger.error(f"[WebAPI] 获取博客列表失败: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
 
@@ -74,7 +74,7 @@ class BlogRoutes:
                 return post
             except HTTPException:
                 raise
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 博客获取失败，上抛 500
                 logger.error(f"[WebAPI] 获取博客失败: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
 
@@ -95,7 +95,7 @@ class BlogRoutes:
                     published=post_data.published
                 )
                 return result
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 创建博客失败，上抛 500
                 logger.error(f"[WebAPI] 创建博客失败: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
 
@@ -119,7 +119,7 @@ class BlogRoutes:
                 return result
             except ValueError as e:
                 raise HTTPException(status_code=404, detail=str(e))
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 更新博客失败，上抛 500
                 logger.error(f"[WebAPI] 更新博客失败: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
 
@@ -139,7 +139,7 @@ class BlogRoutes:
                 return {"success": True, "message": "删除成功"}
             except HTTPException:
                 raise
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 删除博客失败，上抛 500
                 logger.error(f"[WebAPI] 删除博客失败: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
 

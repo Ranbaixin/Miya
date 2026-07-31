@@ -209,7 +209,7 @@ class MiyaTaskManager:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — Worker 异常已记录日志
                 logger.error(f"[TaskManager] Worker {worker_id} 异常: {e}")
 
         logger.info(f"[TaskManager] Worker {worker_id} 停止")
@@ -240,12 +240,12 @@ class MiyaTaskManager:
             if self.on_task_completed:
                 try:
                     self.on_task_completed(task.task_id, result)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 完成回调失败已记录日志
                     logger.error(f"[TaskManager] 任务完成回调失败: {e}")
 
             logger.info(f"[TaskManager] 任务完成: {task.task_id}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 任务执行失败已记录日志
             logger.error(f"[TaskManager] 任务执行失败: {e}\n{traceback.format_exc()}")
 
             task.error = str(e)
@@ -266,7 +266,7 @@ class MiyaTaskManager:
                 if self.on_task_failed:
                     try:
                         self.on_task_failed(task.task_id, e)
-                    except Exception as cb_error:
+                    except Exception as cb_error:  # noqa: BLE001 — 失败回调失败已记录日志
                         logger.error(f"[TaskManager] 任务失败回调失败: {cb_error}")
 
     async def _auto_cleanup(self) -> None:
@@ -291,7 +291,7 @@ class MiyaTaskManager:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 自动清理异常已记录日志
                 logger.error(f"[TaskManager] 自动清理异常: {e}")
 
     def _generate_task_id(self, task_type: str, payload: Dict[str, Any]) -> str:

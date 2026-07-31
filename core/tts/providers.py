@@ -51,7 +51,7 @@ class APITTSEngine(TTSEngine):
             logger.info(f"API TTS engine initialized: type={self.api_type}")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — TTS引擎调用失败降级
             logger.error(f"API TTS initialization failed: {e}")
             return False
 
@@ -75,7 +75,7 @@ class APITTSEngine(TTSEngine):
 
             return None
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — TTS引擎调用失败降级
             logger.error(f"API TTS synthesis failed: {e}")
             return None
 
@@ -87,7 +87,7 @@ class APITTSEngine(TTSEngine):
             voice = kwargs.get("voice", self.voice)
             return await self._call_api(text, output_path, voice, speed)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — TTS引擎调用失败降级
             logger.error(f"API TTS synthesis to file failed: {e}")
             return None
 
@@ -101,7 +101,7 @@ class APITTSEngine(TTSEngine):
             else:
                 logger.error(f"Unsupported API type: {self.api_type}")
                 return None
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — TTS引擎调用失败降级
             logger.error(f"TTS API call failed: {e}")
             return None
 
@@ -134,7 +134,7 @@ class APITTSEngine(TTSEngine):
         except ImportError:
             logger.error("requests library not installed")
             return None
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — TTS引擎调用失败降级
             logger.error(f"OpenAI TTS API call failed: {e}")
             return None
 
@@ -168,7 +168,7 @@ class APITTSEngine(TTSEngine):
             else:
                 logger.error(f"Azure TTS API error: {response.status_code}")
                 return None
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — TTS引擎调用失败降级
             logger.error(f"Azure TTS API call failed: {e}")
             return None
 
@@ -233,7 +233,7 @@ class SystemTTSEngine(TTSEngine):
             logger.info(f"System TTS engine initialized on {self.os_type}")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — TTS引擎调用失败降级
             logger.error(f"System TTS initialization failed: {e}")
             return False
 
@@ -254,7 +254,7 @@ class SystemTTSEngine(TTSEngine):
 
             return None
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — TTS引擎调用失败降级
             logger.error(f"System TTS synthesis failed: {e}")
             return None
 
@@ -275,7 +275,7 @@ class SystemTTSEngine(TTSEngine):
                 logger.error(f"Unsupported OS: {self.os_type}")
                 return None
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — TTS引擎调用失败降级
             logger.error(f"System TTS synthesis to file failed: {e}")
             return None
 
@@ -299,7 +299,7 @@ class SystemTTSEngine(TTSEngine):
             speaker.Speak(text)
             stream.Close()
             return output_path
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — TTS引擎调用失败降级
             logger.error(f"Windows TTS synthesis failed: {e}")
             return None
 
@@ -317,7 +317,7 @@ class SystemTTSEngine(TTSEngine):
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, lambda: subprocess.run(cmd, check=True))
             return output_path
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — TTS引擎调用失败降级
             logger.error(f"macOS TTS synthesis failed: {e}")
             return None
 
@@ -339,7 +339,7 @@ class SystemTTSEngine(TTSEngine):
             else:
                 logger.error("Neither espeak nor festival found on Linux")
                 return None
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — TTS引擎调用失败降级
             logger.error(f"Linux TTS synthesis failed: {e}")
             return None
 
@@ -376,7 +376,7 @@ class SystemTTSEngine(TTSEngine):
                     voices = [line.strip() for line in lines if line.strip() and not line.startswith('#')]
                     return voices[:20]
             return []
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — TTS引擎调用失败降级
             logger.error(f"Failed to get voice list: {e}")
             return []
 
@@ -444,7 +444,7 @@ class GPTSoviTSEngine(TTSEngine):
             logger.info(f"GPT-SOViTS v2 engine initialized: {self.api_url}")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — TTS引擎调用失败降级
             logger.error(f"GPT-SOViTS initialization failed: {e}")
             return False
 
@@ -476,7 +476,7 @@ class GPTSoviTSEngine(TTSEngine):
 
             return None
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — TTS引擎调用失败降级
             logger.error(f"GPT-SOViTS synthesis failed: {e}")
             return None
 
@@ -497,7 +497,7 @@ class GPTSoviTSEngine(TTSEngine):
 
             return await self._call_api(text, output_path, speed, reference_audio, reference_text)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — TTS引擎调用失败降级
             logger.error(f"GPT-SOViTS synthesis to file failed: {e}")
             return None
 
@@ -552,7 +552,7 @@ class GPTSoviTSEngine(TTSEngine):
         except ImportError:
             logger.error("requests library not installed")
             return None
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — TTS引擎调用失败降级
             logger.error(f"GPT-SOViTS API call failed: {e}")
             return None
 

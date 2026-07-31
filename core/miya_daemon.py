@@ -160,7 +160,7 @@ class MiyaDaemon:
             try:
                 await self._miya.memory_net.initialize()
                 logger.info("✅ MemoryNet 全局记忆系统初始化成功")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — MemoryNet 失败不影响核心，已记录日志
                 logger.warning(f"⚠️ MemoryNet 初始化失败（不影响核心服务）: {e}")
 
         # 主动聊天后台轮询（可选，失败不影响核心服务）
@@ -169,7 +169,7 @@ class MiyaDaemon:
             if dh and dh.proactive_chat and dh.proactive_chat.is_enabled():
                 await dh.start_proactive_background()
                 logger.info("✅ 主动聊天后台轮询已启动")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 主动聊天失败不影响核心，已记录日志
             logger.warning(f"⚠️ 主动聊天启动失败（不影响核心服务）: {e}")
 
     async def _init_platforms(self, platform_ids: Optional[List[str]] = None):
@@ -233,17 +233,17 @@ class MiyaDaemon:
                 wm = get_working_memory()
                 wm.save(force=True)  # 强制刷新防抖缓冲区
                 logger.debug("[关闭] 工作记忆已保存")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 工作记忆保存失败已记录日志
                 logger.debug(f"[关闭] 工作记忆保存失败: {e}")
 
             try:
                 diting = get_diting()
                 diting.save()
                 logger.debug("[关闭] 谛听状态已保存")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 谛听保存失败已记录日志
                 logger.debug(f"[关闭] 谛听保存失败: {e}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 状态保存失败已记录日志
             logger.warning(f"状态保存失败: {e}")
 
     async def _close_miya_core(self):
@@ -255,7 +255,7 @@ class MiyaDaemon:
                     await conv_hist.flush()
                 if conv_hist and hasattr(conv_hist, "close"):
                     await conv_hist.close()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 核心关闭异常已记录日志
             logger.warning(f"Miya 核心关闭异常: {e}")
 
     async def _scheduler_lifecycle(self, action: str) -> None:
@@ -270,7 +270,7 @@ class MiyaDaemon:
             else:
                 await scheduler.stop()
                 logger.info("定时任务调度器已停止")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 调度器操作失败已记录日志
             logger.warning(f"⚠️ 定时任务调度器{action}失败: {e}")
 
     # ==================== 信号处理 ====================

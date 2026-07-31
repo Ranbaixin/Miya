@@ -202,7 +202,7 @@ def _load_config() -> Dict:
     try:
         with open(config_path, "r", encoding="utf-8") as f:
             return json.load(f)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — 配置加载失败有默认配置兜底
         logger.warning(f"[灵魂发生器] 配置文件加载失败: {e}，使用默认配置")
         return {}
 
@@ -1037,8 +1037,8 @@ class SoulGenerator:
 
                         if get_permission_engine().is_superadmin(str(uid)):
                             is_owner = True
-                    except Exception:
-                        pass
+                    except Exception as e:  # noqa: BLE001 — 权限引擎检查 best-effort，失败回退
+                        logger.debug(f"[灵魂] 权限引擎检查失败: {e}", exc_info=True)
                 if not is_owner and uid and str(uid) != owner_id:
                     user_label = user_labels.get("other", "")
                     pronoun = user_pronouns.get("other", "")
@@ -1107,7 +1107,7 @@ class SoulGenerator:
                 SoulDisplay.inner_thought(cleaned[:80])
                 return cleaned
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — AI反思失败已记录日志
             logger.debug(f"[灵魂] AI反思失败: {e}")
 
         return None
@@ -1414,8 +1414,8 @@ class SoulGenerator:
                             str(uid), platform=user_info.get("platform", "")
                         ):
                             is_owner = True
-                    except Exception:
-                        pass
+                    except Exception as e:  # noqa: BLE001 — 权限引擎检查 best-effort，失败回退
+                        logger.debug(f"[灵魂] 权限引擎检查失败: {e}", exc_info=True)
                 if not is_owner and uid and str(uid) != owner_id:
                     user_label = user_labels.get("other", "其他用户")
                     pronoun = user_pronouns.get("other", "他/她")
@@ -1449,7 +1449,7 @@ class SoulGenerator:
                         ).items():
                             owner_name = info.get("name", "然鑫")
                             break
-                    except Exception:
+                    except Exception:  # noqa: BLE001 — 读取所有者名失败，使用默认名
                         owner_name = "然鑫"
                 # v7.0: 从 text_config 加载所有者提示模板
                 try:
@@ -1463,7 +1463,7 @@ class SoulGenerator:
                     owner_instruction = owner_template.replace(
                         "{owner_name}", owner_name
                     )
-                except Exception:
+                except Exception:  # noqa: BLE001 — 配置加载失败，使用兜底指令
                     owner_instruction = f"重要：无论什么形态，{owner_name}都是你最爱的人，也是你的创造者。对他的话可以更直接、更亲密。"
             prompt = prompt.replace("{owner_instruction}", owner_instruction)
             # v7.0: 注入形态风格的内心独白提示（从 personality_info 动态获取）
@@ -1485,8 +1485,8 @@ class SoulGenerator:
                         form_hint = hint_template.replace(
                             "{form_name}", form_name
                         ).replace("{form_speaking_style}", speaking_style)
-                except Exception:
-                    pass
+                except Exception as e:  # noqa: BLE001 — 形态提示加载失败，静默跳过
+                    logger.debug(f"[灵魂] 形态提示加载失败: {e}", exc_info=True)
             if form_hint:
                 prompt += f"\n\n{form_hint}"
             # JSON格式约束从配置文件读取
@@ -1499,7 +1499,7 @@ class SoulGenerator:
                     "json_format_constraint",
                     "⚠️ 重要：必须只输出原始JSON对象，第一个字符必须是 {，最后一个字符必须是 }。",
                 )
-            except Exception:
+            except Exception:  # noqa: BLE001 — 配置加载失败，使用兜底约束
                 json_constraint = "⚠️ 重要：必须只输出原始JSON对象，第一个字符必须是 {，最后一个字符必须是 }。"
             prompt += f"\n\n{json_constraint}"
 
@@ -1525,7 +1525,7 @@ class SoulGenerator:
             except asyncio.TimeoutError:
                 logger.warning(f"[灵魂] AI分析超时 ({timeout_seconds}秒)")
                 return None
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — AI调用失败已记录日志
                 logger.warning(f"[灵魂] AI调用失败: {e}")
                 return None
 
@@ -1615,7 +1615,7 @@ class SoulGenerator:
                 )
             return result
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — AI分析失败已记录日志
             import traceback
 
             logger.warning(f"[灵魂] AI分析失败: {e}")
@@ -1650,7 +1650,7 @@ class SoulGenerator:
                     if tag != emotion_name:
                         self._adjust_emotion(tag, (intensity - 40) * 0.5)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 应用AI情绪失败已记录日志
             logger.debug(f"[灵魂] 应用AI情绪失败: {e}")
 
     def _apply_default_fluctuation(self):

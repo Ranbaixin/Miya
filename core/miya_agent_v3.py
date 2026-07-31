@@ -164,7 +164,7 @@ class MiyaAgentV3:
                             }
                         )
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 执行错误已记录到步骤结果
                 result.steps.append(
                     ExecutionStep(
                         step_number=step_num,
@@ -319,7 +319,7 @@ class MiyaAgentV3:
                 response.content if hasattr(response, "content") else str(response)
             )
             return self._extract_command(content)
-        except:
+        except Exception:  # noqa: BLE001 — AI命令提取失败返回 None
             return None
 
     def _format_task_result(self, result: TaskResult) -> str:
@@ -411,7 +411,7 @@ class MiyaAgentV3:
             json_match = re.search(r"\{.+?\}", content, re.DOTALL)
             if json_match:
                 return json.loads(json_match.group(0))
-        except:
+        except Exception:  # noqa: S110, BLE001 — AI意图解析失败回退
             pass
 
         return {
@@ -458,7 +458,7 @@ class MiyaAgentV3:
                     "method": plan.get("method", "shell"),
                     "reasoning": plan.get("reasoning", ""),
                 }
-        except:
+        except Exception:  # noqa: S110, BLE001 — AI计划解析失败回退
             pass
 
         return self._fallback_command(request)
@@ -543,7 +543,7 @@ class MiyaAgentV3:
                 "error": result.error,
                 "command": cmd,
             }
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 命令执行失败返回错误结果
             return {"success": False, "output": "", "error": str(e), "command": cmd}
 
     async def _ai_verify(self, request: str, result: Dict, model_client) -> Dict:
@@ -573,7 +573,7 @@ class MiyaAgentV3:
             json_match = re.search(r"\{.+?\}", content, re.DOTALL)
             if json_match:
                 return json.loads(json_match.group(0))
-        except:
+        except Exception:  # noqa: S110, BLE001 — AI验证解析失败回退
             pass
 
         return {

@@ -86,7 +86,7 @@ class SkillMarkdownParser:
         try:
             with open(path, "r", encoding="utf-8") as f:
                 content = f.read()
-        except Exception as e:
+        except (OSError, ValueError) as e:
             logger.error(f"[SkillParser] 读取失败: {e}")
             return None
 

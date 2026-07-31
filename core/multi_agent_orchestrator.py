@@ -107,7 +107,7 @@ class Agent:
             })
             
             return {'result': result, 'success': True}
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — Agent 执行任务失败
             self.status = AgentStatus.ERROR
             logger.error(f"Agent {self.agent_id} 执行任务失败: {e}")
             return {'result': None, 'success': False, 'error': str(e)}
@@ -333,7 +333,7 @@ class MultiAgentOrchestrator:
                 subtask.status = TaskStatus.COMPLETED if result.get('success') else TaskStatus.FAILED
                 if not result.get('success'):
                     subtask.error = result.get('error')
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 子任务执行失败已记录日志
                 subtask.error = str(e)
                 subtask.status = TaskStatus.FAILED
                 logger.error(f"[MultiAgent] 子任务执行失败: {subtask_id}, {e}")

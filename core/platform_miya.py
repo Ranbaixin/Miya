@@ -157,7 +157,7 @@ class QQAdapter(PlatformAdapter):
             self._connected = True
             logger.info("[QQAdapter] 已连接")
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 连接失败已记录日志
             logger.error(f"[QQAdapter] 连接失败: {e}")
             return False
 
@@ -182,7 +182,7 @@ class QQAdapter(PlatformAdapter):
                         json={"group_id": int(target), "message": message},
                     )
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 发送消息失败已记录日志
             logger.error(f"[QQAdapter] 发送消息失败: {e}")
             return False
 
@@ -202,7 +202,7 @@ class QQAdapter(PlatformAdapter):
                         json={"group_id": int(target), "message": msg},
                     )
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 发送图片失败已记录日志
             logger.error(f"[QQAdapter] 发送图片失败: {e}")
             return False
 
@@ -222,7 +222,7 @@ class QQAdapter(PlatformAdapter):
                         json={"group_id": int(target), "message": msg},
                     )
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 发送语音失败已记录日志
             logger.error(f"[QQAdapter] 发送语音失败: {e}")
             return False
 
@@ -241,7 +241,7 @@ class QQAdapter(PlatformAdapter):
                         user_name=data["data"].get("nickname", ""),
                         platform=self.platform_type,
                     )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 获取用户信息失败已记录日志
             logger.error(f"[QQAdapter] 获取用户信息失败: {e}")
         return None
 
@@ -277,7 +277,7 @@ class TelegramAdapter(PlatformAdapter):
                     self._connected = True
                     logger.info("[TelegramAdapter] 已连接")
                     return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 连接失败已记录日志
             logger.error(f"[TelegramAdapter] 连接失败: {e}")
         return False
 
@@ -298,7 +298,7 @@ class TelegramAdapter(PlatformAdapter):
         try:
             await self._call_api("sendMessage", chat_id=target, text=message)
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 发送消息失败已记录日志
             logger.error(f"[TelegramAdapter] 发送消息失败: {e}")
             return False
 
@@ -307,7 +307,7 @@ class TelegramAdapter(PlatformAdapter):
         try:
             await self._call_api("sendPhoto", chat_id=target, photo=image_url)
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 发送图片失败已记录日志
             logger.error(f"[TelegramAdapter] 发送图片失败: {e}")
             return False
 
@@ -316,7 +316,7 @@ class TelegramAdapter(PlatformAdapter):
         try:
             await self._call_api("sendVoice", chat_id=target, voice=voice_url)
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 发送语音失败已记录日志
             logger.error(f"[TelegramAdapter] 发送语音失败: {e}")
             return False
 
@@ -329,8 +329,8 @@ class TelegramAdapter(PlatformAdapter):
                 user_name=resp.get("first_name", ""),
                 platform=self.platform_type,
             )
-        except Exception as e:
-            logger.error(f"[TelegramAdapter] 获取用���信���失败: {e}")
+        except Exception as e:  # noqa: BLE001 — 获取用户信息失败已记录日志
+            logger.error(f"[TelegramAdapter] 获取用户信息失败: {e}")
         return None
 
 

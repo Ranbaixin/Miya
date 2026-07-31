@@ -192,7 +192,7 @@ class AdvancedOrchestrator:
                 'summary': f"思维链完成，共 {len(chain.steps)} 个思考步骤"
             }
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 思维链分析失败
             logger.error(f"思维链分析失败: {e}")
             return {
                 'success': False,
@@ -251,7 +251,7 @@ class AdvancedOrchestrator:
                 'summary': summary
             }
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 任务规划失败
             logger.error(f"任务规划失败: {e}")
             return {
                 'success': False,
@@ -292,7 +292,7 @@ class AdvancedOrchestrator:
                 'summary': f"探索完成，共 {len(findings)} 条发现"
             }
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 探索失败
             logger.error(f"探索失败: {e}")
             return {
                 'success': False,
@@ -377,7 +377,7 @@ class AdvancedOrchestrator:
                 'details': self.task_planner.get_summary()
             }
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 任务执行失败
             logger.error(f"任务执行失败: {e}")
             return {
                 'success': False,

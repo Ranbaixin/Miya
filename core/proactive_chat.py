@@ -62,10 +62,10 @@ def load_config() -> dict:
                 return _normalize_config(raw_config)
             else:
                 return get_default_config()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 配置加载失败有默认配置兜底
             logger.warning(f"[主动聊天] 配置加载失败: {e}，使用默认配置")
             return get_default_config()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — 配置加载失败有默认配置兜底
         logger.warning(f"[主动聊天] 配置加载失败: {e}，使用默认配置")
         return get_default_config()
 
@@ -469,7 +469,7 @@ class ProactiveChatSystem:
                 parts.append(f"{core_info.get('name', '')}显照·{core_info.get('description', '')}")
 
             return " | ".join(parts)
-        except Exception:
+        except Exception:  # noqa: BLE001 — 人设构建 best-effort，失败返回空
             return ""
 
     def set_send_callback(self, callback):
@@ -527,7 +527,7 @@ class ProactiveChatSystem:
             if asyncio.iscoroutine(result):
                 result = await result
             return str(result) if result else ""
-        except Exception:
+        except Exception:  # noqa: BLE001 — 深度上下文 best-effort，失败返回空
             return ""
 
     async def _generate_ai_message(self, trigger_type: str, context: dict, target_id: int = 0) -> Optional[str]:
@@ -619,7 +619,7 @@ class ProactiveChatSystem:
             if message.upper() == "SKIP" or not message:
                 return None
             return message
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — AI 生成可选失败，已记录日志
             logger.warning(f"[主动聊天] AI 生成失败 [{trigger_type}]: {e}")
             return None
 
@@ -635,8 +635,8 @@ class ProactiveChatSystem:
                     cfg = json.load(f)
                 prompts = cfg.get("proactive_chat", {}).get("default_prompts", {})
                 return prompts.get(trigger_type, "")
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001 — 配置读取失败，有默认空串兜底
+            logger.error(f"[主动聊天] 读取 text_config.json 失败: {e}")
         return ""
 
     @staticmethod
@@ -654,8 +654,8 @@ class ProactiveChatSystem:
                 for part in key.split("."):
                     node = node.get(part, {})
                 return node if isinstance(node, str) else default
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001 — 配置读取失败，有默认值兜底
+            logger.error(f"[主动聊天] 读取 text_config.json 失败: {e}")
         return default
 
     def _try_get_ai_message(self, trigger_type: str, context: dict) -> Optional[str]:
@@ -749,16 +749,16 @@ class ProactiveChatSystem:
                                         f"[主动聊天] [后台] [{result.trigger_type}] "
                                         f"target={target_id} -> {result.message[:30]}"
                                     )
-                                except Exception as e:
+                                except Exception as e:  # noqa: BLE001 — 发送失败已记录日志
                                     logger.error(f"[主动聊天] 发送回调失败: {e}")
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 — 单次检查失败已记录日志
                         logger.warning(f"[主动聊天] 后台检查 target={target_id} 失败: {e}")
                         continue
 
             except asyncio.CancelledError:
                 logger.info("[主动聊天] 后台轮询循环已取消")
                 break
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 轮询异常已记录日志
                 logger.error(f"[主动聊天] 后台轮询异常: {e}")
                 await asyncio.sleep(10)
 
@@ -1499,7 +1499,7 @@ class ProactiveChatSystem:
                     context=context,
                 )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — AI触发失败已记录日志
             logger.warning(f"[主动聊天] AI触发失败: {e}")
 
         return None

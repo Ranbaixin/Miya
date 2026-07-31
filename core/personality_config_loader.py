@@ -30,7 +30,7 @@ def _load_config() -> Dict[str, Any]:
         else:
             logger.warning(f"人格配置文件不存在: {config_path}")
             _config = _get_default_config()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — 加载失败有默认配置兜底
         logger.warning(f"加载人格配置失败: {e}，使用默认配置")
         _config = _get_default_config()
 

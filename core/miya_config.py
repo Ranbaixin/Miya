@@ -46,7 +46,7 @@ def get_miya_config() -> Dict[str, Any]:
         try:
             with open(config_path, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except:
+        except (OSError, ValueError):  # noqa: S110 — 配置加载失败回退默认配置
             pass
 
     return DEFAULT_CONFIG.copy()

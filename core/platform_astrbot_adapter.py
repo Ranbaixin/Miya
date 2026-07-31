@@ -42,7 +42,7 @@ class AstrBotPlatformAdapter(ABC):
                 await self._astrbot_adapter.initialize()
             self._initialized = True
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 初始化失败已记录日志
             logger.error(f"[{self.platform_name}] 初始化失败: {e}")
             return False
 
@@ -53,7 +53,7 @@ class AstrBotPlatformAdapter(ABC):
                 await self._astrbot_adapter.connect()
             self._connected = True
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 连接失败已记录日志
             logger.error(f"[{self.platform_name}] 连接失败: {e}")
             return False
 
@@ -63,7 +63,7 @@ class AstrBotPlatformAdapter(ABC):
             if hasattr(self._astrbot_adapter, "disconnect"):
                 await self._astrbot_adapter.disconnect()
             self._connected = False
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 断开连接失败已记录日志
             logger.error(f"[{self.platform_name}] 断开连接失败: {e}")
 
     def is_connected(self) -> bool:
@@ -103,7 +103,7 @@ class AstrBotPlatformAdapter(ABC):
                 "raw": event,
             }
             return message
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 事件转换失败已记录日志
             logger.error(f"[{self.platform_name}] 事件转换失败: {e}")
             return None
 
@@ -114,7 +114,7 @@ class AstrBotPlatformAdapter(ABC):
                 await self._astrbot_adapter.send_message(target, message, **kwargs)
                 return True
             return False
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 发送消息失败已记录日志
             logger.error(f"[{self.platform_name}] 发送消息失败: {e}")
             return False
 
@@ -125,7 +125,7 @@ class AstrBotPlatformAdapter(ABC):
                 await self._astrbot_adapter.send_image(target, image_path, **kwargs)
                 return True
             return False
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 发送图片失败已记录日志
             logger.error(f"[{self.platform_name}] 发送图片失败: {e}")
             return False
 

@@ -113,7 +113,7 @@ class AstrBotPluginMarket:
 
             except asyncio.TimeoutError:
                 logger.warning(f"获取插件市场超时: {url}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 获取插件市场失败已记录日志
                 logger.warning(f"获取插件市场失败: {url}, {e}")
 
         return None
@@ -135,7 +135,7 @@ class AstrBotPluginMarket:
                         json.dumps(md5_data, ensure_ascii=False), encoding="utf-8"
                     )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 更新 MD5 失败已记录日志
             logger.warning(f"更新 MD5 失败: {e}")
 
     def _is_cache_valid(self) -> bool:
@@ -152,7 +152,7 @@ class AstrBotPluginMarket:
                 self._md5_cache_file.read_text(encoding="utf-8")
             ).get("md5", "")
             return current_md5 == cached_md5
-        except:
+        except Exception:  # noqa: BLE001 — 缓存校验失败返回 False
             return False
 
     def _load_current_md5(self) -> str:
@@ -160,7 +160,7 @@ class AstrBotPluginMarket:
         try:
             cache_data = json.loads(self._cache_file.read_text(encoding="utf-8"))
             return cache_data.get("_meta", {}).get("md5", "")
-        except:
+        except Exception:  # noqa: BLE001 — 读取 MD5 失败返回空
             return ""
 
     def _load_cache(self) -> Optional[Dict]:
@@ -168,7 +168,7 @@ class AstrBotPluginMarket:
         if self._cache_file.exists():
             try:
                 return json.loads(self._cache_file.read_text(encoding="utf-8"))
-            except:
+            except Exception:  # noqa: S110, BLE001 — 缓存读取失败静默跳过
                 pass
         return None
 
@@ -178,7 +178,7 @@ class AstrBotPluginMarket:
             self._cache_file.write_text(
                 json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 保存插件缓存失败已记录日志
             logger.warning(f"保存插件缓存失败: {e}")
 
     def _parse_plugins(self, data: Dict) -> List[PluginInfo]:
@@ -201,7 +201,7 @@ class AstrBotPluginMarket:
                     astrbot_version=info.get("astrbot_version", ""),
                 )
                 plugins.append(plugin)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 解析插件失败已记录日志
                 logger.warning(f"解析插件 {name} 失败: {e}")
 
         return sorted(plugins, key=lambda x: x.name)
@@ -240,7 +240,7 @@ class AstrBotPluginMarket:
                 else:
                     logger.error(f"下载插件失败: {response.status}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 下载插件异常已记录日志
             logger.error(f"下载插件 {plugin.name} 异常: {e}")
 
         return False

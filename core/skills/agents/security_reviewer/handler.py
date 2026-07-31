@@ -3,9 +3,12 @@ Security Reviewer Agent - 安全审查
 检测代码中的安全漏洞和风险
 """
 
+import logging
 import re
 from pathlib import Path
 from typing import Any, Dict
+
+logger = logging.getLogger(__name__)
 
 
 async def handler(args: Dict[str, Any], context: Dict[str, Any]) -> str:
@@ -58,8 +61,8 @@ async def _scan_security(terminal, target: str) -> str:
                         issues.append(
                             {"file": str(file), "type": issue_type, "pattern": pattern}
                         )
-            except:
-                pass
+            except (OSError, ValueError) as exc:
+                logger.debug("[SecurityReviewer] 读取文件失败: %s: %s", file, exc)
 
     if not issues:
         return "✅ 未发现明显安全问题"

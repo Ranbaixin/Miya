@@ -139,7 +139,7 @@ class UserPersonaManager:
                         data = json.load(f)
                         persona = UserPersona(**data)
                         self.user_personas[user_id] = persona
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 加载用户侧写失败已记录日志
                     logger.warning(f"[用户侧写系统] 加载用户侧写失败 {user_id}: {e}")
 
             # 加载群聊侧写
@@ -150,13 +150,13 @@ class UserPersonaManager:
                         data = json.load(f)
                         persona = GroupPersona(**data)
                         self.group_personas[group_id] = persona
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 加载群聊侧写失败已记录日志
                     logger.warning(f"[用户侧写系统] 加载群聊侧写失败 {group_id}: {e}")
 
             logger.info(
                 f"[用户侧写系统] 已加载 {len(self.user_personas)} 个用户侧写, {len(self.group_personas)} 个群聊侧写"
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载侧写失败已记录日志
             logger.warning(f"[用户侧写系统] 加载侧写失败: {e}")
 
     def _save_user_persona(self, user_id: str):
@@ -168,7 +168,7 @@ class UserPersonaManager:
             persona.updated_at = datetime.now().isoformat()
             with open(self._get_user_file(user_id), "w", encoding="utf-8") as f:
                 json.dump(asdict(persona), f, ensure_ascii=False, indent=2)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 保存用户侧写失败已记录日志
             logger.warning(f"[用户侧写系统] 保存用户侧写失败 {user_id}: {e}")
 
     def _save_group_persona(self, group_id: str):
@@ -180,7 +180,7 @@ class UserPersonaManager:
             persona.updated_at = datetime.now().isoformat()
             with open(self._get_group_file(group_id), "w", encoding="utf-8") as f:
                 json.dump(asdict(persona), f, ensure_ascii=False, indent=2)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 保存群聊侧写失败已记录日志
             logger.warning(f"[用户侧写系统] 保存群聊侧写失败 {group_id}: {e}")
 
     def get_or_create_user_persona(

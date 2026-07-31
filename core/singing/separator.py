@@ -90,7 +90,7 @@ class DemucsSeparator(VocalSeparator):
                         timeout=self.timeout,
                     ),
                 )
-            except (_sp.TimeoutExpired, Exception) as e:
+            except (_sp.TimeoutExpired, Exception) as e:  # noqa: BLE001 — demucs失败尝试下一模型
                 logger.warning(f"[分离] demucs [{model}] error: {e}")
                 continue
 
@@ -107,7 +107,8 @@ class DemucsSeparator(VocalSeparator):
                         if os.path.isdir(candidate):
                             dmc_out = candidate
                             break
-                except Exception:
+                except Exception:  # noqa: BLE001 — demucs输出扫描失败跳过
+                    logger.debug(f"[分离] 扫描 demucs 输出失败: {dmc_base}")
                     pass
 
             dmc_v = None
@@ -234,7 +235,7 @@ class UVR5Separator(VocalSeparator):
             if os.path.exists(wav_input) and os.path.getsize(wav_input) > 0:
                 src_abs = wav_input
                 logger.info(f"[UVR5] WAV 预转换完成: {os.path.getsize(wav_input)}B")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — WAV预转换失败用原文件
             logger.warning(f"[UVR5] WAV 预转换失败, 使用原始文件: {e}")
 
         for model_cfg in self.models:
@@ -268,7 +269,7 @@ class UVR5Separator(VocalSeparator):
                         errors="replace",
                     ),
                 )
-            except (_sp.TimeoutExpired, Exception) as e:
+            except (_sp.TimeoutExpired, Exception) as e:  # noqa: BLE001 — UVR5失败尝试下一模型
                 logger.warning(f"[UVR5] {model_type} error: {e}")
                 continue
 
@@ -334,7 +335,8 @@ async def _build_instrumental(stem_files: dict, output_dir: str) -> Optional[str
         )
         if os.path.exists(target) and os.path.getsize(target) > 0:
             return target
-    except Exception:
+    except Exception:  # noqa: BLE001 — ffmpeg混音失败降级返回空
+        logger.debug("[分离] ffmpeg 混音失败")
         pass
     return None
 
@@ -365,7 +367,7 @@ async def _ffmpeg_fallback(
             v_out if os.path.exists(v_out) else None,
             i_out if os.path.exists(i_out) else None,
         )
-    except Exception:
+    except Exception:  # noqa: BLE001 — ffmpeg回退失败降级
         return None, None
 
 
@@ -450,7 +452,7 @@ def _check_amplitude(vocal_path: Optional[str], inst_path: Optional[str]):
                 vocal_nonzero_pct = nonzero
                 if peak < 0.01 and nonzero < 1.0:
                     vocal_usable = False
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 振幅检查失败降级
             logger.warning(f"[分离] {label} 振幅检查异常: {e}")
             if label == "vocal":
                 vocal_usable = False

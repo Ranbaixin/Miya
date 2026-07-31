@@ -93,7 +93,7 @@ class VisualConsistencyManager:
             logger.info(f"[Visual] 添加角色参考: {character_id}")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 添加角色参考失败已记录日志
             logger.error(f"[Visual] 添加角色参考失败: {e}")
             return False
 
@@ -132,7 +132,7 @@ class VisualConsistencyManager:
             logger.info(f"[Visual] 添加风格参考: {style_id}")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 添加风格参考失败已记录日志
             logger.error(f"[Visual] 添加风格参考失败: {e}")
             return False
 
@@ -349,7 +349,7 @@ class VisualConsistencyManager:
 
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载参考失败已记录日志
             logger.error(f"[Visual] 加载参考失败: {e}")
             return False
 

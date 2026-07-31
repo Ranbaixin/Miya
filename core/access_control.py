@@ -156,7 +156,7 @@ class APIKeyManager:
 
                 logger.info(f"[访问控制] 加载了{len(self._api_keys)}个API密钥")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 密钥加载失败置空存储，鉴权fail-closed
             logger.error(f"[访问控制] 加载API密钥失败: {e}")
 
     def _save_keys(self):
@@ -192,7 +192,7 @@ class APIKeyManager:
 
             logger.debug("[访问控制] API密钥已保存")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 密钥保存失败仅记录，内存态仍生效
             logger.error(f"[访问控制] 保存API密钥失败: {e}")
 
     def generate_key(
@@ -261,7 +261,7 @@ class APIKeyManager:
 
             return None
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 鉴权异常显式拒绝（fail-closed）
             logger.error(f"[访问控制] 验证API密钥失败: {e}")
             return None
 

@@ -180,7 +180,7 @@ class OpenAIProvider(Provider):
                 )
                 self._initialized = True
                 logger.info(f"[OpenAIProvider] 初始化成功: {self.model}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — OpenAI Provider初始化失败
                 logger.error(f"[OpenAIProvider] 初始化失败: {e}")
 
     async def chat(
@@ -262,7 +262,7 @@ class DeepSeekProvider(Provider):
                 )
                 self._initialized = True
                 logger.info(f"[DeepSeekProvider] 初始化成功: {self.model}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — DeepSeek Provider初始化失败
                 logger.error(f"[DeepSeekProvider] 初始化失败: {e}")
 
     async def chat(
@@ -330,7 +330,7 @@ class AnthropicProvider(Provider):
                 )
                 self._initialized = True
                 logger.info(f"[AnthropicProvider] 初始化成功: {self.model}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — Anthropic Provider初始化失败
                 logger.error(f"[AnthropicProvider] 初始化失败: {e}")
 
     async def chat(
@@ -417,7 +417,7 @@ class SiliconFlowProvider(Provider):
                 )
                 self._initialized = True
                 logger.info(f"[SiliconFlowProvider] 初始化成功: {self.model}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — SiliconFlow Provider初始化失败
                 logger.error(f"[SiliconFlowProvider] 初始化失败: {e}")
 
     async def chat(
@@ -551,7 +551,7 @@ class ProviderManager:
         for callback in self._change_callbacks:
             try:
                 callback(new_provider_id)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 回调失败
                 logger.warning(f"[ProviderManager] 回调失败: {e}")
 
     def get_provider_lock(self, provider_id: str) -> asyncio.Lock:
@@ -608,7 +608,7 @@ class ProviderManager:
                 if provider and self._health_status.get(preferred_provider, False):
                     async with self.get_provider_lock(preferred_provider):
                         return await provider.chat(messages, **kwargs)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — Provider降级失败已记录日志
                 logger.warning(f"[ProviderManager] {preferred_provider} 失败: {e}")
                 self.set_health_status(preferred_provider, False)
 

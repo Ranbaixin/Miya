@@ -74,7 +74,7 @@ class FileReadTool(Tool):
             with open(path, "r", encoding=encoding) as f:
                 content = f.read()
             return ToolResult(success=True, result=content)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 读取失败返回错误结果
             return ToolResult(success=False, error=str(e))
 
 
@@ -92,7 +92,7 @@ class FileWriteTool(Tool):
             with open(path, "w", encoding=encoding) as f:
                 f.write(content)
             return ToolResult(success=True, result=path)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 写入失败返回错误结果
             return ToolResult(success=False, error=str(e))
 
 
@@ -111,7 +111,7 @@ class FileListTool(Tool):
             files = list(Path(path).glob(pattern))
             result = [str(f) for f in files]
             return ToolResult(success=True, result=result)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 列出文件失败返回错误结果
             return ToolResult(success=False, error=str(e))
 
 
@@ -150,7 +150,7 @@ class ShellTool(Tool):
                 process.kill()
                 return ToolResult(success=False, error="命令执行超时")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 命令执行失败返回错误结果
             return ToolResult(success=False, error=str(e))
 
 
@@ -180,7 +180,7 @@ class PythonTool(Tool):
             try:
                 exec(code, {"__builtins__": __builtins__})
                 result["output"] = sys.stdout.getvalue()
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 代码执行错误写入结果
                 result["error"] = str(e)
             finally:
                 sys.stdout = old_stdout
@@ -188,7 +188,7 @@ class PythonTool(Tool):
 
             return ToolResult(success=result["error"] is None, result=result)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 执行环境异常返回错误结果
             return ToolResult(success=False, error=str(e))
 
 
@@ -242,7 +242,7 @@ class WebSearchTool(Tool):
                     success=False, error=f"不支持的搜索引擎: {self.search_engine}"
                 )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 搜索失败返回错误结果
             return ToolResult(success=False, error=str(e))
 
 
@@ -278,7 +278,7 @@ class KnowledgeBaseTool(Tool):
             ]
 
             return ToolResult(success=True, result=formatted)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 知识库查询失败返回错误结果
             return ToolResult(success=False, error=str(e))
 
 

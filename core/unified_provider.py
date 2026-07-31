@@ -64,7 +64,7 @@ class UnifiedProviderManager:
 
             self._miya_providers = {"default": ModelPoolManager()}
             logger.info("[UnifiedProviderManager] Miya模型池已加载")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — Miya模型池加载失败
             logger.warning(f"[UnifiedProviderManager] Miya模型池加载失败: {e}")
 
     async def chat(
@@ -93,7 +93,7 @@ class UnifiedProviderManager:
                 return await pool.chat(messages, stream=stream, **kwargs)
 
             return await self._chat_default(messages, stream, **kwargs)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — Miya聊天失败
             logger.error(f"[UnifiedProviderManager] Miya聊天失败: {e}")
             return await self._chat_default(messages, stream, **kwargs)
 

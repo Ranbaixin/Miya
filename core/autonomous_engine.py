@@ -273,7 +273,7 @@ class AutonomousEngine:
         if self.on_decision:
             try:
                 self.on_decision(decision, problem)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 决策回调失败已记录日志
                 self.logger.error(f"决策回调失败: {e}")
         
         return decision
@@ -305,7 +305,7 @@ class AutonomousEngine:
             if self.on_fix_start:
                 try:
                     self.on_fix_start(decision, problem)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 修复开始回调失败已记录日志
                     self.logger.error(f"修复开始回调失败: {e}")
             
             # 使用 AutoFixer 执行修复
@@ -326,13 +326,13 @@ class AutonomousEngine:
             if self.on_fix_complete:
                 try:
                     self.on_fix_complete(decision, problem, result)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 修复完成回调失败已记录日志
                     self.logger.error(f"修复完成回调失败: {e}")
             
             self.logger.info(f"决策执行完成: {decision.id}, 结果: {decision.result}")
             return result
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 执行决策失败已记录日志
             self.logger.error(f"执行决策失败: {e}")
             decision.action_taken = "auto_fix"
             decision.result = f"error: {str(e)}"
@@ -391,7 +391,7 @@ class AutonomousEngine:
                 # 等待
                 await asyncio.sleep(wait_time)
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 改进循环出错已记录日志
                 self.logger.error(f"改进循环出错: {e}")
                 import traceback
                 traceback.print_exc()
@@ -487,7 +487,7 @@ class AutonomousEngine:
                             else:
                                 result['fixes_failed'] += 1
 
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 处理问题失败已记录日志
                     error_msg = f"处理问题 {problem.id} 失败: {str(e)}"
                     self.logger.error(error_msg)
                     result['errors'].append(error_msg)
@@ -495,7 +495,7 @@ class AutonomousEngine:
             self.logger.info(f"✅ 手动改进完成: {result['fixes_successful']}/{result['fixes_attempted']} 成功")
             return result
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 手动改进失败已记录日志
             error_msg = f"手动改进失败: {str(e)}"
             self.logger.error(error_msg)
             result['errors'].append(error_msg)
@@ -556,7 +556,7 @@ class AutonomousEngine:
             
             self.logger.info(f"状态已保存: {file_path}")
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 保存状态失败已记录日志
             self.logger.error(f"保存状态失败: {e}")
     
     def load_state(self, file_path: str = ".autonomous_engine_state.json"):
@@ -595,7 +595,7 @@ class AutonomousEngine:
             
             self.logger.info(f"状态已加载: {file_path}")
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载状态失败已记录日志
             self.logger.error(f"加载状态失败: {e}")
 
 

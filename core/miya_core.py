@@ -89,7 +89,7 @@ class MIYACore:
                 logger.info(f"  - {provider_id}: {config.get('model', 'N/A')}")
             self.state.providers_loaded = len(default_providers)
             logger.info(f"✅ Provider 系统: {self.state.providers_loaded} 个提供商")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 可选组件初始化失败，已记录日志
             logger.warning(f"⚠️ Provider 系统: {e}")
             self.provider_manager = None
 
@@ -104,7 +104,7 @@ class MIYACore:
                 logger.info(f"  - {platform_id}: {config.get('name', platform_id)}")
             self.state.platforms_active = list(default_platforms.keys())
             logger.info(f"✅ Platform 系统: {len(self.state.platforms_active)} 个平台")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 可选组件初始化失败，已记录日志
             logger.warning(f"⚠️ Platform 系统: {e}")
             self.platform_manager = None
 
@@ -116,7 +116,7 @@ class MIYACore:
             await self.star_manager.load_all()
             self.state.plugins_loaded = len(self.star_manager.list_stars())
             logger.info(f"✅ Star 系统: {self.state.plugins_loaded} 个插件")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 可选组件初始化失败，已记录日志
             logger.warning(f"⚠️ Star 系统: {e}")
             self.star_manager = None
 
@@ -126,7 +126,7 @@ class MIYACore:
 
             self.knowledge_base = KnowledgeBaseManager()
             logger.info("✅ 知识库系统已加载")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 可选组件初始化失败，已记录日志
             logger.warning(f"⚠️ 知识库: {e}")
             self.knowledge_base = None
 
@@ -136,7 +136,7 @@ class MIYACore:
 
             self.tool_registry = ToolRegistry()
             logger.info("✅ 工具系统已加载")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 可选组件初始化失败，已记录日志
             logger.warning(f"⚠️ 工具系统: {e}")
             self.tool_registry = None
 
@@ -146,7 +146,7 @@ class MIYACore:
 
             self.event_bus = EventBus()
             logger.info("✅ 事件系统已加载")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 可选组件初始化失败，已记录日志
             logger.warning(f"⚠️ 事件系统: {e}")
             self.event_bus = None
 
@@ -156,7 +156,7 @@ class MIYACore:
 
             self.dashboard_api = get_api_router()
             logger.info("✅ Dashboard API 已加载")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 可选组件初始化失败，已记录日志
             logger.warning(f"⚠️ Dashboard API: {e}")
             self.dashboard_api = None
 

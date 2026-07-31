@@ -55,7 +55,7 @@ class AutoConvertMusicEngine(SingingEngine):
                 f"Auto-Convert-Music engine initialized: {self.api_url} speaker={self.speaker}"
             )
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 唱歌引擎API调用失败降级
             logger.error(f"Auto-Convert-Music initialization failed: {e}")
             return False
 
@@ -76,7 +76,7 @@ class AutoConvertMusicEngine(SingingEngine):
             resp = requests.get(url, timeout=(5, t))
             resp.raise_for_status()
             return resp
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 唱歌引擎API调用失败降级
             logger.error(f"Auto-Convert-Music request failed: {url} — {e}")
             return None
 
@@ -93,7 +93,7 @@ class AutoConvertMusicEngine(SingingEngine):
                 song_name=data.get("songName", query),
                 source="netease",
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 唱歌引擎API调用失败降级
             logger.error(f"Failed to parse song search result: {e}")
             return None
 
@@ -106,7 +106,7 @@ class AutoConvertMusicEngine(SingingEngine):
         try:
             data = resp.json()
             return data.get("converted_file", [])
-        except Exception:
+        except Exception:  # noqa: BLE001 — 唱歌引擎API调用失败降级
             return []
 
     async def request_learn(self, song_name: str) -> LearnTask:
@@ -120,7 +120,7 @@ class AutoConvertMusicEngine(SingingEngine):
             status = LearnStatus(data.get("status", "waiting"))
             actual_name = data.get("songName", song_name)
             return LearnTask(song_name=actual_name, status=status)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 唱歌引擎API调用失败降级
             logger.error(f"Failed to request learn: {e}")
             return LearnTask(song_name=song_name, status=LearnStatus.FAILED)
 
@@ -139,7 +139,7 @@ class AutoConvertMusicEngine(SingingEngine):
             if song_name in converted:
                 return LearnStatus.PROCESSED
             return LearnStatus.PROCESSING
-        except Exception:
+        except Exception:  # noqa: BLE001 — 唱歌引擎API调用失败降级
             return LearnStatus.FAILED
 
     async def download_vocal(self, song_name: str, output_dir: str) -> Optional[str]:
@@ -201,7 +201,7 @@ class AutoConvertMusicEngine(SingingEngine):
             return []
         try:
             return resp.json().get("convertfail", [])
-        except Exception:
+        except Exception:  # noqa: BLE001 — 唱歌引擎API调用失败降级
             return []
 
     async def download_mix(self, song_name: str, output_dir: str) -> Optional[str]:
@@ -279,7 +279,7 @@ class RVCEngine(SingingEngine):
                 f"RVC engine initialized: {self.api_url} model={self.model_name}"
             )
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 唱歌引擎API调用失败降级
             logger.error(f"RVC initialization failed: {e}")
             return False
 
@@ -292,7 +292,7 @@ class RVCEngine(SingingEngine):
             resp = requests.get(url, timeout=(5, t))
             resp.raise_for_status()
             return resp
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 唱歌引擎API调用失败降级
             logger.debug(f"RVC GET failed: {url} — {e}")
             return None
 
@@ -307,7 +307,7 @@ class RVCEngine(SingingEngine):
             resp = requests.post(url, data=data, files=files, timeout=(5, t))
             resp.raise_for_status()
             return resp
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 唱歌引擎API调用失败降级
             logger.error(f"RVC POST failed: {url} — {e}")
             return None
 
@@ -319,7 +319,7 @@ class RVCEngine(SingingEngine):
             return []
         try:
             return resp.json()
-        except Exception:
+        except Exception:  # noqa: BLE001 — 唱歌引擎API调用失败降级
             return []
 
     async def set_model(self, model_name: str) -> bool:
@@ -360,7 +360,7 @@ class RVCEngine(SingingEngine):
                 out_f.write(resp.content)
             logger.info(f"RVC conversion complete: {output_path}")
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 唱歌引擎API调用失败降级
             logger.error(f"RVC voice conversion failed: {e}")
             return False
 
@@ -381,7 +381,7 @@ class RVCEngine(SingingEngine):
                 song_name=data.get("songName", query),
                 source="netease",
             )
-        except Exception:
+        except Exception:  # noqa: BLE001 — 唱歌引擎API调用失败降级
             return None
 
     async def get_available_songs(self) -> List[str]:
@@ -392,7 +392,7 @@ class RVCEngine(SingingEngine):
             return []
         try:
             return resp.json().get("converted_file", [])
-        except Exception:
+        except Exception:  # noqa: BLE001 — 唱歌引擎API调用失败降级
             return []
 
     async def request_learn(self, song_name: str) -> LearnTask:
@@ -406,7 +406,7 @@ class RVCEngine(SingingEngine):
             status = LearnStatus(data.get("status", "waiting"))
             actual_name = data.get("songName", song_name)
             return LearnTask(song_name=actual_name, status=status)
-        except Exception:
+        except Exception:  # noqa: BLE001 — 唱歌引擎API调用失败降级
             return LearnTask(song_name=song_name, status=LearnStatus.FAILED)
 
     async def get_learn_status(self, song_name: str) -> LearnStatus:
@@ -424,7 +424,7 @@ class RVCEngine(SingingEngine):
             if song_name in converted:
                 return LearnStatus.PROCESSED
             return LearnStatus.PROCESSING
-        except Exception:
+        except Exception:  # noqa: BLE001 — 唱歌引擎API调用失败降级
             return LearnStatus.FAILED
 
     async def download_vocal(self, song_name: str, output_dir: str) -> Optional[str]:
@@ -464,7 +464,7 @@ class RVCEngine(SingingEngine):
         try:
             data = resp.json()
             actual_name = data.get("songName", song_name)
-        except Exception:
+        except Exception:  # noqa: BLE001 — 唱歌引擎API调用失败降级
             actual_name = song_name
         audio_resp = await asyncio.get_event_loop().run_in_executor(
             None, lambda an=actual_name: self._get(f"/get_audio/{an}", timeout=120)
@@ -500,5 +500,5 @@ class RVCEngine(SingingEngine):
             return []
         try:
             return resp.json().get("convertfail", [])
-        except Exception:
+        except Exception:  # noqa: BLE001 — 唱歌引擎API调用失败降级
             return []

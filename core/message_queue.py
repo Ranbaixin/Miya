@@ -387,7 +387,7 @@ class MessageQueueManager:
             logger.info(
                 f"[完成][{model_name}] {queue_name}: {elapsed:.2f}s {self._format_meta(request)}"
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 请求处理失败已记录日志
             elapsed = time.perf_counter() - start
             logger.error(
                 f"[失败][{model_name}] {queue_name}: {elapsed:.2f}s {self._format_meta(request)} - {e}"

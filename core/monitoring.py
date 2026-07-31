@@ -318,7 +318,7 @@ class AlertEngine:
         for callback in self._alert_callbacks:
             try:
                 callback(alert)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 单回调失败不影响其他告警通知
                 logger.error(f"[告警引擎] 通知告警失败: {e}")
 
     def register_alert_callback(self, callback: Callable[[Alert], None]):
@@ -393,7 +393,7 @@ class NotificationService:
 
             logger.info(f"[通知服务] 邮件告警已发送: {alert.alert_id}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 邮件告警为可选通知，失败仅记录
             logger.error(f"[通知服务] 发送邮件失败: {e}")
 
     async def send_webhook_alert(self, alert: Alert):
@@ -423,7 +423,7 @@ class NotificationService:
                     else:
                         logger.warning(f"[通知服务] Webhook返回错误: {response.status}")
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 单 Webhook 失败不阻塞其余通知
                 logger.error(f"[通知服务] 发送Webhook失败: {webhook_url}, 错误: {e}")
 
     def _format_alert_email(self, alert: Alert) -> str:
@@ -538,7 +538,7 @@ class MonitoringSystem:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 监控循环需持续运行，仅记录
                 logger.error(f"[监控系统] 监控循环错误: {e}")
                 await asyncio.sleep(self.check_interval)
 

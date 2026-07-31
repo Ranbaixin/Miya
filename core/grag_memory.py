@@ -101,7 +101,7 @@ class GRAGMemoryManager:
                 self._neo4j_driver = GraphDatabase.driver(uri, auth=(user, password))
                 self._neo4j_initialized = True
                 logger.info("[GRAG] Neo4j 连接成功")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — Neo4j 连接失败
                 logger.warning(f"[GRAG] Neo4j 连接失败: {e}")
                 self._neo4j_initialized = True  # 只警告一次
 
@@ -132,7 +132,7 @@ class GRAGMemoryManager:
             await start_task_manager()
 
             logger.info("[GRAG] 任务管理器集成完成")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 任务管理器集成失败
             logger.warning(f"[GRAG] 任务管理器集成失败: {e}")
 
     async def add_conversation_memory(self, user_input: str, ai_response: str) -> bool:
@@ -159,13 +159,13 @@ class GRAGMemoryManager:
                     )
                     logger.info(f"[GRAG] 已提交提取任务: {task_id}")
                     return True
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 提交提取任务失败
                     logger.error(f"[GRAG] 提交提取任务失败: {e}")
                     # 同步回退
                     await self._extract_and_store_quintuples_sync(conversation_text)
 
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 添加对话记忆失败
             logger.error(f"[GRAG] 添加对话记忆失败: {e}")
             return False
 
@@ -245,7 +245,7 @@ class GRAGMemoryManager:
             except json.JSONDecodeError:
                 logger.warning(f"[GRAG] 解析五元组失败: {content[:100]}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — LLM提取失败，使用规则
             logger.warning(f"[GRAG] LLM提取失败，使用规则: {e}")
             # 简单的规则提取作为回退
             quintuples = self._rule_based_extraction(text)
@@ -325,7 +325,7 @@ class GRAGMemoryManager:
                 f"[GRAG] 已存储五元组: {quintuple.subject} - {quintuple.relation} -> {quintuple.object}"
             )
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 存储五元组失败
             logger.error(f"[GRAG] 存储五元组失败: {e}")
             return False
 
@@ -356,7 +356,7 @@ class GRAGMemoryManager:
                     return result.data()
 
             return await asyncio.to_thread(_run)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 查询失败
             logger.error(f"[GRAG] 查询失败: {e}")
             return []
 
@@ -392,7 +392,7 @@ class GRAGMemoryManager:
                     return result.data()
 
             return await asyncio.to_thread(_run)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 实体查询失败
             logger.error(f"[GRAG] 实体查询失败: {e}")
             return []
 
@@ -441,7 +441,7 @@ class GRAGMemoryManager:
                     }
 
             return await asyncio.to_thread(_run)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 统计查询失败返回错误状态
             return {"enabled": self.enabled, "neo4j": "error", "error": str(e)}
 
     async def close(self) -> None:

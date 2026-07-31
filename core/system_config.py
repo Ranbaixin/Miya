@@ -37,7 +37,7 @@ def _load_json_config(config_name: str) -> Dict[str, Any]:
             else:
                 logger.warning(f"配置文件不存在: {config_path}")
                 return {}
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 配置加载失败已记录日志
             logger.error(f"加载配置 {config_name} 失败: {e}")
             return {}
 

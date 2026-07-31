@@ -125,7 +125,7 @@ class TTSNet:
 
             return response
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — TTS消息处理失败返回错误
             logger.error(f"TTS message handling failed: {e}")
             if MLINK_AVAILABLE:
                 error_msg = Message(

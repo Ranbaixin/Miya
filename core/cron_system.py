@@ -141,7 +141,7 @@ class CronScheduler:
                 await asyncio.sleep(self._check_interval)
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 调度异常已记录日志
                 logger.error(f"[CronScheduler] 调度异常: {e}")
                 await asyncio.sleep(5)
 
@@ -200,7 +200,7 @@ class CronScheduler:
 
             cron = croniter(cron_expr, base_time)
             return cron.get_next(datetime)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — Cron解析失败已记录日志
             logger.warning(f"[CronScheduler] Cron解析失败: {e}")
             return None
 
@@ -240,7 +240,7 @@ class CronScheduler:
             status = TaskStatus.FAILED
             logger.error(f"[CronScheduler] {error}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 任务执行失败已记录日志
             error = str(e)
             status = TaskStatus.FAILED
             logger.error(f"[CronScheduler] 任务执行失败: {e}")

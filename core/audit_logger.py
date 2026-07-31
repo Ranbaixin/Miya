@@ -217,7 +217,7 @@ class AuditLogger:
             try:
                 log_file.unlink()
                 logger.debug(f"[审计日志] 删除旧日志: {log_file}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 删除日志失败
                 logger.error(f"[审计日志] 删除日志失败: {e}")
 
     def log_event(
@@ -315,7 +315,7 @@ class AuditLogger:
 
             self._current_file_size += len(event_json.encode("utf-8"))
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 写入事件失败
             logger.error(f"[审计日志] 写入事件失败: {e}")
 
     def query_events(
@@ -424,10 +424,11 @@ class AuditLogger:
                             ):
                                 results.append(event)
 
-                        except Exception:
+                        except Exception as e:  # noqa: BLE001 — 跳过无效日志行继续读取
+                            logger.warning(f"[审计日志] 跳过无效日志行: {e}")
                             continue
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 查询审计文件失败已记录日志
                 logger.error(f"[审计日志] 查询文件失败: {log_file}, 错误: {e}")
 
         return results

@@ -106,7 +106,7 @@ async def execute_command(
             result = handler(context, *parsed_args)
 
         return result if result else "命令执行完成"
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — 执行失败
         logger.error(f"[Commands] 执行失败 {name}: {e}")
         return f"执行失败: {e}"
 

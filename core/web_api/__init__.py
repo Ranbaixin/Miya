@@ -77,7 +77,7 @@ class WebAPI:
             from core.multi_agent_orchestrator import MultiAgentOrchestrator
 
             self.multi_agent_orchestrator = MultiAgentOrchestrator()
-        except:
+        except Exception:  # noqa: BLE001 — 多Agent编排器初始化失败，降级为 None
             self.multi_agent_orchestrator = None
 
         if not FASTAPI_AVAILABLE:
@@ -108,7 +108,7 @@ class WebAPI:
             if miya_api and miya_api.router:
                 self.router.include_router(miya_api.router)
                 logger.info("[WebAPI] MiyaAPI 路由已添加")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — MiyaAPI 为可选路由，失败跳过
             logger.warning(f"[WebAPI] 添加 MiyaAPI 路由失败: {e}")
 
     def _include_extra_routers(self):
@@ -118,14 +118,14 @@ class WebAPI:
 
             self.router.include_router(health_router)
             logger.info("[WebAPI] 健康监控路由已添加 (/health/)")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 健康监控路由为可选，失败跳过
             logger.warning(f"[WebAPI] 添加健康监控路由失败: {e}")
         try:
             from core.resource_manager import router as resource_router
 
             self.router.include_router(resource_router)
             logger.info("[WebAPI] 资源管理路由已添加 (/resources/)")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 资源管理路由为可选，失败跳过
             logger.warning(f"[WebAPI] 添加资源管理路由失败: {e}")
         try:
             from pathlib import Path
@@ -140,7 +140,7 @@ class WebAPI:
             create_management_routes(self.router, webui)
             create_runtime_routes(self.router, webui)
             logger.info("[WebAPI] MiyaWebUI 管理路由已添加")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — MiyaWebUI 管理路由为可选，失败跳过
             logger.warning(f"[WebAPI] 添加 MiyaWebUI 管理路由失败: {e}")
 
     def _init_subroutes(self):
@@ -251,7 +251,7 @@ class WebAPI:
                     "process_count": len(psutil.pids()),
                     "timestamp": datetime.utcnow().isoformat(),
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 系统信息采集失败，返回错误响应
                 return {"error": str(e)}
 
         @self.router.get("/api/emotion")
@@ -266,8 +266,8 @@ class WebAPI:
                             "intensity": s.get("intensity", 50),
                             "emotions": s.get("emotions", {}),
                         }
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001 — 情绪状态读取失败，降级返回默认
+                logger.debug(f"[WebAPI] 情绪状态读取失败: {e}")
             return {"dominant_emotion": "平静", "intensity": 50, "emotions": {}}
 
         @self.router.get("/api/miya/logs")
@@ -282,7 +282,7 @@ class WebAPI:
                     try:
                         with open(lf, "r", encoding="utf-8", errors="ignore") as f:
                             lines.extend(f.readlines()[-limit:])
-                    except:
+                    except (OSError, ValueError):  # noqa: S110 — 单个日志文件读取失败则跳过
                         pass
                 return {
                     "status": "success",
@@ -290,7 +290,7 @@ class WebAPI:
                     "count": len(lines),
                     "timestamp": datetime.utcnow().isoformat(),
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 日志读取失败，返回错误响应
                 return {"status": "error", "error": str(e), "logs": [], "count": 0}
 
         @self.router.get("/api/queue/stats")
@@ -311,7 +311,7 @@ class WebAPI:
                         "interval": 5,
                         "last_process_time_ms": 0,
                     }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 队列统计获取失败，降级返回默认值
                 logger.warning(f"[WebAPI] 获取队列统计失败: {e}")
             return {
                 "size": 0,
@@ -331,7 +331,7 @@ class WebAPI:
                     return {"error": "文件不存在"}
                 with open(fp, "r", encoding="utf-8", errors="ignore") as f:
                     return {"path": path, "content": f.read()}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 配置文件读取失败，返回错误响应
                 return {"error": str(e)}
 
         @self.router.get("/api/status")
@@ -360,7 +360,7 @@ class WebAPI:
                         "timestamp": datetime.utcnow().isoformat(),
                     }
                 return {"error": "System not initialized"}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 系统状态查询失败，上抛 500
                 logger.error(f"[WebAPI] 获取系统状态失败: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
 
@@ -402,8 +402,8 @@ class WebAPI:
                                     usg_id = linked_to
                                     sendg_name = u.get("username", sendg_name)
                                 break
-                except Exception:
-                    pass
+                except Exception as e:  # noqa: BLE001 — 用户链接配置解析失败，跳过链接
+                    logger.debug(f"[WebChat] 读取用户链接配置失败: {e}")
 
                 perception = {
                     "platform": platform,
@@ -421,8 +421,8 @@ class WebAPI:
                     if engine and engine.is_superadmin(str(usg_id), platform=platform):
                         perception["is_owner"] = True
                         perception["canonical_user_id"] = usg_id
-                except Exception:
-                    pass
+                except Exception as e:  # noqa: BLE001 — 权限引擎不可用，不注入超管标记
+                    logger.debug(f"[WebChat] 权限引擎检查失败: {e}")
 
                 message = Message(
                     msg_type="data",
@@ -517,8 +517,8 @@ class WebAPI:
                                         lookup_id = linked_to
                                         sendg_name = u.get("username", sendg_name)
                                     break
-                    except Exception:
-                        pass
+                    except Exception as e:  # noqa: BLE001 — 用户链接配置解析失败，跳过链接
+                        logger.debug(f"[SSE Chat] 读取用户链接配置失败: {e}")
 
                     perception = {
                         "platform": platform,
@@ -537,8 +537,8 @@ class WebAPI:
                         if engine and engine.is_superadmin(str(lookup_id), platform=platform):
                             perception["is_owner"] = True
                             perception["canonical_user_id"] = str(lookup_id)
-                    except Exception:
-                        pass
+                    except Exception as e:  # noqa: BLE001 — 权限引擎不可用，不注入超管标记
+                        logger.debug(f"[SSE Chat] 权限引擎检查失败: {e}")
                     message = Message(
                         msg_type="data",
                         content=perception,
@@ -562,8 +562,8 @@ class WebAPI:
                                 _cfg = _json.load(_f)
                             if _cfg.get("local_playback_enabled") and response:
                                 asyncio.ensure_future(self._do_tts_local(response))
-                        except Exception:
-                            pass
+                        except (OSError, ValueError) as e:
+                            logger.debug(f"[SSE Chat] TTS 配置读取失败: {e}")
 
                         response_data = {
                             "type": "plain",
@@ -640,7 +640,7 @@ class WebAPI:
                         for p in platforms
                     ],
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 平台统计获取失败，返回错误响应
                 logger.error(f"[Platform API] 获取平台统计失败: {e}")
                 return {"online": 0, "total": 0, "platforms": [], "error": str(e)}
 
@@ -667,7 +667,7 @@ class WebAPI:
                         for p in all_
                     ],
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 平台列表读取失败，返回错误响应
                 return {"success": False, "platform": [], "error": str(e)}
 
         @self.router.post("/api/config/platform/new")
@@ -683,7 +683,7 @@ class WebAPI:
                     "success": True,
                     "message": f"平台 {platform_id} 添加成功（需重启生效）",
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 平台添加失败，返回错误响应
                 return {"success": False, "message": str(e)}
 
         @self.router.post("/api/config/platform/update")
@@ -705,7 +705,7 @@ class WebAPI:
                     if platform_id in enabled:
                         enabled.remove(platform_id)
                 return {"success": True, "message": f"平台 {platform_id} 更新成功"}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 平台更新失败，返回错误响应
                 return {"success": False, "message": str(e)}
 
         @self.router.post("/api/config/platform/delete")
@@ -718,7 +718,7 @@ class WebAPI:
                 if not platform_id:
                     return {"success": False, "message": "缺少平台ID"}
                 return {"success": True, "message": f"平台 {platform_id} 删除成功"}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 平台删除失败，返回错误响应
                 return {"success": False, "message": str(e)}
 
         @self.router.get("/api/platform/template")
@@ -736,7 +736,7 @@ class WebAPI:
                         "credentials": v.get("credentials", []),
                     }
                 return {"success": True, "templates": templates}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 平台模板读取失败，返回错误响应
                 return {"success": False, "templates": {}, "error": str(e)}
 
         @self.router.get("/api/platform/capabilities")
@@ -1071,8 +1071,8 @@ class WebAPI:
             await loop.run_in_executor(None, _play)
         except ImportError:
             pass
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001 — TTS 本地播放失败，忽略
+            logger.debug(f"TTS 本地播放失败: {e}")
 
     def get_router(self):
         """获取 API 路由器"""
@@ -1111,6 +1111,6 @@ def create_web_api(web_net: Any, decision_hub: Any, github_store: Any = None) ->
     """
     try:
         return WebAPI(web_net, decision_hub, github_store)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — WebAPI 创建失败，返回 None
         logger.error(f"[WebAPI] 创建失败: {e}")
         return None

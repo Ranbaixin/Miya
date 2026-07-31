@@ -65,7 +65,7 @@ class UnifiedToolRegistry:
                         source="ToolNet",
                     )
                 logger.info(f"[UnifiedToolRegistry] 已注册 {len(tools)} 个ToolNet工具")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — ToolNet注册失败已记录日志
             logger.warning(f"[UnifiedToolRegistry] ToolNet工具注册失败: {e}")
 
     async def _register_computer_tools(self):
@@ -84,7 +84,7 @@ class UnifiedToolRegistry:
                     source="Computer",
                 )
             logger.info(f"[UnifiedToolRegistry] 已注册 {len(tools)} 个Computer工具")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — Computer注册失败已记录日志
             logger.warning(f"[UnifiedToolRegistry] Computer工具注册失败: {e}")
 
     async def _register_skill_tools(self):
@@ -104,7 +104,7 @@ class UnifiedToolRegistry:
                         source="Skills",
                     )
                 logger.info(f"[UnifiedToolRegistry] 已注册 {len(skills)} 个Skill工具")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — Skill注册失败已记录日志
             logger.warning(f"[UnifiedToolRegistry] Skill工具注册失败: {e}")
 
     def _register_tool(
@@ -153,7 +153,7 @@ class UnifiedToolRegistry:
                 return await self._execute_toolnet(tool_name, arguments, context)
             else:
                 return {"success": False, "error": "未知工具类型"}
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 工具执行失败已记录日志
             logger.error(f"[UnifiedToolRegistry] 工具执行失败: {e}")
             return {"success": False, "error": str(e)}
 
@@ -178,7 +178,7 @@ class UnifiedToolRegistry:
                 )
 
             return {"success": False, "error": f"未知Computer工具: {tool_name}"}
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — Computer执行失败返回错误结果
             return {"success": False, "error": str(e)}
 
     async def _execute_skill(

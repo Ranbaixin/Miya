@@ -120,7 +120,7 @@ class SkillsRegistry:
                             metadata=data.get("capabilities", {}),
                         )
                         logger.info(f"[Skills] 注册 MCP: {data['name']}")
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 — MCP清单加载失败跳过
                         logger.warning(
                             f"[Skills] 加载 MCP manifest 失败: {service_dir}: {e}"
                         )
@@ -206,7 +206,7 @@ async def get_agent_handler(agent_name: str):
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
             return module.handler
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — Agent handler获取失败降级
         logger.warning(f"[Skills] 获取 Agent handler 失败: {agent_name} - {e}")
 
     return None
@@ -247,7 +247,7 @@ async def call_mcp_service(
                     {"tool_name": tool_name, **params}
                 )
                 return result
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — MCP服务调用失败返回错误
         return json.dumps({"error": f"服务调用失败: {str(e)}"})
 
     return json.dumps({"error": "服务未正确实现"})

@@ -215,7 +215,7 @@ class PlatformRegistry:
         for listener in self._broadcast_listeners:
             try:
                 await listener(event)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 广播监听器异常
                 logger.error(f"[Registry] 广播监听器异常: {e}")
 
 

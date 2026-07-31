@@ -41,7 +41,7 @@ class AstrBotPlatformLoader:
         for platform_dir in platform_dirs:
             try:
                 await self._load_platform_from_dir(platform_dir)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 平台加载失败已记录日志
                 logger.error(f"Failed to load platform from {platform_dir}: {e}")
 
         logger.info(f"Loaded {len(self._platforms)} AstrBot platforms")
@@ -213,7 +213,7 @@ class AstrBotPlatformManager:
             logger.info(f"Created platform: {platform_id}")
             return instance
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 创建平台失败已记录日志
             logger.error(f"Failed to create platform {platform_id}: {e}")
             return None
 

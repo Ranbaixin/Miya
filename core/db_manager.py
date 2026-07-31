@@ -164,7 +164,7 @@ class DatabaseManager:
                     await self._db.commit()
                 logger.info(f"[DatabaseManager] 创建会话: {session.session_id}")
                 return True
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 创建会话失败
                 logger.error(f"[DatabaseManager] 创建会话失败: {e}")
                 return False
 
@@ -211,7 +211,7 @@ class DatabaseManager:
                     )
                     await self._db.commit()
                 return True
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 更新会话失败
                 logger.error(f"[DatabaseManager] 更新会话失败: {e}")
                 return False
 
@@ -239,7 +239,7 @@ class DatabaseManager:
                     )
                     await self._db.commit()
                 return True
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 删除会话失败
                 logger.error(f"[DatabaseManager] 删除会话失败: {e}")
                 return False
 
@@ -273,7 +273,7 @@ class DatabaseManager:
                     )
                     await self._db.commit()
                 return True
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 添加消息失败
                 logger.error(f"[DatabaseManager] 添加消息失败: {e}")
                 return False
 
@@ -329,7 +329,7 @@ class DatabaseManager:
                     )
                     await self._db.commit()
                 return True
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 设置配置失败
                 logger.error(f"[DatabaseManager] 设置配置失败: {e}")
                 return False
 

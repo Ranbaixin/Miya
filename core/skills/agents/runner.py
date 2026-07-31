@@ -46,7 +46,7 @@ class AgentToolRegistry:
                         logger.info(
                             f"[Agent:{self.agent_name}] 发现工具: {tool_dir.name}"
                         )
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — Agent工具执行失败降级
                     logger.warning(
                         f"[Agent:{self.agent_name}] 加载工具失败 {tool_dir.name}: {e}"
                     )
@@ -84,7 +84,7 @@ class AgentRunner:
             try:
                 with open(prompt_path, "r", encoding="utf-8") as f:
                     return f.read()
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — Agent工具执行失败降级
                 logger.warning(f"加载prompt失败: {e}")
 
         return self._get_default_prompt()
@@ -137,7 +137,7 @@ class AgentRunner:
                 return await handler_module.execute(args, context)
             else:
                 return f"工具 {tool_name} 没有 execute 函数"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — Agent工具执行失败降级
             logger.error(f"执行工具失败 {tool_name}: {e}")
             return f"执行工具失败: {str(e)[:100]}"
 
@@ -189,7 +189,7 @@ class AgentRunner:
             logger.info(f"[Agent:{self.agent_name}] 执行完成")
             return result if result else f"[Agent:{self.agent_name}] 已处理完成"
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — Agent工具执行失败降级
             logger.error(f"[Agent:{self.agent_name}] 执行失败: {e}")
             return f"[Agent:{self.agent_name}] 执行失败: {str(e)[:200]}"
 

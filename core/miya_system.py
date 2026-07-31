@@ -118,7 +118,7 @@ class MIYASystem:
             self._modules["providers"].status = "ready"
             self._modules["providers"].load_time_ms = (time.time() - start) * 1000
             logger.info(f"  [OK] Providers: {len(self._providers)}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 可选模块初始化失败已记录日志
             self._modules["providers"].status = "error"
             self._modules["providers"].error = str(e)
             logger.warning(f"  [SKIP] Providers: {e}")
@@ -137,7 +137,7 @@ class MIYASystem:
             self._modules["platforms"].status = "ready"
             self._modules["platforms"].load_time_ms = (time.time() - start) * 1000
             logger.info(f"  [OK] Platforms: {len(self._platforms)}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 可选模块初始化失败已记录日志
             self._modules["platforms"].status = "error"
             self._modules["platforms"].error = str(e)
             logger.warning(f"  [SKIP] Platforms: {e}")
@@ -157,7 +157,7 @@ class MIYASystem:
             self._modules["api_router"].status = "ready"
             self._modules["api_router"].load_time_ms = (time.time() - start) * 1000
             logger.info(f"  [OK] API Routes: {len(routes)}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 可选模块初始化失败已记录日志
             self._modules["api_router"].status = "error"
             self._modules["api_router"].error = str(e)
             logger.warning(f"  [SKIP] API: {e}")
@@ -172,7 +172,7 @@ class MIYASystem:
             self._modules["memory"].status = "ready"
             self._modules["memory"].load_time_ms = (time.time() - start) * 1000
             logger.info("  [OK] Memory: ready")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 可选模块初始化失败已记录日志
             self._modules["memory"].status = "disabled"
             logger.info(f"  [SKIP] Memory: {e}")
 
@@ -187,7 +187,7 @@ class MIYASystem:
             self._modules["personality"].status = "ready"
             self._modules["personality"].load_time_ms = (time.time() - start) * 1000
             logger.info("  [OK] Personality: ready")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 可选模块初始化失败已记录日志
             self._modules["personality"].status = "disabled"
             logger.info(f"  [SKIP] Personality: {e}")
 

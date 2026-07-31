@@ -166,7 +166,7 @@ class CacheManager:
         try:
             serialized = pickle.dumps(value)
             return len(serialized)
-        except Exception:
+        except Exception:  # noqa: BLE001 — 序列化失败用默认大小
             return 1024  # 默认大小
     
     def _evict_if_needed(self):
