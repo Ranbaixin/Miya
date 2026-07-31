@@ -90,20 +90,13 @@ class MiyaDaemon:
     def _create_platform(self, platform_id: str, config: Dict[str, Any]) -> Optional[BasePlatform]:
         """根据平台ID创建对应的平台实例"""
         from .unified_platform_impl import (
-            DingTalkPlatform,
             DiscordPlatform,
             GenericPlatform,
-            KOOKPlatform,
             LarkPlatform,
-            LINEPlatform,
             OneBotPlatform,
             QQOfficialPlatform,
-            SatoriPlatform,
-            SlackPlatform,
             TelegramPlatform,
             WebChatPlatform,
-            WeChatOfficialPlatform,
-            WeComPlatform,
         )
 
         platform_map: Dict[str, type] = {
@@ -113,13 +106,6 @@ class MiyaDaemon:
             "aiocqhttp": OneBotPlatform,
             "webchat": WebChatPlatform,
             "lark": LarkPlatform,
-            "kook": KOOKPlatform,
-            "slack": SlackPlatform,
-            "line": LINEPlatform,
-            "dingtalk": DingTalkPlatform,
-            "satori": SatoriPlatform,
-            "wecom": WeComPlatform,
-            "weixin_official_account": WeChatOfficialPlatform,
         }
 
         cls = platform_map.get(platform_id)
