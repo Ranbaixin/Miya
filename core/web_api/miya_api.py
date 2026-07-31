@@ -2587,37 +2587,33 @@ class MiyaAPI:
                 pool = get_model_pool()
                 models = pool._models if hasattr(pool, "_models") else {}
 
-                # 获取启动时间
-                import time
-
-                start_time = int(time.time()) - 3600  # 假设运行了1小时
+                # 获取启动时间 (用进程创建时间代替假数据)
+                import time, psutil
+                start_time = int(psutil.Process().create_time())
 
                 return {
                     "success": True,
                     "data": {
-                        "total_conversations": 0,
-                        "total_messages": 0,
-                        "total_users": 0,
                         "active_providers": len(models),
                         "total_providers": len(models),
                         "running": start_time,
-                        "message_time_series": [],
                         "start_time": start_time,
+                        # 以下统计暂未接入, 标记为不可用
+                        "total_conversations": None,
+                        "total_messages": None,
+                        "total_users": None,
+                        "message_time_series": None,
+                        "note": "conversation/message/user 统计暂未接入",
                     },
                 }
             except Exception as e:
                 logger.warning(f"[MiyaAPI] 获取统计失败: {e}")
                 return {
-                    "success": True,
+                    "success": False,
+                    "error": str(e),
                     "data": {
-                        "total_conversations": 0,
-                        "total_messages": 0,
-                        "total_users": 0,
-                        "active_providers": 0,
-                        "total_providers": 0,
-                        "running": 0,
-                        "message_time_series": [],
-                        "start_time": 0,
+                        "available": False,
+                        "reason": "统计服务暂不可用",
                     },
                 }
 
@@ -2682,12 +2678,14 @@ class MiyaAPI:
         try:
             if hasattr(self.decision_hub, "emotion") and self.decision_hub.emotion:
                 return self.decision_hub.emotion.get_emotion_state()
-        except:
-            pass
+        except Exception as e:
+            logger.warning(f"获取情绪状态失败: {e}", exc_info=True)
         return {
-            "emotion_name": "平静",
-            "intensity": 50,
-            "emotions": [{"name": "平静", "intensity": 60}],
+            "emotion_name": "unknown",
+            "intensity": 0,
+            "emotions": [],
+            "available": False,
+            "error": "情绪状态不可用",
         }
 
     def _get_personality_state(self) -> Dict:
@@ -2695,18 +2693,18 @@ class MiyaAPI:
         try:
             if hasattr(self.decision_hub, "personality") and self.decision_hub.personality:
                 return self.decision_hub.personality.get_profile()
-        except:
-            pass
-        return {"current_personality": "default", "traits": {}}
+        except Exception as e:
+            logger.warning(f"获取人格状态失败: {e}", exc_info=True)
+        return {"current_personality": "unknown", "traits": {}, "available": False}
 
     def _get_memory_stats(self) -> Dict:
         """获取记忆统计"""
         try:
             if hasattr(self.decision_hub, "memory_engine") and self.decision_hub.memory_engine:
                 return self.decision_hub.memory_engine.get_memory_stats()
-        except:
-            pass
-        return {"total": 0, "short_term": 0, "long_term": 0}
+        except Exception as e:
+            logger.warning(f"获取记忆统计失败: {e}", exc_info=True)
+        return {"total": None, "available": False, "error": "记忆统计不可用"}
 
     def _get_platform_info(self) -> Dict:
         """获取平台信息"""

@@ -126,6 +126,7 @@ class RealVectorCache:
             await self.initialize()
 
         if self._client is None:
+            # Mock 模式: Milvus 未配置, 返回占位 ID (这是设计内降级)
             return [f"mock_{i}" for i in range(len(texts))]
 
         try:
@@ -142,8 +143,9 @@ class RealVectorCache:
             self._collection.flush()
             return ids
         except Exception as e:
-            logger.warning(f"添加向量失败: {e}")
-            return [f"mock_{i}" for i in range(len(texts))]
+            # 真实写入失败 = 记忆可能丢失, 必须上抛, 不能伪装成功
+            logger.error(f"向量写入失败 (记忆可能丢失!): {e}", exc_info=True)
+            raise
 
     async def search(
         self,
