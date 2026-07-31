@@ -91,7 +91,7 @@ class Horoscope(BaseTool):
             logger.info(f"运势已保存到记忆: {uuid}")
             return uuid
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.warning(f"保存运势到记忆失败: {e}")
             return None
 
@@ -194,7 +194,7 @@ class Horoscope(BaseTool):
             logger.info("成功从 API 获取星座运势")
             return result
 
-        except Exception as api_error:
+        except Exception as api_error:  # noqa: BLE001 - 已有日志兜底
             logger.warning(f"API 请求失败，降级使用本地数据: {api_error}")
             # API 失败，使用本地生成的运势
             return await self._get_local_fortune(constellation, time_type)

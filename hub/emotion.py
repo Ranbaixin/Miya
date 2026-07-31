@@ -4,8 +4,11 @@
 从 YAML 配置文件加载情绪响应
 """
 
+import logging
 import random
 from typing import Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class FormStyle:
@@ -32,8 +35,8 @@ class FormStyle:
             for name, cfg in form_styles.items():
                 if isinstance(cfg, dict):
                     cls._registry[name] = FormStyle(name, cfg.get("connector", "，"))
-        except Exception:
-            pass
+        except Exception:  # noqa: BLE001 — 形态风格配置加载失败仅降级
+            logger.warning("[FormStyle] 加载情绪形态配置失败，使用默认值")
 
         # 回退默认值（如果配置未加载）
         defaults = {
@@ -106,7 +109,7 @@ class Emotion:
 
             self._loader = get_personality_loader()
             self._use_yaml = True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — YAML加载失败仅降级为内置配置
             import logging
 
             logging.getLogger(__name__).warning(f"[Emotion] YAML加载失败: {e}")
@@ -200,8 +203,8 @@ class Emotion:
                 config = self._loader.load(form_name)
                 if "emotions" in config:
                     self._yaml_emotions[form_name] = config["emotions"]
-            except Exception:
-                pass
+            except Exception:  # noqa: BLE001 — 形态情绪风格加载失败仅降级
+                logger.warning(f"[Emotion] 加载形态 {form_name} 情绪风格失败")
 
         # 设置当前形态（检查是否有YAML配置）
         if self._loader:

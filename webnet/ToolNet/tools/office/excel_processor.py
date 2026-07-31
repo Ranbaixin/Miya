@@ -38,7 +38,7 @@ class ExcelProcessor:
 
             logger.info(f"成功加载文件: {file_path}, 形状: {df.shape}")
             return df
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"加载文件失败: {e}")
             return None
 
@@ -126,7 +126,7 @@ class ExcelProcessor:
             )
             logger.info(f"跨表匹配完成: df1({df1.shape}) + df2({df2.shape}) → result({result.shape})")
             return result
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"跨表匹配失败: {e}")
             return df1
 
@@ -197,7 +197,7 @@ class ExcelProcessor:
 
             logger.info(f"分组聚合完成: 按 {group_by} 分组, {agg_func}({agg_column})")
             return result
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"分组聚合失败: {e}")
             return df
 
@@ -214,7 +214,7 @@ class ExcelProcessor:
 
             logger.info(f"文件保存成功: {output_path}")
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"保存文件失败: {e}")
             return False
 
@@ -230,7 +230,7 @@ class ExcelProcessor:
                     try:
                         pd.to_datetime(result_df[col].head(100), errors='coerce')
                         date_columns.append(col)
-                    except:
+                    except (ValueError, TypeError):  # noqa: S110 - 日期检测兜底
                         pass
 
         for col in date_columns:
@@ -266,7 +266,7 @@ class ExcelProcessor:
             result_df[new_col_name] = result_df.eval(expr)
             logger.info(f"添加计算列: {new_col_name} = {expr}")
             return result_df
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"添加计算列失败: {e}")
             return result_df
 

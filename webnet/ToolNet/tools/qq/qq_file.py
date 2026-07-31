@@ -248,7 +248,7 @@ class QQFileTool(BaseTool):
             else:
                 raise ValueError(f"不支持的文件来源: {file_source}")
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"文件处理失败: {e}")
             
             # 清理临时文件

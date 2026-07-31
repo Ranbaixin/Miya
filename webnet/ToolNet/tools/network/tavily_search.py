@@ -133,7 +133,7 @@ class TavilyAISearch:
                 "error": f"HTTP {e.response.status_code}",
                 "results": [],
             }
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"[Tavily] 搜索失败: {e}")
             return {
                 "success": False,

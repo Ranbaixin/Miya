@@ -80,7 +80,7 @@ def _search_files(search_path: str, file_name: str, max_results: int) -> list:
                                 None,  # 时间戳
                             )
                         )
-                    except:
+                    except (OSError, ValueError):  # noqa: S110 - 文件扫描兜底
                         pass
 
                     if len(results) >= max_results:
@@ -92,7 +92,7 @@ def _search_files(search_path: str, file_name: str, max_results: int) -> list:
 
     except PermissionError:
         logger.warning(f"[文件搜索] 无权限访问: {search_path}")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.warning(f"[文件搜索] 搜索异常: {e}")
 
     return results

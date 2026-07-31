@@ -13,5 +13,5 @@ async def execute(args: Dict[str, Any], context: Any) -> str:
         tool = PythonInterpreter()
         result = await tool.execute(args, context)
         return result
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
         return f"代码执行失败: {str(e)}"

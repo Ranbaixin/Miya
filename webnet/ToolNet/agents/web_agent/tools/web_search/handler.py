@@ -51,6 +51,6 @@ async def execute(args, context=None, **kwargs) -> str:
 
         return summary
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.error(f"网络搜索失败: {e}")
         return f"搜索失败: {str(e)[:50]}"

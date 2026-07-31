@@ -68,7 +68,7 @@ class WeiboHotTool(BaseTool):
 
             return "获取热搜失败，请稍后再试"
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"获取微博热搜失败: {e}")
             return f"获取热搜失败: {str(e)[:50]}"
 

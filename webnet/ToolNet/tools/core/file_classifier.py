@@ -192,7 +192,7 @@ class FileClassifier:
                 results["已处理"] += 1
                 results["文件列表"].append({"源文件": str(file_path), "目标位置": str(destination), "分类": category})
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - 合理兜底
                 error_msg = f"处理文件失败 {file_path.name}: {e}"
                 logger.error(error_msg)
                 results["错误"].append(error_msg)
@@ -274,7 +274,7 @@ class FileClassifier:
             logger.info(f"整理报告已保存: {report_path}")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"生成报告失败: {e}")
             return False
 
@@ -317,7 +317,7 @@ class FileClassifier:
                     else:
                         hash_map[file_hash] = file_path
 
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 - 已有日志兜底
                     logger.error(f"计算哈希失败 {file_path.name}: {e}")
 
         elif method == "name":

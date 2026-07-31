@@ -69,7 +69,7 @@ class LifeNet:
             logger.info(f"[LifeNet] 添加日记: {entry.entry_id}")
             return f"✅ 已记录日记: {title}\n{content[:100]}..."
         
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[LifeNet] 添加日记失败: {e}")
             return f"❌ 记录失败: {str(e)}"
     
@@ -100,7 +100,7 @@ class LifeNet:
             
             return result
         
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[LifeNet] 获取日记失败: {e}")
             return f"❌ 获取失败: {str(e)}"
     
@@ -133,7 +133,7 @@ class LifeNet:
             logger.info(f"[LifeNet] 创建角色节点: {node.node_id}")
             return f"✅ 已创建角色节点: {node.name}\n{node.description}"
         
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[LifeNet] 创建角色节点失败: {e}")
             return f"❌ 创建失败: {str(e)}"
     
@@ -164,7 +164,7 @@ class LifeNet:
             logger.info(f"[LifeNet] 创建阶段节点: {node.node_id}")
             return f"✅ 已创建阶段节点: {node.name}\n{node.description}"
         
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[LifeNet] 创建阶段节点失败: {e}")
             return f"❌ 创建失败: {str(e)}"
     
@@ -205,7 +205,7 @@ class LifeNet:
             
             return result
         
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[LifeNet] 列出节点失败: {e}")
             return f"❌ 获取失败: {str(e)}"
     
@@ -254,7 +254,7 @@ class LifeNet:
             
             return result
         
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[LifeNet] 获取节点失败: {e}")
             return f"❌ 获取失败: {str(e)}"
     
@@ -300,7 +300,7 @@ class LifeNet:
             logger.info(f"[LifeNet] 添加总结: {entry.entry_id} ({level})")
             return f"✅ 已记录{level}总结: {title}"
         
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[LifeNet] 添加总结失败: {e}")
             return f"❌ 记录失败: {str(e)}"
     
@@ -338,7 +338,7 @@ class LifeNet:
             
             return result
         
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[LifeNet] 获取总结失败: {e}")
             return f"❌ 获取失败: {str(e)}"
     
@@ -367,7 +367,7 @@ class LifeNet:
             logger.info(f"[LifeNet] 获取记忆上下文: {months_back}个月")
             return context
         
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[LifeNet] 获取记忆上下文失败: {e}")
             return f"❌ 获取失败: {str(e)}"
     
@@ -418,6 +418,6 @@ class LifeNet:
             
             return result
         
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[LifeNet] 搜索记忆失败: {e}")
             return f"❌ 搜索失败: {str(e)}"

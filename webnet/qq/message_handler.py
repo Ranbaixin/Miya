@@ -183,13 +183,13 @@ class QQMessageHandler:
                         card = member_info.get("card", "")
                         nickname = member_info.get("nickname", "")
                         sender_name = card or nickname or sender_name
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录警告日志，使用默认昵称
             logger.warning(f"[QQNet] 获取用户信息失败: {e}")
 
         # 尝试发送表情包作为回应
         try:
             await self._send_emoji_response(group_id, sender_id)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志，表情包发送为尽力而为
             logger.error(f"[QQNet] 发送表情包失败: {e}")
 
         # 构建拍一拍消息
@@ -277,7 +277,7 @@ class QQMessageHandler:
                 group_info = await self.qq_net.onebot_client.get_group_info(group_id)
                 if group_info:
                     group_name = group_info.get("group_name", "")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录警告日志，群名为可选信息
             logger.warning(f"[QQNet] 获取群名失败: {e}")
 
         # 检测@机器人
@@ -303,7 +303,7 @@ class QQMessageHandler:
                 is_at_bot=is_at_bot,
                 reply_to_bot=reply_to_bot,
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录调试日志，谛听为旁路功能
             logger.debug(f"[QQMessageHandler] 谛听记录失败: {e}")
 
         # 保存历史
@@ -395,7 +395,7 @@ class QQMessageHandler:
                 sender_id=sender_id,  # 【修复】添加 sender_id
                 image_url=image_url,
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录警告日志并返回 None
             logger.warning(f"获取引用消息失败: {e}")
             return None
 
@@ -438,7 +438,7 @@ class QQMessageHandler:
                 user_info = await self.qq_net.onebot_client.get_stranger_info(sender_id)
                 if user_info:
                     user_name = user_info.get("nickname", "")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 已记录警告日志，用户名可选
                 logger.warning(f"[QQNet] 获取用户名失败: {e}")
 
         # 保存到历史
@@ -666,7 +666,7 @@ class QQMessageHandler:
 
             # 保存到缓存管理器
             self.qq_net.cache_manager.set_message_history(chat_id, messages)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录警告日志，缓存非关键路径
             logger.warning(f"[QQMessageHandler] 保存消息到缓存失败: {e}")
 
         # 异步保存到全局记忆系统
@@ -714,7 +714,7 @@ class QQMessageHandler:
 
             logger.debug(f"[QQNet] 消息已保存到全局记忆: {msg_type}_{chat_id}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志
             logger.error(f"[QQNet] 保存到全局记忆失败: {e}")
 
     def get_history(self, chat_id: int, limit: int = 20) -> List[Dict[str, Any]]:
@@ -724,7 +724,7 @@ class QQMessageHandler:
             if messages is None or len(messages) == 0:
                 return []
             return messages[-limit:]
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录警告日志并返回空结果
             logger.warning(f"[QQMessageHandler] 获取消息历史失败: {e}")
             return []
 
@@ -841,7 +841,7 @@ class QQMessageHandler:
                 group_info = await self.qq_net.onebot_client.get_group_info(group_id)
                 if group_info:
                     group_name = group_info.get("group_name", "")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录警告日志，群名为可选信息
             logger.warning(f"[QQNet] 获取群名失败: {e}")
 
         is_at_bot = self._is_at_bot(raw_message)

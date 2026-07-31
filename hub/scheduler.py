@@ -82,7 +82,7 @@ class Scheduler:
             try:
                 loop.run_until_complete(self.start())
                 loop.run_forever()
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 线程边界异常仅记录防止崩溃
                 logger.error(f"调度器线程错误: {e}")
             finally:
                 loop.close()
@@ -165,7 +165,7 @@ class Scheduler:
                     if hasattr(self, "terminal_callback") and self.terminal_callback:
                         try:
                             await self.terminal_callback(message)
-                        except Exception as e:
+                        except Exception as e:  # noqa: BLE001 — 终端回调失败仅记录
                             logger.error(f"终端回调失败: {e}")
                 else:
                     # 使用 onebot_client 发送消息

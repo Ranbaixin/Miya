@@ -78,7 +78,7 @@ class EnhancedTaskScheduler:
             
             logger.info(f"任务数据库初始化完成: {self.db_path}")
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"初始化数据库失败: {e}")
     
     async def start(self):
@@ -203,7 +203,7 @@ class EnhancedTaskScheduler:
             
             return success
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"执行任务异常: {task_id}, 错误: {e}")
             self._record_task_history(task_id, "execute", "error", f"执行异常: {str(e)}")
             
@@ -239,7 +239,7 @@ class EnhancedTaskScheduler:
                 logger.error(f"未知任务类型: {task_type}")
                 return False
                 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"任务执行内部错误: {task_id}, 错误: {e}")
             return False
     
@@ -313,7 +313,7 @@ class EnhancedTaskScheduler:
                 # 清理已完成的任务
                 self._cleanup_completed_tasks()
                 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - 已有日志兜底
                 logger.error(f"任务检查循环异常: {e}")
             
             # 等待一段时间再检查
@@ -333,7 +333,7 @@ class EnhancedTaskScheduler:
                 if not result:
                     logger.warning(f"任务执行失败: {task_id}")
                 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"任务完成回调异常: {e}")
     
     async def _recover_pending_tasks(self):
@@ -347,7 +347,7 @@ class EnhancedTaskScheduler:
                 task_id = task["task_id"]
                 self._record_task_history(task_id, "recover", "success", "任务恢复")
                 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"恢复任务失败: {e}")
     
     def _validate_task_data(self, task_data: Dict[str, Any]) -> bool:
@@ -380,10 +380,10 @@ class EnhancedTaskScheduler:
                 elif " " in execute_time:
                     try:
                         return datetime.strptime(execute_time, "%Y-%m-%d %H:%M:%S")
-                    except:
+                    except (ValueError, TypeError):
                         try:
                             return datetime.strptime(execute_time, "%Y-%m-%d %H:%M")
-                        except:
+                        except (ValueError, TypeError):  # noqa: S110 - 时间解析兜底
                             pass
                 # 相对时间（如"+1h", "+30m"）
                 elif execute_time.startswith("+"):
@@ -406,12 +406,12 @@ class EnhancedTaskScheduler:
             try:
                 timestamp = float(execute_time)
                 return datetime.fromtimestamp(timestamp)
-            except:
+            except (TypeError, ValueError, OverflowError, OSError):  # noqa: S110 - 时间戳解析兜底
                 pass
             
             return datetime.now()
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"解析执行时间失败: {e}")
             return datetime.now()
     
@@ -454,7 +454,7 @@ class EnhancedTaskScheduler:
             conn.commit()
             conn.close()
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"保存任务到数据库失败: {e}")
     
     def _get_task_from_db(self, task_id: str) -> Optional[Dict[str, Any]]:
@@ -474,7 +474,7 @@ class EnhancedTaskScheduler:
             else:
                 return None
                 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"从数据库获取任务失败: {e}")
             return None
     
@@ -518,7 +518,7 @@ class EnhancedTaskScheduler:
             conn.commit()
             conn.close()
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"更新任务状态失败: {e}")
     
     def _get_pending_tasks(self) -> List[Dict[str, Any]]:
@@ -540,7 +540,7 @@ class EnhancedTaskScheduler:
             
             return [dict(row) for row in rows]
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"获取待执行任务失败: {e}")
             return []
     
@@ -564,7 +564,7 @@ class EnhancedTaskScheduler:
             
             return [dict(row) for row in rows]
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"根据状态获取任务失败: {e}")
             return []
     
@@ -582,7 +582,7 @@ class EnhancedTaskScheduler:
             conn.commit()
             conn.close()
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"记录任务历史失败: {e}")
     
     def _cleanup_completed_tasks(self):
@@ -615,7 +615,7 @@ class EnhancedTaskScheduler:
             if deleted_count > 0:
                 logger.info(f"清理了 {deleted_count} 个已完成的任务")
                 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"清理已完成任务失败: {e}")
     
     # 公共API
@@ -650,7 +650,7 @@ class EnhancedTaskScheduler:
             
             return [dict(row) for row in rows]
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"列出任务失败: {e}")
             return []
     
@@ -672,7 +672,7 @@ class EnhancedTaskScheduler:
             logger.info(f"任务已取消: {task_id}")
             return True
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"取消任务失败: {e}")
             return False
     
@@ -695,7 +695,7 @@ class EnhancedTaskScheduler:
             
             return [dict(row) for row in rows]
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"获取任务历史失败: {e}")
             return []
     
@@ -745,7 +745,7 @@ class EnhancedTaskScheduler:
                 "timestamp": datetime.now().isoformat()
             }
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"获取统计信息失败: {e}")
             return {}
 

@@ -171,7 +171,7 @@ async def _list_group_files(onebot_client, group_id: int) -> str:
 
         return output
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
         return f"❌ 获取文件列表失败: {str(e)}"
 
 
@@ -183,7 +183,7 @@ async def _get_file_url(onebot_client, group_id: int, file_id: str) -> str:
             return f"📥 文件下载链接:\n{url}"
         else:
             return "❌ 无法获取下载链接"
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
         return f"❌ 获取链接失败: {str(e)}"
 
 
@@ -233,7 +233,7 @@ async def _download_file(
         else:
             return "❌ 文件下载失败"
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
         return f"❌ 下载失败: {str(e)}"
 
 

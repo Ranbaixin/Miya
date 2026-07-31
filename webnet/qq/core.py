@@ -225,7 +225,7 @@ class QQNet:
                 f"功能开关: poke={self.poke_reply_enabled}, emoji={self.emoji_request_enabled}"
             )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并回退默认配置
             logger.error(f"[QQNet] 加载统一配置失败，使用默认配置: {e}")
             self.onebot_ws_url = "ws://localhost:6700"
             self.onebot_token = ""

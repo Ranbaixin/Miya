@@ -64,7 +64,7 @@ class QQHybridConfig:
 
             logger.info("[QQHybridConfig] 混合配置加载成功")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并回退默认配置
             logger.error(f"[QQHybridConfig] 配置加载失败: {e}")
             self._set_defaults()
 
@@ -117,7 +117,7 @@ class QQHybridConfig:
                 == "true",
             }
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并回退空配置
             logger.error(f"[QQHybridConfig] 加载.env配置失败: {e}")
             self._env_config = {}
 
@@ -148,7 +148,7 @@ class QQHybridConfig:
 
             logger.info(f"[QQHybridConfig] 从 {yaml_path} 加载YAML配置")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并回退空配置
             logger.error(f"[QQHybridConfig] 加载YAML配置失败: {e}")
             self._yaml_config = {}
 
@@ -228,10 +228,10 @@ class QQHybridConfig:
             if self.cache_manager:
                 try:
                     self.cache_manager.set_config("qq_hybrid_config", merged_config)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 已记录警告日志，缓存非关键
                     logger.warning(f"[QQHybridConfig] 缓存配置失败: {e}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并缓存默认配置
             logger.error(f"[QQHybridConfig] 合并配置失败: {e}")
 
             # 8. 缓存默认配置
@@ -414,7 +414,7 @@ class QQHybridConfig:
                 cached_config = self.cache_manager.get_config("qq_hybrid_config")
                 if cached_config is not None:
                     return cached_config.copy()
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 已记录调试日志，缓存命中失败可忽略
                 logger.debug(f"[QQHybridConfig] 从缓存获取配置失败: {e}")
 
         # 从默认配置获取
@@ -424,7 +424,7 @@ class QQHybridConfig:
         if self.cache_manager:
             try:
                 self.cache_manager.set_config("qq_hybrid_config", config)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 已记录调试日志，缓存非关键
                 logger.debug(f"[QQHybridConfig] 缓存配置失败: {e}")
 
         return config.copy()
@@ -492,7 +492,7 @@ class QQHybridConfig:
         except ImportError:
             logger.warning("[QQHybridConfig] 模型池未找到，使用本地配置")
             return self._get_local_model_config(model_type)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并回退本地配置
             logger.error(f"[QQHybridConfig] 获取模型配置失败: {e}")
             return self._get_local_model_config(model_type)
 
@@ -545,7 +545,7 @@ class QQHybridConfig:
         if self.cache_manager:
             try:
                 self.cache_manager.invalidate_config("qq_hybrid_config")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 已记录调试日志，缓存清除失败可忽略
                 logger.debug(f"[QQHybridConfig] 清除缓存失败: {e}")
 
         # 重新加载配置

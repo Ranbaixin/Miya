@@ -162,7 +162,7 @@ class ListScheduleTasksTool(BaseTool):
                     try:
                         dt = datetime.fromisoformat(schedule_time)
                         result += f"   执行时间: {dt.strftime('%Y-%m-%d %H:%M')}\n"
-                    except:
+                    except (ValueError, TypeError):
                         result += f"   执行时间: {schedule_time}\n"
 
                 if 'repeat' in data:

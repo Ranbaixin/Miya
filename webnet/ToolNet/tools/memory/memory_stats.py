@@ -43,7 +43,7 @@ class MemoryStats(BaseTool):
             # 确保初始化
             try:
                 await init_unified_memory("data/memory")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - 已有日志兜底
                 logger.warning(f"初始化统一记忆失败: {e}")
 
             if hasattr(memory, "get_stats"):
@@ -88,7 +88,7 @@ class MemoryStats(BaseTool):
 
         except ImportError:
             return "❌ 记忆系统未初始化"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"获取记忆统计失败: {e}")
             return f"❌ 获取统计失败: {str(e)}"
 
@@ -172,6 +172,6 @@ class MemorySearchByCategory(BaseTool):
 
         except ImportError:
             return "❌ 记忆系统未初始化"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"按分类搜索记忆失败: {e}")
             return f"❌ 搜索失败: {str(e)}"

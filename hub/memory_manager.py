@@ -217,7 +217,7 @@ class MemoryManager:
                     group_id=group_id,
                     message_type=message_type,
                 )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 自记忆分析失败仅跳过
                 logger.debug(f"[记忆管理器] 弥娅自记忆分析失败: {e}")
 
             # 使用 Historian 自动提取重要记忆
@@ -229,7 +229,7 @@ class MemoryManager:
                     group_id=group_id,
                     message_type=message_type,
                 )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 记忆提取失败仅跳过
                 logger.debug(f"[记忆管理器] Historian 提取失败: {e}")
 
             # 【LifeBook 集成】自动记录到多视角日记系统
@@ -247,7 +247,7 @@ class MemoryManager:
                         topics=[message_type],
                         emotion=str(emotion_val) if emotion_val else "平静",
                     )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — LifeBook 记录失败仅跳过
                 logger.debug(f"[记忆管理器] LifeBook 记录失败: {e}")
 
             # 【每日摘要】跨天时自动生昨日摘要
@@ -279,7 +279,7 @@ class MemoryManager:
                             f"[记忆管理器] 已生成 {yesterday} 每日摘要 ({len(daily)} 条对话)"
                         )
                 self._last_summary_date = today
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 每日摘要失败仅跳过
                 logger.debug(f"[记忆管理器] 每日摘要生成跳过: {e}")
 
             # 对话历史压缩
@@ -294,7 +294,7 @@ class MemoryManager:
                                 session_id=session_id, recent_count=30
                             )
                             logger.info(f"[记忆管理器] 已触发对话压缩: {session_id}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 对话压缩失败仅跳过
                 logger.debug(f"[记忆管理器] 对话压缩失败: {e}")
 
             # 存储到 Neo4j 知识图谱（异步提取五元组，不阻塞消息流）
@@ -312,10 +312,10 @@ class MemoryManager:
                         user_input=str(user_text),
                         ai_response=response,
                     )
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 图谱存储失败仅跳过
                     logger.debug(f"[记忆管理器] Neo4j 存储跳过: {e}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 存储失败不阻断消息处理
             logger.error(f"[记忆管理器] 存储 AI 响应失败: {e}")
 
     async def _analyze_and_upgrade_assistant_memory(
@@ -365,7 +365,7 @@ class MemoryManager:
                             assistant_patterns.append(
                                 (pattern_regex, mem_type, importance, [tag_name])
                             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 配置加载失败仅降级为空
             logger.warning(f"[记忆管理器] 加载自记忆配置失败: {e}")
             return
 
@@ -403,7 +403,7 @@ class MemoryManager:
                         f"[星璇·自记忆升级] {mem_type}: {content[:30]}... "
                         f"(priority={base_importance})"
                     )
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 升级存储失败仅跳过
                     logger.debug(f"[星璇·自记忆升级] 存储失败: {e}")
 
                 # 每个回复只记录一条最重要的，避免刷屏
@@ -475,10 +475,10 @@ class MemoryManager:
                         group_id=group_id,
                         message_type=message_type,
                     )
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 自记忆分析失败仅跳过
                     logger.debug(f"[记忆管理器] 弥娅自记忆分析失败: {e}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 存储失败不阻断消息处理
             logger.error(f"[记忆管理器] 存储统一记忆失败: {e}")
 
     async def get_conversation_history(
@@ -532,7 +532,7 @@ class MemoryManager:
 
             return context
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 历史读取失败降级返回空
             logger.error(f"[记忆管理器] 获取对话历史失败: {e}")
             return []
 
@@ -572,6 +572,6 @@ class MemoryManager:
             from memory import get_memory_stats
 
             return await get_memory_stats()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 统计失败降级返回空
             logger.error(f"[记忆管理器] 获取统计失败: {e}")
             return {}

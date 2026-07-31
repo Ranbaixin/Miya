@@ -102,7 +102,7 @@ class MemoryCommandHandler:
                 return await self._cmd_my(user_id)
             else:
                 return self._help()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 错误信息已返回给用户
             return f"[ERROR] {str(e)[:50]}"
 
     async def _cmd_stats(self) -> str:

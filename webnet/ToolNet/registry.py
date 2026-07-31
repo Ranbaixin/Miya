@@ -223,7 +223,7 @@ class ToolRegistry:
                             f"[权限检查] 用户 {user_id} 是群管理员(role={role})，放行"
                         )
                         return {"allowed": True, "required_permission": None}
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 - 已有日志兜底
                     self.logger.warning(f"[权限检查] 获取群成员信息失败: {e}")
 
             user_mapper = UserMapper()
@@ -246,7 +246,7 @@ class ToolRegistry:
                 "user_id": unified_user_id,
             }
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             self.logger.error(f"[权限检查异常] {e}，拒绝执行（安全优先）")
             return {"allowed": False, "required_permission": None, "error": f"权限检查失败: {e}"}
 
@@ -322,7 +322,7 @@ class ToolRegistry:
 
             self.register(ModelManagementTool())
             self.logger.info("模型管理工具已注册")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             self.logger.warning(f"加载模型管理工具失败: {e}")
 
     def _load_cross_terminal_tools(self):
@@ -484,7 +484,7 @@ class ToolRegistry:
             self.logger.info(
                 "已加载娱乐工具: QQLike, Horoscope, WenchangDijun, SendPoke, ReactEmoji"
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             self.logger.warning(f"加载娱乐工具失败: {e}")
 
     def _load_qq_multimedia_tools(self):
@@ -504,7 +504,7 @@ class ToolRegistry:
             self.logger.info(
                 "已加载QQ多媒体工具: QQImageTool, QQFileTool, QQEmojiTool, QQFileReaderTool, QQImageAnalyzerTool"
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             self.logger.warning(f"加载QQ多媒体工具失败: {e}")
 
     def _load_web_search_tools(self):
@@ -522,7 +522,7 @@ class ToolRegistry:
             self.register(DataAnalyzer())
             self.register(ChartGenerator())
             self.logger.info("已加载可视化工具: DataAnalyzer, ChartGenerator")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             self.logger.warning(f"加载可视化工具失败: {e}")
 
     def _load_lifenet_tools(self):
@@ -558,7 +558,7 @@ class ToolRegistry:
             self.register(LifeGetMemoryContext())
 
             self.logger.info("已加载 LifeNet 记忆管理工具")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             self.logger.warning(f"加载 LifeNet 工具失败: {e}")
 
     def _load_network_tools(self):
@@ -583,7 +583,7 @@ class ToolRegistry:
             self.logger.info(
                 "已加载网络工具: CrawlWebpage, WhoisQuery, TCPing, SpeedTest, TavilySearch, WeatherQuery"
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             self.logger.warning(f"加载网络工具失败: {e}")
 
     def _load_core_tools(self):
@@ -594,7 +594,7 @@ class ToolRegistry:
             self.register(ChangelogTool())
 
             self.logger.info("已加载核心工具: Changelog")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             self.logger.warning(f"加载核心工具失败: {e}")
 
     def _load_social_tools(self):
@@ -605,7 +605,7 @@ class ToolRegistry:
             self.register(QQLevelTool())
 
             self.logger.info("已加载社交工具: QQLevel")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             self.logger.warning(f"加载社交工具失败: {e}")
 
     def _load_agent_tools(self):
@@ -704,7 +704,7 @@ class ToolRegistry:
                                                 ctx_dict if ctx_dict else context,
                                             )
                                         return f"工具 {self._name} 没有 execute 函数"
-                                    except Exception as e:
+                                    except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
                                         return f"执行工具失败: {str(e)}"
 
                             tool = DynamicTool(
@@ -719,11 +719,11 @@ class ToolRegistry:
                             self.logger.info(
                                 f"已加载 Agent 工具: {agent_dir.name}/{tool_dir.name}"
                             )
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 - 已有日志兜底
                         self.logger.warning(f"加载 Agent 工具失败 {tool_dir.name}: {e}")
 
             self.logger.info("Agent 工具加载完成")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             self.logger.warning(f"加载 Agent 工具失败: {e}")
 
     def _load_mcp_tools(self):
@@ -737,7 +737,7 @@ class ToolRegistry:
             self.logger.info(
                 f"[ToolRegistry] MCPNet 已加载 {len(tools)} 个工具: {[t._full_name for t in tools]}"
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             self.logger.warning(f"加载 MCP 工具失败（MCP 可能尚未初始化）: {e}")
 
 

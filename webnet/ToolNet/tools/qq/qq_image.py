@@ -211,7 +211,7 @@ class QQImageTool(BaseTool):
             
             return temp_file_path
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"图片处理失败: {e}")
             
             # 清理临时文件
@@ -219,7 +219,7 @@ class QQImageTool(BaseTool):
                 try:
                     temp_file.close()
                     os.unlink(temp_file.name)
-                except:
+                except OSError:  # noqa: S110 - 临时文件清理兜底
                     pass
                     
             return None
@@ -262,5 +262,5 @@ class QQImageTool(BaseTool):
                     
         except ImportError:
             logger.warning("PIL库未安装，跳过图片大小调整")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.warning(f"图片大小调整失败: {e}")

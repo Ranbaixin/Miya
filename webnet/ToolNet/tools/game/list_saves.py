@@ -66,7 +66,7 @@ class ListSaves(BaseTool):
                 try:
                     dt = datetime.fromisoformat(created_at)
                     created_at = dt.strftime('%Y-%m-%d %H:%M:%S')
-                except:
+                except (ValueError, TypeError):  # noqa: S110 - 时间解析兜底
                     pass
 
             # 获取游戏元数据
@@ -84,6 +84,6 @@ class ListSaves(BaseTool):
 
             return result
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             self.logger.error(f"[ListSaves] 读取存档失败: {e}")
             return f"❌ 读取存档失败: {str(e)}"

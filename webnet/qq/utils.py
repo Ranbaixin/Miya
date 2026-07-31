@@ -40,7 +40,7 @@ class OneBotAPICompatibility:
                 return {"supported": True, "message": "API支持戳一戳功能"}
             else:
                 return {"supported": False, "message": f"未知API: {api_name}"}
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 需捕获任意异常并返回诊断结果
             error_msg = str(e)
             if "retcode=1200" in error_msg or "网络连接异常" in error_msg:
                 return {
@@ -74,7 +74,7 @@ class OneBotAPICompatibility:
                     **api_info,
                     **result
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 错误信息已写入结果字典
                 supported_apis[api_name] = {
                     **api_info,
                     "supported": False,
@@ -300,7 +300,7 @@ class LikeFallback:
                         "original_error": error_msg,
                         "data": result
                     }
-                except Exception as fallback_error:
+                except Exception as fallback_error:  # noqa: BLE001 — 已记录日志并返回友好提示
                     # 备选方案2：记录日志，返回友好提示
                     logger.error(f"点赞备选方案也失败: {fallback_error}")
                     
@@ -342,14 +342,14 @@ async def check_onebot_connection(client) -> Dict[str, Any]:
                 "ws_url": getattr(client, 'ws_url', 'unknown'),
                 "ws_open": not client.ws.closed
             }
-        except Exception as api_error:
+        except Exception as api_error:  # noqa: BLE001 — 需返回诊断信息
             return {
                 "connected": False,
                 "message": f"API调用失败: {str(api_error)}",
                 "ws_open": not client.ws.closed
             }
             
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — 需返回诊断信息
         return {
             "connected": False,
             "message": f"连接检查失败: {str(e)}"

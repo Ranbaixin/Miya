@@ -48,7 +48,7 @@ class SendPokeTool(BaseTool):
                 else:
                     return "戳一戳仅支持群聊"
             return "戳一戳功能暂不可用"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"戳一戳失败: {e}")
             return f"戳一戳失败: {str(e)[:50]}"
 

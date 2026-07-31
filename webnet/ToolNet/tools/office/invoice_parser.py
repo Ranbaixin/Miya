@@ -76,9 +76,9 @@ class InvoiceParser:
                         try:
                             extracted_fields["开票日期_标准化"] = datetime.strptime(date_str, fmt).strftime('%Y-%m-%d')
                             break
-                        except:
+                        except (ValueError, TypeError):  # noqa: S110 - 日期格式解析兜底
                             pass
-                except:
+                except (ValueError, TypeError):  # noqa: S110 - 日期解析兜底
                     pass
 
             # 提取金额（数值）
@@ -130,7 +130,7 @@ class InvoiceParser:
             else:
                 return {"error": f"不支持的文件格式: {path.suffix}"}
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"解析发票文件失败: {e}")
             return {"error": str(e)}
 
@@ -146,7 +146,7 @@ class InvoiceParser:
         except ImportError:
             logger.error("PyPDF2未安装")
             return ""
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"PDF提取失败: {e}")
             return ""
 
@@ -219,7 +219,7 @@ class InvoiceParser:
             logger.info(f"总金额: ¥{total_amount:,.2f}")
 
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"保存报销表格失败: {e}")
             return False
 
@@ -369,7 +369,7 @@ class InvoiceParser:
             logger.info(f"报销报告已生成: {report_path}")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"生成报告失败: {e}")
             return False
 

@@ -122,7 +122,7 @@ class QQMessage:
             else:
                 try:
                     time = datetime.fromisoformat(time_str)
-                except:
+                except (ValueError, TypeError):
                     time = datetime.now()
 
         reply_data = data.get("reply")

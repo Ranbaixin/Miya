@@ -68,7 +68,7 @@ class RenderHtmlTool(BaseTool):
             except ImportError:
                 return "HTML渲染需要安装playwright: pip install playwright && playwright install chromium"
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"HTML渲染失败: {e}")
             return f"渲染失败: {str(e)[:50]}"
 

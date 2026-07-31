@@ -45,7 +45,7 @@ async def resolve_short_url(short_url: str) -> Optional[str]:
             location = resp.headers.get("Location") or resp.headers.get("location")
             if location:
                 return str(location)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.warning(f"[B站] 解析短链失败 {short_url}: {e}")
     return None
 
@@ -117,7 +117,7 @@ async def extract_all_from_message(message: str) -> list[str]:
             bvid = av_to_bv(av_number)
             if bvid not in bvids:
                 bvids.append(bvid)
-        except:
+        except (ValueError, TypeError):  # noqa: S110 - 解析AV号兜底
             pass
 
     for match in URL_PATTERN.finditer(message):

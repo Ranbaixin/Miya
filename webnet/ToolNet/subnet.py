@@ -248,7 +248,7 @@ class ToolSubnet:
                         agent_tools_count += 1
 
             logger.info(f"[格式塔] Agent工具已加载: {agent_tools_count} 个")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.warning(f"[格式塔] 加载Agent工具失败: {e}")
 
     async def shutdown(self):

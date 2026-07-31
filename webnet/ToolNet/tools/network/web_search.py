@@ -101,7 +101,7 @@ class EnhancedWebSearch:
                 engine_results = self._search_engine(query, engine, num_results)
                 all_results.extend(engine_results)
                 logger.info(f"{engine}引擎返回 {len(engine_results)} 个结果")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - 已有日志兜底
                 logger.error(f"{engine}引擎搜索失败: {e}")
         deduplicated = self._deduplicate_results(all_results)
         ranked = self._rank_results(deduplicated, query)
@@ -126,7 +126,7 @@ class EnhancedWebSearch:
                 if os.path.exists(rel_path):
                     load_dotenv(rel_path, override=True)
             return bool(os.getenv("TAVILY_API_KEY", ""))
-        except Exception:
+        except Exception:  # noqa: BLE001 - 工具兜底返回错误
             return False
 
     def _search_engine(
@@ -217,7 +217,7 @@ class EnhancedWebSearch:
         except requests.exceptions.Timeout:
             logger.error(f"{engine}引擎请求超时")
             return []
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"{engine}引擎请求失败: {e}")
             return []
 
@@ -241,7 +241,7 @@ class EnhancedWebSearch:
                             "source": "duckduckgo_html",
                         }
                     )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"DuckDuckGo HTML 解析失败: {e}")
         return results
 
@@ -266,7 +266,7 @@ class EnhancedWebSearch:
                                 "source": "duckduckgo_api",
                             }
                         )
-        except Exception:
+        except Exception:  # noqa: S110, BLE001 - 响应解析兜底
             pass
         return results
 
@@ -298,7 +298,7 @@ class EnhancedWebSearch:
                         "source": "tavily_ai",
                     },
                 )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"Tavily 解析失败: {e}")
         return results
 
@@ -326,7 +326,7 @@ class EnhancedWebSearch:
                             "source": "baidu",
                         }
                     )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"百度解析失败: {e}")
         return results
 
@@ -349,7 +349,7 @@ class EnhancedWebSearch:
                             "source": "bing_cn",
                         }
                     )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"必应中国解析失败: {e}")
         return results
         """解析DuckDuckGo API响应"""

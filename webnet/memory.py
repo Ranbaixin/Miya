@@ -166,7 +166,7 @@ class MemoryNet:
                 },
             )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[MemoryNet] 添加对话失败: {e}")
             return Message(
                 type=MessageType.ERROR,
@@ -216,7 +216,7 @@ class MemoryNet:
                 },
             )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[MemoryNet] 获取对话失败: {e}")
             return Message(
                 type=MessageType.ERROR,
@@ -250,7 +250,7 @@ class MemoryNet:
                 content={"action": "add_memory", "success": True, "uuid": uuid},
             )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[MemoryNet] 添加记忆失败: {e}")
             return Message(
                 type=MessageType.ERROR,
@@ -298,7 +298,7 @@ class MemoryNet:
                 },
             )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[MemoryNet] 搜索记忆失败: {e}")
             return Message(
                 type=MessageType.ERROR,
@@ -323,7 +323,7 @@ class MemoryNet:
                 content={"action": "get_statistics", "statistics": stats},
             )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[MemoryNet] 获取统计失败: {e}")
             return Message(
                 type=MessageType.ERROR,
@@ -355,7 +355,7 @@ class MemoryNet:
                 },
             )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[MemoryNet] 导出失败: {e}")
             return Message(
                 type=MessageType.ERROR,
@@ -410,7 +410,7 @@ class MemoryNet:
 
             return conversations
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[MemoryNet] 获取对话历史失败: {e}")
             return []
 
@@ -449,7 +449,7 @@ class MemoryNet:
 
             return all_conversations
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[MemoryNet] 获取所有对话失败: {e}")
             return []
 
@@ -480,7 +480,7 @@ class MemoryNet:
 
             logger.debug(f"[MemoryNet] 记忆已存储: {memory_type}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志
             logger.error(f"[MemoryNet] 存储记忆失败: {e}")
 
     async def search_undefined_memory(self, query: str, limit: int = 10) -> List[Dict]:
@@ -501,7 +501,7 @@ class MemoryNet:
             results = await self.undefined_memory.search(query, limit)
             return results
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[MemoryNet] 搜索记忆失败: {e}")
             return []
 
@@ -573,7 +573,7 @@ class MemoryNet:
             # 返回前N条
             return all_conversations[:limit]
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[MemoryNet] 全局搜索失败: {e}")
             return []
 
@@ -678,7 +678,7 @@ class MemoryNet:
                                 }
                             )
                             logger.debug("[MemoryNet] 已添加潮汐记忆")
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 已记录调试日志
                     logger.debug(f"[MemoryNet] 获取潮汐记忆失败: {e}")
 
             logger.info(
@@ -687,7 +687,7 @@ class MemoryNet:
 
             return cross_platform_memories[:limit]
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[MemoryNet] 获取跨平台记忆失败: {e}")
             return []
 
@@ -817,7 +817,7 @@ class MemoryNet:
             if extracted_count > 0:
                 logger.info(f"[MemoryNet] 自动提取了 {extracted_count} 条重要信息")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志
             logger.error(f"[MemoryNet] 自动提取重要信息失败: {e}")
 
     # ==================== 潮汐记忆/知识图谱集成 ====================
@@ -875,7 +875,7 @@ class MemoryNet:
                         )
                         logger.info(f"[MemoryNet] 已存储知识图谱关系: {rel_id}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志
             logger.error(f"[MemoryNet] 存储到 MemoryEngine 失败: {e}")
 
     async def retrieve_from_memory_engine(
@@ -941,7 +941,7 @@ class MemoryNet:
 
             return results
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[MemoryNet] 从 MemoryEngine 检索失败: {e}")
             return []
 
@@ -1001,7 +1001,7 @@ class MemoryNet:
                 f"{len(old_messages)} 条 -> 1 条摘要"
             )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志
             logger.error(f"[MemoryNet] 压缩对话失败: {e}")
 
     def _generate_conversation_summary(self, messages: List) -> str:
@@ -1024,6 +1024,6 @@ class MemoryNet:
 
             return "\n".join(summary_parts) if summary_parts else "对话历史"
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
             logger.error(f"[MemoryNet] 生成对话摘要失败: {e}")
             return "对话历史"

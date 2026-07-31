@@ -21,7 +21,7 @@ def _load_topic_keywords() -> Dict[str, List[str]]:
             with open(config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
             return config.get("lifebook", {}).get("topic_keywords", {})
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — 关键词加载失败降级为内置
         logger.debug(f"[SessionHandler] 加载话题关键词失败: {e}")
     return {}
 
@@ -125,7 +125,7 @@ class SessionHandler:
                 )
                 if msgs:
                     return [{"role": m.role, "content": m.content} for m in msgs]
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 消息读取失败降级为空
                 logger.debug(f"[会话处理] memory_net 获取消息失败: {e}")
 
         return messages
@@ -167,6 +167,6 @@ class SessionHandler:
                 custom_summary=custom_summary,
             )
             return {"success": True, "file": file_path}
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 总结失败返回失败态由调用方处理
             logger.error(f"[会话处理] 生成每日总结失败: {e}")
             return {"success": False, "message": str(e)}

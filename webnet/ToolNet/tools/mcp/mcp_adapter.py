@@ -170,7 +170,7 @@ def discover_mcp_tools() -> List[MCPTool]:
                     f"[MCPNet] 已创建格式塔工具: {tool._full_name} ({manifest.display_name})"
                 )
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.warning(f"[MCPNet] 工具发现失败（MCP 可能尚未初始化）: {e}")
 
     return tools

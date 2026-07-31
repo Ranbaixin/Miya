@@ -45,7 +45,7 @@ class AuthSubnet(BaseSubnet):
             try:
                 with open(self.permissions_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - 已有日志兜底
                 logger.warning(f"加载权限配置失败: {e}")
                 return self._create_default_permissions()
         else:
@@ -77,7 +77,7 @@ class AuthSubnet(BaseSubnet):
             try:
                 with open(self.users_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - 已有日志兜底
                 logger.warning(f"加载用户列表失败: {e}")
                 return {}
         else:
@@ -94,7 +94,7 @@ class AuthSubnet(BaseSubnet):
             try:
                 with open(self.sessions_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - 已有日志兜底
                 logger.warning(f"加载会话列表失败: {e}")
                 return {}
         else:
@@ -125,7 +125,7 @@ class AuthSubnet(BaseSubnet):
             self.tools['remove_user'] = RemoveUserTool()
 
             logger.info(f"[AuthNet] 已加载 {len(self.tools)} 个鉴权工具")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.warning(f"[AuthNet] 加载鉴权工具失败: {e}")
             self.tools = {}
 
@@ -156,7 +156,7 @@ class AuthSubnet(BaseSubnet):
             result = await tool.execute(args, context)
             self._record_success(tool_name)
             return result
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"[AuthNet] 执行工具 {tool_name} 失败: {e}")
             self._record_failure(tool_name, str(e))
             return f"执行失败: {str(e)}"

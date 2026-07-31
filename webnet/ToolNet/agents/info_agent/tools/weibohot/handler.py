@@ -45,6 +45,6 @@ async def execute(args: Dict[str, Any], context: Dict[str, Any]) -> str:
 
             return result
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.error(f"获取微博热搜失败: {e}")
         return f"获取热搜失败: {str(e)[:50]}"

@@ -44,7 +44,7 @@ class ListGroupsTool(BaseTool):
                 "note": "占位实现，实际权限组请查看配置文件"
             }, ensure_ascii=False, indent=2)
                 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"列出权限组失败: {e}")
             return json.dumps({
                 "success": False,

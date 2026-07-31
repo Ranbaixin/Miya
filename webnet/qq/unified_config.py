@@ -60,7 +60,7 @@ class UnifiedQQConfig:
             logger.warning(f"[UnifiedQQConfig] 无法导入Settings: {e}")
             # 使用环境变量直接加载
             self._load_from_env()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并回退默认配置
             logger.error(f"[UnifiedQQConfig] 配置初始化失败: {e}")
             self._config = self._get_default_config()
 
@@ -266,7 +266,7 @@ class UnifiedQQConfig:
 
             logger.info("[UnifiedQQConfig] 配置重新加载成功")
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回 False
             logger.error(f"[UnifiedQQConfig] 配置重新加载失败: {e}")
             return False
 

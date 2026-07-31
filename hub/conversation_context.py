@@ -131,7 +131,7 @@ class ConversationContextManager:
                     "important_topic_keywords", []
                 )
                 return cc_config
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 配置加载失败仅降级为默认
             logger.warning(f"[对话上下文] 加载配置失败: {e}")
         return {}
 
@@ -216,7 +216,7 @@ class ConversationContextManager:
                     f"[对话上下文] 恢复话题状态: {loaded} 个会话, "
                     f"跳过 {filtered_sessions} 个休眠"
                 )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 恢复状态失败仅跳过恢复
             logger.warning(f"[对话上下文] 恢复话题状态失败: {e}")
 
     def _save_topic_state(self):
@@ -239,7 +239,7 @@ class ConversationContextManager:
             }
             with open(self._persist_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 状态持久化失败可接受
             logger.warning(f"[对话上下文] 保存话题状态失败: {e}")
 
     def _detect_topic(self, text: str) -> str:
@@ -358,7 +358,7 @@ class ConversationContextManager:
                             }
                         )
                         total_tokens += token_estimate
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 历史读取失败不阻断回复
                 logger.error(f"[对话上下文] 获取对话历史失败: {e}")
 
         return context
@@ -446,6 +446,6 @@ class ConversationContextManager:
                     return "\n\n".join(summaries)
 
             return ""
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 摘要缺失不影响主流程
             logger.debug(f"[对话上下文] 获取 Lifebook 摘要失败: {e}")
             return ""

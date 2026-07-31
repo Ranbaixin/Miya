@@ -80,7 +80,7 @@ class BackupManager:
                     self.tasks[name] = BackupTask(**task_data)
 
                 logger.info(f"加载了 {len(self.tasks)} 个备份任务")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - 已有日志兜底
                 logger.warning(f"加载备份任务失败: {e}")
 
     def _save_tasks(self) -> None:
@@ -106,7 +106,7 @@ class BackupManager:
                     self.records.append(BackupRecord(**record_data))
 
                 logger.info(f"加载了 {len(self.records)} 条备份记录")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - 已有日志兜底
                 logger.warning(f"加载备份记录失败: {e}")
 
     def _save_records(self) -> None:

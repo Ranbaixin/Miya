@@ -40,7 +40,7 @@ class PermissionCore:
 
                 self._unified_manager = get_permission_engine()
                 logger.info("使用统一权限配置文件模式")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - 已有日志兜底
                 logger.warning(f"加载统一权限管理器失败: {e}，回退到传统模式")
                 self.use_unified_config = False
                 self._unified_manager = None
@@ -180,8 +180,8 @@ class PermissionCore:
                     result=result,
                     platform=context.get("platform") if context else None,
                 )
-            except Exception:
-                pass  # 审计日志失败不应影响主流程
+            except Exception:  # noqa: BLE001 - 审计日志失败不影响主流程
+                logger.warning("审计日志写入失败", exc_info=True)
 
         # 【新增】缓存结果
         if use_cache and self.enable_cache and not list_mode:
@@ -196,8 +196,8 @@ class PermissionCore:
                 from .audit import get_audit_logger
 
                 self._audit_logger = get_audit_logger()
-            except Exception:
-                pass
+            except Exception:  # noqa: BLE001 - 审计日志器获取失败兜底
+                logger.warning("获取审计日志器失败", exc_info=True)
         return self._audit_logger
 
     def _get_cache(self):
@@ -207,8 +207,8 @@ class PermissionCore:
                 from .cache import get_permission_cache
 
                 self._cache = get_permission_cache()
-            except Exception:
-                pass
+            except Exception:  # noqa: BLE001 - 权限缓存获取失败兜底
+                logger.warning("获取权限缓存失败", exc_info=True)
         return self._cache
 
     def _get_from_cache(self, user_id: str, permission: str) -> Optional[bool]:

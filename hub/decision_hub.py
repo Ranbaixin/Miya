@@ -285,7 +285,7 @@ class DecisionHub:
 
             self.security_service = SecurityService()
             logger.info("[决策层] 安全服务已初始化（技术性防注入）")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 安全服务为可选增强，失败降级
             logger.warning(f"[决策层] 安全服务初始化失败: {e}")
             self.security_service = None
 
@@ -295,7 +295,7 @@ class DecisionHub:
 
             self.ai_injection_detector = get_injection_detector()
             logger.info("[决策层] AI注入检测器已初始化（角色扮演诱导检测）")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 注入检测器为可选增强，失败降级
             logger.warning(f"[决策层] AI注入检测器初始化失败: {e}")
             self.ai_injection_detector = None
 
@@ -329,8 +329,8 @@ class DecisionHub:
                         )
                         if cog_text:
                             parts.append(cog_text)
-                    except Exception:
-                        pass
+                    except Exception:  # noqa: BLE001 — 认知记忆检索为增强上下文，失败静默降级
+                        logger.debug("[主动聊天] 认知记忆检索失败", exc_info=True)
 
                     # 2. 对话历史
                     try:
@@ -346,11 +346,11 @@ class DecisionHub:
                                 lines.append(f"{name}: {content}")
                             if lines:
                                 parts.append("【近期对话】\n" + "\n".join(lines))
-                    except Exception:
-                        pass
+                    except Exception:  # noqa: BLE001 — 对话历史为增强上下文，失败静默降级
+                        logger.debug("[主动聊天] 对话历史获取失败", exc_info=True)
 
                     return "\n".join(parts) if parts else ""
-                except Exception:
+                except Exception:  # noqa: BLE001 — 富上下文为最佳努力，失败返回空
                     return ""
 
             self.proactive_chat.set_rich_context_provider(_rich_context_provider)
@@ -394,12 +394,12 @@ class DecisionHub:
                         "response": message,
                     }
                     await self.memory_manager.store_unified_memory(perception, role="assistant")
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 主动聊天记忆存储为附加功能，失败降级
                     logger.debug(f"[主动聊天] 记忆存储失败: {e}")
 
             self.proactive_chat.set_send_callback(_proactive_send_callback)
             logger.info("[决策层] 主动聊天系统 v2.0 已初始化")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 主动聊天为可选增强，失败降级
             logger.warning(f"[决策层] 主动聊天系统初始化失败: {e}")
             self.proactive_chat = None
 
@@ -422,7 +422,7 @@ class DecisionHub:
                     if result.level.value in ["dangerous", "blocked"]:
                         logger.warning(f"[决策层-防注入] 技术性注入: level={result.level}, reason={result.reason}")
                         return get_text("security.ai_injection_detection.fallback_response"), None
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 技术防注入为可选防护，失败放行
                 logger.warning(f"[决策层-防注入] 技术检测失败: {e}")
 
         # 2. 检查AI角色扮演诱导
@@ -447,7 +447,7 @@ class DecisionHub:
                             # 软防护：允许回复但附加防护提示
                             protection_prompt = self.ai_injection_detector.get_protection_prompt()
                             return None, protection_prompt
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — AI防注入为可选防护，失败放行
                 logger.warning(f"[决策层-AI防注入] 检测失败: {e}")
 
         return None, None
@@ -462,7 +462,7 @@ class DecisionHub:
                 if driver:
                     self.knowledge_graph = KnowledgeGraphManager(neo4j_driver=driver)
                     logger.info("[决策层] 知识图谱管理器已初始化")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 知识图谱为可选增强，失败降级
             logger.warning(f"[决策层] 知识图谱初始化失败: {e}")
 
     async def _handle_proactive_chat(self, perception: dict, user_message: str, main_response: str = ""):
@@ -562,7 +562,7 @@ class DecisionHub:
 
             return None
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 主动聊天为可选功能，失败不中断主流程
             logger.warning(f"[决策层] 主动聊天处理失败: {e}")
             return None
 
@@ -607,7 +607,7 @@ class DecisionHub:
                 if result and result.get("status") == "ok":
                     logger.info(f"[决策层] [智能表情包] 发送到用户 {user_id}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 表情包为可选增强，失败降级
             logger.warning(f"[决策层] 智能表情包发送失败: {e}")
 
     def _extract_keywords_from_input(self, text: str) -> List[str]:
@@ -641,7 +641,7 @@ class DecisionHub:
             logger.info("[决策层] 会话管理器初始化完成")
             return sm
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 会话管理器为可选组件，失败降级
             logger.warning(f"[决策层] 会话管理器初始化失败: {e}")
             return None
 
@@ -665,7 +665,7 @@ class DecisionHub:
 
             self._soul_generator = init_soul_generator()
             logger.info("[灵魂] 🎭 灵魂发生器已初始化")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 灵魂发生器为可选增强，失败降级
             logger.warning(f"[灵魂] 初始化跳过: {e}")
             self._soul_generator = None
 
@@ -686,7 +686,7 @@ class DecisionHub:
             logger.info("[决策层] 鉴权子网初始化成功（支持跨平台权限管理）")
             logger.info("[决策层] 权限检查将在消息处理前自动执行")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 鉴权子网为可选增强，失败降级
             logger.warning(f"[决策层] 鉴权子网初始化失败: {e}")
             self.auth_subnet = None
 
@@ -720,7 +720,7 @@ class DecisionHub:
                 self.collaboration_engine = None
                 logger.warning("[决策层] ModelPool 不可用，协作引擎未初始化")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 协作引擎为可选增强，失败降级
             import traceback
 
             logger.warning(f"[决策层] 模型协作引擎初始化失败: {e}\n{traceback.format_exc()}")
@@ -771,7 +771,7 @@ class DecisionHub:
 
             return self._advanced_orchestrator
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 高级编排器为可选增强，失败降级
             logger.warning(f"[决策层] 高级编排器初始化失败: {e}")
             self._advanced_orchestrator_initialized = True  # 标记为已尝试初始化
             return None
@@ -857,7 +857,7 @@ class DecisionHub:
                     f"[谛听] 记录: group={group_id}({group_name}), user={sender_name}, "
                     f"at_bot={is_at_bot}, reply_bot={reply_to_bot}"
                 )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 谛听记录为附加日志，失败降级
             logger.warning(f"[谛听] 记录失败: {e}")
 
         # 【新增】更新用户/群聊侧写（从消息中学习用户特征）
@@ -875,7 +875,7 @@ class DecisionHub:
                     message=content,
                 )
                 logger.debug(f"[决策层] 用户侧写已更新: user_id={user_id}, group_id={group_id}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 用户侧写为可选增强，失败降级
                 logger.debug(f"[决策层] 用户侧写更新失败: {e}")
 
         # 【新增】在最开始拦截快捷命令
@@ -915,7 +915,7 @@ class DecisionHub:
                     },
                 )
                 logger.info(f"[决策层] 图片分析结果已保存到长期记忆: {memory_id}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 图片记忆保存为附加功能，失败降级
                 logger.warning(f"[决策层] 保存图片到长期记忆失败: {e}")
 
             # 【新增】保存图片分析结果到工作内存（短期记忆）
@@ -934,7 +934,7 @@ class DecisionHub:
                     image_analysis.get("model", ""),
                 )
                 logger.info("[决策层] 图片分析结果已保存到工作内存")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 工作记忆保存为附加功能，失败降级
                 logger.debug(f"[决策层] 保存图片到工作内存失败: {e}")
 
         # 【新增】检测引用消息包含图片，提前保存占位记录
@@ -954,14 +954,14 @@ class DecisionHub:
                         "pending",
                     )
                     logger.info("[决策层] 引用图片预保存记录")
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 引用图片预保存为附加功能，失败降级
                     logger.debug(f"[决策层] 引用图片预保存失败: {e}")
 
         # 【新增】检查是否是用户确认/纠正图片识别结果（独立于图片消息）
         # 用户可能发送"是的，这是xxx"或"不是，是yyy"来确认/纠正之前的图片识别
         try:
             await self._check_and_learn_image_correction(perception, content, user_id, group_id)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 图片学习为可选增强，失败降级
             logger.debug(f"[决策层] 检查图片学习失败: {e}")
 
         quick_response = await self._handle_quick_commands(content, platform, perception)
@@ -1175,7 +1175,7 @@ class DecisionHub:
                         content=response[:200],
                         is_at_bot=False,
                     )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 工作记忆为附加功能，失败降级
                 logger.debug(f"[决策层] 工作记忆存储AI回复失败: {e}")
 
             # 【新增】智能记忆 - 自动提取重要内容记忆
@@ -1184,7 +1184,7 @@ class DecisionHub:
                 historian = get_historian()
                 uid = perception.get("user_id", "unknown")
                 await historian.process_after_response(user_input, response, uid)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 智能记忆为可选增强，失败降级
                 logger.debug(f"[决策层] 智能记忆处理失败: {e}")
 
         # 7. 情绪衰减
@@ -1284,7 +1284,7 @@ class DecisionHub:
                     self._in_v3_execution = False
                     v3_executed = True
                     return result
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — V3代理为增强路径，失败回退普通模式
                     # 清除标志
                     self._in_v3_execution = False
                     logger.warning(f"V3代理失败: {e}，回退到普通模式")
@@ -1372,7 +1372,7 @@ class DecisionHub:
                         )
                     if context.get("group_id"):
                         gpc = pm.build_group_context(str(context.get("group_id")))
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 用户侧写为增强上下文，失败降级
                     logger.debug(f"[决策层] 用户侧写检索失败: {e}")
                 return upc, gpc
 
@@ -1393,8 +1393,8 @@ class DecisionHub:
                         result = perception_ctx.get("perception_text", "")
                         logger.warning(f"[意识感知] 成功: {result[:150]}")
                         return result
-                except Exception:
-                    pass
+                except Exception:  # noqa: BLE001 — 意识感知为增强上下文，失败静默降级
+                    logger.debug("[决策层] 意识感知失败", exc_info=True)
                 return ""
 
             async def fetch_search_context():
@@ -1427,10 +1427,10 @@ class DecisionHub:
                                         search_results = await searcher.search(content)
                                         if search_results:
                                             sc = f"\n\n【联网搜索结果】\n{str(search_results)[:800]}"
-                                except Exception:
-                                    pass
-                except Exception:
-                    pass
+                                except Exception:  # noqa: BLE001 — 联网搜索为增强功能，失败静默降级
+                                    logger.debug("[决策层] 联网搜索失败", exc_info=True)
+                except Exception:  # noqa: BLE001 — 搜索上下文构建为增强功能，失败静默降级
+                    logger.debug("[决策层] 搜索上下文构建失败", exc_info=True)
                 return sc
 
             async def fetch_group_chat_context():
@@ -1489,8 +1489,8 @@ class DecisionHub:
                             recent_context = wm.build_prompt_context(str(group_id))[:500]
                         elif msg_type == "private" and ctx_uid:
                             recent_context = wm.build_prompt_context(f"private_{ctx_uid_str}")[:500]
-                    except Exception:
-                        pass
+                    except Exception:  # noqa: BLE001 — 工作记忆上下文为增强，失败静默降级
+                        logger.debug("[谛听-并行] 工作记忆上下文获取失败", exc_info=True)
 
                     strategy = await diteng.analyze_message_strategy(
                         content=content,
@@ -1507,7 +1507,7 @@ class DecisionHub:
                         f"confidence={getattr(strategy, 'confidence', 0):.2f}"
                     )
                     return strategy
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 谛听策略为增强功能，失败降级
                     logger.warning(f"[谛听-并行] 分析失败: {e}")
                 return None
 
@@ -1542,7 +1542,7 @@ class DecisionHub:
                     )
                     if cmc:
                         logger.warning(f"[决策层] 智能记忆检索到相关记忆 (user_id={query_user_id})")
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 智能记忆检索为增强功能，失败降级
                     logger.warning(f"[决策层] 智能记忆检索失败: {e}")
                 return cmc
 
@@ -1559,8 +1559,8 @@ class DecisionHub:
                                     "soul_model", "deepseek_v4_flash_official"
                                 )
                                 ai_client_for_soul = self.model_pool.create_ai_client(soul_model_id)
-                            except Exception:
-                                pass
+                            except Exception as e:  # noqa: BLE001 — 灵魂模型客户端为增强依赖，失败降级使用默认模型
+                                logger.error(f"[灵魂] 灵魂模型客户端创建失败: {e}")
                         personality_info = {}
                         if self.personality:
                             try:
@@ -1574,8 +1574,8 @@ class DecisionHub:
                                     "form_description": form.get("description", ""),
                                     "speaking_style": form.get("speaking", {}).get("style", ""),
                                 }
-                            except Exception:
-                                pass
+                            except Exception:  # noqa: BLE001 — 形态配置为增强上下文，失败静默降级
+                                logger.debug("[灵魂] 形态配置获取失败", exc_info=True)
                         sr = await self._soul_generator.process(
                             content,
                             history,
@@ -1588,7 +1588,7 @@ class DecisionHub:
                             personality_info=personality_info,
                             cognitive_memory=cognitive_memory,
                         )
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 灵魂生成器为增强功能，失败降级
                     logger.warning(f"[灵魂] 提前分析失败: {e}")
                 return sr
 
@@ -1612,8 +1612,8 @@ class DecisionHub:
                                 if hasattr(self, "onebot_client") and self.onebot_client:
                                     user_id_str = str(context.get("user_id", ""))
                                     await self.onebot_client.send_like(user_id_str)
-                            except Exception:
-                                pass
+                            except Exception:  # noqa: BLE001 — 点赞为最佳努力通知，失败静默忽略
+                                logger.debug("[决策层] 发送点赞失败", exc_info=True)
                         return None
                     context["_message_strategy"] = {
                         "strategy": diting_strategy.response_strategy,
@@ -1637,7 +1637,7 @@ class DecisionHub:
                         f"- 回复语气：{_style_desc}\n"
                         f"（请根据以上指引调整你的回复风格，但不要生硬地复述这些指令）"
                     )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 谛听结果处理为增强功能，失败降级
                 logger.warning(f"[谛听-并行] 结果处理失败: {e}")
 
             # 等待 Phase 2 任务
@@ -1939,7 +1939,7 @@ class DecisionHub:
                                             cognition_text += "\n（以上是弥娅近期的思考记录，用于了解自己的连贯状态，不要直接引用输出）"
                                             emotion_context_for_collab += "\n\n" + cognition_text
                                             logger.info("[认知记忆] 已注入认知记忆到协作引擎 (db fallback)")
-                            except Exception as e:
+                            except Exception as e:  # noqa: BLE001 — 认知记忆注入为增强功能，失败降级
                                 logger.debug(f"[认知记忆] 注入协作引擎失败: {e}")
 
                             tool_ctx_for_collab["emotion_context"] = emotion_context_for_collab
@@ -2036,7 +2036,7 @@ class DecisionHub:
                                 priority=0.5,
                             )
                             logger.info("[灵魂记忆] 协作引擎已存储")
-                        except Exception as store_err:
+                        except Exception as store_err:  # noqa: BLE001 — 情绪记忆存储为附加功能，失败降级
                             logger.warning(f"[灵魂记忆] store_auto失败: {store_err}")
 
                         # C方案：存入长期记忆，AI自行判断重要性
@@ -2072,7 +2072,7 @@ class DecisionHub:
                                 group_id=group_id_str_cog,
                             )
                             print("[DEBUG协作] 协作引擎路径存储完成")
-                        except Exception as cog_err:
+                        except Exception as cog_err:  # noqa: BLE001 — 认知记忆存储为附加功能，失败降级
                             logger.warning(f"[认知记忆] 协作路径存储失败: {cog_err}")
 
                         # 存储到 decision_hub 供 SSE/API 读取（协作引擎路径）
@@ -2089,7 +2089,7 @@ class DecisionHub:
 
                         return collab_result.response
 
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 — 协作引擎为增强路径，失败降级单模型
                         logger.warning(f"[决策层-协作引擎] 协作失败，降级为单模型: {e}")
                         # 继续走原有单模型路径
 
@@ -2149,7 +2149,7 @@ class DecisionHub:
                         if cognition_parts:
                             cognition_context = "\n【近期思维参考】\n" + "\n".join(cognition_parts[:3])
                             logger.info(f"[认知记忆] 从数据库检索 {len(recent_cognitions)} 条思维记录")
-            except Exception as cog_err:
+            except Exception as cog_err:  # noqa: BLE001 — 认知记忆检索为增强功能，失败降级
                 logger.warning(f"[认知记忆] 检索失败: {cog_err}")
 
             # 调用 AI（注入情绪上下文 + 认知记忆）
@@ -2237,7 +2237,7 @@ class DecisionHub:
                     priority=0.5,
                 )
                 logger.info("[灵魂记忆] 已存储情绪上下文")
-            except Exception as store_err:
+            except Exception as store_err:  # noqa: BLE001 — 情绪记忆存储为附加功能，失败降级
                 # 如果存储失败，尝试用更简单的方式
                 logger.warning(f"[灵魂记忆] store_auto失败: {store_err}")
 
@@ -2254,7 +2254,7 @@ class DecisionHub:
                         priority=0.6,
                     )
                     logger.info(f"[灵魂记忆] 已存储情绪: {significant_emotions}")
-                except Exception as store_err2:
+                except Exception as store_err2:  # noqa: BLE001 — 情绪峰值存储为附加功能，失败降级
                     logger.warning(f"[灵魂记忆] 情绪峰值存储失败: {store_err2}")
 
             # 【LifeBook 集成】用真实情绪数据记录交互到多视角日记
@@ -2283,7 +2283,7 @@ class DecisionHub:
                         topics=[message_type] if message_type else ["对话"],
                         emotion=str(emotion_label),
                     )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — LifeBook日记为附加功能，失败降级
                 logger.debug(f"[决策层] LifeBook 记录失败: {e}")
 
             # 【增强】存储认知记忆 - 思考过程、情绪分析、内心独白 + 缓存
@@ -3251,13 +3251,7 @@ class DecisionHub:
 
                 logger.warning(f"[权限检查] 用户 {check_id} 无权限执行命令")
                 return False
-            except Exception as e:
-                logger.warning(f"[权限检查异常] {e}，拒绝执行")
-                return False
-            except Exception as e:
-                logger.warning(f"[权限检查异常] {e}，拒绝执行")
-                return False
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 权限引擎为统一鉴权，失败保守拒绝
                 logger.warning(f"[权限检查异常] {e}，拒绝执行")
                 return False
 
@@ -3581,7 +3575,7 @@ class DecisionHub:
             mem_result = await process_memory_command(content, uid)
             if mem_result:
                 return mem_result
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 记忆命令为可选功能，失败跳过
             logger.debug(f"[决策层] 记忆命令处理跳过: {e}")
 
         # 9. 子命令系统 — 委托到 CommandHandler
@@ -3636,7 +3630,7 @@ class DecisionHub:
         try:
             with open(config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
-        except Exception:
+        except (OSError, ValueError):  # 文件不存在/JSON损坏时回退空配置
             config = {}
 
         changed = False
@@ -3745,7 +3739,7 @@ class DecisionHub:
                 with open(config_path, "w", encoding="utf-8") as f:
                     json.dump(config, f, ensure_ascii=False, indent=2)
                 logger.info(f"[决策层] TTS 配置已更新: {messages[0]}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — TTS配置保存失败已向用户反馈，不中断命令流
                 logger.error(f"[决策层] TTS 配置保存失败: {e}")
                 return f"配置保存失败: {e}"
 
@@ -3759,7 +3753,7 @@ class DecisionHub:
                                 inst.set_tts_mode("voice")
                             elif is_text:
                                 inst.set_tts_mode("text")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 运行时通知平台为附加功能，失败降级
             logger.debug(f"[决策层] 运行时通知平台失败: {e}")
 
         return "\n".join(messages)
@@ -3793,7 +3787,7 @@ class DecisionHub:
 
             logger.debug(f"[决策层] 添加状态标签: {tag}")
             return response + tag
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 状态标签为附加装饰，失败返回原响应
             logger.debug(f"[决策层] 添加状态标签失败: {e}")
             return response
 
@@ -3821,7 +3815,7 @@ class DecisionHub:
 
             logger.info(f"[决策层] 从配置加载触发关键词: {len(keywords)} 个")
             return keywords
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 触发关键词加载为增强配置，失败返回空
             logger.warning(f"[决策层] 加载触发关键词失败: {e}")
             return []
 
@@ -3873,7 +3867,7 @@ class DecisionHub:
                 metadata={"learned_answer": answer},
             )
             logger.warning(f"[AI学习] 学习完成，memory_id={memory_id}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 图片学习存储为附加功能，失败降级
             logger.warning(f"[AI学习] 保存失败: {e}")
 
     async def _check_and_learn_general_correction(self, perception: dict, content: str, user_id):
@@ -3940,5 +3934,5 @@ class DecisionHub:
                 },
             )
             logger.info(f"[决策层] 通用学习完成，场景: {matched_scenario['tags'][0]}, 内容: {extracted_answer}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 通用学习存储为附加功能，失败降级
             logger.warning(f"[决策层] 通用学习失败: {e}")

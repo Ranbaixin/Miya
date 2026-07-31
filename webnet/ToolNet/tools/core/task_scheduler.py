@@ -204,7 +204,7 @@ class TaskScheduler:
             self.scheduler.remove_job(task_id)
             del self.tasks[task_id]
             logger.info(f"移除任务: {task_id}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"移除任务失败: {task_id}, 错误: {e}")
 
     def pause_task(self, task_id: str) -> None:
@@ -217,7 +217,7 @@ class TaskScheduler:
         try:
             self.scheduler.pause_job(task_id)
             logger.info(f"暂停任务: {task_id}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"暂停任务失败: {task_id}, 错误: {e}")
 
     def resume_task(self, task_id: str) -> None:
@@ -230,7 +230,7 @@ class TaskScheduler:
         try:
             self.scheduler.resume_job(task_id)
             logger.info(f"恢复任务: {task_id}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"恢复任务失败: {task_id}, 错误: {e}")
 
     def run_task_now(self, task_id: str) -> None:
@@ -243,7 +243,7 @@ class TaskScheduler:
         try:
             self.scheduler.modify_job(task_id, next_run_time=datetime.now())
             logger.info(f"立即运行任务: {task_id}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"立即运行任务失败: {task_id}, 错误: {e}")
 
     def get_task(self, task_id: str) -> Optional[ScheduledTask]:
@@ -281,7 +281,7 @@ class TaskScheduler:
                     'next_run_time': job.next_run_time.isoformat() if job.next_run_time else None,
                     'trigger': str(job.trigger)
                 }
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"获取任务信息失败: {task_id}, 错误: {e}")
         return None
 

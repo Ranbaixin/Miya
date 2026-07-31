@@ -181,7 +181,7 @@ class QQFileReaderTool(BaseTool):
             
             return info
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
             return f"❌ 获取文件信息失败: {str(e)}"
     
     async def _read_file_content(
@@ -212,12 +212,12 @@ class QQFileReaderTool(BaseTool):
                 try:
                     content = await self._read_text_file(file_path, encoding)
                     response = await self._process_text_content(content, file_path, max_length, include_statistics)
-                except:
+                except Exception:  # noqa: BLE001 - 文件类型兜底
                     return f"❌ 不支持的文件类型: {file_ext}\n支持的类型: {', '.join(self.SUPPORTED_FILE_TYPES.keys())}"
             
             return response
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"读取文件内容失败: {e}")
             return f"❌ 读取文件内容失败: {str(e)}"
     
@@ -245,10 +245,10 @@ class QQFileReaderTool(BaseTool):
                 try:
                     with open(file_path, 'r', encoding=enc, errors='replace') as f:
                         return f.read()
-                except:
+                except Exception:  # noqa: S112, BLE001 - 编码尝试失败继续
                     continue
             raise Exception(f"无法解码文件，尝试的编码都失败: {str(e)}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 捕获后重抛
             raise Exception(f"读取文本文件失败: {str(e)}")
     
     async def _read_document_file(self, file_path: str) -> Dict[str, Any]:
@@ -268,7 +268,7 @@ class QQFileReaderTool(BaseTool):
         except ImportError as e:
             logger.warning(f"PDF/DOCX处理器不可用: {e}")
             raise Exception("PDF/DOCX处理器不可用，请确保已安装相关依赖")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"读取文档文件失败: {e}")
             raise Exception(f"读取文档文件失败: {str(e)}")
     
@@ -456,7 +456,7 @@ class QQFileReaderTool(BaseTool):
                 
                 return response
                 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"文件分析失败: {e}")
             return f"❌ 文件分析失败: {str(e)}"
     
@@ -502,7 +502,7 @@ class QQFileReaderTool(BaseTool):
             else:
                 return await self._read_file_content(file_path, file_ext, max_length, "auto", True)
                 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"生成文件摘要失败: {e}")
             return f"❌ 生成文件摘要失败: {str(e)}"
     
@@ -565,7 +565,7 @@ class QQFileReaderTool(BaseTool):
                 
                 return response
                 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"文件搜索失败: {e}")
             return f"❌ 文件搜索失败: {str(e)}"
     
@@ -635,7 +635,7 @@ class QQFileReaderTool(BaseTool):
                 return f"{encoding} ({confidence:.1f}% 置信度)"
             else:
                 return "编码检测置信度低"
-        except:
+        except Exception:  # noqa: BLE001 - 编码检测兜底
             return "编码检测失败"
     
     def _format_file_size(self, size_bytes: int) -> str:

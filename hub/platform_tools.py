@@ -563,7 +563,7 @@ class PlatformToolsManager:
         try:
             adapter = get_adapter(platform)
             return adapter._get_available_tools()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 平台工具读取失败降级返回空
             logger.error(f"[平台工具] 获取平台工具失败: {e}")
             return []
 
@@ -608,7 +608,7 @@ class PlatformToolsManager:
             )
             return platform_schemas
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 工具过滤失败降级为全量
             logger.warning(f"[平台工具] 获取平台工具失败: {e}，使用全部工具")
             return self.tool_subnet.get_tools_schema()
 

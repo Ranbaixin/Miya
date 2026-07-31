@@ -81,6 +81,6 @@ class SearchGameMemory(BaseTool):
 
             return report
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"[SearchGameMemory] 执行失败: {e}")
             return f"错误：{str(e)}"

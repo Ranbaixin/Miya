@@ -75,7 +75,7 @@ class MemoryQueryTool(BaseTool):
                 return await self._get_tags()
             else:
                 return "未知操作类型"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"记忆查询失败: {e}")
             return f"查询失败: {str(e)[:100]}"
 

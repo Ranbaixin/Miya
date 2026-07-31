@@ -45,6 +45,6 @@ async def execute(args: Union[Dict[str, Any], Any], context: Any = None) -> str:
         # 调用工具
         result = await tool.execute(actual_context, **actual_args)
         return result
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.error(f"图片分析失败: {e}")
         return f"图片分析失败: {str(e)}"

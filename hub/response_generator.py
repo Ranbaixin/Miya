@@ -260,7 +260,7 @@ class ResponseGenerator:
                         tools=tools_schema,
                         tool_choice="auto",
                     )
-                except Exception as tool_error:
+                except Exception as tool_error:  # noqa: BLE001 — 工具调用失败降级重试
                     logger.warning(
                         f"[响应生成器] 工具调用失败: {tool_error}，尝试不使用工具..."
                     )
@@ -271,7 +271,7 @@ class ResponseGenerator:
                             tools=None,
                             tool_choice="none",
                         )
-                    except Exception:
+                    except Exception:  # noqa: BLE001 — 重试失败提供兜底回复
                         response = "系统出了点问题。我记下了，等会再试。"
             else:
                 # 不使用工具
@@ -408,7 +408,7 @@ class ResponseGenerator:
         try:
             adapter = get_adapter(platform)
             return adapter._get_available_tools()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 平台工具读取失败降级返回空
             logger.error(f"[响应生成器] 获取平台工具失败: {e}")
             return []
 
@@ -466,7 +466,7 @@ class ResponseGenerator:
             )
             return platform_schemas
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 工具过滤失败降级为全量
             logger.warning(f"[响应生成器] 获取平台工具失败: {e}，使用全部工具")
             return self.tool_subnet.get_tools_schema()
 
@@ -710,6 +710,6 @@ class ResponseGenerator:
             tag = f"\n\n[{form_name}|{speak_mode}|{core_name}]" if core_name else f"\n\n[{form_name}|{speak_mode}]"
 
             return response + tag
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 状态标签失败不影响回复
             logger.debug(f"[响应生成器] 添加状态标签失败: {e}")
             return response

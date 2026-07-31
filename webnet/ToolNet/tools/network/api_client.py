@@ -133,7 +133,7 @@ class APIClient:
 
                 try:
                     response_data = await response.json()
-                except:
+                except Exception:  # noqa: BLE001 - JSON解析兜底降级文本
                     response_data = await response.text()
 
                 return APIResponse(
@@ -231,7 +231,7 @@ class APIClient:
         try:
             response = await self.get(endpoint)
             return response.success
-        except:
+        except Exception:  # noqa: BLE001 - 健康检查兜底
             return False
 
 

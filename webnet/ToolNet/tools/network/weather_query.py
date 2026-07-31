@@ -74,7 +74,7 @@ class WeatherQueryTool(BaseTool):
             # 备用：简单返回
             return f"【{city}】天气查询服务暂时不可用，请稍后再试"
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"天气查询失败: {e}")
             return f"查询天气失败: {str(e)[:50]}"
 

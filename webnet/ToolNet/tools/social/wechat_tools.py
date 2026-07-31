@@ -75,7 +75,7 @@ class WeChatTools(SocialBase):
                     "mode": "simulation"
                 }
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
             return await self._handle_error(e, "发送消息", target=target)
 
     async def send_image(
@@ -121,7 +121,7 @@ class WeChatTools(SocialBase):
                     "mode": "simulation"
                 }
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
             return await self._handle_error(e, "发送图片", target=target)
 
     async def get_user_info(self, user_id: str) -> Optional[Dict[str, Any]]:
@@ -188,7 +188,7 @@ class WeChatTools(SocialBase):
                     "mode": "simulation"
                 }
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
             return await self._handle_error(e, "点赞朋友圈", moment_id=moment_id)
 
     async def comment_moment(
@@ -228,7 +228,7 @@ class WeChatTools(SocialBase):
                     "mode": "simulation"
                 }
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
             return await self._handle_error(e, "评论朋友圈", moment_id=moment_id)
 
     async def send_file(
@@ -271,5 +271,5 @@ class WeChatTools(SocialBase):
                     "mode": "simulation"
                 }
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
             return await self._handle_error(e, "发送文件", target=target)

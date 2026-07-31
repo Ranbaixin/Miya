@@ -186,7 +186,7 @@ class QQOneBotClient:
         try:
             result = await self._call_api("get_group_info", {"group_id": group_id})
             return result.get("data", {})
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回空结果
             logger.error(f"[QQ] 获取群信息失败: {e}")
             return None
 
@@ -200,7 +200,7 @@ class QQOneBotClient:
                 params["no_cache"] = no_cache
             result = await self._call_api("get_stranger_info", params)
             return result.get("data", {})
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回空结果
             logger.error(f"[QQ] 获取用户信息失败: {e}")
             return None
 
@@ -214,7 +214,7 @@ class QQOneBotClient:
                 {"group_id": group_id, "user_id": user_id, "no_cache": no_cache},
             )
             return result.get("data", {})
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回空结果
             logger.error(f"[QQ] 获取群成员信息失败: {e}")
             return None
 
@@ -225,7 +225,7 @@ class QQOneBotClient:
                 "get_group_member_list", {"group_id": group_id}
             )
             return result.get("data", [])
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回空结果
             logger.error(f"[QQ] 获取群成员列表失败: {e}")
             return []
 
@@ -234,7 +234,7 @@ class QQOneBotClient:
         try:
             result = await self._call_api("get_friend_list")
             return result.get("data", [])
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回空结果
             logger.error(f"[QQ] 获取好友列表失败: {e}")
             return []
 
@@ -243,7 +243,7 @@ class QQOneBotClient:
         try:
             result = await self._call_api("get_group_list")
             return result.get("data", [])
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回空结果
             logger.error(f"[QQ] 获取群列表失败: {e}")
             return []
 
@@ -254,7 +254,7 @@ class QQOneBotClient:
                 "get_group_file_system_info", {"group_id": group_id}
             )
             return result.get("data")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回空结果
             logger.error(f"[QQ] 获取群文件系统信息失败: {e}")
             return None
 
@@ -265,7 +265,7 @@ class QQOneBotClient:
                 "get_group_root_files", {"group_id": group_id}
             )
             return result.get("data", {})
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回空结果
             logger.error(f"[QQ] 获取群文件列表失败: {e}")
             return {"files": [], "folders": []}
 
@@ -276,7 +276,7 @@ class QQOneBotClient:
                 "get_group_files", {"group_id": group_id, "folder_id": folder_id}
             )
             return result.get("data", {})
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回空结果
             logger.error(f"[QQ] 获取群文件夹文件列表失败: {e}")
             return {"files": [], "folders": []}
 
@@ -288,7 +288,7 @@ class QQOneBotClient:
             )
             data = result.get("data", {})
             return data.get("url")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回空结果
             logger.error(f"[QQ] 获取群文件下载链接失败: {e}")
             return None
 
@@ -306,7 +306,7 @@ class QQOneBotClient:
                 else:
                     logger.error(f"[QQ] 文件下载失败，状态码: {response.status}")
                     return False
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志，返回 False 由调用方处理
             logger.error(f"[QQ] 群文件下载失败: {e}")
             return False
 
@@ -341,7 +341,7 @@ class QQOneBotClient:
                 "send_like",
                 {"user_id": user_id, "times": times},
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并上抛
             logger.error(f"[QQ] 点赞失败: {e}")
             raise
 
@@ -359,7 +359,7 @@ class QQOneBotClient:
                 else:
                     logger.error(f"[QQ] 图片下载失败: HTTP {response.status_code}")
                     return None
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回空结果
             logger.error(f"[QQ] 图片下载失败: {e}")
             return None
 
@@ -368,7 +368,7 @@ class QQOneBotClient:
         try:
             result = await self._call_api("get_msg", {"message_id": message_id})
             return result.get("data")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回空结果
             logger.error(f"[QQ] 获取消息失败: {e}")
             return None
 
@@ -386,7 +386,7 @@ class QQOneBotClient:
             elif isinstance(data, list):
                 return data
             return []
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回空结果
             logger.error(f"[QQ] 获取转发消息失败: {e}")
             return []
 
@@ -547,7 +547,7 @@ class QQOneBotClient:
                 await self.run()
             except websockets.ConnectionClosed:
                 logger.warning("[QQ] 连接断开")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 重连兜底，已记录日志
                 logger.error(f"[QQ] 运行错误: {e}")
 
             if self._should_stop:
@@ -603,7 +603,7 @@ class QQOneBotClient:
                 logger.error(f"[QQ] 图片上传失败，未返回file_id: {result}")
                 return None
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回空结果
             logger.error(f"[QQ] 图片上传失败: {e}")
             return None
 
@@ -646,7 +646,7 @@ class QQOneBotClient:
                 logger.error(f"[QQ] 文件上传失败，未返回file_id: {result}")
                 return None
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回空结果
             logger.error(f"[QQ] 文件上传失败: {e}")
             return None
 

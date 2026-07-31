@@ -26,7 +26,7 @@ def check_is_admin(user_id: int, group_id: Optional[int], onebot_client) -> bool
             ):
                 return True
         return False
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.error(f"[save_game] 检查管理员权限失败: {e}")
         return False
 
@@ -81,7 +81,7 @@ def save_game(
         else:
             return {"success": False, "message": "保存失败: 当前没有活跃的游戏"}
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.error(f"[save_game] 保存游戏失败: {e}")
         return {"success": False, "message": f"保存失败: {str(e)}"}
 
@@ -122,7 +122,7 @@ def export_game_archive(
         else:
             return {"success": False, "message": "导出失败"}
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.error(f"[export_game_archive] 导出存档失败: {e}")
         return {"success": False, "message": f"导出失败: {str(e)}"}
 
@@ -188,7 +188,7 @@ def import_game_archive(
         else:
             return {"success": False, "message": "导入失败: 文件不存在或格式错误"}
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.error(f"[import_game_archive] 导入存档失败: {e}")
         return {"success": False, "message": f"导入失败: {str(e)}"}
 
@@ -257,7 +257,7 @@ def set_character_visibility(
         else:
             return {"success": False, "message": "设置失败"}
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.error(f"[set_character_visibility] 设置可见性失败: {e}")
         return {"success": False, "message": f"设置失败: {str(e)}"}
 
@@ -307,6 +307,6 @@ def list_game_saves(
         else:
             return {"success": False, "message": "没有找到存档"}
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.error(f"[list_game_saves] 列出存档失败: {e}")
         return {"success": False, "message": f"列出存档失败: {str(e)}"}

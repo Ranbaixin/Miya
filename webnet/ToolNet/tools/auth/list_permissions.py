@@ -54,7 +54,7 @@ class ListPermissionsTool(BaseTool):
                 }
             }, ensure_ascii=False, indent=2)
                 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"列出权限失败: {e}")
             return json.dumps({
                 "success": False,

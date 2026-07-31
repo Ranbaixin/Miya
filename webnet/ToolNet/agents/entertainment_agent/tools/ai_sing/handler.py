@@ -16,5 +16,5 @@ async def execute(args: Dict[str, Any], context: Any) -> str:
             return "请告诉我你想听什么歌呢？"
         result = await handle_sing_request(song_name, username=username)
         return result
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
         return f"唱歌功能调用失败: {str(e)}"

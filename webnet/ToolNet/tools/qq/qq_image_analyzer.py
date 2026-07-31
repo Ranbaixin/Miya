@@ -76,7 +76,7 @@ class QQImageAnalyzerTool:
                 data = await onebot_client.download_image(url)
                 if data:
                     return data
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             self.logger.warning(f"onebot_client下载失败: {e}")
 
         # 使用httpx直接下载
@@ -85,7 +85,7 @@ class QQImageAnalyzerTool:
                 resp = await client.get(url, timeout=30.0)
                 if resp.status_code == 200:
                     return resp.content
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             self.logger.error(f"httpx下载失败: {e}")
 
         return None
@@ -119,9 +119,9 @@ class QQImageAnalyzerTool:
                         result += f"\n📝 识别文字:\n{vision_result.text_content}"
                 else:
                     self.logger.warning(f"视觉分析失败: {vision_result}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - 已有日志兜底
                 self.logger.warning(f"视觉模型分析失败: {e}")
 
             return result
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
             return f"❌ 图片分析失败: {str(e)}"

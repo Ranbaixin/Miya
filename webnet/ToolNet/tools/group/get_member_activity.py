@@ -111,7 +111,7 @@ class GetMemberActivityTool(BaseTool):
 
             return "历史消息分析功能暂未实现"
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"获取群成员活跃度失败: {e}")
             return f"获取活跃度失败: {str(e)[:50]}"
 

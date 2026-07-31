@@ -126,7 +126,7 @@ class MiyaWebUI:
                 logger.info("[MiyaWebUI] Bot 启动成功")
                 return {"success": True, "message": "Bot 启动成功"}
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
                 self.bot_status = BotStatus.ERROR
                 logger.error(f"[MiyaWebUI] Bot 启动失败: {e}")
                 return {"success": False, "message": f"启动失败: {str(e)}"}
@@ -149,7 +149,7 @@ class MiyaWebUI:
                 logger.info("[MiyaWebUI] Bot 已停止")
                 return {"success": True, "message": "Bot 已停止"}
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 已记录日志并返回友好提示
                 self.bot_status = BotStatus.ERROR
                 logger.error(f"[MiyaWebUI] Bot 停止失败: {e}")
                 return {"success": False, "message": f"停止失败: {str(e)}"}
@@ -198,7 +198,7 @@ class MiyaWebUI:
                             "success_calls", 0
                         )
                         self.stats.tool_calls_failed = stats.get("failed_calls", 0)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 已记录调试日志
                 logger.debug(f"[MiyaWebUI] 获取统计失败: {e}")
 
         return self.stats
@@ -240,7 +240,7 @@ class MiyaWebUI:
                 and content.split("NEO4J_PASSWORD=")[1].split("\n")[0].strip() != ""
             )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志
             logger.error(f"[MiyaWebUI] 读取配置失败: {e}")
 
         return config_status
@@ -277,12 +277,12 @@ class MiyaWebUI:
                                 "message": parts[2],
                             }
                         )
-                except:
+                except (ValueError, IndexError):  # noqa: S110 — 日志行解析失败则跳过
                     pass
 
             return logs[-lines:]
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回空结果
             logger.error(f"[MiyaWebUI] 读取日志失败: {e}")
             return []
 

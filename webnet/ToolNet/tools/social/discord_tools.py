@@ -77,7 +77,7 @@ class DiscordTools(SocialBase):
                     "mode": "simulation"
                 }
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
             return await self._handle_error(e, "发送消息", target=target)
 
     async def send_image(
@@ -126,7 +126,7 @@ class DiscordTools(SocialBase):
                     "mode": "simulation"
                 }
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
             return await self._handle_error(e, "发送图片", target=target)
 
     async def get_user_info(self, user_id: str) -> Optional[Dict[str, Any]]:
@@ -207,7 +207,7 @@ class DiscordTools(SocialBase):
                     "mode": "simulation"
                 }
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
             return await self._handle_error(e, "添加表情反应", msg_id=msg_id, emoji=emoji)
 
     async def create_role(
@@ -262,7 +262,7 @@ class DiscordTools(SocialBase):
                     "mode": "simulation"
                 }
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
             return await self._handle_error(e, "创建角色", guild_id=guild_id, name=name)
 
     async def kick_member(
@@ -311,5 +311,5 @@ class DiscordTools(SocialBase):
                     "mode": "simulation"
                 }
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
             return await self._handle_error(e, "踢出成员", guild_id=guild_id, user_id=user_id)

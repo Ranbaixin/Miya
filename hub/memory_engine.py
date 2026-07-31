@@ -41,7 +41,7 @@ class MemoryEngine:
             try:
                 self._load_tide_from_redis()
                 logger.info("从Redis加载潮汐记忆")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 初始化加载失败仅跳过
                 logger.warning(f"Redis加载失败: {e}")
 
         # 尝试从Milvus加载长期记忆统计
@@ -49,7 +49,7 @@ class MemoryEngine:
             try:
                 stats = self.milvus_client.get_stats()
                 logger.info(f"Milvus长期记忆数量: {stats.get('total_vectors', 0)}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 初始化加载失败仅跳过
                 logger.warning(f"Milvus加载失败: {e}")
 
         # 尝试从Neo4j加载知识图谱统计
@@ -58,7 +58,7 @@ class MemoryEngine:
                 stats = self.neo4j_client.get_stats()
                 logger.info(f"Neo4j知识图谱: {stats.get('total_nodes', 0)}节点, "
                            f"{stats.get('total_relationships', 0)}关系")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 初始化加载失败仅跳过
                 logger.warning(f"Neo4j加载失败: {e}")
 
     def _load_tide_from_redis(self) -> None:
@@ -74,7 +74,7 @@ class MemoryEngine:
                     self.tide_memory[memory_id] = data['content']
                     heapq.heappush(self.tide_priority, (-data['metadata']['priority'], memory_id))
                     self.memory_metadata[memory_id] = data['metadata']
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载失败降级为空内存
             logger.error(f"从Redis加载潮汐记忆失败: {e}")
 
     def store_tide(self, memory_id: str, content: Dict, priority: float = 0.5,
@@ -117,7 +117,7 @@ class MemoryEngine:
                     ttl,
                     data_json
                 )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — Redis持久化失败不影响内存记忆
                 logger.error(f"存储潮汐记忆到Redis失败: {e}")
 
     def retrieve_tide(self, memory_id: str) -> Optional[Dict]:
@@ -134,7 +134,7 @@ class MemoryEngine:
                         # 更新优先级队列
                         priority = data['metadata'].get('priority', 0.5)
                         heapq.heappush(self.tide_priority, (-priority, memory_id))
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 检索失败降级返回空
                     logger.error(f"从Redis检索潮汐记忆失败: {e}")
                     return None
             else:
@@ -193,7 +193,7 @@ class MemoryEngine:
                     }]
                 )
                 logger.info(f"✅ 存储梦境记忆到Milvus: {dream_id}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 向量存储失败不影响内存记忆
                 logger.error(f"存储梦境记忆到Milvus失败: {e}")
 
         # 存储五元组到Neo4j
@@ -211,7 +211,7 @@ class MemoryEngine:
                     subject, predicate, obj, context, emotion
                 )
                 logger.info(f"✅ 存储记忆五元组到Neo4j: {dream_id}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 图谱存储失败不影响内存记忆
                 logger.error(f"存储记忆五元组到Neo4j失败: {e}")
 
         # 更新元数据
@@ -245,7 +245,7 @@ class MemoryEngine:
                         'source': 'vector'
                     })
                 logger.info(f"✅ 从Milvus检索到 {len(results)} 条记忆")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 向量搜索失败降级为关键词搜索
                 logger.error(f"Milvus搜索失败: {e}")
 
         # 2. 关键词搜索（如果向量搜索失败或补充）
@@ -287,7 +287,7 @@ class MemoryEngine:
                 memories = self.neo4j_client.query_memory_by_emotion(emotion)
                 logger.info(f"✅ 从Neo4j检索到 {len(memories)} 条情绪记忆")
                 return memories
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 搜索失败降级返回空
                 logger.error(f"按情绪搜索失败: {e}")
 
         return []
@@ -318,7 +318,7 @@ class MemoryEngine:
                     metadata=[content]
                 )
                 logger.info(f"✅ 存储长期记忆到Milvus: {memory_id}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 向量存储失败不影响后续流程
                 logger.error(f"存储长期记忆到Milvus失败: {e}")
 
         # 存储知识图谱
@@ -336,7 +336,7 @@ class MemoryEngine:
                     subject, predicate, obj, context, emotion
                 )
                 logger.info(f"✅ 存储知识图谱到Neo4j: {memory_id}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 图谱存储失败不影响后续流程
                 logger.error(f"存储知识图谱到Neo4j失败: {e}")
 
     def _compress_content(self, content: Dict) -> Dict:
@@ -379,7 +379,7 @@ class MemoryEngine:
         if self.redis_client:
             try:
                 self.redis_client.delete(f"tide:{memory_id}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 清理失败不影响内存清理
                 logger.error(f"从Redis删除记忆失败: {e}")
 
     def cleanup_expired(self) -> int:
@@ -448,7 +448,7 @@ class MemoryEngine:
             try:
                 self.redis_client.flushdb()
                 logger.info("🗑️ 已清空Redis")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 清空失败不影响内存清空
                 logger.error(f"清空Redis失败: {e}")
 
         if self.milvus_client:
@@ -456,7 +456,7 @@ class MemoryEngine:
                 self.milvus_client.drop_collection()
                 self.milvus_client.create_collection()
                 logger.info("🗑️ 已清空Milvus")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 清空失败不影响内存清空
                 logger.error(f"清空Milvus失败: {e}")
 
         logger.info("🗑️ 已清空所有记忆")
@@ -488,6 +488,6 @@ class MemoryEngine:
 
             logger.info(f"✅ 导入记忆成功: {len(self.tide_memory)}潮汐, {len(self.dream_memory)}梦境")
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 导入失败返回 False 由调用方处理
             logger.error(f"导入记忆失败: {e}")
             return False

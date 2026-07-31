@@ -224,7 +224,7 @@ class WenchangDijun(BaseTool):
             logger.info(f"抽签已保存到记忆: {uuid}")
             return uuid
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.warning(f"保存抽签到记忆失败: {e}")
             return None
 
@@ -252,7 +252,7 @@ class WenchangDijun(BaseTool):
                 # 保存到记忆系统
                 await self._save_to_memory(result)
                 return result
-            except Exception as api_error:
+            except Exception as api_error:  # noqa: BLE001 - 已有日志兜底
                 logger.warning(f"API 请求失败，降级使用本地数据: {api_error}")
                 # API 失败，使用本地数据
                 result = get_local_fortune()

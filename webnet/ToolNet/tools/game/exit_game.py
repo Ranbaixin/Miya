@@ -50,7 +50,7 @@ class ExitGame(BaseTool):
                         group_id=group_id, user_id=user_id
                     )
                     is_admin = member_info.get("role", "member") in ["admin", "owner"]
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 - 已有日志兜底
                     self.logger.warning(f"检查群管理员失败: {e}")
 
             # 只有 superadmin 或群管理员才能退出游戏模式

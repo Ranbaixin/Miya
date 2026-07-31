@@ -208,7 +208,7 @@ class QQMessageParser:
             return ReplyInfo(
                 message_id=msg_id, sender_name=sender_name, content=content[:100]
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录警告日志并返回 None
             logger.warning(f"解析引用消息失败: {e}")
             return None
 

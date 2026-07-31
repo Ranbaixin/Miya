@@ -212,7 +212,7 @@ class CreateScheduleTaskTool(BaseTool):
                             )
                         else:
                             scheduler = None
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 - 已有日志兜底
                         logger.warning(f"尝试获取全局scheduler失败: {e}")
 
                 if scheduler:

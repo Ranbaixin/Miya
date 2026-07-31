@@ -44,7 +44,7 @@ async def search_normal_memory(
 
         return result
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.error(f"[search_normal_memory] 检索失败: {e}")
         return {
             'success': False,
@@ -88,7 +88,7 @@ async def search_game_memory(
 
         return result
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.error(f"[search_game_memory] 检索失败: {e}")
         return {
             'success': False,
@@ -112,7 +112,7 @@ def format_memory_report(result: Dict[str, Any], retriever: MemoryRetriever) -> 
     """
     try:
         return retriever.format_memories_for_report(result)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.error(f"[format_memory_report] 格式化失败: {e}")
         return f"报告生成失败: {str(e)}"
 

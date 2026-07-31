@@ -161,7 +161,7 @@ class ThinkingQueryTool(BaseTool):
             return await self._query_cognition(
                 user_id, limit, emoji, title, fmt_func, empty_msg
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error("思考记录查询失败: %s", e)
             return f"查询失败: {str(e)[:100]}"
 

@@ -355,7 +355,7 @@ class WebResearcher:
             logger.info(f"调研报告已保存: {output_path}")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"生成调研报告失败: {e}")
             return False
 

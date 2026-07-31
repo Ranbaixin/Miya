@@ -54,7 +54,7 @@ class QueryFriendsTool(BaseTool):
 
             return "\n".join(lines)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"获取好友列表失败: {e}")
             return f"获取好友列表失败: {str(e)[:50]}"
 
@@ -103,7 +103,7 @@ class QueryGroupsTool(BaseTool):
 
             return "\n".join(lines)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"获取群列表失败: {e}")
             return f"获取群列表失败: {str(e)[:50]}"
 

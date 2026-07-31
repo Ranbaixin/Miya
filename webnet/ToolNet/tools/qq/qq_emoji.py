@@ -554,7 +554,7 @@ class QQEmojiTool(BaseTool):
             else:
                 return f"❌ QQ表情发送失败: {result}"
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
             return f"❌ QQ表情发送失败: {str(e)}"
 
     async def _send_image_emoji(
@@ -672,7 +672,7 @@ class QQEmojiTool(BaseTool):
         except ImportError:
             # 表情包管理器未安装，只搜索QQ内置表情
             pass
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.warning(f"搜索图片表情包失败: {e}")
 
         # 合并结果
@@ -753,7 +753,7 @@ class QQEmojiTool(BaseTool):
                 else:
                     return f"❌ 随机QQ表情发送失败: {result}"
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
                 return f"❌ 随机QQ表情发送失败: {str(e)}"
 
         else:
@@ -1135,7 +1135,7 @@ class QQEmojiTool(BaseTool):
 
         except ImportError:
             return "❌ 表情包管理器未安装"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"消息分析失败: {e}")
             return f"❌ 消息分析失败: {str(e)}"
 

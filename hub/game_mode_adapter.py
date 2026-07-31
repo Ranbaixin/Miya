@@ -99,7 +99,7 @@ class GameModeAdapter(IGameModeAdapter):
                     'extra_config': mode.extra_config
                 }
             return None
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 读取模式失败降级返回空
             logger.error(f"[GameModeAdapter] 获取模式失败: {e}")
             return None
 
@@ -129,7 +129,7 @@ class GameModeAdapter(IGameModeAdapter):
                     'characters': save_data.characters
                 }
             return None
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 读取游戏记忆失败降级返回空
             logger.error(f"[GameModeAdapter] 获取游戏记忆失败: {e}")
             return None
 
@@ -151,7 +151,7 @@ class GameModeAdapter(IGameModeAdapter):
         try:
             history = self._game_memory_manager.get_conversation_history(game_id, max_tokens)
             return history
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 历史读取失败降级返回空列表
             logger.error(f"[GameModeAdapter] 获取对话历史失败: {e}")
             return []
 
@@ -171,7 +171,7 @@ class GameModeAdapter(IGameModeAdapter):
 
         try:
             return self._game_memory_manager.estimate_tokens(text)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 估算失败降级为简易估算
             logger.warning(f"[GameModeAdapter] Token估算失败,使用降级方案: {e}")
             return len(text) // 2 + len(text.split())
 
@@ -194,7 +194,7 @@ class GameModeAdapter(IGameModeAdapter):
 
         try:
             return self._game_memory_manager.estimate_conversation_history_tokens(messages)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 估算失败降级为简易估算
             logger.warning(f"[GameModeAdapter] 对话token估算失败: {e}")
             return self.estimate_tokens(' '.join([m.get('content', '') for m in messages]))
 
@@ -214,7 +214,7 @@ class GameModeAdapter(IGameModeAdapter):
 
         try:
             return await self._game_memory_manager.compress_old_messages(game_id)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 压缩失败降级返回失败态
             logger.error(f"[GameModeAdapter] 压缩对话失败: {e}")
             return False
 
@@ -247,7 +247,7 @@ class GameModeAdapter(IGameModeAdapter):
             return self._game_memory_manager.add_conversation_message(
                 game_id, role, content, player_id, player_name
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 写入失败返回 False 由调用方处理
             logger.error(f"[GameModeAdapter] 添加对话消息失败: {e}")
             return False
 
@@ -276,7 +276,7 @@ class GameModeAdapter(IGameModeAdapter):
                 game_id, player_id, is_admin
             )
             return [char.to_dict() for char in characters]
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 角色卡读取失败降级返回空
             logger.error(f"[GameModeAdapter] 获取角色卡失败: {e}")
             return []
 
@@ -321,7 +321,7 @@ class GameModeAdapter(IGameModeAdapter):
                             'extra_config': mode.extra_config
                         }
             return None
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 查找失败降级返回空
             logger.error(f"[GameModeAdapter] 查找用户游戏失败: {e}")
             return None
 
@@ -342,6 +342,6 @@ class GameModeAdapter(IGameModeAdapter):
 
         try:
             return self._game_mode_manager.filter_tools(all_tools, chat_id)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 过滤失败降级返回全量工具
             logger.error(f"[GameModeAdapter] 过滤工具失败: {e}")
             return all_tools

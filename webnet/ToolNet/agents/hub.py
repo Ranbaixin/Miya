@@ -40,7 +40,7 @@ class AgentInfo:
                             tool_config = json.load(f)
                             if "function" in tool_config:
                                 self.tools.append(tool_config)
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 - 已有日志兜底
                         logger.warning(f"加载工具配置失败 {tool_dir.name}: {e}")
 
     def get_tools_schema(self) -> List[Dict]:
@@ -222,7 +222,7 @@ class AgentHub:
 
             logger.info(f"[AgentHub] 已加载路由配置: {list(result.keys())}")
             return result
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.warning(f"[AgentHub] 加载路由配置失败: {e}")
             return None
 

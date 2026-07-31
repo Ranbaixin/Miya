@@ -99,7 +99,7 @@ class ArxivSearchTool(BaseTool):
 
             return "搜索失败，请稍后再试"
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"arXiv搜索失败: {e}")
             return f"搜索失败: {str(e)[:50]}"
 

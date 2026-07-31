@@ -257,7 +257,7 @@ class QQTTsHandler:
             await self.qq_net.onebot_client.send_group_message(group_id, message)
             logger.debug(f"[QQNet] 发送群消息: group={group_id}")
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志，返回 False 由调用方处理
             logger.error(f"[QQNet] 发送群消息失败: {e}")
             return False
 
@@ -312,7 +312,7 @@ class QQTTsHandler:
             await self.qq_net.onebot_client.send_private_message(user_id, message)
             logger.debug(f"[QQNet] 发送私聊消息: user={user_id}")
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志，返回 False 由调用方处理
             logger.error(f"[QQNet] 发送私聊消息失败: {e}")
             return False
 
@@ -329,7 +329,7 @@ class QQTTsHandler:
             # 直接发送
             return await self._send_tts_segment(group_id, text, is_group=True)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并回退到文本
             logger.error(f"[QQNet] 发送TTS群消息失败: {e}")
             # 回退到文本
             await self.qq_net.onebot_client.send_group_message(group_id, text)
@@ -348,7 +348,7 @@ class QQTTsHandler:
             # 直接发送
             return await self._send_tts_segment(user_id, text, is_group=False)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并回退到文本
             logger.error(f"[QQNet] 发送TTS私聊消息失败: {e}")
             # 回退到文本
             await self.qq_net.onebot_client.send_private_message(user_id, text)
@@ -389,7 +389,7 @@ class QQTTsHandler:
                         with open(wav_path, 'wb') as wav_file:
                             wav_file.write(wav_data)
                         logger.debug(f"[QQNet] 创建 WAV 文件用于本地播放: {wav_path}")
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 已记录警告日志，本地播放可选
                     logger.warning(f"[QQNet] 创建 WAV 失败: {e}")
                     wav_path = None
 
@@ -429,10 +429,10 @@ class QQTTsHandler:
                         os.unlink(tmp_path)
                     if wav_path and os.path.exists(wav_path):
                         os.unlink(wav_path)
-                except:
+                except OSError:  # noqa: S110 — 临时文件清理失败可忽略
                     pass
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志，返回 False 由调用方处理
             logger.error(f"[QQNet] 发送TTS语音片段失败: {e}")
             return False
 
@@ -441,7 +441,7 @@ class QQTTsHandler:
         try:
             if self.audio_player:
                 await self.audio_player.play(audio_path, self.local_playback_volume)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志，本地播放为尽力而为
             logger.error(f"[QQNet] 本地播放失败: {e}")
 
     def set_tts_mode(self, mode: str):

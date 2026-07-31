@@ -155,7 +155,7 @@ class QQImageHandler:
                     logger.info("[QQImageHandler] 表情包已自动保存")
             except ImportError:
                 pass
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录调试日志，自动保存为旁路功能
             logger.debug(f"[QQImageHandler] 自动保存表情包失败: {e}")
 
     def _extract_image_info(self, event: Dict) -> Optional[Dict[str, Any]]:
@@ -211,7 +211,7 @@ class QQImageHandler:
                     return None
 
             return None
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回空结果
             logger.error(f"[QQImageHandler] 下载图片失败: {e}")
             return None
 
@@ -245,7 +245,7 @@ class QQImageHandler:
             else:
                 return self._create_fallback_result(image_data)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并回退本地分析
             logger.error(f"[QQImageHandler] 视觉模型分析失败: {e}")
             return self._create_fallback_result(image_data)
 
@@ -288,7 +288,7 @@ class QQImageHandler:
                 "confidence": 0.3,
                 "api_call": False,
             }
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录调试日志并返回兜底结果
             logger.debug(f"[QQImageHandler] Fallback 分析也失败: {e}")
             return {
                 "success": False,
@@ -331,7 +331,7 @@ class QQImageHandler:
                 and hasattr(self.qq_net, "cache_manager")
             ):
                 self.qq_net.cache_manager.set_image_analysis(image_id, image_analysis)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录调试日志，缓存非关键
             logger.debug(f"[QQImageHandler] 缓存分析结果失败: {e}")
 
     def _cleanup_cache(self):

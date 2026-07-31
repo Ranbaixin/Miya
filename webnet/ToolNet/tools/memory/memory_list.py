@@ -42,7 +42,7 @@ def _load_config() -> Dict[str, Any]:
                 "defaults": tool_config.get("defaults", {}),
                 "self_memory_tags": self_config.get("self_memory_tags", []),
             }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.warning(f"[MemoryList] 加载配置失败: {e}")
 
     return {}

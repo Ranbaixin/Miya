@@ -47,6 +47,6 @@ async def execute(args: Dict[str, Any], context: Dict[str, Any]) -> str:
 
             return "暂无百度热搜数据"
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.error(f"获取百度热搜失败: {e}")
         return f"获取百度热搜失败: {str(e)[:50]}"

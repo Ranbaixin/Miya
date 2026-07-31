@@ -102,7 +102,7 @@ class ModelManagementTool(BaseTool):
             else:
                 self.logger.warning(f"配置文件不存在: {config_path}")
                 return {}
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             self.logger.error(f"加载配置文件失败: {e}")
             return {}
 
@@ -168,7 +168,7 @@ class ModelManagementTool(BaseTool):
             result += f"总计: {len(models_config)} 个模型"
             return result
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
             return f"❌ 获取模型列表失败: {str(e)}"
 
     async def _get_model_info(self, args: Dict[str, Any]) -> str:
@@ -220,7 +220,7 @@ class ModelManagementTool(BaseTool):
             result += f"总计: {len(strategies)} 种任务类型"
             return result
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
             return f"❌ 获取路由策略失败: {str(e)}"
 
     async def _get_strategy(self, args: Dict[str, Any]) -> str:

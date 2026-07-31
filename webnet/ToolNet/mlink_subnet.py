@@ -117,7 +117,7 @@ class PerceptionLayer:
                         # emotion 是一个对象，直接使用
                         result.emotion = str(context.emotion)
                         result.context['emotion'] = result.emotion
-                except Exception as emotion_error:
+                except Exception as emotion_error:  # noqa: BLE001 - 已有日志兜底
                     self.logger.warning(f"获取情绪信息失败: {emotion_error}")
                     # 不影响工具执行，继续处理
 
@@ -144,7 +144,7 @@ class PerceptionLayer:
 
             self.logger.debug(f"感知层预处理完成: {tool_name}, 风险: {result.risk_level:.2f}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             self.logger.error(f"感知层预处理失败: {e}")
             result.passed = False
             result.message = f"❌ 感知层处理失败: {e}"

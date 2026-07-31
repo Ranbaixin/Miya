@@ -144,7 +144,7 @@ class WorkflowEngine:
                    for ne in execution.node_executions.values()):
                 execution.status = NodeStatus.COMPLETED
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 合理兜底
             execution.status = NodeStatus.FAILED
             logger.error(f"工作流执行失败: {execution.execution_id}, 错误: {e}")
         finally:

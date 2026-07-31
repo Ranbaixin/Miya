@@ -85,5 +85,5 @@ class PythonInterpreter(BaseTool):
             else:
                 return "代码执行完成，无输出"
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 工具兜底返回错误
             return f"执行错误: {str(e)}"

@@ -86,6 +86,6 @@ Tavily 返回结构化、干净的搜索结果，适合 AI 阅读。
             else:
                 return f"Tavily 搜索失败: {result.get('error', '未知错误')}"
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"[TavilySearch] 执行失败: {e}")
             return f"Tavily 搜索执行失败: {e}"

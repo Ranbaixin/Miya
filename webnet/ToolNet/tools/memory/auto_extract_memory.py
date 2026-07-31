@@ -92,7 +92,7 @@ class AutoExtractMemory(BaseTool):
 
                 return f"✅ 已记住：{fact}\n   标签: {', '.join(tags)}"
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - 已有日志兜底
                 logger.warning(f"MiyaMemoryCore 存储失败，尝试旧系统: {e}")
 
             # 方法2: 写入 Undefined 轻量记忆系统

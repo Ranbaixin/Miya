@@ -44,7 +44,7 @@ def setup_chinese_font():
 
         logger.warning("未找到中文字体，使用默认字体")
         return None
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.error(f"设置中文字体失败: {e}")
         return None
 
@@ -123,7 +123,7 @@ class ChartGenerator(BaseTool):
         try:
             plt.style.use(style)
             logger.info(f"图表样式设置为: {style}")
-        except:
+        except (ValueError, TypeError):
             plt.style.use('default')
             logger.warning(f"样式 {style} 不存在，使用默认样式")
 
@@ -475,6 +475,6 @@ def generate_chart(
             "chart_path": result_path,
             "chart_type": chart_type
         }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.error(f"生成图表失败: {e}")
         return {"success": False, "error": str(e)}

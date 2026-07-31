@@ -519,7 +519,7 @@ def generate_report_command(
             "内容长度": len(content)
         }
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.error(f"保存报告失败: {e}")
         return {
             "success": False,

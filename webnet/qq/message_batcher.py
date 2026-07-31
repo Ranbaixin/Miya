@@ -199,7 +199,7 @@ class MessageBatcher:
                             await self.send_status_callback(
                                 group_id, self.status_message
                             )
-                        except Exception as e:
+                        except Exception as e:  # noqa: BLE001 — 已记录警告日志，状态提示非关键
                             logger.warning(f"[消息汇总] 发送状态提示失败: {e}")
 
                 # 启动计时器
@@ -229,7 +229,7 @@ class MessageBatcher:
 
         except asyncio.CancelledError:
             pass
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志
             logger.error(f"[消息汇总] 窗口计时器异常: {e}")
 
     async def _flush_window(self, group_key: str):

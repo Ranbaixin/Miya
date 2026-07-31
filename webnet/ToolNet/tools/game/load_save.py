@@ -84,7 +84,7 @@ class LoadSave(BaseTool):
                     try:
                         dt = datetime.fromisoformat(created_at)
                         created_at = dt.strftime('%Y-%m-%d %H:%M:%S')
-                    except:
+                    except (ValueError, TypeError):  # noqa: S110 - 时间解析兜底
                         pass
 
                 result = "✅ **存档加载成功**\n\n"
@@ -130,7 +130,7 @@ class LoadSave(BaseTool):
                 safe_state = StateTransitionValidator.reset_to_safe_state(current_state)
                 mode_manager.set_game_state(chat_id, safe_state)
                 instance_manager.get_instance(chat_id).record_error()
-            except:
+            except Exception:  # noqa: S110, BLE001 - 错误恢复兜底
                 pass
 
             return f"⚠️ 加载存档时发生错误: {e}"

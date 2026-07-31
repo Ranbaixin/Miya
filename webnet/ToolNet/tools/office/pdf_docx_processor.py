@@ -40,7 +40,7 @@ class PDFDocxProcessor:
             else:
                 logger.error("旧版.doc文件暂不支持，请转换为.docx")
                 return None
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 已有日志兜底
             logger.error(f"加载文件失败: {e}")
             return None
 

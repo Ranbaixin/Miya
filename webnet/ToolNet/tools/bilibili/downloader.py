@@ -71,7 +71,7 @@ async def get_video_info(bvid: str, cookie: str = "") -> Optional[VideoInfo]:
                 cid=info.get("cid", 0),
                 avid=info.get("aid", 0),
             )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.error(f"[B站] 获取视频信息异常: {e}")
         return None
 
@@ -108,7 +108,7 @@ async def get_download_url(
                     "size": durl[0].get("size", 0),
                     "length": durl[0].get("length", 0),
                 }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.error(f"[B站] 获取下载链接异常: {e}")
 
     return None

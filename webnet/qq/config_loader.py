@@ -64,7 +64,7 @@ class QQConfigLoader:
             self.initialized = True
             return True
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并回退默认配置
             logger.error(f"加载QQ配置失败: {e}")
             self.config = self._get_default_config()
             self.initialized = True
@@ -214,7 +214,7 @@ class QQConfigLoader:
             logger.info(f"QQ配置已保存到: {self.config_path}")
             return True
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 已记录日志并返回 False
             logger.error(f"保存QQ配置失败: {e}")
             return False
 

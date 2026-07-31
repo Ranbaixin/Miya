@@ -47,6 +47,6 @@ async def execute(args: Dict[str, Any], context: Dict[str, Any]) -> str:
             else:
                 return f"查询失败: HTTP {resp.status_code}"
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 已有日志兜底
         logger.error(f"查询QQ等级失败: {e}")
         return f"查询QQ等级暂时不可用: {str(e)[:50]}"
