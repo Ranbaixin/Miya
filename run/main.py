@@ -816,7 +816,8 @@ class Miya:
     async def ashutdown(self) -> None:
         """异步关闭系统 —— 在运行中的事件循环内调用。"""
         self.logger.info("弥娅系统正在关闭...")
-        import asyncio, contextlib
+        import asyncio
+        import contextlib
 
         async def _safe_close(name: str, close_fn) -> None:
             """关闭子系统，兼容同步/异步，wait_for 10s 防挂死（P7.1）"""

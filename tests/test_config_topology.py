@@ -26,15 +26,6 @@ def test_only_one_platforms_config():
 
 def test_config_entrypoints_frozen():
     """配置入口集合被冻结; 新增入口必须显式改这个测试."""
-    hits = sorted(
-        p.relative_to(ROOT).as_posix()
-        for p in ROOT.rglob("*.py")
-        if any(
-            p.name in {f.rsplit("/", 1)[-1]} for f in ALLOWED_CONFIG_ENTRIES
-        )
-        and "venv" not in str(p)
-        and "__pycache__" not in str(p)
-    )
     # 只验证主要入口存在
     for entry in ALLOWED_CONFIG_ENTRIES:
         full = ROOT / entry

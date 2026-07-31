@@ -1250,7 +1250,8 @@ class MiyaMemoryCore:
         self._cache[memory.id] = memory
         if len(self._cache) > 5000:
             old_keys = sorted(self._cache, key=lambda k: self._cache[k].access_count)[:2500]
-            for k in old_keys: del self._cache[k]
+            for k in old_keys:
+                del self._cache[k]
         self._user_index[user_id].add(memory.id)
         for tag in memory.tags:
             self._tag_index[tag].add(memory.id)

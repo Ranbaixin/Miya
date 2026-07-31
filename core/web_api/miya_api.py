@@ -1549,7 +1549,6 @@ class MiyaAPI:
                 # Platform 配置
                 if config_type == "platform" or "platform" in config:
                     platform_config = config.get("platform", config)
-                    plat_path = Path("config/platforms_config.py")
                     logger.info(f"[MiyaAPI] Platform 配置更新: {list(platform_config.keys()) if isinstance(platform_config, dict) else '非dict'}")
                     saved.append("platform")
 
@@ -2599,7 +2598,9 @@ class MiyaAPI:
                 models = pool._models if hasattr(pool, "_models") else {}
 
                 # 获取启动时间 (用进程创建时间代替假数据)
-                import time, psutil
+                import time
+                import psutil
+
                 start_time = int(psutil.Process().create_time())
 
                 return {
