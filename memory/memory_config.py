@@ -38,7 +38,7 @@ def load_memory_config(force_reload: bool = False) -> Dict[str, Any]:
         else:
             logger.warning(f"[MemoryConfig] 配置文件不存在: {config_path}")
             _CACHE = {}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — 软加载：配置损坏时回退空字典，各模块用自带默认值
         logger.error(f"[MemoryConfig] 加载失败: {e}")
         _CACHE = {}
 

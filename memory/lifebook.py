@@ -61,7 +61,7 @@ class LifeBook:
             try:
                 with open(self._index_file, "r", encoding="utf-8") as f:
                     return json.load(f)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 索引损坏时从空索引重建
                 logger.warning(f"[LifeBook] 加载索引失败: {e}")
         return {}
 
@@ -70,7 +70,7 @@ class LifeBook:
         try:
             with open(self._index_file, "w", encoding="utf-8") as f:
                 json.dump(self._index, f, ensure_ascii=False, indent=2)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 索引为辅助元数据，日记正文已写入
             logger.error(f"[LifeBook] 保存索引失败: {e}")
 
     def _get_date_key(self, dt: Optional[datetime] = None) -> str:
@@ -386,7 +386,7 @@ class LifeBook:
 
             logger.info(f"[LifeBook] 每日总结已生成: {date_key}")
             return summary
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 总结生成失败返回 None，不阻塞调用方
             logger.warning(f"[LifeBook] 生成每日总结失败: {e}")
             return None
 
@@ -436,7 +436,7 @@ class LifeBook:
 
             logger.info(f"[LifeBook] 周总结已生成: {year} W{week_num:02d}")
             return str(week_file)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 周总结生成失败返回 None，可下轮重试
             logger.warning(f"[LifeBook] 生成周总结失败: {e}")
             return None
 
@@ -488,7 +488,7 @@ class LifeBook:
 
             logger.info(f"[LifeBook] 月总结已生成: {year}-{month}")
             return str(month_file)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 月总结生成失败返回 None，可下轮重试
             logger.warning(f"[LifeBook] 生成月总结失败: {e}")
             return None
 
@@ -551,7 +551,7 @@ class LifeBook:
             )
 
             return summary or "（生成失败）"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — AI 调用失败返回占位文案，不中断流程
             logger.warning(f"[LifeBook] AI 调用失败: {e}")
             return f"（生成失败: {e}）"
 
@@ -644,7 +644,7 @@ class LifeBook:
                                 "preview": content[:200] + "...",
                             }
                         )
-                except:
+                except (OSError, ValueError):  # noqa: S110 — 跳过损坏/不可读的日记文件
                     pass
 
         return results[:limit]

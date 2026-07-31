@@ -90,7 +90,7 @@ class DiscordPlatform(MessageMixin, BasePlatform):
         if self._client:
             try:
                 await self._client.close()
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — Level 3：断开清理 best-effort，失败仅记日志
                 logger.warning(f"[{self.platform_id}] 断开异常: {e}")
         self._client = None
 

@@ -70,7 +70,7 @@ class SemanticDynamicsEngine:
                 return await self.embedding_client.encode(text)
             elif hasattr(self.embedding_client, "get_embedding"):
                 return await self.embedding_client.get_embedding(text)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 嵌入失败降级为模拟向量，保证功能可用
             logger.warning(f"计算嵌入失败: {e}")
 
         return self._generate_mock_vector(text)
@@ -110,7 +110,7 @@ class SemanticDynamicsEngine:
                     top_k=top_k,
                 )
                 return [r for r in results if r.get("distance", 0) >= threshold]
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 搜索失败返回空结果，不影响调用方
                 logger.warning(f"向量搜索失败: {e}")
 
         return []

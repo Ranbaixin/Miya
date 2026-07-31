@@ -51,7 +51,7 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
             )
             logger.info(f"[qqofficial] 主动私聊消息 -> {user_id}: {message[:30]}")
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — Level 2：主动发送失败返回 False，由决策层回退其他平台，已记日志
             logger.error(f"[qqofficial] 主动私聊消息失败: {e}")
             return False
 
@@ -68,7 +68,7 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
             )
             logger.info(f"[qqofficial] 主动群聊消息 -> {group_id}: {message[:30]}")
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — Level 2：主动发送失败返回 False，由决策层回退其他平台，已记日志
             logger.error(f"[qqofficial] 主动群聊消息失败: {e}")
             return False
 
@@ -140,7 +140,7 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
                                     content=chunk,
                                     msg_seq=platform._next_msg_seq(),
                                 )
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — Level 2：单条消息处理失败不中断 bot 连接，已记日志
                     logger.error(f"[qqofficial] 消息处理异常: {e}")
 
             async def _do_handle_group(msg):
@@ -178,7 +178,7 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
                                     msg_seq=platform._next_msg_seq(),
                                 )
                             await asyncio.sleep(0.3)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — Level 2：单条群消息处理失败不中断连接，已记日志
                     logger.error(f"[qqofficial] 群消息处理异常: {e}")
 
             self._bot_client = _MiyaBotClient(intents=intents, is_sandbox=self.sandbox)
@@ -191,7 +191,7 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
                     await self._bot_client.start(**params)
                 except asyncio.CancelledError:
                     pass
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — Level 2：Bot 运行异常由健康检查/自动重连兜底，已记日志
                     logger.error(f"[qqofficial] Bot 运行异常: {e}")
 
             self._bot_task = asyncio.create_task(run_bot())
@@ -243,7 +243,7 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
                     url=file_uri,
                 )
             logger.info("[qqofficial] 语音消息已发送")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — Level 2：语音发送失败降级为文字，已记日志
             logger.warning(f"[qqofficial] 语音发送失败: {e}，回退文字")
             return False
         import asyncio as _asyncio

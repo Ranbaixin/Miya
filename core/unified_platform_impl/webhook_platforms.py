@@ -64,7 +64,7 @@ class LarkPlatform(WebhookPlatform):
                                 content, user_id, chat_id, msg_type
                             )
                         )
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — Level 2：SDK 回调解析失败仅记日志，上抛会中断长连接
                     logger.warning(f"[lark] 消息异常: {e}")
 
             handler = (
@@ -130,7 +130,7 @@ class LarkPlatform(WebhookPlatform):
                     .build()
                 )
                 client.im.v1.message.create(req)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — Level 2：回复失败仅记日志，fire-and-forget 任务无上层兜底
                 logger.warning(f"[lark] 回复失败: {e}")
 
     async def _do_disconnect(self):
@@ -176,7 +176,7 @@ class KOOKPlatform(WebhookPlatform):
                         message_type=channel_type if channel_type else "private",
                     )
                     return {"code": 0}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — Level 2：webhook 解析失败仅记日志，返回确认包避免平台重试
                 logger.warning(f"[kook] webhook error: {e}")
             return {"code": 0}
 
@@ -222,7 +222,7 @@ class SlackPlatform(WebhookPlatform):
                         group_id=channel,
                     )
                 return {"ok": True}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — Level 2：webhook 解析失败仅记日志，返回确认包避免平台重试
                 logger.warning(f"[slack] webhook error: {e}")
                 return {"ok": True}
 
@@ -263,7 +263,7 @@ class LINEPlatform(WebhookPlatform):
                             user_id=str(user_id),
                             message_type=msg_type,
                         )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — Level 2：webhook 解析失败仅记日志，返回确认包避免平台重试
                 logger.warning(f"[line] webhook error: {e}")
             return {"status": "ok"}
 
@@ -300,7 +300,7 @@ class DingTalkPlatform(WebhookPlatform):
                         message_type="private",
                     )
                     return {"msgtype": "text", "text": {"content": response}}
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — Level 2：webhook 解析失败仅记日志，返回确认包避免平台重试
                 logger.warning(f"[dingtalk] webhook error: {e}")
             return {"errcode": 0}
 
@@ -342,7 +342,7 @@ class SatoriPlatform(WebhookPlatform):
                         user_id=str(user_id),
                         message_type="private",
                     )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — Level 2：webhook 解析失败仅记日志，返回确认包避免平台重试
                 logger.warning(f"[satori] webhook error: {e}")
             return {"code": 0}
 

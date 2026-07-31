@@ -103,7 +103,7 @@ class TelegramPlatform(MessageMixin, BasePlatform):
             try:
                 await self._app.stop()
                 await self._app.shutdown()
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — Level 3：断开清理 best-effort，失败仅记日志
                 logger.warning(f"[{self.platform_id}] 断开异常: {e}")
         self._app = None
 

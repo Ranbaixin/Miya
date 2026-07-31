@@ -235,7 +235,7 @@ async def store_cognition(
         # 写回文件
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(existing_data, f, ensure_ascii=False, indent=2)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — 辅助可视化备份失败不影响主存储
         logger.debug(f"[认知记忆] JSON备份失败: {e}")
 
     return memory_id

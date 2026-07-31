@@ -631,7 +631,7 @@ class WorkingMemoryManager:
                 session_id = self._find_session_file_for_user(user_id)
                 if session_id:
                     return self._try_load_history(session_id)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 历史消息加载失败返回空，可降级处理
             logger.debug(f"[工作记忆] 加载历史消息失败 ({group_id}): {e}")
         return []
 
@@ -663,7 +663,7 @@ class WorkingMemoryManager:
                 result.append(f"{sender}: {content[:80]}" if sender else content[:80])
 
             return result
-        except Exception:
+        except Exception:  # noqa: BLE001 — 会话历史读取失败返回空列表
             return []
 
     def _get_topic_history_for(self, group_id: str) -> list:
@@ -678,7 +678,7 @@ class WorkingMemoryManager:
             with open(topic_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
             return data.get("topic_history", {}).get(group_id, [])
-        except Exception:
+        except Exception:  # noqa: BLE001 — 话题历史读取失败返回空列表
             return []
 
     def _get_last_message_time_from_disk(self, group_id: str) -> float:
@@ -694,8 +694,8 @@ class WorkingMemoryManager:
                 result = self._scan_sessions_for_user(user_id)
                 if result > 0:
                     return result
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001 — 时间推断失败返回0，不阻塞上下文构建
+            logger.debug(f"[工作记忆] 推断最后活跃时间失败 ({group_id}): {e}")
         return 0.0
 
     def _try_get_time_from_disk(self, session_id: str) -> float:
@@ -720,11 +720,11 @@ class WorkingMemoryManager:
                         from datetime import datetime
 
                         return datetime.fromisoformat(last_ts).timestamp()
-            except Exception:
+            except (OSError, ValueError, TypeError):  # noqa: S110 — 时间戳解析失败降级用文件修改时间
                 pass
 
             return file_path.stat().st_mtime
-        except Exception:
+        except Exception:  # noqa: BLE001 — 读取会话文件失败返回0
             return 0.0
 
     def _scan_sessions_for_user(self, user_id: str) -> float:
@@ -757,11 +757,11 @@ class WorkingMemoryManager:
                         t = datetime.fromisoformat(last_ts).timestamp()
                         if t > best_time:
                             best_time = t
-                except Exception:
+                except Exception:  # noqa: S112, BLE001 — 跳过损坏的会话文件继续扫描
                     continue
 
             return best_time
-        except Exception:
+        except Exception:  # noqa: BLE001 — 扫描失败返回0
             return 0.0
 
     def _find_session_file_for_user(self, user_id: str) -> str:
@@ -782,10 +782,10 @@ class WorkingMemoryManager:
                     sid = messages[0].get("session_id", "")
                     if sid.endswith(f"_{user_id}") or sid.endswith(f"_用户-{user_id}"):
                         return sid
-                except Exception:
+                except Exception:  # noqa: S112, BLE001 — 跳过损坏的会话文件继续扫描
                     continue
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001 — 扫描失败返回空，调用方可降级
+            logger.debug(f"[工作记忆] 查找会话文件失败 ({user_id}): {e}")
         return ""
 
     def get_full_context(self, group_id: str) -> Dict:
@@ -873,7 +873,7 @@ class WorkingMemoryManager:
             # 不在这里过滤休眠状态——phase 判断在 build_prompt_context 时进行
             if loaded > 0:
                 logger.info(f"[工作记忆] 加载了 {loaded} 个会话状态")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 会话状态加载失败时以空状态启动
             logger.warning(f"[工作记忆] 加载失败: {e}")
 
     def _schedule_save(self):
@@ -925,7 +925,7 @@ class WorkingMemoryManager:
             with open(self._persist_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             logger.debug(f"[工作记忆] 已保存 {len(data['states'])} 个群的上下文")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 防抖后台保存失败仅告警，不打断调用链
             logger.warning(f"[工作记忆] 保存失败: {e}")
 
 

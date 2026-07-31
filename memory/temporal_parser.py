@@ -34,7 +34,7 @@ def _load_config() -> dict:
             with open(config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
             return config.get("temporal_parser", {})
-    except Exception:
+    except (OSError, ValueError):  # noqa: S110 — 配置缺失/损坏时跳过，使用内置时间范围
         pass
     return {}
 

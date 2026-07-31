@@ -241,7 +241,7 @@ class MemoryItem:
             return False
         try:
             return datetime.now() > datetime.fromisoformat(self.expires_at)
-        except:
+        except (ValueError, TypeError):
             return False
 
     def is_valid(self) -> bool:
@@ -398,7 +398,7 @@ class JsonBackend(MemoryBackend):
             try:
                 with open(self.index_file, "r", encoding="utf-8") as f:
                     self._index = json.load(f)
-            except Exception as e:
+            except (OSError, ValueError) as e:
                 logger.warning(f"加载索引失败: {e}")
                 self._index = {}
 
@@ -406,7 +406,7 @@ class JsonBackend(MemoryBackend):
         try:
             with open(self.index_file, "w", encoding="utf-8") as f:
                 json.dump(self._index, f, ensure_ascii=False, indent=2)
-        except Exception as e:
+        except (OSError, TypeError) as e:
             logger.error(f"保存索引失败: {e}")
 
     def _load_tag_index(self):
@@ -416,7 +416,7 @@ class JsonBackend(MemoryBackend):
                     data = json.load(f)
                     for tag, ids in data.items():
                         self._tag_index[tag] = set(ids)
-            except Exception as e:
+            except (OSError, ValueError) as e:
                 logger.warning(f"加载倒排索引失败: {e}")
 
     def _save_tag_index(self):
@@ -424,7 +424,7 @@ class JsonBackend(MemoryBackend):
             data = {tag: list(ids) for tag, ids in self._tag_index.items()}
             with open(self.tag_index_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False)
-        except Exception as e:
+        except (OSError, TypeError) as e:
             logger.error(f"保存倒排索引失败: {e}")
 
     def _cleanup_stale_entries(self):
@@ -512,7 +512,7 @@ class JsonBackend(MemoryBackend):
                     self._tag_dirty = False
 
                 return True
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 后端边界：保存失败降级返回 False，由调用方感知
                 logger.error(f"保存记忆失败: {e}")
                 return False
 
@@ -555,7 +555,7 @@ class JsonBackend(MemoryBackend):
                         return None
                     data = json.loads(content)
                     return MemoryItem.from_dict(data)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 后端边界：加载失败降级返回 None
                 logger.error(f"加载记忆失败: {e}")
             return None
 
@@ -579,7 +579,7 @@ class JsonBackend(MemoryBackend):
                 self._save_tag_index()
                 self._invalidate_cache()
                 return True
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 后端边界：删除失败降级返回 False
                 logger.error(f"删除记忆失败: {e}")
                 return False
 
@@ -629,7 +629,8 @@ class JsonBackend(MemoryBackend):
 
                         if self._match_query(memory, query):
                             results.append(memory)
-                except:
+                except (OSError, ValueError):
+                    # noqa: S112 — 单条记忆文件损坏/读取失败时跳过，不中断整次查询
                     continue
 
         results = self._sort_results(results, query.sort_by, query.sort_order)
@@ -704,7 +705,8 @@ class JsonBackend(MemoryBackend):
                     return False
                 if query.end_time and mem_time > query.end_time:
                     return False
-            except:
+            except (TypeError, ValueError):
+                # noqa: S110 — 时间解析失败，跳过该时间过滤条件
                 pass
 
         # 归档过滤
@@ -849,7 +851,8 @@ class MiyaMemoryCore:
                 self._config = config["auto_classify"]
             else:
                 self._config = self._get_default_classify_config()
-        except Exception:
+        except (ImportError, OSError, ValueError) as e:
+            logger.debug(f"[MiyaMemoryCore] 分类配置加载失败，使用默认配置: {e}")
             self._config = self._get_default_classify_config()
 
     def _get_default_classify_config(self):
@@ -921,7 +924,7 @@ class MiyaMemoryCore:
 
                 self._enhancer = MemoryEnhancer()
                 logger.info("[MiyaMemoryCore] MemoryEnhancer 已启用")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 可选增强器：不可用时降级为 None
                 logger.debug(f"[MiyaMemoryCore] MemoryEnhancer 不可用: {e}")
                 self._enhancer = None
         return self._enhancer
@@ -948,7 +951,7 @@ class MiyaMemoryCore:
                 logger.warning(
                     "[MiyaMemoryCore] SQLite 后端未启用，检查 text_config.json"
                 )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 可选后端：SQLite 不可用不影响主流程
             logger.debug(f"[MiyaMemoryCore] SQLite 后端初始化失败（不影响运行）: {e}")
 
         # 初始化真实 Embedding 客户端（绕过配置，直接使用模型池）
@@ -1013,7 +1016,7 @@ class MiyaMemoryCore:
                 fallback_name, "[MiyaMemoryCore] Embedding 使用 fallback: "
             ):
                 return
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 可选功能：Embedding 不可用回退伪向量
             logger.warning(
                 "[MiyaMemoryCore] Embedding 客户端初始化失败，使用伪向量回退: %s", e
             )
@@ -1121,7 +1124,7 @@ class MiyaMemoryCore:
             else:
                 logger.info("[MiyaMemoryCore] 记忆锚点无需更新")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 锚点同步为启动附加操作，失败不阻断初始化
             logger.warning(f"[MiyaMemoryCore] 记忆锚点加载失败: {e}")
 
     # ==================== 核心存储方法 ====================
@@ -1183,7 +1186,7 @@ class MiyaMemoryCore:
         if isinstance(level, str):
             try:
                 level = MemoryLevel(level)
-            except:
+            except ValueError:
                 level = MemoryLevel.SHORT_TERM
         elif level is None:
             level = MemoryLevel.SHORT_TERM
@@ -1192,7 +1195,7 @@ class MiyaMemoryCore:
         if isinstance(source, str):
             try:
                 source = MemorySource(source)
-            except:
+            except ValueError:
                 source = MemorySource.SYSTEM
 
         # 自动分类
@@ -1240,7 +1243,7 @@ class MiyaMemoryCore:
         if self.sqlite_backend:
             try:
                 await self.sqlite_backend.save(memory)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — SQLite 双写为增强，JSON 为主存储
                 logger.debug(f"[MiyaMemoryCore] SQLite 写入失败（不影响运行）: {e}")
 
         # 更新缓存和索引
@@ -1274,7 +1277,7 @@ class MiyaMemoryCore:
             try:
                 recent = list(self._cache.values())[-20:]  # 最近20条
                 await enhancer.analyze_and_link(memory, recent)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 可选功能：链接挖掘失败不影响存储
                 logger.debug(f"[MiyaMemoryCore] MemoryEnhancer 链接失败: {e}")
 
         # 批量写入索引（每50次store或超时批量flush）
@@ -1495,7 +1498,7 @@ class MiyaMemoryCore:
             if self.sqlite_backend:
                 try:
                     backend_results = await self.sqlite_backend.query(q)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — SQLite 查询失败回退 JSON 是设计行为
                     logger.debug(f"[MiyaMemoryCore] SQLite 查询失败，回退 JSON: {e}")
                     backend_results = await self.backend.query(q)
             else:
@@ -1545,8 +1548,8 @@ class MiyaMemoryCore:
             try:
                 sqlite_count = await self.sqlite_backend.count()
                 by_level_db = await self.sqlite_backend.count_by_level()
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001 — 统计为 best-effort，失败不影响主流程
+                logger.debug(f"[MiyaMemoryCore] SQLite 统计查询失败: {e}")
 
         return {
             "total_cached": len(self._cache),
@@ -1649,7 +1652,8 @@ class MiyaMemoryCore:
                     return False
                 if query.end_time and mem_time > query.end_time:
                     return False
-            except Exception:
+            except (TypeError, ValueError):
+                # noqa: S110 — 时间解析失败，跳过该时间过滤条件
                 pass
         return True
 
@@ -1806,7 +1810,7 @@ class MiyaMemoryCore:
         if self.sqlite_backend:
             try:
                 await self.sqlite_backend.save(memory)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — SQLite 双写为增强，失败不影响主存储
                 logger.debug(f"[MiyaMemoryCore] update 同步 SQLite 失败: {e}")
         self._cache[memory_id] = memory
 
@@ -1874,7 +1878,7 @@ class MiyaMemoryCore:
                             for tag in memory.tags:
                                 self._tag_index[tag].discard(memory.id)
                             count += 1
-                    except Exception:
+                    except Exception:  # noqa: S112, BLE001 — 清理路径：损坏记忆文件跳过
                         continue
 
             # 保存更新后的索引
@@ -1897,12 +1901,15 @@ class MiyaMemoryCore:
 
             try:
                 created = datetime.fromisoformat(memory.created_at)
-                if created < cutoff:
-                    memory.is_archived = True
-                    await self.backend.save(memory)
-                    count += 1
-            except:
-                pass
+            except (TypeError, ValueError):
+                continue  # 时间戳异常的记忆跳过归档
+            if created < cutoff:
+                memory.is_archived = True
+                # Level 1 上抛：归档写盘失败必须暴露，禁止静默成功
+                if not await self.backend.save(memory):
+                    logger.error(f"[MiyaMemoryCore] 归档写盘失败: {memory.id}")
+                    raise RuntimeError(f"归档写盘失败: {memory.id}")
+                count += 1
 
         logger.info(f"[MiyaMemoryCore] 归档了 {count} 条旧对话")
         return count
@@ -1933,7 +1940,7 @@ class MiyaMemoryCore:
                     metadata=memory.metadata,
                 )
                 memory_ids.append(memory_id)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 批量接口：单条失败以空 ID 标记，不中断批次
                 logger.warning(f"[MiyaMemoryCore] 批量存储失败: {e}")
                 memory_ids.append("")
         return memory_ids
@@ -1953,7 +1960,7 @@ class MiyaMemoryCore:
             try:
                 if await self.delete(memory_id):
                     count += 1
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 批量接口：单条失败计入未删除，不中断批次
                 logger.warning(f"[MiyaMemoryCore] 批量删除失败: {e}")
         return count
 
@@ -1966,7 +1973,7 @@ class MiyaMemoryCore:
                 try:
                     await self.delete_expired()
                     await self.decay_low_priority_memories(days=90, threshold=0.3)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 后台清理循环必须存活，异常仅记日志
                     logger.warning(f"[MiyaMemoryCore] 清理任务异常: {e}")
                 await asyncio.sleep(interval)
 
@@ -1992,33 +1999,33 @@ class MiyaMemoryCore:
         all_ids = await self.backend.get_all_ids()
 
         for memory_id in all_ids[:1000]:  # 每次处理最多1000条
+            memory = await self.get_by_id(memory_id)
+            if not memory:
+                continue
+
+            # 只处理低优先级的长期记忆
+            if memory.level != MemoryLevel.LONG_TERM:
+                continue
+            if memory.priority >= threshold:
+                continue
+
+            # 检查最后访问时间
+            last_access = getattr(memory, "last_accessed", None)
+            if not last_access:
+                continue
+
             try:
-                memory = await self.get_by_id(memory_id)
-                if not memory:
-                    continue
-
-                # 只处理低优先级的长期记忆
-                if memory.level != MemoryLevel.LONG_TERM:
-                    continue
-                if memory.priority >= threshold:
-                    continue
-
-                # 检查最后访问时间
-                last_access = getattr(memory, "last_accessed", None)
-                if not last_access:
-                    continue
-
-                try:
-                    last_time = datetime.fromisoformat(last_access)
-                    if (datetime.now() - last_time).days >= days:
-                        # 降低优先级
-                        memory.priority = max(0.1, memory.priority - 0.1)
-                        await self.backend.save(memory)
-                        count += 1
-                except:
-                    pass
-            except:
-                pass
+                last_time = datetime.fromisoformat(last_access)
+            except (TypeError, ValueError):
+                continue  # 时间戳异常的记忆跳过衰减
+            if (datetime.now() - last_time).days >= days:
+                # 降低优先级
+                memory.priority = max(0.1, memory.priority - 0.1)
+                # Level 1 上抛：衰减写盘失败必须暴露，禁止静默成功
+                if not await self.backend.save(memory):
+                    logger.error(f"[MiyaMemoryCore] 衰减写盘失败: {memory.id}")
+                    raise RuntimeError(f"衰减写盘失败: {memory.id}")
+                count += 1
 
         if count > 0:
             logger.info(f"[MiyaMemoryCore] 优先级衰减了 {count} 条记忆")
@@ -2122,11 +2129,11 @@ class MiyaMemoryCore:
                 if self.sqlite_backend:
                     try:
                         await self.sqlite_backend.save(memory)
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 — SQLite 双写失败不影响 JSON 主存储
                         logger.debug(f"[MiyaMemoryCore] SQLite 向量同步失败: {e}")
 
                 logger.debug(f"[MiyaMemoryCore] 向量生成并同步成功: {memory.id}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 向量为可选增强，失败仅回退伪向量
             logger.warning(f"[MiyaMemoryCore] 向量生成失败: {e}")
 
     async def _backup_memory(self, memory: MemoryItem):
@@ -2164,7 +2171,7 @@ class MiyaMemoryCore:
 
                 # 清理超过8周的旧备份文件
                 self._cleanup_old_backups(backup_dir)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 备份为增强路径，失败不阻断存储主流程
                 logger.warning(f"[MiyaMemoryCore] 备份失败: {e}")
 
     def _cleanup_old_backups(self, backup_dir: Path):
@@ -2195,7 +2202,7 @@ class MiyaMemoryCore:
                             f.unlink()
                 except (ValueError, IndexError):
                     pass
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 清理路径：备份清理失败仅记日志
             logger.warning(f"[MiyaMemoryCore] 备份清理失败: {e}")
 
     async def close(self) -> None:
@@ -2203,8 +2210,8 @@ class MiyaMemoryCore:
         # 1. 刷盘脏索引
         try:
             self._flush_index()
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001 — 关闭路径：刷盘失败不阻断关闭
+            logger.warning(f"[MiyaMemoryCore] 关闭时刷盘失败: {e}")
 
         # 2. 关闭 JsonBackend / SQLiteBackend（释放文件锁，否则 Windows 下临时目录清理失败）
         for backend in (getattr(self, "backend", None), getattr(self, "sqlite_backend", None)):
@@ -2212,8 +2219,8 @@ class MiyaMemoryCore:
                 continue
             try:
                 await backend.close()
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001 — 关闭路径：后端关闭失败不阻断关闭
+                logger.warning(f"[MiyaMemoryCore] 后端关闭失败: {e}")
 
     def _simple_embed(self, text: str) -> List[float]:
         """生成伪向量（回退用，比纯哈希更合理）"""
@@ -2267,7 +2274,7 @@ class MiyaMemoryCore:
                         input=text,
                     )
                     return resp.data[0].embedding
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 可选功能：Embedding 失败回退伪向量
                 logger.warning(
                     f"[MiyaMemoryCore] Embedding API 调用失败，使用回退方案: {e}"
                 )
@@ -2295,7 +2302,7 @@ class MiyaMemoryCore:
                     )
                     if results:
                         return results
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 向量搜索失败回退关键词是设计行为
                 logger.debug(
                     f"[MiyaMemoryCore] SQLite 向量搜索失败，回退关键词搜索: {e}"
                 )
@@ -2389,7 +2396,7 @@ async def get_memory_core(
                         logger.info("[MiyaMemoryCore] Embedding 未启用，使用伪向量回退")
                 else:
                     logger.warning("[MiyaMemoryCore] multi_model_config.json 不存在")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 可选功能：Embedding 加载失败回退伪向量
                 logger.debug(
                     f"[MiyaMemoryCore] Embedding 客户端加载失败，使用伪向量: {e}"
                 )

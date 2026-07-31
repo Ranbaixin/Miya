@@ -182,7 +182,7 @@ class MemoryEnhancer:
                             for l in links
                         ]
                 logger.info(f"[MemoryEnhancer] 加载了 {len(self._links)} 个记忆关联")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 关联缓存损坏时从空开始重建
             logger.warning(f"[MemoryEnhancer] 加载关联失败: {e}")
 
     async def _save_links(self):
@@ -203,7 +203,7 @@ class MemoryEnhancer:
             }
             with open(self._link_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 关联为增强元数据，保存失败不中断增强流水线
             logger.error(f"[MemoryEnhancer] 保存关联失败: {e}")
 
     async def analyze_and_link(
@@ -320,7 +320,7 @@ class MemoryEnhancer:
         """解析时间"""
         try:
             return datetime.fromisoformat(time_str)
-        except:
+        except (ValueError, TypeError):
             return datetime.now()
 
     def get_related_memories(self, memory_id: str) -> List[Dict]:
@@ -417,7 +417,7 @@ class MemoryEnhancer:
                             emotional_boost=w.get("emotional_boost", 0.0),
                         )
                 logger.info(f"[MemoryEnhancer] 加载了 {len(self._weights)} 个记忆权重")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 权重缓存损坏时从空开始重建
             logger.warning(f"[MemoryEnhancer] 加载权重失败: {e}")
 
     async def _save_weights(self):
@@ -434,7 +434,7 @@ class MemoryEnhancer:
             }
             with open(self._weight_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 权重为增强元数据，保存失败不中断增强流水线
             logger.error(f"[MemoryEnhancer] 保存权重失败: {e}")
 
     def calculate_decay_weight(self, memory_id: str, created_at: str) -> float:

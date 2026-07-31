@@ -67,7 +67,7 @@ class RealVectorCache:
             logger.info(f"向量缓存初始化成功 (Milvus Lite: {self.milvus_db_path})")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 初始化失败降级为模拟模式，不阻断启动
             logger.warning(f"Milvus Lite 初始化失败，使用模拟模式: {e}")
             self._client = None
             self._is_lite = True
@@ -82,7 +82,8 @@ class RealVectorCache:
             connections.connect(alias="default", uri=f"sqlite:///{self.milvus_db_path}")
             collection = Collection(self.collection_name, using="default")
             return collection.num_entities > 0 or True
-        except:
+        except Exception as e:  # noqa: BLE001 — 探测失败视为不存在，触发重建
+            logger.debug(f"检查collection存在失败: {e}")
             return False
 
     def _create_collection(self):
@@ -112,7 +113,7 @@ class RealVectorCache:
             self._collection.create_index(field_name="vector", index_params=index_params)
             self._collection.load()
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 创建失败时缓存保持未初始化，后续可重试
             logger.warning(f"创建collection失败: {e}")
 
     async def add(
@@ -179,7 +180,7 @@ class RealVectorCache:
                 }
                 for hit in results[0]
             ]
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 搜索失败返回空结果，调用方可降级处理
             logger.warning(f"搜索向量失败: {e}")
             return []
 

@@ -69,7 +69,7 @@ class SessionManager:
                 session_id, platform=platform, limit=limit
             )
             return [{"role": m.role, "content": m.content} for m in mems]
-        except Exception:
+        except Exception:  # noqa: BLE001 — 对话历史读取失败返回空列表，调用方可降级
             return []
 
     async def save_session(
@@ -92,7 +92,7 @@ class SessionManager:
                     metadata=msg.get("metadata", {}),
                 )
                 stored += 1
-            except Exception:
+            except Exception:  # noqa: S112, BLE001 — 单条消息保存失败跳过，其余继续写入
                 continue
 
         # 更新活跃会话

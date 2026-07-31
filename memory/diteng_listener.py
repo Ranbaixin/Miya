@@ -216,7 +216,7 @@ class DiTingListener:
                     f"[谛听] 从磁盘恢复状态: {loaded_groups} 群, "
                     f"{loaded_active} 活跃用户"
                 )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 恢复失败以空状态启动，不阻塞监听
             logger.warning(f"[谛听] 恢复状态失败: {e}")
 
     def save(self):
@@ -257,7 +257,7 @@ class DiTingListener:
             }
             with open(self._persist_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 后台线程池持久化失败仅告警，不破坏消息处理链
             logger.warning(f"[谛听] 保存状态失败: {e}")
 
     def on_group_message(
@@ -657,7 +657,7 @@ class DiTingListener:
         except asyncio.TimeoutError:
             logger.warning("[谛听-策略] 分析超时，使用默认策略")
             return MessageStrategy()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 分析失败时回退默认策略，不影响回复流程
             logger.warning(f"[谛听-策略] 分析失败: {e}，使用默认策略")
             return MessageStrategy()
 
@@ -686,7 +686,7 @@ class DiTingListener:
                 )
 
             return config
-        except Exception:
+        except Exception:  # noqa: BLE001 — 策略配置加载失败时回退到内置默认值
             return {"max_responses_per_turn": 3, "default_max_messages": 1}
 
     def _build_strategy_prompt(

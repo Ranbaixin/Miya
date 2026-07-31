@@ -92,8 +92,8 @@ class MessageMixin:
                     fallbacks = of.get("fallback_responses", ["好的~"])
                     logger.info(f"[MessageMixin] 刷屏过滤: {count}个感叹号 → 替换")
                     return random.choice(fallbacks)
-        except Exception:
-            pass
+        except (OSError, ValueError) as e:
+            logger.debug(f"[MessageMixin] 输出过滤器配置加载失败: {e}")
         return text
 
     async def _after_route(self, content: str, response: str, user_id: str) -> None:
@@ -112,8 +112,9 @@ class MessageMixin:
                 await miya.decision_hub.handle_session_end(
                     session_id=user_id, platform=self.platform_id
                 )
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001 — Level 1：会话结束处理失败先记日志再上抛
+            logger.error(f"[{self.platform_id}] 会话结束处理失败: {e}")
+            raise
 
         try:
             from memory.lifebook import get_lifebook
@@ -125,8 +126,8 @@ class MessageMixin:
                 topics=[],
                 emotion="平静",
             )
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001 — Level 2：LifeBook 记录失败降级为日志
+            logger.warning(f"[{self.platform_id}] LifeBook 记录失败: {e}", exc_info=True)
 
     @staticmethod
     def _split_message(text: str, max_len: int = 200) -> list:
@@ -269,8 +270,8 @@ class MessageMixin:
                     logger.info(f"[身份] {user_name}({user_id}) → 助理")
                 else:
                     logger.info(f"[身份] {user_name}({user_id}) → 普通用户")
-            except Exception:
-                pass
+            except Exception as e:  # noqa: BLE001 — 权限引擎故障按普通用户处理（安全默认），留日志便于排查
+                logger.warning(f"[{self.platform_id}] 身份权限判定失败，按普通用户处理: {e}")
 
             if extra:
                 perception_data.update(extra)
@@ -316,7 +317,7 @@ class MessageMixin:
             with open("config/tts_config.json", "r", encoding="utf-8") as f:
                 c = json.load(f)
             return c.get("enabled", False) and c.get("qq_default_mode") == "voice"
-        except Exception:
+        except (OSError, ValueError):
             return False
 
     def _tts_should_local(self) -> bool:
@@ -327,7 +328,7 @@ class MessageMixin:
             with open("config/tts_config.json", "r", encoding="utf-8") as f:
                 c = json.load(f)
             return c.get("local_playback_enabled", False)
-        except Exception:
+        except (OSError, ValueError):
             return False
 
     def _tts_platform_supports_voice(self) -> bool:
@@ -351,7 +352,7 @@ class MessageMixin:
             from core.tts.engine_router import synthesize
 
             audio_path = await synthesize(text)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — TTS 为可选功能，合成失败降级为无语音
             logger.debug(f"[{self.platform_id}] TTS 合成失败: {e}")
             return None, False
 
@@ -362,7 +363,7 @@ class MessageMixin:
         if should_voice:
             try:
                 sent = await self._tts_send_voice(audio_path, text)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 语音发送失败降级为文字发送
                 logger.warning(f"[{self.platform_id}] TTS 语音发送失败: {e}")
 
         if should_local:
@@ -392,7 +393,7 @@ class MessageMixin:
             await loop.run_in_executor(None, _play_blocking)
         except ImportError:
             logger.debug("simpleaudio 不可用，跳过本地播放")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 本地播放为可选功能，失败仅记日志
             logger.debug(f"本地播放异常: {e}")
 
     async def _tts_play_response(self, text: str):
@@ -412,5 +413,5 @@ class MessageMixin:
                 logger.info(f"[{self.platform_id}] TTS 本地播放完成")
             else:
                 logger.warning(f"[{self.platform_id}] TTS 合成返回空路径")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — TTS 为可选功能，播放失败仅记日志
             logger.warning(f"[{self.platform_id}] TTS 本地播放失败: {e}")

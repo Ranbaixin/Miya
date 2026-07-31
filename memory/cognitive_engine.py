@@ -250,7 +250,7 @@ class CognitiveEngine:
             # 计算余弦相似度
             return self._cosine_similarity(text_emb, memory_emb)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 相似度计算失败时降级返回0分
             logger.debug(f"[认知引擎] 语义相似度计算失败: {e}")
             return 0.0
 
@@ -309,7 +309,7 @@ class CognitiveEngine:
             hours_ago = (datetime.now() - memory_time).total_seconds() / 3600
             time_weight = max(0.1, 1 - hours_ago / (24 * 30))  # 30天内衰减
             score += time_weight * 0.15
-        except:
+        except (ValueError, TypeError):
             score += 0.1
 
         # 5. 语义相似度（使用embedding）

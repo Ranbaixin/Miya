@@ -198,7 +198,7 @@ class SQLiteBackend(MemoryBackend):
                 # 使用 MemoryItem 的序列化方法处理枚举
                 serialized_metadata = memory._serialize_dict(memory.metadata)
                 metadata_str = json.dumps(serialized_metadata, ensure_ascii=False)
-            except Exception:
+            except Exception:  # noqa: BLE001 — 元数据序列化失败降级为字符串存储
                 metadata_str = json.dumps(str(memory.metadata), ensure_ascii=False)
 
         field_map = {
@@ -247,7 +247,7 @@ class SQLiteBackend(MemoryBackend):
             )
             conn.commit()
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 保存失败返回 False，由调用方检查
             logger.error(f"[SQLiteBackend] 保存记忆失败: {e}")
             return False
 
@@ -262,7 +262,7 @@ class SQLiteBackend(MemoryBackend):
             if not row:
                 return None
             return self._row_to_memory(row)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 加载失败返回 None，调用方可降级
             logger.error(f"[SQLiteBackend] 加载记忆失败: {e}")
             return None
 
@@ -274,7 +274,7 @@ class SQLiteBackend(MemoryBackend):
             conn.execute(f"DELETE FROM {self._table_name} WHERE id = ?", (memory_id,))
             conn.commit()
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 删除失败返回 False，由调用方检查
             logger.error(f"[SQLiteBackend] 删除记忆失败: {e}")
             return False
 
@@ -329,7 +329,7 @@ class SQLiteBackend(MemoryBackend):
             )
             rows = conn.execute(sql, params).fetchall()
             return [self._row_to_memory(row) for row in rows]
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 查询失败返回空列表，调用方可降级
             logger.error(f"[SQLiteBackend] 查询失败: {e}")
             return []
 
@@ -353,7 +353,7 @@ class SQLiteBackend(MemoryBackend):
                 f"SELECT COUNT(*) FROM {self._table_name} WHERE {where}", params
             ).fetchone()
             return row[0]
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 计数失败返回 0，不影响调用方
             logger.error(f"[SQLiteBackend] 计数失败: {e}")
             return 0
 
@@ -367,7 +367,7 @@ class SQLiteBackend(MemoryBackend):
                 f"SELECT level, COUNT(*) FROM {self._table_name} GROUP BY level"
             ).fetchall()
             return {row[0]: row[1] for row in rows}
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 统计失败返回空字典，调用方可降级
             logger.error(f"[SQLiteBackend] 按层级统计失败: {e}")
             return {}
 
@@ -385,7 +385,7 @@ class SQLiteBackend(MemoryBackend):
                 )
             conn.commit()
             return len(memories)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 批量保存失败返回 0，由调用方检查
             logger.error(f"[SQLiteBackend] 批量保存失败: {e}")
             return 0
 
@@ -404,7 +404,7 @@ class SQLiteBackend(MemoryBackend):
             if count > 0:
                 logger.info(f"[SQLiteBackend] 清理了 {count} 条过期记忆")
             return count
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 清理失败返回 0，下轮再试
             logger.error(f"[SQLiteBackend] 清理过期记忆失败: {e}")
             return 0
 
@@ -457,7 +457,7 @@ class SQLiteBackend(MemoryBackend):
             scored.sort(key=lambda x: x[1], reverse=True)
             results = [item for item, _ in scored[:limit]]
             return results
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 搜索失败返回空列表，调用方可降级
             logger.error(f"[SQLiteBackend] 向量搜索失败: {e}")
             return []
 
@@ -512,6 +512,6 @@ class SQLiteBackend(MemoryBackend):
                 is_archived=bool(row["is_archived"]),
                 is_pinned=bool(row["is_pinned"]),
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 单行转换失败返回 None，跳过该条
             logger.error(f"[SQLiteBackend] 行转换失败: {e}")
             return None

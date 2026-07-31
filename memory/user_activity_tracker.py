@@ -37,7 +37,7 @@ def record_activity(user_id: str, last_topic: str = "") -> None:
         }
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — 活跃追踪为 best-effort，写入失败不打断消息处理
         logger.debug(f"[活动追踪] 写入失败 ({user_id}): {e}")
 
 
@@ -50,7 +50,7 @@ def get_last_active(user_id: str) -> float:
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
         return data.get("last_active", 0.0)
-    except Exception:
+    except Exception:  # noqa: BLE001 — 读取失败返回 0，视为从未活跃
         return 0.0
 
 
@@ -63,7 +63,7 @@ def get_last_topic(user_id: str) -> str:
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
         return data.get("last_topic", "")
-    except Exception:
+    except Exception:  # noqa: BLE001 — 读取失败返回空话题，调用方可降级
         return ""
 
 

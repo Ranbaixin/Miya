@@ -83,8 +83,8 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                         .get("ai_analysis", {})
                         .get("timeout", 30),
                     }
-        except Exception as e:
-            logger.debug(f"[{self.platform_id}] 加载 qq_config.yaml 失败: {e}")
+        except Exception as e:  # noqa: BLE001 — 配置加载失败降级为默认配置，避免平台启动失败
+            logger.warning(f"[{self.platform_id}] 加载 qq_config.yaml 失败: {e}")
         return {}
 
     # ============ 决策中心引用登记 ============
@@ -99,7 +99,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             miya.decision_hub.onebot_client = self
             miya.decision_hub.qq_net = self
             logger.info(f"[{self.platform_id}] DecisionHub 引用已登记")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 引用登记为附加操作，失败不影响平台运行
             logger.debug(f"[{self.platform_id}] DecisionHub 引用登记失败: {e}")
 
         # 启动调度器（定时任务 / 主动聊天 / 时段问候）
@@ -113,7 +113,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 if not getattr(miya.scheduler, "_started", False):
                     miya.scheduler.start_background()
                     logger.info(f"[{self.platform_id}] 调度器已启动")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 调度器为附加组件，失败不影响消息接收
             logger.debug(f"[{self.platform_id}] 调度器启动失败: {e}")
 
         # 注册 M-Link 节点
@@ -133,7 +133,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                     ],
                 )
                 logger.info(f"[{self.platform_id}] M-Link 节点已注册")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — M-Link 节点注册为附加操作，失败仅记日志
             logger.debug(f"[{self.platform_id}] M-Link 节点注册失败: {e}")
 
     # ============ 访问控制 ============
@@ -208,8 +208,8 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             info = await self._call_onebot_api("get_group_info", {"group_id": int(group_id)})
             if isinstance(info, dict):
                 return info.get("group_name", "")
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001 — 群名解析为最佳努力，失败仅返回空群名
+            logger.debug(f"[{self.platform_id}] 解析群名失败: {e}")
         return ""
 
     async def _do_connect(self) -> bool:
@@ -261,7 +261,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                                         logger.error(f"[{self.platform_id}] WebSocket 错误")
                                         break
 
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 — 连接循环必须存活，断线重连是设计行为
                         logger.warning(f"[{self.platform_id}] 连接断开: {e}, {retry_delay}s 后重连")
                         self._connected = False
                         self._ws = None
@@ -339,7 +339,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 await self._handle_notice(data)
             elif post_type == "request":
                 logger.debug(f"[{self.platform_id}] 请求: {data.get('request_type')}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 消息处理外层兜底，单条异常不中断接收循环
             logger.error(f"[{self.platform_id}] 消息处理异常: {e}")
 
     async def _handle_notice(self, data: Dict):
@@ -452,7 +452,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                         }
                     )
                 )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 表情包为附加内容，发送失败不影响文字回复
             logger.warning(f"[{self.platform_id}] emoji发送失败: {e}")
 
     async def _call_onebot_api(self, action: str, params: Dict) -> Optional[Dict]:
@@ -475,7 +475,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             result = await asyncio.wait_for(future, timeout=3.0)
             if result and result.get("status") == "ok":
                 return result.get("data")
-        except (asyncio.TimeoutError, Exception):
+        except Exception:  # noqa: S110, BLE001 — WS 调用失败（含超时）回退 HTTP 兜底
             pass
         finally:
             self._pending_echoes.pop(echo, None)
@@ -493,7 +493,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                     data = await resp.json()
                     if data.get("status") == "ok":
                         return data.get("data")
-        except Exception:
+        except Exception:  # noqa: S110, BLE001 — HTTP 回退失败返回 None，由调用方兜底
             pass
         return None
 
@@ -589,8 +589,8 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             from core.unified_permission import get_permission_engine
 
             is_owner = get_permission_engine().is_superadmin(user_id, platform=self.platform_id)
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001 — 权限引擎故障按非超管处理（安全默认），留日志
+            logger.warning(f"[{self.platform_id}] 超管判定失败，按普通用户处理: {e}")
 
         # === 8. 自动保存所有图片（在任何拦截之前） ===
         has_direct_images = bool(image_segments)
@@ -650,7 +650,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                         if not content:
                             content = f"[图片: {result.description[:100]}]"
                         break
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 视觉分析为可选增强，失败不影响消息处理
                     logger.debug(f"[{self.platform_id}] 直接图片分析失败: {e}")
 
         # === 10. 自动保存直接图片 ===
@@ -729,7 +729,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                                 analyzed = True
                                 logger.info(f"[{self.platform_id}] 引用图片分析完成: {desc[:50]}...")
                                 break
-                        except Exception as e:
+                        except Exception as e:  # noqa: BLE001 — 视觉分析为可选增强，失败不影响消息处理
                             logger.warning(f"[{self.platform_id}] 引用图片视觉分析失败: {e}")
                     if not analyzed:
                         content = f"[回复图片] {content}"
@@ -769,7 +769,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                                 analyzed_str = True
                                 logger.info(f"[{self.platform_id}] 引用图片(CQ)分析完成: {desc[:50]}...")
                                 break
-                        except Exception as e:
+                        except Exception as e:  # noqa: BLE001 — 视觉分析为可选增强，失败不影响消息处理
                             logger.warning(f"[{self.platform_id}] 引用图片(CQ)视觉分析失败: {e}")
                     if not analyzed_str:
                         content = f"[回复图片] {content}"
@@ -846,7 +846,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 await self._ws.send_str(json.dumps(reply_data))
                 if len(chunk) < len(text):
                     await asyncio.sleep(0.3)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 发送失败中断剩余分条，避免无限重试
                 logger.error(f"[{self.platform_id}] 发送回复异常: {e}")
                 break
 
@@ -859,7 +859,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             with open(config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
             return config.get("enabled", False) and config.get("qq_default_mode") == "voice"
-        except Exception:
+        except (OSError, ValueError):
             return False
 
     async def _send_voice_reply(self, msg_type: str, target_id: str, text: str):
@@ -871,7 +871,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         try:
             with open(config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
-        except Exception:
+        except (OSError, ValueError):
             return None, False
 
         preferred = config.get("preferred_engine", "edge_tts")
@@ -883,13 +883,13 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 audio_path = await self._synthesize_api_tts(config, text)
             else:
                 audio_path = await self._synthesize_edge_tts(config, text)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — TTS 为可选功能，主引擎失败回退 edge-tts
             logger.warning(f"[{self.platform_id}] {preferred} 合成失败: {e}")
             if preferred != "edge_tts":
                 try:
                     audio_path = await self._synthesize_edge_tts(config, text)
                     logger.info(f"[{self.platform_id}] 已回退到 edge-tts")
-                except Exception as e2:
+                except Exception as e2:  # noqa: BLE001 — TTS 回退也失败时降级为文字回复
                     logger.error(f"[{self.platform_id}] edge-tts 回退也失败: {e2}")
                     return None, False
             else:
@@ -925,7 +925,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
             asyncio.get_event_loop().call_later(30, _cleanup, audio_path)
             return audio_path, True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 语音发送失败降级为文字发送
             logger.error(f"[{self.platform_id}] 语音发送失败: {e}")
             return None, False
 
@@ -937,7 +937,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             with open("config/tts_config.json", "r", encoding="utf-8") as f:
                 config = json.load(f)
             return config.get("local_playback_enabled", False)
-        except Exception:
+        except (OSError, ValueError):
             return False
 
     async def _synthesize_for_local(self, config: dict, text: str) -> str:
@@ -950,11 +950,11 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 return await self._synthesize_api_tts(config, text)
             else:
                 return await self._synthesize_edge_tts(config, text)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 本地合成为可选功能，主引擎失败回退 edge-tts
             logger.warning(f"[{self.platform_id}] 本地合成 {preferred} 失败: {e}，回退 edge-tts")
             try:
                 return await self._synthesize_edge_tts(config, text)
-            except Exception:
+            except Exception:  # noqa: BLE001 — 本地合成彻底失败返回 None，由调用方处理
                 return None
 
     async def _play_local(self, audio_path: str, text: str):
@@ -975,7 +975,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 logger.info(f"[{self.platform_id}] 本地播放完成")
         except ImportError:
             logger.debug(f"[{self.platform_id}] simpleaudio 不可用，跳过本地播放")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 本地播放为可选功能，失败仅记日志
             logger.debug(f"[{self.platform_id}] 本地播放失败: {e}")
 
     async def _synthesize_edge_tts(self, config: dict, text: str) -> str:
@@ -1111,7 +1111,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             )
             logger.info(f"[{self.platform_id}] 群消息已发送到 {group_id}")
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 发送失败返回 False，由调用方按返回值回退
             logger.error(f"[{self.platform_id}] 发送群消息失败: {e}")
             return False
 
@@ -1133,7 +1133,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             )
             logger.info(f"[{self.platform_id}] 私聊消息已发送给 {user_id}")
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 发送失败返回 False，由调用方按返回值回退
             logger.error(f"[{self.platform_id}] 发送私聊消息失败: {e}")
             return False
 
@@ -1395,7 +1395,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             ):
                 if resp.status == 200:
                     return await resp.read()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 图片下载失败返回 None，由调用方兜底
             logger.error(f"[{self.platform_id}] 下载图片失败: {e}")
         return None
 
@@ -1428,7 +1428,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 },
             )
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 上传失败返回 False，由调用方兜底
             logger.error(f"[{self.platform_id}] 上传群文件失败: {e}")
             return False
 
@@ -1478,7 +1478,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                         async for chunk in response.content.iter_chunked(8192):
                             f.write(chunk)
                     return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 下载失败返回 False，由调用方兜底
             logger.error(f"[{self.platform_id}] 下载群文件失败: {e}")
         return False
 
@@ -1497,7 +1497,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 {"message_id": message_id, "emoji_id": emoji_id},
             )
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 表情表态为可选功能，失败仅记日志
             logger.debug(f"[{self.platform_id}] 表情表态失败: {e}")
             return False
 
@@ -1552,7 +1552,8 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                         if len(raw) > 1024:
                             logger.debug(f"[{self.platform_id}] OneBot get_image(base64) 成功: {len(raw)/1024:.1f}KB")
                             return raw
-                    except Exception:
+                    except (TypeError, ValueError):
+                        # noqa: S110 — base64 解码失败，回退到文件路径方案
                         pass
                 # 尝试作为文件路径读取（部分 OneBot 实现返回本地路径）
                 if isinstance(result, dict):
@@ -1588,7 +1589,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                             return raw
                         else:
                             logger.debug(f"[{self.platform_id}] HTTP 下载数据过小: {len(raw)}B")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 图片下载为附加功能，失败回退到下一方案
                 logger.debug(f"[{self.platform_id}] 直接下载图片失败(url): {e}")
 
         logger.debug(f"[{self.platform_id}] 图片下载失败: file={file_id[:30] if file_id else '-'}")
@@ -1605,7 +1606,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
                     saver = get_auto_emoji_saver()
                     await saver.auto_save_emoji(int(user_id), image_bytes, image_info=img_data)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 图片自动保存为附加功能，失败仅记日志
                     logger.debug(f"[{self.platform_id}] 自动保存图片失败: {e}")
 
     async def _auto_save_string_images(self, raw_message: str, user_id: str):
@@ -1625,7 +1626,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                         image_bytes,
                         image_info={"file_name": file_id},
                     )
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — 图片自动保存为附加功能，失败仅记日志
                     logger.debug(f"[{self.platform_id}] 自动保存图片失败(CQ): {e}")
 
     async def _auto_save_image_bytes(self, image_bytes: bytes, user_id: str, image_info: Optional[Dict] = None):
@@ -1635,7 +1636,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
             saver = get_auto_emoji_saver()
             await saver.auto_save_emoji(int(user_id), image_bytes, image_info=image_info)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 图片自动保存为附加功能，失败仅记日志
             logger.debug(f"[{self.platform_id}] 自动保存图片失败(bytes): {e}")
 
     async def _do_disconnect(self):

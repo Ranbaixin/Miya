@@ -371,7 +371,7 @@ class Historian:
                     f"(importance={importance}, level={level.value})"
                 )
                 return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 以 False 返回值向调用方传递失败信号
             logger.error(f"[星璇·自记忆] 保存失败: {e}")
 
         return False
@@ -430,7 +430,7 @@ class Historian:
                     f"[Historian] 已记忆: {content[:30]}... (importance={importance}, group={group_id})"
                 )
                 return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 以 False 返回值向调用方传递失败信号
             logger.error(f"[Historian] 保存记忆失败: {e}")
 
         return False
@@ -481,7 +481,7 @@ class Historian:
                     group_id=group_id,
                 )
                 logger.info(f"[Historian] 自动记住: {content[:30]}...")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — 单条自动记忆失败不中断整批处理
                 logger.error(f"[Historian] 自动记忆失败: {e}")
 
         # === 【新增】弥娅自记忆提取 ===
@@ -512,7 +512,7 @@ class Historian:
         # 定期将短期重要记忆升级为长期记忆
         try:
             await self._auto_archive_short_term(user_id)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 后台维护任务失败不影响主流程
             logger.debug(f"[Historian] 自动归档失败: {e}")
 
     async def _auto_archive_short_term(self, user_id: str) -> None:
@@ -570,7 +570,7 @@ class Historian:
                     f"[Historian] 自动归档: 升级了 {upgraded_count} 条短期记忆为长期记忆"
                 )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 归档为可选维护，失败下次再试
             logger.debug(f"[Historian] 自动归档执行失败: {e}")
 
 
