@@ -1,7 +1,8 @@
 """配置拓扑冻结测试 —— 防止配置入口意外漂移。"""
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+# 项目根（本文件位于 tests/unit/config/ 下，向上 3 级）
+ROOT = Path(__file__).resolve().parents[3]
 
 # P3 batch 7 收敛后的唯一配置入口
 ALLOWED_CONFIG_ENTRIES = {
