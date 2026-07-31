@@ -37,7 +37,7 @@
 
 **跨平台无处不在。** 从 QQ、OneBot、飞书到 Electron 桌面应用与 Web 终端，她同时驻留在你的每一块屏幕上。内置来自社区的 OpenClaw 模块赋予她操持系统的双手；蛛网子网架构让工具调用和消息路由如呼吸般自然。
 
-**多重人格，一键切换。** 22 种 YAML 定义的人格形态，支持运行时无感热替换——在温柔与毒舌、理性与疯狂之间，永远有一个最懂你的弥娅。
+**多重人格，一键切换。** 19 种 YAML 定义的人格形态（+3 个模板），支持运行时无感热替换——在温柔与毒舌、理性与疯狂之间，永远有一个最懂你的弥娅。
 
 **多模型智能调度。** 并非绑定单一 AI，而是在 OpenAI、DeepSeek、智谱等模型池间自由调度，懂得在不同场景下选择最合适的思维引擎。
 
@@ -47,7 +47,7 @@
 
 | 模式 | 入口 | 说明 |
 |------|------|------|
-| **终端模式** | `start.bat [1]` | DeepSeek V4 + Claude Code Engine 驱动的命令行交互 |
+| **终端模式** | `start.bat [1]` | Python 异步命令行交互 (v8.1 重构) |
 | **守护进程** | `start.bat [2]` | 后台多平台服务 + 管理 API (端口 9800) |
 | **桌面应用** | `start.bat [3]` | Electron + React 桌面客户端 |
 | **Web 界面** | `start.bat [4]` | 浏览器前端 (React HUD) |
@@ -57,7 +57,7 @@
 ## 核心特性
 
 ### 人格系统
-- 多形态人格切换（default / kafka / jingliu / feixiao 等 22 种）
+- 多形态人格切换（kafka / jingliu / feixiao 等 19 种 + 3 个 YAML 模板）
 - 基于 YAML 定义的人格配置文件
 - 运行时动态加载与切换
 - 情感波动与个性表达
@@ -255,11 +255,10 @@ Miya/
 │   └── ...
 │
 ├── frontend/               # 前端
-│   ├── ui/                 # React HUD (47 组件, 12 页面)
+│   ├── ui/                 # React HUD (30+ 组件, 20+ 页面)
 │   └── packages/           # Vue 3 控制面板
 │
 ├── miya_frontend/          # Electron 桌面应用
-├── claude-code-engine/     # Claude Code 引擎 (Node.js)
 ├── data/                   # 运行时数据 (记忆/日志/向量)
 ├── docs/                   # 文档
 ├── scripts/                # 实用脚本 (24 个)
