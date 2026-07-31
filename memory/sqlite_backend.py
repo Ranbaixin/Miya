@@ -315,6 +315,9 @@ class SQLiteBackend(MemoryBackend):
                 for tag in query.tags:
                     conditions.append("tags LIKE ?")
                     params.append(f'%"{tag}"%')
+            # 归档过滤（P8 Step2 暴露：SQLite 查询缺此过滤，归档记忆不应出现在普通检索）
+            if not query.include_archived:
+                conditions.append("is_archived = 0")
 
             where_clause = " AND ".join(conditions) if conditions else "1=1"
             limit_clause = f"LIMIT {query.limit}"

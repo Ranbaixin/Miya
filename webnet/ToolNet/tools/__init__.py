@@ -1,33 +1,37 @@
 """
 ToolNet 工具包 - 弥娅统一工具服务
 
-> 符合模块化架构的工具系统
-> - 所有工具集中在 ToolNet（服务层）
-> - 各功能模块通过接口调用工具
-> - AI 索引友好，易于发现和使用
+> 惰性加载设计（P8 Step4 校准 2026-07-31）：
+> 原实现用 16 个 star import 强制加载所有工具子模块，导致 `import webnet`
+> 就强制依赖所有可选依赖组（office→pandas、network→bs4、visualization→matplotlib 等），
+> 任一缺失即整个 webnet 无法导入。改为 `__getattr__` 按需加载：仅访问具体
+> 工具时才 import 对应子包；可选依赖缺失的子包在未使用其工具时不阻塞导入。
 """
 
-from .auth import *
-from .basic import *
-from .bilibili import *
-from .cognitive import *
-from .core import *
+import importlib
+import logging
 
-# 跨终端模块已迁移至 Open-ClaudeCode，不再导入
-from .entertainment import *
-from .group import *
-from .knowledge import *
-from .life import *
-from .memory import *
-from .message import *
-from .network import *
-from .office import *
-from .reporting import *
-from .scheduler import *
-from .social import *
+logger = logging.getLogger(__name__)
 
-# 终端模块已迁移至 Open-ClaudeCode，不再导入
-from .visualization import *
+_SUBMODULES = [
+    "auth",
+    "basic",
+    "bilibili",
+    "cognitive",
+    "core",
+    "entertainment",
+    "group",
+    "knowledge",
+    "life",
+    "memory",
+    "message",
+    "network",
+    "office",
+    "reporting",
+    "scheduler",
+    "social",
+    "visualization",
+]
 
 __all__ = [
     # 核心服务
@@ -112,3 +116,15 @@ __all__ = [
     # B站
     "BilibiliVideo",
 ]
+
+
+def __getattr__(name):
+    """按需加载子模块中的工具（PEP 562，P8 惰性化）。"""
+    for sub in _SUBMODULES:
+        try:
+            mod = importlib.import_module(f".{sub}", __name__)
+        except ImportError:
+            continue  # 可选依赖缺失的子包：未使用时跳过，不阻塞其他工具
+        if hasattr(mod, name):
+            return getattr(mod, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

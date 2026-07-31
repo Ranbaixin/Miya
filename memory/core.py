@@ -1615,6 +1615,9 @@ class MiyaMemoryCore:
             return False
         if query.tags and not any(tag in memory.tags for tag in query.tags):
             return False
+        # 归档过滤（P8 Step2 暴露：缓存搜索路径缺此过滤，对齐 backend 的归档过滤逻辑）
+        if not query.include_archived and memory.is_archived:
+            return False
         if memory.priority < query.min_priority:
             return False
         if query.query:
@@ -1798,8 +1801,13 @@ class MiyaMemoryCore:
 
         memory.updated_at = datetime.now().isoformat()
 
-        # 保存
+        # 保存（JSON 后端 + SQLite 同步；P8 Step2 暴露：原 update 不写 SQLite 导致归档/删除不同步）
         await self.backend.save(memory)
+        if self.sqlite_backend:
+            try:
+                await self.sqlite_backend.save(memory)
+            except Exception as e:
+                logger.debug(f"[MiyaMemoryCore] update 同步 SQLite 失败: {e}")
         self._cache[memory_id] = memory
 
         self._stats["total_updated"] += 1
@@ -2189,6 +2197,23 @@ class MiyaMemoryCore:
                     pass
         except Exception as e:
             logger.warning(f"[MiyaMemoryCore] 备份清理失败: {e}")
+
+    async def close(self) -> None:
+        """关闭所有后端连接，释放资源（P8 Step2 暴露：原无 close 方法，P7.1 关闭链依赖它）。"""
+        # 1. 刷盘脏索引
+        try:
+            self._flush_index()
+        except Exception:
+            pass
+
+        # 2. 关闭 JsonBackend / SQLiteBackend（释放文件锁，否则 Windows 下临时目录清理失败）
+        for backend in (getattr(self, "backend", None), getattr(self, "sqlite_backend", None)):
+            if backend is None or not hasattr(backend, "close"):
+                continue
+            try:
+                await backend.close()
+            except Exception:
+                pass
 
     def _simple_embed(self, text: str) -> List[float]:
         """生成伪向量（回退用，比纯哈希更合理）"""

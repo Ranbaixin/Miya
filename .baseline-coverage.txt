@@ -1,0 +1,81 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.14, pytest-9.1.1, pluggy-1.6.0 -- F:\Ranxin\Miya\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: F:\Ranxin\Miya
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.4.0, cov-7.1.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 27 items
+
+tests/unit/memory/test_concurrent.py::test_concurrent_read_write PASSED  [  3%]
+tests/unit/memory/test_concurrent.py::test_concurrent_reads_no_error PASSED [  7%]
+tests/unit/memory/test_store_query.py::test_store_and_retrieve PASSED    [ 11%]
+tests/unit/memory/test_store_query.py::test_update_preserves_id PASSED   [ 14%]
+tests/unit/memory/test_store_query.py::test_delete_removes_from_index PASSED [ 18%]
+tests/unit/memory/test_store_query.py::test_archive_flags PASSED         [ 22%]
+tests/unit/memory/test_store_query.py::test_decay_updates_priority PASSED [ 25%]
+tests/unit/memory/test_store_query.py::test_concurrent_writes_no_corruption PASSED [ 29%]
+tests/unit/permission/test_check_permission.py::test_check_permission_denies_unknown_user PASSED [ 33%]
+tests/unit/permission/test_check_permission.py::test_check_permission_returns_structured_error PASSED [ 37%]
+tests/unit/permission/test_check_permission.py::test_check_permission_denies_empty_args PASSED [ 40%]
+tests/unit/platform/test_send_message_contract.py::test_platform_inherits_base[OneBotPlatform] PASSED [ 44%]
+tests/unit/platform/test_send_message_contract.py::test_platform_inherits_base[TelegramPlatform] PASSED [ 48%]
+tests/unit/platform/test_send_message_contract.py::test_platform_inherits_base[DiscordPlatform] PASSED [ 51%]
+tests/unit/platform/test_send_message_contract.py::test_platform_inherits_base[QQOfficialPlatform] PASSED [ 55%]
+tests/unit/platform/test_send_message_contract.py::test_platform_inherits_base[LarkPlatform] PASSED [ 59%]
+tests/unit/platform/test_send_message_contract.py::test_lifecycle_methods_implemented[OneBotPlatform] PASSED [ 62%]
+tests/unit/platform/test_send_message_contract.py::test_lifecycle_methods_implemented[TelegramPlatform] PASSED [ 66%]
+tests/unit/platform/test_send_message_contract.py::test_lifecycle_methods_implemented[DiscordPlatform] PASSED [ 70%]
+tests/unit/platform/test_send_message_contract.py::test_lifecycle_methods_implemented[QQOfficialPlatform] PASSED [ 74%]
+tests/unit/platform/test_send_message_contract.py::test_lifecycle_methods_implemented[LarkPlatform] PASSED [ 77%]
+tests/unit/platform/test_send_message_contract.py::test_send_message_contract_defined PASSED [ 81%]
+tests/unit/platform/test_send_message_contract.py::test_send_capability_snapshot[OneBotPlatform] PASSED [ 85%]
+tests/unit/platform/test_send_message_contract.py::test_send_capability_snapshot[QQOfficialPlatform] PASSED [ 88%]
+tests/unit/platform/test_send_message_contract.py::test_send_capability_snapshot[TelegramPlatform] PASSED [ 92%]
+tests/unit/platform/test_send_message_contract.py::test_send_capability_snapshot[DiscordPlatform] PASSED [ 96%]
+tests/unit/platform/test_send_message_contract.py::test_send_capability_snapshot[LarkPlatform] PASSED [100%]
+
+============================== warnings summary ===============================
+.venv\Lib\site-packages\_pytest\config\__init__.py:1464
+  F:\Ranxin\Miya\.venv\Lib\site-packages\_pytest\config\__init__.py:1464: PytestConfigWarning: Unknown config option: collect_ignore_glob
+  
+    self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=============================== tests coverage ================================
+______________ coverage: platform win32, python 3.11.14-final-0 _______________
+
+Name                                                 Stmts   Miss  Cover
+------------------------------------------------------------------------
+core\unified_platform_impl\__init__.py                   8      0   100%
+core\unified_platform_impl\discord_platform.py          63     48    24%
+core\unified_platform_impl\generic_platform.py          38     16    58%
+core\unified_platform_impl\message_mixin.py            234    205    12%
+core\unified_platform_impl\onebot_platform.py         1016    931     8%
+core\unified_platform_impl\qq_official_platform.py     148    128    14%
+core\unified_platform_impl\telegram_platform.py         63     48    24%
+core\unified_platform_impl\webhook_base.py              23      7    70%
+core\unified_platform_impl\webhook_platforms.py        196    150    23%
+memory\__init__.py                                     190    129    32%
+memory\cognition_cache.py                               66     66     0%
+memory\cognitive_engine.py                             350    308    12%
+memory\core.py                                        1205    627    48%
+memory\diteng_listener.py                              342    342     0%
+memory\historian.py                                    235    235     0%
+memory\lifebook.py                                     349    349     0%
+memory\lifebook_manager.py                              43     19    56%
+memory\memory_config.py                                 43     15    65%
+memory\memory_enhancer.py                              266    135    49%
+memory\real_vector_cache.py                             96     96     0%
+memory\semantic_dynamics_engine.py                     117    117     0%
+memory\session_decay.py                                117    117     0%
+memory\session_manager.py                               56     56     0%
+memory\sqlite_backend.py                               287    141    51%
+memory\temporal_parser.py                              154     95    38%
+memory\undefined_memory.py                              34     34     0%
+memory\unified_memory.py                                46     46     0%
+memory\user_activity_tracker.py                         44     44     0%
+memory\working_memory.py                               474    474     0%
+------------------------------------------------------------------------
+TOTAL                                                 6303   4978    21%
+======================== 27 passed, 1 warning in 6.94s ========================

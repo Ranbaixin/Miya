@@ -34,7 +34,7 @@ tests/
 │   ├── platform/            # 平台回复发送 (回归风险 #2)
 │   │   └── test_send_message_contract.py
 │   ├── config/              # 配置加载 + 拓扑冻结 (回归风险 #3)
-│   │   └── test_config_topology.py  (⚠️ 校准：当前位于 tests/ 根，Step 1 需移动到 tests/unit/config/)
+│   │   └── test_config_topology.py  (⚠️ 校准：暂留 tests/ 根，见下方"已知问题"#5 — 双轨制未收敛)
 │   └── permission/          # 权限 fail-closed
 │       └── test_check_permission.py
 ├── integration/             # 需要真实文件/DB
@@ -222,6 +222,17 @@ git checkout -- tests/unit/memory/test_store_query.py
 ```
 
 ---
+
+### 已知问题（P8 Step 2-4 暴露，2026-07-31）
+
+测试基线的价值在于暴露真实问题。本阶段**当场修复**了以下（小而安全，且是 P8 测试/关闭链的直接依赖）：
+
+1. **MiyaMemoryCore 无 `close()`** — P7.1 关闭链依赖它；已新增（刷盘脏索引 + 关闭 Json/SQLite 后端释放文件锁）
+2. **`MiyaMemoryCore._match_query` 缺归档过滤** — 缓存搜索路径会返回归档记忆，已对齐 backend 行为
+3. **`update()` 不同步 SQLite** — 归档/更新后 SQLite 查询读到旧数据；已加 SQLite 同步
+4. **`SQLiteBackend.query` 缺归档过滤** — 已加 `is_archived = 0` 条件
+5. **`core/platforms_config.py` 双轨制（未修，记 issue）** — 与 `config/platforms_config.py` 是两套 API（`get_default_platforms` vs `get_enabled_platforms`）；仅被 4 个死代码文件引用（dashboard_api/miya_core/miya_system/miya_unified_config，均 0 引用）。`test_only_one_platforms_config` 因此失败。**建议 P9 清理时删除 core 版 + 4 个死消费方，再把 test_config_topology 移入 tests/unit/config/**
+6. **webnet 包强依赖可选组（已修）** — `tools/__init__.py` 原 16 个 star import 强制加载所有工具子包（需 pandas/bs4/matplotlib 等全部可选依赖，任一缺失 import webnet 即挂）。已惰性化为 PEP 562 `__getattr__`；`beautifulsoup4` 从 office 组提升到主依赖（web_search 核心需要）
 
 ## 四、验收标准
 
