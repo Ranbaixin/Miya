@@ -88,25 +88,12 @@ class E2ETestRunner:
 
 
 # ==================== Performance Tests ====================
-
-async def test_config_cache_basic():
-    """Test config cache basic functionality"""
-    from core.config_cache import ConfigCache
-
-    cache = ConfigCache(max_size=100, default_ttl=60.0)
-
-    cache.put("emotion", "default_happy", 0.8)
-    value = cache.get("emotion", "default_happy")
-    assert value == 0.8, "Cache value mismatch"
-
-    print("  [OK] Config cache basic functionality")
+# (config_cache 模块已删除, 测试已移除)
 
 
-async def test_config_cache_performance():
-    """Test config cache performance"""
-    from core.config_cache import ConfigCache
-
-    cache = ConfigCache(max_size=1000, default_ttl=300.0)
+async def _removed_test_config_cache():
+    """已移除: config_cache 模块随 P3 死代码清理删除"""
+    pass
 
     def load_config():
         return {"value": time.time()}
@@ -551,8 +538,7 @@ async def run_all_e2e_tests():
 
     print("[MODULE 1] Performance Optimization")
     print("-" * 70)
-    await runner.run_test("Config cache basic", test_config_cache_basic)
-    await runner.run_test("Config cache performance", test_config_cache_performance, benchmark=True)
+    # Config cache tests removed (module deleted in P3 batch 7)
     await runner.run_test("Event batcher basic", test_event_batcher_basic)
     await runner.run_test("Event batcher performance", test_event_batcher_performance, benchmark=True)
     await runner.run_test("DB connection pool basic", test_db_connection_pool_basic)
