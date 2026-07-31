@@ -804,6 +804,47 @@ class Miya:
 
         return status
 
+    async def ashutdown(self) -> None:
+        """异步关闭系统 —— 在运行中的事件循环内调用。"""
+        self.logger.info("弥娅系统正在关闭...")
+        import asyncio, contextlib
+
+        # 1. 调度器
+        if hasattr(self, 'scheduler') and self.scheduler:
+            try: await self.scheduler.stop()
+            except Exception as e: self.logger.debug(f"调度器关闭失败: {e}")
+
+        # 2. 决策中枢
+        if hasattr(self, 'decision_hub') and self.decision_hub:
+            try:
+                if hasattr(self.decision_hub, 'shutdown'): self.decision_hub.shutdown()
+            except Exception as e: self.logger.debug(f"DecisionHub 关闭失败: {e}")
+
+        # 3. M-Link
+        if self.mlink:
+            try:
+                if hasattr(self.mlink, 'close'): self.mlink.close()
+            except Exception as e: self.logger.debug(f"M-Link 关闭失败: {e}")
+
+        # 4. MemoryNet
+        if self.memory_net:
+            try:
+                if hasattr(self.memory_net, 'close'): self.memory_net.close()
+            except Exception as e: self.logger.debug(f"MemoryNet 关闭失败: {e}")
+
+        # 5. AI 客户端
+        if self.ai_client:
+            try:
+                if hasattr(self.ai_client, 'close'): self.ai_client.close()
+            except Exception as e: self.logger.debug(f"AI 客户端关闭失败: {e}")
+
+        # 6. Redis
+        if self.redis:
+            try: self.redis.close()
+            except Exception as e: self.logger.debug(f"Redis 关闭失败: {e}")
+
+        self.logger.info("弥娅系统已关闭")
+
     def shutdown(self) -> None:
         """关闭系统 - 优雅释放所有资源"""
         self.logger.info("弥娅系统正在关闭...")
@@ -870,28 +911,29 @@ class Miya:
         self.logger.info("弥娅系统已关闭")
 
 
+
 def main():
-    """主函数"""
+    """主函数 —— 参数解析 + 统一事件循环入口"""
+    return asyncio.run(amain())
+
+
+async def amain():
+    """异步主函数 —— 所有初始化/交互/关闭在同一个事件循环内完成。"""
     print("=" * 50)
     print("        弥娅 AI 系统")
     print("        Miya AI System")
     print("=" * 50)
     print()
 
+    miya = None
     try:
         print("[系统] 正在初始化弥娅系统...")
-        # 创建弥娅实例
         miya = Miya()
 
-        # 异步初始化 MemoryNet
+        # 异步初始化 MemoryNet (在 amain 的循环内, 不再 new_event_loop + close)
         print("[系统] 初始化全局记忆网络...")
         if miya.memory_net:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                loop.run_until_complete(miya._initialize_memory_net_async())
-            finally:
-                loop.close()
+            await miya._initialize_memory_net_async()
         else:
             print("[警告] 全局记忆网络未初始化，记忆功能将受限")
 
@@ -899,8 +941,6 @@ def main():
         print(f"UUID: {miya.identity.uuid}")
         print(f"启动时间: {miya.identity.awake_time}")
         print()
-
-        # 显示系统状态
         print("=" * 50)
         print("【弥娅系统】")
         print(f"  版本: v{VERSION}")
@@ -910,205 +950,157 @@ def main():
         # 启动定时任务调度器
         if miya.scheduler:
             try:
-                # 设置终端回调，用于在终端模式下输出提醒
                 async def terminal_callback(message: str):
-                    print(f"\n【定时提醒】 {message}\n然鑫: ")
-
+                    print(f"\n【定时提醒】 {message}\n> ")
                 miya.scheduler.terminal_callback = terminal_callback
-
-                # 在后台线程中启动调度器
                 miya.scheduler.start_background()
             except Exception:
                 pass
 
-        # 交互循环 - 使用异步主循环
-        async def main_loop():
-            # 启动主动聊天后台轮询
-            if miya.decision_hub and miya.decision_hub.proactive_chat:
-                asyncio.create_task(miya.decision_hub.start_proactive_background())
+        # 启动主动聊天后台轮询
+        if miya.decision_hub and miya.decision_hub.proactive_chat:
+            miya._proactive_task = asyncio.create_task(
+                miya.decision_hub.start_proactive_background()
+            )
 
-            while True:
-                try:
-                    # 同步获取用户输入（支持中文）
-                    user_input = chinese_input("> ").strip()
-
-                    # 使用文本加载器
-                    from core.text_loader import get_farewell, is_farewell
-
-                    if is_farewell(user_input):
-                        print(f"{miya.identity.name}: {get_farewell()}")
-                        # 保存对话历史到 Lifebook
-                        if miya.decision_hub:
-                            try:
-                                import asyncio
-
-                                loop = asyncio.get_event_loop()
-                                if loop.is_running():
-                                    asyncio.create_task(
-                                        miya.decision_hub.handle_session_end("default", platform="terminal")
-                                    )
-                                else:
-                                    loop.run_until_complete(
-                                        miya.decision_hub.handle_session_end("default", platform="terminal")
-                                    )
-                                print("对话历史已保存")
-                            except Exception as e:
-                                print(f"保存对话历史失败: {e}")
-                        break
-
-                    if user_input.lower() in ["status", "状态"]:
-                        status = miya.get_system_status()
-                        print(f"\n=== {miya.identity.name} 系统状态 ===")
-                        print(f"版本: {miya.identity.version}")
-                        print(f"UUID: {miya.identity.uuid}")
-                        print("\n【人格状态】")
-                        print(f"  形态: {status['personality']['state']}")
-                        print(f"  主导特质: {status['personality']['dominant_trait']}")
-                        print("  人格向量:")
-                        for trait, value in status["personality"]["vectors"].items():
-                            print(f"    {trait}: {value:.2f}")
-                        print("\n【情绪状态】")
-                        print(f"  主导情绪: {status['emotion']['dominant']}")
-                        print(f"  情绪强度: {status['emotion']['intensity']:.2f}")
-                        print("  当前情绪:")
-                        for emotion, intensity in status["emotion"]["current"].items():
-                            print(f"    {emotion}: {intensity:.2f}")
-                        print("\n【记忆统计】")
-                        print(f"  潮汐记忆: {status['memory_stats'].get('tide_count', 0)}条")
-                        print(f"  长期记忆: {status['memory_stats'].get('longterm_count', 0)}条")
-                        print("\n【感知状态】")
-                        print(f"  全局激活: {status['perception']['global_active']}")
-                        print(f"  外部感知: {status['perception']['external_active']}")
-                        print(f"  内部感知: {status['perception']['internal_active']}")
-                        print("\n【信任统计】")
-                        print(f"  平均信任: {status['trust_stats']['avg_score']:.2f}")
-                        print(f"  总交互: {status['trust_stats']['total_interactions']}")
-                        print("\n【系统健康】")
-                        print(f"  熵值: {status['entropy_health']['current_entropy']:.3f}")
-                        print(f"  健康状态: {status['entropy_health']['status']}")
-                        print()
-                        continue
-
-                    # 【自主能力】触发自主改进
-                    if user_input.lower() in ["auto", "自动改进", "improve", "自主"]:
-                        print(f"\n{miya.identity.name}: 正在进行自主改进...")
-                        result = await miya.autonomy_with_personality.personalized_improvement(
-                            max_fixes=5, consider_personality=True
-                        )
-                        print(f"\n{miya.identity.name}: 改进完成！")
-                        print(f"  发现问题: {result['problems_found']}")
-                        print(f"  做出决策: {result['decisions_made']}")
-                        print(f"  尝试修复: {result['fixes_attempted']}")
-                        print(f"  成功修复: {result['fixes_successful']}")
-                        if result.get("personality_influenced"):
-                            print("  人设影响: 是")
-                        if result.get("current_emotion"):
-                            print(f"  当前情绪: {result['current_emotion']}")
-                        print()
-                        continue
-
-                    # 【自主能力】查看学习报告
-                    if user_input.lower() in ["learn", "学习报告", "报告"]:
-                        print(f"\n{miya.identity.name}: 正在生成学习报告...")
-                        report = miya.autonomy_with_personality.generate_personalized_report()
-                        print(f"\n=== {miya.identity.name} 学习报告 ===")
-                        if report.get("personality"):
-                            personality = report["personality"]
-                            print("\n【人格状态】")
-                            vectors = personality.get("vectors", {})
-                            print(f"  形态: {personality.get('current_form', {}).get('name', '未知')}")
-                            print(f"  专属称呼: {personality.get('current_title', '然鑫')}")
-                            print(f"  状态: {personality.get('state', '未知')}")
-                            print("  人格向量:")
-                            if vectors:
-                                vector_names = {
-                                    "warmth": "温暖度",
-                                    "logic": "逻辑性",
-                                    "creativity": "创造力",
-                                    "empathy": "同理心",
-                                    "resilience": "韧性",
-                                }
-                                for key, value in vectors.items():
-                                    cn_name = vector_names.get(key, key)
-                                    print(f"    {cn_name}: {value:.2f}")
-                            print()
-                        if report.get("emotion"):
-                            emotion = report["emotion"]
-                            print("\n【情绪状态】")
-                            current_emotion = emotion.get("current_emotion", {})
-                            if current_emotion:
-                                print(f"  主导情绪: {current_emotion.get('dominant', '未知')}")
-                                print(f"  情绪强度: {current_emotion.get('intensity', 0):.2f}")
-                                print("  当前情绪:")
-                                for emotion_name, intensity in current_emotion.get("current", {}).items():
-                                    print(f"    {emotion_name}: {intensity:.2f}")
-                            print()
-                        if report.get("memory"):
-                            print("\n【记忆统计】")
-                            stats = report.get("memory", {})
-                            print(f"  长期记忆: {stats.get('longterm_count', 0)}条")
-                            print(f"  潮汐记忆: {stats.get('tide_count', 0)}条")
-                            print(f"  语义记忆: {stats.get('semantic_count', 0)}条")
-                            print(f"  知识图谱: {stats.get('graph_count', 0)}条")
-                            print()
-                        if report.get("learning"):
-                            learning = report.get("learning", {})
-                            print("\n【学习统计】")
-                            print(f"  学习次数: {learning.get('total_learnings', 0)}次")
-                            print(f"  改进次数: {learning.get('total_improvements', 0)}次")
-                            if learning.get("learning_history"):
-                                print("  最近学习:")
-                                for item in learning.get("learning_history", [])[:5]:
-                                    print(f"    - {item.get('type', '未知')}: {item.get('description', '无描述')}")
-                            print()
-                        continue
-
-                    if user_input.lower() in ["yes", "y", "是", "确认"]:
-                        print(f"{miya.identity.name}: 确认功能已由 Open-ClaudeCode 处理\n")
-                        continue
-
-                    if user_input.lower() in ["取消", "cancel", "no", "n"]:
-                        print(f"{miya.identity.name}: 取消功能已由 Open-ClaudeCode 处理\n")
-                        continue
-
-                    if user_input.lower().startswith("switch ") or user_input.lower() == "list terminals":
-                        print(f"{miya.identity.name}: 终端管理已由 Open-ClaudeCode 处理\n")
-                        continue
-
-                except KeyboardInterrupt:
-                    print("\n\n检测到中断信号...")
-                    break
-
-        # 保持系统运行（等待中断）
-        while True:
-            try:
-                import time
-
-                time.sleep(1)
-            except KeyboardInterrupt:
-                break
+        # 交互主循环
+        await _interactive_loop(miya)
 
     except Exception as e:
         logging.error(f"系统错误: {e}", exc_info=True)
         return 1
 
     finally:
-        if "miya" in locals():
-            # 关闭对话历史管理器（等待所有保存任务完成）
+        if miya is not None:
+            # 关闭对话历史管理器
             try:
                 if miya.memory_net and hasattr(miya.memory_net, "conversation_history"):
-
-                    async def cleanup_conversation_history():
-                        await miya.memory_net.conversation_history.close()
-                        print("对话历史已保存")
-
-                    asyncio.run(cleanup_conversation_history())
+                    await miya.memory_net.conversation_history.close()
+                    print("对话历史已保存")
             except Exception as e:
                 logging.error(f"关闭对话历史管理器失败: {e}", exc_info=True)
 
-            miya.shutdown()
+            # 取消主动聊天任务
+            try:
+                if hasattr(miya, '_proactive_task'):
+                    miya._proactive_task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await miya._proactive_task
+            except Exception:
+                pass
+
+            # 异步关闭
+            await miya.ashutdown()
 
     return 0
+
+
+async def _interactive_loop(miya) -> None:
+    """终端交互主循环 —— 在 amain 的事件循环内运行。"""
+    while True:
+        try:
+            loop = asyncio.get_running_loop()
+            user_input = (await loop.run_in_executor(None, chinese_input, "> ")).strip()
+
+            from core.text_loader import get_farewell, is_farewell
+
+            if is_farewell(user_input):
+                print(f"{miya.identity.name}: {get_farewell()}")
+                if miya.decision_hub:
+                    try:
+                        await miya.decision_hub.handle_session_end("default", platform="terminal")
+                        print("对话历史已保存")
+                    except Exception as e:
+                        print(f"保存对话历史失败: {e}")
+                break
+
+            if user_input.lower() in ["status", "状态"]:
+                _print_status(miya)
+                continue
+
+            if user_input.lower() in ["auto", "自动改进", "improve", "自主"]:
+                print(f"\n{miya.identity.name}: 正在进行自主改进...")
+                try:
+                    result = await miya.autonomy_with_personality.personalized_improvement(
+                        max_fixes=5, consider_personality=True
+                    )
+                    print(f"\n{miya.identity.name}: 改进完成！")
+                    print(f"  发现问题: {result['problems_found']}")
+                    print(f"  做出决策: {result['decisions_made']}")
+                    print(f"  尝试修复: {result['fixes_attempted']}")
+                    print(f"  成功修复: {result['fixes_successful']}")
+                except Exception as e:
+                    print(f"  自主改进出错: {e}")
+                print()
+                continue
+
+            if user_input.lower() in ["learn", "学习报告", "报告"]:
+                print(f"\n{miya.identity.name}: 正在生成学习报告...")
+                try:
+                    report = await miya.autonomy_with_personality.generate_personalized_report()
+                    print(report)
+                except Exception as e:
+                    print(f"  报告生成失败: {e}")
+                print()
+                continue
+
+            # 占位命令 (Claude Code Engine 已移除)
+            if user_input.lower() in ["yes", "y", "是", "确认",
+                                       "取消", "cancel", "no", "n"]:
+                print(f"{miya.identity.name}: 此功能当前不通过终端提供\n")
+                continue
+            if user_input.lower().startswith("switch ") or user_input.lower() == "list terminals":
+                print(f"{miya.identity.name}: 终端管理功能当前不可用\n")
+                continue
+
+            # 普通聊天
+            if user_input:
+                reply = await miya.process_input_async(user_input)
+                if reply:
+                    print(f"{miya.identity.name}: {reply}")
+                print()
+
+        except KeyboardInterrupt:
+            print("\n\n检测到中断信号...")
+            break
+
+
+def _print_status(miya) -> None:
+    """打印系统状态。使用 .get() 防御缺失 key (修复原 KeyError)。"""
+    status = miya.get_system_status()
+    print(f"\n=== {miya.identity.name} 系统状态 ===")
+    print(f"版本: {miya.identity.version}")
+    print(f"UUID: {miya.identity.uuid}")
+    print("\n【人格状态】")
+    print(f"  形态: {status['personality'].get('state', 'N/A')}")
+    print(f"  主导特质: {status['personality'].get('dominant_trait', 'N/A')}")
+    vectors = status['personality'].get('vectors', {})
+    print("  人格向量:")
+    for trait, value in vectors.items():
+        print(f"    {trait}: {value:.2f}")
+    print("\n【情绪状态】")
+    print(f"  主导情绪: {status['emotion'].get('dominant', 'N/A')}")
+    print(f"  情绪强度: {status['emotion'].get('intensity', 0):.2f}")
+    current = status['emotion'].get('current', {})
+    print("  当前情绪:")
+    for emotion, intensity in current.items():
+        print(f"    {emotion}: {intensity:.2f}")
+    print("\n【记忆统计】")
+    print(f"  潮汐记忆: {status['memory_stats'].get('tide_count', 0)}条")
+    print(f"  长期记忆: {status['memory_stats'].get('longterm_count', 0)}条")
+    print("\n【感知状态】")
+    perception = status.get('perception', {})
+    print(f"  全局激活: {perception.get('global_active', 'N/A')}")
+    print(f"  外部感知: {perception.get('external_active', 'N/A')}")
+    print("\n【信任统计】")
+    trust = status.get('trust_stats', {})
+    print(f"  平均信任: {trust.get('avg_score', 'N/A')}")
+    print(f"  总交互: {trust.get('total_interactions', 'N/A')}")
+    print("\n【系统健康】")
+    entropy = status.get('entropy_health', {})
+    print(f"  熵值: {entropy.get('current_entropy', 'N/A')}")
+    print(f"  健康状态: {entropy.get('status', 'N/A')}")
+    print()
 
 
 if __name__ == "__main__":
