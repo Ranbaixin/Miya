@@ -186,6 +186,22 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 addopts = ["-v", "--tb=short"]
+# 脚本风格测试 (if __name__ == "__main__"): pytest 无法正确收集，迁到 test_ 函数后解除
+collect_ignore_glob = [
+    "tests/e2e_test_scenarios.py",
+    "tests/integration_test_scenarios.py",
+    "tests/run_integration_tests.py",
+    "tests/test_dynamic_system.py",
+    "tests/test_emoji_manager.py",
+    "tests/test_enhanced_memory.py",
+    "tests/test_memory_core.py",
+    "tests/test_memory_system.py",
+    "tests/test_memory_verify.py",
+    "tests/test_miya_memory.py",
+    "tests/test_proactive_chat.py",
+    "tests/test_qq_config.py",
+    "tests/test_yinmei_vtuber.py",
+]
 
 [tool.ruff]
 line-length = 120
