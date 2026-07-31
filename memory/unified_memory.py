@@ -81,14 +81,15 @@ class UnifiedMemory:
 _unified_memory_instance: Optional[UnifiedMemory] = None
 
 
+from utils.singleton import sync_singleton
+
+
+@sync_singleton
 def get_unified_memory(
     data_dir: str = "data/memory", config: Optional[Dict] = None
 ) -> UnifiedMemory:
     """获取统一记忆实例"""
-    global _unified_memory_instance
-    if _unified_memory_instance is None:
-        _unified_memory_instance = UnifiedMemory(data_dir, config)
-    return _unified_memory_instance
+    return UnifiedMemory(data_dir, config)
 
 
 def init_unified_memory(

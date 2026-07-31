@@ -546,16 +546,19 @@ class AuditLogger:
 _global_audit_logger: Optional[AuditLogger] = None
 
 
+from utils.singleton import sync_singleton
+
+
+@sync_singleton
 def get_global_audit_logger() -> AuditLogger:
     """获取全局审计日志实例"""
-    global _global_audit_logger
-    if _global_audit_logger is None:
-        _global_audit_logger = AuditLogger()
-    return _global_audit_logger
+    return AuditLogger()
 
 
 def set_global_audit_logger(logger: AuditLogger):
     """设置全局审计日志实例"""
+    # P7.3 注：get_global_audit_logger 已改为 @sync_singleton（cell 缓存），
+    # 此 setter 不再影响其返回值。当前无任何调用者，保留仅为兼容；如需注入请改用 reset + 重建。
     global _global_audit_logger
     _global_audit_logger = logger
 

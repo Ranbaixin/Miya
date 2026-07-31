@@ -39,12 +39,13 @@ class LogManager:
 _log_broker: Optional[LogBroker] = None
 
 
+from utils.singleton import sync_singleton
+
+
+@sync_singleton
 def get_log_broker() -> LogBroker:
     """获取日志代理"""
-    global _log_broker
-    if _log_broker is None:
-        _log_broker = LogBroker()
-    return _log_broker
+    return LogBroker()
 
 
 def get_logger(name: str) -> logging.Logger:

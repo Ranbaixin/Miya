@@ -595,10 +595,10 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         # === 8. 自动保存所有图片（在任何拦截之前） ===
         has_direct_images = bool(image_segments)
         if has_direct_images:
-            asyncio.ensure_future(self._auto_save_images(image_segments, user_id))
+            self._spawn(self._auto_save_images(image_segments, user_id))
             # 字符串格式的 CQ 图片也保存（可能在过滤前漏掉）
         if isinstance(raw_message, str) and "[CQ:image" in raw_message:
-            asyncio.ensure_future(self._auto_save_string_images(raw_message, user_id))
+            self._spawn(self._auto_save_string_images(raw_message, user_id))
 
         # === 9. 图片 / 表情预过滤（纯图片且非@非超管的群消息跳过） ===
         if (
@@ -625,7 +625,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 image_bytes = await self._download_reference_image(img_data)
                 if not image_bytes:
                     continue
-                asyncio.ensure_future(self._auto_save_image_bytes(image_bytes, user_id, img_data))
+                self._spawn(self._auto_save_image_bytes(image_bytes, user_id, img_data))
                 try:
                     from core.multi_vision_analyzer import get_vision_analyzer
 
@@ -655,7 +655,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
         # === 10. 自动保存直接图片 ===
         if has_direct_images:
-            asyncio.ensure_future(self._auto_save_images(image_segments, user_id))
+            self._spawn(self._auto_save_images(image_segments, user_id))
 
         # === 11. 文件附件 ===
         if file_segments:
@@ -701,7 +701,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                         image_bytes = await self._download_reference_image(img_data)
                         if not image_bytes:
                             continue
-                        asyncio.ensure_future(self._auto_save_image_bytes(image_bytes, user_id, img_data))
+                        self._spawn(self._auto_save_image_bytes(image_bytes, user_id, img_data))
                         try:
                             from core.multi_vision_analyzer import (
                                 get_vision_analyzer,
@@ -741,7 +741,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                         image_bytes = await self._download_reference_image({"file": fid})
                         if not image_bytes:
                             continue
-                        asyncio.ensure_future(self._auto_save_image_bytes(image_bytes, user_id, {"file": fid}))
+                        self._spawn(self._auto_save_image_bytes(image_bytes, user_id, {"file": fid}))
                         try:
                             from core.multi_vision_analyzer import (
                                 get_vision_analyzer,

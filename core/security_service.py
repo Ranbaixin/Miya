@@ -410,11 +410,10 @@ class SecurityService:
 _global_security_service: Optional[SecurityService] = None
 
 
+from utils.singleton import sync_singleton
+
+
+@sync_singleton
 def get_global_security_service() -> SecurityService:
     """获取全局安全服务"""
-    global _global_security_service
-
-    if _global_security_service is None:
-        _global_security_service = SecurityService()
-
-    return _global_security_service
+    return SecurityService()

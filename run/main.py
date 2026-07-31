@@ -110,6 +110,11 @@ class Miya:
     def __init__(self):
         self.logger = self._setup_logger()
         self.settings = Settings()
+        # 后台任务引用持有（防 GC + 统一取消，P7.2 RUF006 修复）
+        self._tasks: set[asyncio.Task] = set()
+        # Uvicorn server / 线程引用（P7.1 优雅关闭）
+        self._uvicorn_server = None
+        self._server_thread = None
         self.logger.info("弥娅系统初始化中...")
 
         # 【第一阶段】系统环境检测
@@ -602,14 +607,17 @@ class Miya:
                             except Exception as e:
                                 self.logger.warning(f"[Miya] 吟美插件加载失败: {e}")
 
-                            uvicorn.run(
+                            # P7.1: 改用 uvicorn.Server 以便 ashutdown 时通过 should_exit 优雅停止
+                            config = uvicorn.Config(
                                 app,
                                 host="0.0.0.0",
                                 port=current_api_port,
                                 log_level="warning",
                             )
-                            # uvicorn.run 会阻塞，所以下面的代码不会执行
-                            # 但为了类型安全，返回 True
+                            server = uvicorn.Server(config)
+                            self._uvicorn_server = server
+                            server.run()
+                            # server.run() 会阻塞（直至 should_exit），此处返回 True
                             return True
                         return False
                     except OSError as e:
@@ -629,6 +637,7 @@ class Miya:
                 return False
 
             server_thread = threading.Thread(target=run_server, args=(api_port,), daemon=False)
+            self._server_thread = server_thread
             server_thread.start()
 
             import time
@@ -809,41 +818,72 @@ class Miya:
         self.logger.info("弥娅系统正在关闭...")
         import asyncio, contextlib
 
-        # 1. 调度器
-        if hasattr(self, 'scheduler') and self.scheduler:
-            try: await self.scheduler.stop()
-            except Exception as e: self.logger.debug(f"调度器关闭失败: {e}")
-
-        # 2. 决策中枢
-        if hasattr(self, 'decision_hub') and self.decision_hub:
+        async def _safe_close(name: str, close_fn) -> None:
+            """关闭子系统，兼容同步/异步，wait_for 10s 防挂死（P7.1）"""
             try:
-                if hasattr(self.decision_hub, 'shutdown'): self.decision_hub.shutdown()
-            except Exception as e: self.logger.debug(f"DecisionHub 关闭失败: {e}")
+                result = close_fn()
+                if asyncio.iscoroutine(result):
+                    await asyncio.wait_for(result, timeout=10)
+                self.logger.debug(f"{name} 已关闭")
+            except asyncio.TimeoutError:
+                self.logger.warning(f"{name} 关闭超时")
+            except Exception as e:
+                self.logger.debug(f"{name} 关闭失败: {e}")
 
-        # 3. M-Link
-        if self.mlink:
-            try:
-                if hasattr(self.mlink, 'close'): self.mlink.close()
-            except Exception as e: self.logger.debug(f"M-Link 关闭失败: {e}")
+        # 1. 调度器（async）
+        if getattr(self, 'scheduler', None):
+            await _safe_close("调度器", self.scheduler.stop)
 
-        # 4. MemoryNet
-        if self.memory_net:
-            try:
-                if hasattr(self.memory_net, 'close'): self.memory_net.close()
-            except Exception as e: self.logger.debug(f"MemoryNet 关闭失败: {e}")
+        # 2. 决策中枢（当前无 shutdown 方法，hasattr 保护）
+        if getattr(self, 'decision_hub', None) and hasattr(self.decision_hub, 'shutdown'):
+            await _safe_close("DecisionHub", self.decision_hub.shutdown)
+
+        # 3. M-Link（MLinkCore 当前无 close，hasattr 保护）
+        if getattr(self, 'mlink', None) and hasattr(self.mlink, 'close'):
+            await _safe_close("M-Link", self.mlink.close)
+
+        # 4. MemoryNet（自身无 close，改关闭 memory 层后端，P7.1 补齐）
+        if getattr(self, 'memory_net', None):
+            await _safe_close("MemoryNet后端", self._close_memory_backends)
 
         # 5. AI 客户端
-        if self.ai_client:
-            try:
-                if hasattr(self.ai_client, 'close'): self.ai_client.close()
-            except Exception as e: self.logger.debug(f"AI 客户端关闭失败: {e}")
+        if getattr(self, 'ai_client', None) and hasattr(self.ai_client, 'close'):
+            await _safe_close("AI客户端", self.ai_client.close)
 
-        # 6. Redis
-        if self.redis:
-            try: self.redis.close()
-            except Exception as e: self.logger.debug(f"Redis 关闭失败: {e}")
+        # 6. Redis（sync）
+        if getattr(self, 'redis', None):
+            await _safe_close("Redis", self.redis.close)
+
+        # 7. 多模态分析器（模块级 _global_analyzer 单例，P7.1 新增）
+        try:
+            from core.multi_vision_analyzer import _global_analyzer
+            if _global_analyzer is not None:
+                await _safe_close("多模态分析器", _global_analyzer.close)
+        except Exception as e:
+            self.logger.debug(f"多模态分析器关闭失败: {e}")
+
+        # 8. Neo4j（async，P7.1 新增）
+        if getattr(self, 'grag_memory', None):
+            await _safe_close("Neo4j", self.grag_memory.close)
+
+        # 9. Uvicorn（改造后保存的 server/thread，P7.1 新增）
+        if getattr(self, '_uvicorn_server', None):
+            self._uvicorn_server.should_exit = True
+        if getattr(self, '_server_thread', None) and self._server_thread.is_alive():
+            self._server_thread.join(timeout=5)
 
         self.logger.info("弥娅系统已关闭")
+
+    async def _close_memory_backends(self) -> None:
+        """关闭 memory 层后端（MemoryNet 自身无 close，P7.1 补齐真实关闭链）"""
+        try:
+            from memory import get_memory_core
+            core = await get_memory_core()
+            if core is not None and hasattr(core, 'close'):
+                await core.close()
+                self.logger.debug("memory core 已关闭")
+        except Exception as e:
+            self.logger.debug(f"memory core 关闭失败: {e}")
 
     def shutdown(self) -> None:
         """关闭系统 - 优雅释放所有资源"""
@@ -857,7 +897,9 @@ class Miya:
                 try:
                     loop = asyncio.get_event_loop()
                     if loop.is_running():
-                        asyncio.create_task(self.scheduler.stop())
+                        task = asyncio.create_task(self.scheduler.stop())
+                        self._tasks.add(task)
+                        task.add_done_callback(self._tasks.discard)
                     else:
                         loop.run_until_complete(self.scheduler.stop())
                 except RuntimeError:

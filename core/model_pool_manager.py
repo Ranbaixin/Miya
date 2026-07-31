@@ -465,11 +465,12 @@ class ModelPoolManager:
 _instance: Optional[ModelPoolManager] = None
 
 
+from utils.singleton import sync_singleton
+
+
+@sync_singleton
 def get_model_pool() -> ModelPoolManager:
-    global _instance
-    if _instance is None:
-        _instance = ModelPoolManager()
-    return _instance
+    return ModelPoolManager()
 
 
 def get_model(model_id: str) -> Optional[Model]:

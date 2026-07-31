@@ -77,6 +77,20 @@ class BasePlatform(ABC):
 
     # ==================== 生命周期 ====================
 
+    def _spawn(self, coro: Awaitable) -> asyncio.Task:
+        """创建后台任务并持有引用（防 GC + 统一取消）。RUF006 修复。"""
+        task = asyncio.ensure_future(coro)
+        self._tasks.append(task)
+        task.add_done_callback(self._task_done)
+        return task
+
+    def _task_done(self, task: asyncio.Task) -> None:
+        """任务完成后从 _tasks 移除；列表若已被 _cancel_tasks 清空则忽略。"""
+        try:
+            self._tasks.remove(task)
+        except ValueError:
+            pass
+
     async def connect(self) -> bool:
         """连接到平台（外部调用入口）"""
         async with self._lock:

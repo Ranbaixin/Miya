@@ -420,9 +420,10 @@ class MessageQueueManager:
 _message_queue = None
 
 
+from utils.singleton import sync_singleton
+
+
+@sync_singleton
 def get_message_queue() -> MessageQueueManager:
     """获取消息队列管理器"""
-    global _message_queue
-    if _message_queue is None:
-        _message_queue = MessageQueueManager.get_instance()
-    return _message_queue
+    return MessageQueueManager.get_instance()

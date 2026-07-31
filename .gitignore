@@ -159,6 +159,9 @@ node_modules
 # Miya Bridge PID
 .miya_bridge.pid
 
+# Miya 运行时数据（含 database.db / memory/，绝不提交）
+.miya/
+
 # ── MIYA 编译产物 ──
 build_assets/
 miya_frontend/release/

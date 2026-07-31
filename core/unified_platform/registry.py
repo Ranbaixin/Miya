@@ -224,12 +224,13 @@ class PlatformRegistry:
 _global_registry: Optional[PlatformRegistry] = None
 
 
+from utils.singleton import sync_singleton
+
+
+@sync_singleton
 def get_registry() -> PlatformRegistry:
     """获取全局注册表单例"""
-    global _global_registry
-    if _global_registry is None:
-        _global_registry = PlatformRegistry()
-    return _global_registry
+    return PlatformRegistry()
 
 
 # ==================== 装饰器 ====================

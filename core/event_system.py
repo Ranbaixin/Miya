@@ -323,11 +323,12 @@ _event_bus = None
 _cron_manager = None
 
 
+from utils.singleton import sync_singleton
+
+
+@sync_singleton
 def get_event_bus() -> EventBus:
-    global _event_bus
-    if _event_bus is None:
-        _event_bus = EventBus()
-    return _event_bus
+    return EventBus()
 
 
 def get_cron_manager() -> CronManager:

@@ -280,16 +280,15 @@ class GestaltController:
 _gestalt_controller: Optional[GestaltController] = None
 
 
+from utils.singleton import sync_singleton
+
+
+@sync_singleton
 def get_gestalt_controller() -> GestaltController:
     """
     获取格式塔控制器全局实例
     """
-    global _gestalt_controller
-
-    if _gestalt_controller is None:
-        _gestalt_controller = GestaltController()
-
-    return _gestalt_controller
+    return GestaltController()
 
 
 async def initialize_gestalt(tool_subnet=None) -> GestaltController:

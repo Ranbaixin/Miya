@@ -551,12 +551,13 @@ def invalidate_cache(
 _global_cache_manager: Optional[CacheManager] = None
 
 
+from utils.singleton import sync_singleton
+
+
+@sync_singleton
 def get_cache_manager() -> CacheManager:
     """获取全局缓存管理器实例"""
-    global _global_cache_manager
-    if _global_cache_manager is None:
-        _global_cache_manager = CacheManager()
-    return _global_cache_manager
+    return CacheManager()
 
 
 def clear_cache():

@@ -315,6 +315,10 @@ class EmbeddingClient:
 _global_embedding_client: Optional[EmbeddingClient] = None
 
 
+from utils.singleton import async_singleton
+
+
+@async_singleton
 async def get_embedding_client(
     provider: EmbeddingProvider = EmbeddingProvider.OPENAI,
     model: Optional[str] = None,
@@ -331,18 +335,13 @@ async def get_embedding_client(
     Returns:
         EmbeddingClient实例
     """
-    global _global_embedding_client
-
-    if _global_embedding_client is None:
-        _global_embedding_client = EmbeddingClient(
-            provider=provider, model=model, api_key=api_key
-        )
-        await _global_embedding_client.initialize()
-
-    return _global_embedding_client
+    client = EmbeddingClient(
+        provider=provider, model=model, api_key=api_key
+    )
+    await client.initialize()
+    return client
 
 
 def reset_embedding_client():
     """重置Embedding客户端（主要用于测试）"""
-    global _global_embedding_client
-    _global_embedding_client = None
+    get_embedding_client.reset()

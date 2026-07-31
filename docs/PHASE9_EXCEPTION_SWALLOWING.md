@@ -17,6 +17,14 @@
 | memory | 12 (4 个文件) |
 | hub | 11 (2 个文件) |
 
+> ⚠️ 数量注记（2026-07-31 ruff 实测，`select S110,S112,BLE001,E722`）：
+> - E722（裸 `except:`）：**96 处**
+> - S110（try-except-pass）：**124 处**
+> - S112（try-except-continue）：**17 处**
+> - BLE001（盲 `except Exception`，多数已有日志）：**1379 处**
+> 上表是旧口径（以空 pass 吞噬为主）；Sprint 1 用 ruff baseline 生成真实豁免表，此后以 baseline 为准。
+> 10 处「最危险」清单的行号已核实（2026-07-31）——全部准确，无偏移。
+
 **核心洞察：工具已经在 pyproject.toml 里了，只是被关掉了。**
 
 `pyproject.toml` 已 `select = ["E","F","W","I","N","UP","B","SIM"]`，但：

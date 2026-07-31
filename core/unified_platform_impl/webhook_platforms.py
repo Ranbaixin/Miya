@@ -59,7 +59,7 @@ class LarkPlatform(WebhookPlatform):
                     chat_id = msg.chat_id or ""
                     msg_type = "group" if msg.chat_type == "group" else "private"
                     if content.strip():
-                        asyncio.create_task(
+                        platform._spawn(
                             platform._handle_lark_message(
                                 content, user_id, chat_id, msg_type
                             )

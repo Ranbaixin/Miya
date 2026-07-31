@@ -5,12 +5,14 @@
 
 import json
 import logging
+import threading
 from pathlib import Path
 from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
 _config_cache: Dict[str, Any] = {}
+_config_lock = threading.Lock()  # P7.3: 保护 _config_cache 跨线程读写
 
 
 def _get_config_dir() -> Path:
@@ -20,23 +22,24 @@ def _get_config_dir() -> Path:
 
 def _load_json_config(config_name: str) -> Dict[str, Any]:
     """加载JSON配置文件"""
-    if config_name in _config_cache:
-        return _config_cache[config_name]
+    with _config_lock:
+        if config_name in _config_cache:
+            return _config_cache[config_name]
 
-    config_path = _get_config_dir() / f"{config_name}.json"
+        config_path = _get_config_dir() / f"{config_name}.json"
 
-    try:
-        if config_path.exists():
-            with open(config_path, "r", encoding="utf-8") as f:
-                _config_cache[config_name] = json.load(f)
-                logger.info(f"加载配置 {config_name} 成功")
-                return _config_cache[config_name]
-        else:
-            logger.warning(f"配置文件不存在: {config_path}")
+        try:
+            if config_path.exists():
+                with open(config_path, "r", encoding="utf-8") as f:
+                    _config_cache[config_name] = json.load(f)
+                    logger.info(f"加载配置 {config_name} 成功")
+                    return _config_cache[config_name]
+            else:
+                logger.warning(f"配置文件不存在: {config_path}")
+                return {}
+        except Exception as e:
+            logger.error(f"加载配置 {config_name} 失败: {e}")
             return {}
-    except Exception as e:
-        logger.error(f"加载配置 {config_name} 失败: {e}")
-        return {}
 
 
 def get_system_constants() -> Dict[str, Any]:
@@ -70,7 +73,8 @@ def get_api_url(service: str, path: str = "") -> str:
 def reload_configs():
     """重新加载所有配置"""
     global _config_cache
-    _config_cache = {}
+    with _config_lock:
+        _config_cache = {}
     get_system_constants()
     get_api_endpoints()
     logger.info("配置已重新加载")

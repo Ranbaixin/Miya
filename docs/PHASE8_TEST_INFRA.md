@@ -10,6 +10,10 @@
 
 当前状态:
 - pytest 收集 66 items，但实际执行 0（pytest-asyncio 已装、conftest fixture 已修）
+  > ✅ **已修复**（2026-07-31，Step 0 执行完毕）：pyproject.toml 已补 `[tool.hatch.build.targets.wheel]`（packages + force-include），`uv sync --group dev` 成功；
+  > `uv run pytest --version` = **9.1.1**，核心模块 import 通过，smoke 5/5 通过。实测收集 **69 tests / 1 error**——
+  > error 是 pytest 捕获机制自身问题（`_pytest/capture.py` "I/O operation on closed file"），非项目代码，留待 P8 排查。
+  > 注意：项目实际 Python **3.11.x**（非 CLAUDE.md 所述 3.13）；pytest 在 `[dependency-groups] dev`，需 `uv sync --group dev` 安装。
 - 13 个脚本风格测试已隔离到 `collect_ignore_glob`
 - CI 中 `tests/unit/` 路径已修正、`|| echo` 吞失败已移除
 - **缺少可信的回归测试基线** — 这是 P9（异常吞噬改 raise）的安全网
@@ -30,7 +34,7 @@ tests/
 │   ├── platform/            # 平台回复发送 (回归风险 #2)
 │   │   └── test_send_message_contract.py
 │   ├── config/              # 配置加载 + 拓扑冻结 (回归风险 #3)
-│   │   └── test_config_topology.py  (已创建)
+│   │   └── test_config_topology.py  (⚠️ 校准：当前位于 tests/ 根，Step 1 需移动到 tests/unit/config/)
 │   └── permission/          # 权限 fail-closed
 │       └── test_check_permission.py
 ├── integration/             # 需要真实文件/DB
@@ -42,6 +46,19 @@ tests/
 
 ## 三、执行步骤
 
+### Step 0: 修复本地运行环境（前置，~0.5d）⚠️ 校准新增（2026-07-31）
+
+**问题**：本地三个 Python 环境均无 pytest，且 `uv run`（默认构建）因 hatch 配置缺失而失败。
+
+**修复**：
+1. 在 `pyproject.toml` 补 `[tool.hatch.build.targets.wheel]`（项目为 src-less 平铺布局，需列出 packages：
+   `packages = ["core", "memory", "hub", "utils", "webnet", "mlink", "run", ...]`，或用 `include`/`force-include` 兜底），使 `uv run` 能完成 editable 构建。
+2. `uv sync` 后 `uv run pytest --version` 验证。
+
+**注意**：项目实际 Python 是 **3.11.x**（uv `.venv` = 3.11.14、`venv/` = 3.11.9），非 CLAUDE.md 所述 3.13。
+
+**验证**：`uv run pytest --version` 输出版本号。
+
 ### Step 1: 建立测试目录与基础配置 (~0.5d)
 
 ```bash
@@ -49,11 +66,13 @@ mkdir -p tests/unit/memory tests/unit/platform tests/unit/config tests/unit/perm
 touch tests/unit/__init__.py tests/unit/memory/__init__.py tests/unit/platform/__init__.py
 ```
 
-`pyproject.toml` 配置（当前已部分完成）:
+`pyproject.toml` 配置（当前已部分完成；2026-07-31 核实实际为 `testpaths = ["tests"]`）:
 ```toml
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["tests/unit"]
+testpaths = ["tests"]   # ⚠️ 保持 ["tests"] 而非改 ["tests/unit"]：pytest 会递归收集 tests/unit/，
+                        # 且 tests/ 根下仍有真实测试文件（test_config_topology.py 等）不能被排除。
+                        # 脚本风格测试已由 collect_ignore_glob 隔离，不会混入。
 addopts = ["-v", "--tb=short"]
 ```
 

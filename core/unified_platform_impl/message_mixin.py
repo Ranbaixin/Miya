@@ -291,9 +291,9 @@ class MessageMixin:
                     response = self._filter_output(response)
                 # TTS 本地播放 (fire-and-forget, 所有平台)
                 if response and self._tts_should_local():
-                    asyncio.ensure_future(self._tts_play_response(response))
+                    self._spawn(self._tts_play_response(response))
                 # 副作用 (fire-and-forget)
-                asyncio.ensure_future(
+                self._spawn(
                     self._after_route(content, response or "", user_id)
                 )
                 return response  # None → 不回复, 空字符串 → 平台自行兜底

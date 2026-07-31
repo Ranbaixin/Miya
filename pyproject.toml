@@ -274,3 +274,22 @@ python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
+
+# ============================================================
+# hatch build 配置（P8 Step 0 校准修复 2026-07-31）
+# 项目为 src-less 平铺布局且无 `miya/` 目录，必须显式列出 packages，
+# 否则 hatchling 报 "Unable to determine which files to ship"，
+# 导致 `uv run` / `uv sync` / CI 构建全部失败。
+# ============================================================
+[tool.hatch.build.targets.wheel]
+packages = [
+    "core",
+    "memory",
+    "hub",
+    "webnet",
+    "mlink",
+    "plugins",
+    "config",
+    "run",
+    "utils",
+]
