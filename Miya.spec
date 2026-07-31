@@ -128,7 +128,6 @@ hiddenimports.extend([
     'webnet.EntertainmentNet',
     'mcpserver',
     'mlink',
-    'astrbot',
     'utils', 'utils.emoji_manager',
 ])
 
