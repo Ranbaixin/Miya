@@ -6,8 +6,8 @@
 import asyncio
 import json
 import logging
-from dataclasses import dataclass
-from typing import Dict, List, Tuple
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -16,11 +16,25 @@ logger = logging.getLogger(__name__)
 class Quintuple:
     """五元组数据结构"""
 
-    subject: str
-    subject_type: str
-    predicate: str
-    object: str
-    object_type: str
+    subject: str = ""
+    subject_type: str = ""
+    predicate: str = ""
+    object: str = ""
+    object_type: str = ""
+    # 2026-08 兼容字段：grag_memory 存储路径需要（此前缺失导致 Neo4j 启用后
+    # store_quintuple 抛 AttributeError，五元组从未真正写入图数据库）
+    context: str = ""
+    timestamp: Optional[float] = None
+    attributes: Dict = field(default_factory=dict)
+
+    @property
+    def relation(self) -> str:
+        """兼容别名：五元组的关系字段（grag_memory 旧代码用 relation）"""
+        return self.predicate
+
+    @relation.setter
+    def relation(self, value: str):
+        self.predicate = value
 
     def to_tuple(self) -> Tuple[str, str, str, str, str]:
         return (
