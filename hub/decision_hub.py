@@ -373,10 +373,12 @@ class DecisionHub:
                     logger.info(f"[主动聊天] 无法发送到 {platform}: {message}")
 
                 # 记入统一记忆系统（长时记忆，不含工作记忆避免反馈污染）
+                # 2026-08 修复：群聊主动发言无明确接收用户 → user_id 置空归群桶
+                # （此前写 "0" 产生 aiocqhttp_0 会话桶与孤儿记忆）
                 try:
                     perception = {
                         "platform": platform or "terminal",
-                        "user_id": str(target_id) if chat_type != "group" else "0",
+                        "user_id": "" if chat_type == "group" else str(target_id),
                         "group_id": str(target_id) if chat_type == "group" else "0",
                         "message_type": chat_type,
                         "response": message,
@@ -1186,6 +1188,26 @@ class DecisionHub:
         logger.info(f"[决策层-跨平台] 生成响应: {response[:50] if response else '(空)'}")
         return response
 
+    @staticmethod
+    def _session_ids_for(platform: str, user_id, group_id) -> list:
+        """会话 key 列表：[0]=新 key（写入用），[1..]=旧 key（读取回退用）
+
+        2026-08：历史会话文件按 md5(platform_user) 命名，新 key（群隔离/私聊前缀）
+        无法命中旧数据，读取时回退旧 key。写入始终用新 key，防止数据继续分裂。
+        """
+        uid = str(user_id or "")
+        gid = str(group_id or "0")
+        keys = []
+        if gid and gid != "0":
+            keys.append(f"{platform}_g{gid}_u{uid}" if uid else f"{platform}_g{gid}")
+            if uid:
+                keys.append(f"{platform}_{uid}")
+        else:
+            keys.append(f"{platform}_private_{uid}" if uid else f"{platform}_x_unknown")
+            if uid:
+                keys.append(f"{platform}_{uid}")
+        return keys
+
     async def _generate_response_cross_platform(self, content, platform: str, context: dict = None) -> str:
         """
         生成响应（跨平台统一）
@@ -1331,17 +1353,22 @@ class DecisionHub:
             # ============================================================
             # 2026-08 修复：会话 key 按群隔离（此前同用户跨群共享对话上下文）
             # 群聊: platform_g{group_id}_u{user_id}；私聊: platform_private_{user_id}
+            # 2026-08 兼容：旧数据按 platform_user 命名（md5 文件），读取时回退旧 key
             _group_for_session = context.get("group_id") or 0
-            if _group_for_session:
-                session_id = f"{platform}_g{_group_for_session}_u{user_id}"
-            else:
-                session_id = f"{platform}_private_{user_id}"
+            session_ids = self._session_ids_for(platform, user_id, _group_for_session)
+            session_id = session_ids[0]
             user_id_str = str(user_id)
 
             async def fetch_conversation_context():
-                return await self.conversation_context_manager.get_conversation_context(
+                ctx = await self.conversation_context_manager.get_conversation_context(
                     session_id, current_input=content
                 )
+                # 新 key 无历史时回退旧 key（历史数据 session 文件按 platform_user 命名）
+                if not ctx and len(session_ids) > 1:
+                    ctx = await self.conversation_context_manager.get_conversation_context(
+                        session_ids[1], current_input=""
+                    )
+                return ctx
 
             async def fetch_knowledge_context():
                 if self.knowledge_graph:

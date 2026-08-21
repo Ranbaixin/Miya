@@ -427,7 +427,8 @@ class MemoryManager:
         """
         try:
             platform = perception.get("platform", "terminal")
-            user_id = str(perception.get("user_id", "unknown"))
+            user_id = str(perception.get("user_id", "") or "")
+            group_id = str(perception.get("group_id", "") or "")
 
             if role == "user":
                 content = perception.get("content", "") or perception.get("input", "")
@@ -436,7 +437,16 @@ class MemoryManager:
                 content = perception.get("response", "")
                 sender_name = "弥娅"
 
-            session_id = f"{platform}_{user_id}"
+            # 2026-08 修复：会话 key 与 store_user_message 完全一致（群隔离 + user 维度）
+            # + proactive 群聊（无 user_id）归群桶（此前写入 user_id="0" 产生 aiocqhttp_0 孤儿会话）
+            if group_id and group_id != "0":
+                session_id = (
+                    f"{platform}_g{group_id}_u{user_id}"
+                    if user_id
+                    else f"{platform}_g{group_id}"
+                )
+            else:
+                session_id = f"{platform}_private_{user_id}" if user_id else f"{platform}_x_unknown"
 
             # 存储到统一记忆系统
             await store_dialogue(
@@ -447,7 +457,7 @@ class MemoryManager:
                 platform=platform,
                 metadata={
                     "sender_name": sender_name,
-                    "group_id": perception.get("group_id", ""),
+                    "group_id": group_id,
                     "message_type": perception.get("message_type", ""),
                 },
             )

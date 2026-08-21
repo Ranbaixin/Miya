@@ -32,7 +32,7 @@ def git(files: list[str]) -> list[str]:
 def main() -> int:
     problems = []
 
-    tracked_data = git(["data/"])
+    tracked_data = [f for f in git(["data/"]) if f != "data/.gitkeep"]
     if tracked_data:
         problems.append(f"git 跟踪了 {len(tracked_data)} 个 data/ 运行时文件（应忽略）: "
                         + ", ".join(tracked_data[:5]) + " ...")

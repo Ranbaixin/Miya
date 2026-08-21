@@ -187,6 +187,12 @@ uv run python -X utf8 run/daemon.py --list-platforms
 2. 配置至少一个 AI 模型供应商的 API Key
 3. 可选：配置平台 bot 信息（QQ / Telegram / Discord 等）
 
+> **语义记忆（向量检索）说明**：默认关闭（`multi_model_config.json` 的
+> `embedding_config.enabled=false`）。启用需配置可用的 embedding 服务
+> （siliconflow bge 系列 / 本地 sentence-transformers）。当前已验证的
+> embedding 端点不可用（siliconflow 401）时保持禁用，六层记忆中的
+> 关键词检索与对话历史不受影响。
+
 ---
 
 ## 项目结构
