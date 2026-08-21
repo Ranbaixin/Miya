@@ -294,7 +294,13 @@ class SQLiteBackend(MemoryBackend):
                 params.append(query.group_id)
             if query.level:
                 conditions.append("level = ?")
-                params.append(query.level.value)
+                # 2026-08 修复：level 可能为字符串（retrieve 直传）或枚举，统一转字符串
+                level_val = (
+                    query.level.value
+                    if hasattr(query.level, "value")
+                    else str(query.level)
+                )
+                params.append(level_val)
             if query.session_id:
                 conditions.append("session_id = ?")
                 params.append(query.session_id)

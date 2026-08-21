@@ -1549,56 +1549,6 @@ class MiyaMemoryCore:
 
         return results[:limit]
 
-    async def get_statistics(self) -> Dict:
-        """获取统计"""
-        sqlite_count = 0
-        by_level_db = {}
-        if self.sqlite_backend:
-            try:
-                sqlite_count = await self.sqlite_backend.count()
-                by_level_db = await self.sqlite_backend.count_by_level()
-            except Exception as e:  # noqa: BLE001 — 统计为 best-effort，失败不影响主流程
-                logger.debug(f"[MiyaMemoryCore] SQLite 统计查询失败: {e}")
-
-        return {
-            "total_cached": len(self._cache),
-            "total_indexed": await self.backend.count(),
-            "total_sqlite": sqlite_count,
-            "by_level": {
-                "dialogue": len(
-                    [m for m in self._cache.values() if m.level == MemoryLevel.DIALOGUE]
-                ),
-                "short_term": len(
-                    [
-                        m
-                        for m in self._cache.values()
-                        if m.level == MemoryLevel.SHORT_TERM
-                    ]
-                ),
-                "long_term": len(
-                    [
-                        m
-                        for m in self._cache.values()
-                        if m.level == MemoryLevel.LONG_TERM
-                    ]
-                ),
-                "semantic": len(
-                    [m for m in self._cache.values() if m.level == MemoryLevel.SEMANTIC]
-                ),
-                "knowledge": len(
-                    [
-                        m
-                        for m in self._cache.values()
-                        if m.level == MemoryLevel.KNOWLEDGE
-                    ]
-                ),
-            },
-            "by_level_db": by_level_db,
-            "by_user": len(self._user_index),
-            "by_tag": len(self._tag_index),
-            "stats": self._stats,
-        }
-
     def _search_from_cache(self, query: MemoryQuery) -> List[MemoryItem]:
         """从缓存搜索"""
         results = []
@@ -2095,41 +2045,42 @@ class MiyaMemoryCore:
     # ==================== 统计 ====================
 
     async def get_statistics(self) -> Dict:
-        """获取统计"""
+        """获取统计（2026-08 修复：by_level/by_user/by_tag 从磁盘索引统计，冷启动不再全 0）"""
+        sqlite_count = 0
+        by_level_db = {}
+        if self.sqlite_backend:
+            try:
+                sqlite_count = await self.sqlite_backend.count()
+                by_level_db = await self.sqlite_backend.count_by_level()
+            except Exception as e:  # noqa: BLE001 — 统计为 best-effort，失败不影响主流程
+                logger.debug(f"[MiyaMemoryCore] SQLite 统计查询失败: {e}")
+
+        disk_index = getattr(self.backend, "_index", {}) or {}
+        by_level_disk = {
+            "dialogue": 0,
+            "short_term": 0,
+            "long_term": 0,
+            "semantic": 0,
+            "knowledge": 0,
+        }
+        by_user_disk = set()
+        by_tag_disk = set()
+        for _mid, meta in disk_index.items():
+            lv = meta.get("level", "")
+            if lv in by_level_disk:
+                by_level_disk[lv] += 1
+            if meta.get("user_id"):
+                by_user_disk.add(str(meta["user_id"]))
+            by_tag_disk.update(meta.get("tags") or [])
+
         return {
             "total_cached": len(self._cache),
-            "total_indexed": await self.backend.count(),
-            "by_level": {
-                "dialogue": len(
-                    [m for m in self._cache.values() if m.level == MemoryLevel.DIALOGUE]
-                ),
-                "short_term": len(
-                    [
-                        m
-                        for m in self._cache.values()
-                        if m.level == MemoryLevel.SHORT_TERM
-                    ]
-                ),
-                "long_term": len(
-                    [
-                        m
-                        for m in self._cache.values()
-                        if m.level == MemoryLevel.LONG_TERM
-                    ]
-                ),
-                "semantic": len(
-                    [m for m in self._cache.values() if m.level == MemoryLevel.SEMANTIC]
-                ),
-                "knowledge": len(
-                    [
-                        m
-                        for m in self._cache.values()
-                        if m.level == MemoryLevel.KNOWLEDGE
-                    ]
-                ),
-            },
-            "by_user": len(self._user_index),
-            "by_tag": len(self._tag_index),
+            "total_indexed": len(disk_index),
+            "total_sqlite": sqlite_count,
+            "by_level": by_level_disk,
+            "by_level_db": by_level_db,
+            "by_user": len(by_user_disk),
+            "by_tag": len(by_tag_disk),
             "stats": self._stats,
         }
 

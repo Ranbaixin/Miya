@@ -69,7 +69,12 @@ class MemoryManager:
             platform = perception.get("platform", "qq")
             sender_name = perception.get("sender_name", "用户")
             message_type = perception.get("message_type", "")
-            session_id = f"{platform}_{user_id}"
+            # 2026-08 修复：会话 key 按群隔离（与 decision_hub 的 Phase 4 修复对齐）
+            session_id = (
+                f"{platform}_g{group_id}_u{user_id}"
+                if group_id and group_id != "0"
+                else f"{platform}_private_{user_id}"
+            )
 
             logger.info(f"[记忆管理器] 收到消息: {content[:50]}...")
 
