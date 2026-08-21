@@ -849,8 +849,9 @@ class DecisionHub:
             logger.warning(f"[谛听] 记录失败: {e}")
 
         # 【新增】更新用户/群聊侧写（从消息中学习用户特征）
+        # 2026-08 修复：实际 QQ 平台 ID 为 aiocqhttp（此前写死 "qq" 导致侧写从未触发）
 
-        if platform == "qq" and user_id:
+        if platform in ("qq", "aiocqhttp", "qqofficial") and user_id:
             try:
                 from core.user_persona import get_user_persona_manager
 
@@ -1114,7 +1115,7 @@ class DecisionHub:
                 asyncio.create_task(self._handle_smart_emoji(response, perception))
 
         # 【新增】QQ端状态标签（仅日志，不添加到响应中）
-        if platform == "qq" and response and self.personality:
+        if platform in ("qq", "aiocqhttp", "qqofficial") and response and self.personality:
             from core.text_loader import get_form_name
 
             profile = self.personality.get_profile()
@@ -2974,7 +2975,7 @@ class DecisionHub:
                 # 构建任务参数
                 task_args = {
                     "task_type": task_type,
-                    "target_type": "private" if platform == "qq" else "group",
+                    "target_type": "private" if platform in ("qq", "aiocqhttp", "qqofficial") else "group",
                     "target_id": int(user_id)
                     if isinstance(user_id, str) and user_id.isdigit()
                     else (user_id if isinstance(user_id, int) else 0),
@@ -3004,7 +3005,7 @@ class DecisionHub:
 
                 task_args = {
                     "task_type": task_type,
-                    "target_type": "private" if platform == "qq" else "group",
+                    "target_type": "private" if platform in ("qq", "aiocqhttp", "qqofficial") else "group",
                     "target_id": uid,
                     "message": get_reminder_message(content),
                     "schedule_time": scheduled_time,
@@ -3096,7 +3097,7 @@ class DecisionHub:
 
         try:
             # 根据平台类型处理表情包请求
-            if platform == "qq":
+            if platform in ("qq", "aiocqhttp", "qqofficial"):
                 # QQ平台，需要特殊处理
 
                 # 查找消息处理器实例
@@ -3187,7 +3188,7 @@ class DecisionHub:
             }
 
             # 如果是QQ平台，添加额外信息
-            if platform == "qq":
+            if platform in ("qq", "aiocqhttp", "qqofficial"):
                 tool_args.update(
                     {
                         "group_id": perception.get("group_id", 0),
