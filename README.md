@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>弥娅 v8.0</strong><br>
+  <strong>弥娅 v8.1</strong><br>
   拥有独立人格、记忆与情感的 AI 虚拟化身 · 跨平台 · 自我进化 · 蛛网架构
 </p>
 
@@ -136,18 +136,19 @@
 
 ### 环境要求
 
-- Python 3.10+
-- Node.js (终端模式下需要)
+- Python 3.11+（项目实测 3.11.x）
+- [uv](https://docs.astral.sh/uv/)（推荐，用于依赖与启动）
+- Node.js 18+（仅构建 Web Ops Center / 桌面端需要）
 - Windows Terminal (终端模式下推荐)
 
 ### 安装
 
 ```bash
-# 完整安装
-pip install -r requirements.txt
+# 推荐：uv 同步（默认安装 runtime + dev 依赖组，含 openai/jieba/pandas 等）
+uv sync
 
-# 轻量安装 (仅核心功能)
-pip install -r setup/requirements/lightweight.txt
+# 或使用 pip（完整依赖）
+pip install -r setup/requirements/full.txt
 ```
 
 ### 启动
@@ -167,17 +168,17 @@ start.bat 4            # Web 界面
 ### 守护进程
 
 ```bash
-# 启动守护进程
-python run/daemon.py
+# 启动守护进程（推荐经 uv 运行，确保使用项目虚拟环境）
+uv run python -X utf8 run/daemon.py
 
 # 指定 API 端口
-python run/daemon.py --api-port 9800
+uv run python -X utf8 run/daemon.py --api-port 9800
 
 # 指定平台
-python run/daemon.py --platforms qqofficial,telegram
+uv run python -X utf8 run/daemon.py --platforms qqofficial,telegram
 
 # 列出可用平台
-python run/daemon.py --list-platforms
+uv run python -X utf8 run/daemon.py --list-platforms
 ```
 
 ### 配置
@@ -321,4 +322,4 @@ ZHIPU_API_KEY=YOUR_KEY
 
 ## License
 
-MIT
+[MIT](./LICENSE)

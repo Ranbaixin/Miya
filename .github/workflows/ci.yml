@@ -122,10 +122,27 @@ jobs:
         file: ./coverage.xml
         flags: unit
 
+  secret-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    needs: quality-checks
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Run secret scan
+      run: |
+        python scripts/scan_secrets.py
+
   notify:
     name: Notify Status
     runs-on: ubuntu-latest
-    needs: [quality-checks, unit-tests]
+    needs: [quality-checks, unit-tests, secret-scan]
     if: always()
     env:
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}

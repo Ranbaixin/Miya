@@ -393,6 +393,14 @@ class JsonBackend(MemoryBackend):
         self._load_tag_index()
         self._cleanup_stale_entries()
 
+    def save_index(self):
+        """公开索引持久化入口（2026-08：替代跨类调用私有 _save_index）"""
+        self._save_index()
+
+    def save_tag_index(self):
+        """公开标签索引持久化入口（2026-08：替代跨类调用私有 _save_tag_index）"""
+        self._save_tag_index()
+
     def _load_index(self):
         if self.index_file.exists():
             try:
@@ -1295,8 +1303,8 @@ class MiyaMemoryCore:
     def _flush_index(self):
         """批量刷新索引进磁盘（同时保存 _index 和 _tag_index）"""
         if self._index_dirty:
-            self.backend._save_index()
-            self.backend._save_tag_index()
+            self.backend.save_index()
+            self.backend.save_tag_index()
             self._index_dirty = False
             self._store_count_since_save = 0
             logger.debug("[MiyaMemoryCore] 批量索引已刷新")
@@ -1868,6 +1876,10 @@ class MiyaMemoryCore:
                         memory = MemoryItem.from_dict(data)
                         if memory and memory.is_expired():
                             file_path.unlink()
+                            # 2026-08 修复：磁盘扫描删除路径同步清理 SQLite（此前 SQLite 残留过期记忆）
+                            if self.sqlite_backend:
+                                with contextlib.suppress(Exception):
+                                    await self.sqlite_backend.delete(memory.id)
                             # 从索引中移除
                             if memory.id in self.backend._index:
                                 del self.backend._index[memory.id]
@@ -1910,6 +1922,10 @@ class MiyaMemoryCore:
                 if not await self.backend.save(memory):
                     logger.error(f"[MiyaMemoryCore] 归档写盘失败: {memory.id}")
                     raise RuntimeError(f"归档写盘失败: {memory.id}")
+                # 2026-08 修复：归档同步 SQLite（此前仅 JSON 后端归档）
+                if self.sqlite_backend:
+                    with contextlib.suppress(Exception):
+                        await self.sqlite_backend.save(memory)
                 count += 1
 
         logger.info(f"[MiyaMemoryCore] 归档了 {count} 条旧对话")

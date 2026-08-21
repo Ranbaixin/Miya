@@ -587,14 +587,38 @@ class Miya:
                             from fastapi.middleware.cors import CORSMiddleware
 
                             app = FastAPI(title="弥娅终端API")
+                            # 2026-08 安全加固：CORS 白名单（禁止通配符+credentials 组合）
+                            # 可用环境变量 MIYA_CORS_ORIGINS 覆盖（逗号分隔）
+                            _cors_origins = os.environ.get(
+                                "MIYA_CORS_ORIGINS",
+                                "http://localhost:5173,http://127.0.0.1:5173,"
+                                "http://localhost:3000,http://127.0.0.1:3000,"
+                                "http://localhost:8000,http://127.0.0.1:8000,"
+                                "http://localhost:9800,http://127.0.0.1:9800",
+                            ).split(",")
                             app.add_middleware(
                                 CORSMiddleware,
-                                allow_origins=["*"],
+                                allow_origins=[o.strip() for o in _cors_origins if o.strip()],
                                 allow_credentials=True,
                                 allow_methods=["*"],
                                 allow_headers=["*"],
                             )
                             app.include_router(self.web_api.router)
+
+                            # 2026-08：挂载 React Ops Center 构建产物（frontend/packages/web/dist）
+                            # 构建方式: bash scripts/build_hud.sh（路径含 '#' 需在无#临时目录构建）
+                            from pathlib import Path as _Path
+
+                            _hud_dist = _Path(__file__).parent.parent / "frontend" / "packages" / "web" / "dist"
+                            if _hud_dist.exists():
+                                from fastapi.staticfiles import StaticFiles
+
+                                app.mount("/", StaticFiles(directory=str(_hud_dist), html=True), name="hud")
+                                self.logger.info(f"[WebAPI] Ops Center 已挂载: {_hud_dist}")
+                            else:
+                                self.logger.warning(
+                                    "[WebAPI] 未找到 Ops Center 构建产物，运行 bash scripts/build_hud.sh 构建"
+                                )
 
                             # 安装吟美虚拟主播插件
                             try:

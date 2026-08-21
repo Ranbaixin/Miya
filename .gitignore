@@ -201,6 +201,9 @@ data/diting_state.json
 data/tts_audio/
 data/conversation_context_state.json
 data/last_form.json
+# ===== data/ 运行时数据全量忽略（2026-08 加固：含用户数据/认证库/资产）=====
+data/*
+!data/.gitkeep
 
 # ── Ranxin 分支：保护未跟踪的敏感/冗余文件 ──
 config/multi_model_config.json.deepseek

@@ -53,29 +53,42 @@ class AuthRoutes:
 
         @self.router.post("/login")
         async def login_user(user_data: UserLogin):
-            """用户登录"""
+            """用户登录（2026-08 加固：scrypt 哈希 + JWT 过期 token，无硬编码口令）"""
             username = user_data.username
             password = user_data.password
 
-            # 前端会对密码进行 MD5 加密
-            # miya 的 MD5: 09e980527c9a9c5d40e60a5245a1c0a8
-            # admin 的 MD5: 21232f297a57a5a743894a0e4a801fc3
-            valid_passwords = {
-                "miya": ["miya", "09e980527c9a9c5d40e60a5245a1c0a8"],
-                "admin": ["admin", "21232f297a57a5a743894a0e4a801fc3"],
-            }
+            # 管理员登录：校验 .env 中的 scrypt 哈希（首次启动自动生成随机密码）
+            from .auth_security import (
+                create_token,
+                ensure_admin_credentials,
+                verify_admin_login,
+            )
 
-            if username in valid_passwords and password in valid_passwords[username]:
+            if verify_admin_login(username, password):
+                token = create_token(username)
                 return {
                     "status": "ok",
                     "data": {
                         "username": username,
-                        "nickname": "弥娅" if username == "miya" else "管理员",
+                        "nickname": "管理员",
                         "role": "admin",
-                        "token": "miya_token_" + str(int(datetime.now().timestamp())),
+                        "token": token,
                         "change_pwd_hint": False,
                     },
                 }
+
+            # 尚无管理员凭据时，提示用户查看控制台打印的初始密码
+            try:
+                from .auth_security import _read_env
+
+                if not _read_env().get("MIYA_ADMIN_PASSWORD_HASH"):
+                    ensure_admin_credentials()
+                    return {
+                        "status": "error",
+                        "message": "管理员初始密码已生成，请查看服务端控制台日志（仅显示一次）",
+                    }
+            except Exception as e:  # noqa: BLE001 — 提示生成失败不影响主流程
+                logger.debug(f"[WebAPI] 生成初始密码提示失败: {e}")
 
             try:
                 result = await self.web_net.login_user(
@@ -182,36 +195,16 @@ class AuthRoutes:
 
     def _verify_token(self, token: str) -> Optional[str]:
         """
-        验证 API token
+        验证 API token（2026-08 加固：JWT HS256 + 过期校验，fail-closed）
 
-        简化实现：从配置或数据库验证
-        实际应使用 JWT
+        任何无效/过期 token 一律返回 None（调用方应拒绝访问）。
         """
-        # 简化：检查是否是有效的 token 格式
-        # 实际应从数据库或缓存验证
-        if not token or len(token) < 8:
+        from .auth_security import verify_token as jwt_verify
+
+        username = jwt_verify(token)
+        if not username:
             return None
-
-        # 简化处理：直接返回 token 作为用户ID（生产环境应使用 JWT）
-        # 检查是否是系统管理员 token
-        try:
-            from webnet.AuthNet.permission_core import PermissionCore
-
-            perm_core = PermissionCore()
-            if perm_core.check_permission(f"web_{token}", "api.access"):
-                return token
-        except Exception:
-            # 权限校验异常时显式拒绝，避免静默放行（fail-closed）
-            logger.exception("[WebAPI] 权限校验失败，拒绝访问")
-            raise HTTPException(status_code=401, detail="权限校验失败")
-
-        # 如果是已知的管理员 token
-        admin_tokens = ["admin", "system", "test"]
-        if token in admin_tokens:
-            return "admin"
-
-        # 默认返回 token（简化）
-        return token
+        return username
 
     def get_router(self):
         """获取路由器"""

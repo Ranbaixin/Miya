@@ -15,7 +15,6 @@ from .memory_emotion import MemoryEmotion
 from .memory_engine import MemoryEngine
 from .memory_manager import MemoryManager
 from .perception_handler import PerceptionHandler
-from .response_generator import ResponseGenerator
 from .scheduler import Scheduler
 
 __all__ = [
@@ -26,6 +25,5 @@ __all__ = [
     "Scheduler",
     "DecisionHub",
     "PerceptionHandler",
-    "ResponseGenerator",
     "MemoryManager",
 ]

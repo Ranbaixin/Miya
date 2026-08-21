@@ -4,6 +4,7 @@ AI客户端模块
 整合弥娅人设提示词
 """
 
+import contextvars
 import json
 import logging
 import re
@@ -15,6 +16,12 @@ from core.text_loader import get_error_message
 from .prompt_cache import get_global_prompt_cache
 
 logger = logging.getLogger(__name__)
+
+# 2026-08 并发修复：tool_context 通过 contextvar 按协程传递，
+# 避免并发 AI 调用（用户消息 / 拍一拍 / 主动聊天）互相覆盖 self.tool_context
+_tool_context_var: "contextvars.ContextVar[Optional[Dict[str, Any]]]" = (
+    contextvars.ContextVar("miya_tool_context", default=None)
+)
 
 
 @dataclass
@@ -175,6 +182,8 @@ class BaseAIClient:
         tools: Optional[List[Dict]] = None,
         max_iterations: int = 10,
         use_miya_prompt: bool = True,
+        tool_choice: str = "auto",
+        tool_context: Optional[Dict] = None,
     ) -> str:
         """
         聊天接口（支持工具调用）
@@ -540,6 +549,7 @@ class BaseAIClient:
         use_miya_prompt: bool = True,
         conversation_history: Optional[List[Dict]] = None,
         tool_choice: str = "auto",
+        tool_context: Optional[Dict] = None,
     ) -> str:
         """
         使用系统提示词聊天
@@ -579,7 +589,11 @@ class BaseAIClient:
         messages.append(AIMessage(role="user", content=user_message))
 
         return await self.chat(
-            messages, tools, use_miya_prompt=False, tool_choice=tool_choice
+            messages,
+            tools,
+            use_miya_prompt=False,
+            tool_choice=tool_choice,
+            tool_context=tool_context,
         )  # 避免重复添加
 
 
@@ -611,6 +625,7 @@ class OpenAIClient(BaseAIClient):
         max_iterations: int = 20,
         use_miya_prompt: bool = True,
         tool_choice: str = "auto",
+        tool_context: Optional[Dict] = None,
     ) -> str:
         """调用OpenAI聊天接口（支持工具调用）
 
@@ -620,10 +635,13 @@ class OpenAIClient(BaseAIClient):
             max_iterations: 最大工具调用迭代次数
             use_miya_prompt: 是否使用弥娅人设提示词
             tool_choice: 工具选择策略 ("auto", "required", "none")
+            tool_context: 本次调用的工具执行上下文（contextvar 隔离，防并发串台）
 
         Returns:
             AI回复
         """
+        # 并发修复：按协程隔离 tool_context
+        _tok = _tool_context_var.set(tool_context)
         if not self.client:
             raise RuntimeError("OpenAI客户端未初始化，请安装openai库")
 
@@ -872,7 +890,7 @@ class OpenAIClient(BaseAIClient):
                     final_detected = False
                     for tool_call in tool_calls:
                         _, result = await self._execute_tool_call(
-                            tool_call, self.tool_context
+                            tool_call, _tool_context_var.get() or self.tool_context
                         )
 
                         # 检查FINAL标记
@@ -992,6 +1010,7 @@ class DeepSeekClient(BaseAIClient):
         max_iterations: int = 20,
         use_miya_prompt: bool = True,
         tool_choice: str = "auto",
+        tool_context: Optional[Dict] = None,
     ) -> str:
         """调用DeepSeek聊天接口（支持工具调用）
 
@@ -1026,7 +1045,7 @@ class DeepSeekClient(BaseAIClient):
             tools = self.tool_registry()
 
         logger.info(
-            f"[AIClient] 开始聊天 (模型: {self.model})，工具数量: {len(tools) if tools else 0}, has_tool_context={self.tool_context is not None}, tool_choice={tool_choice}"
+            f"[AIClient] 开始聊天 (模型: {self.model})，工具数量: {len(tools) if tools else 0}, has_tool_context={bool(_tool_context_var.get() or self.tool_context)}, tool_choice={tool_choice}"
         )
         if tools:
             logger.info(
@@ -1185,7 +1204,7 @@ class DeepSeekClient(BaseAIClient):
                 if not can_concurrent:
                     for tool_call in tool_calls:
                         _, result = await self._execute_tool_call(
-                            tool_call, self.tool_context
+                            tool_call, _tool_context_var.get() or self.tool_context
                         )
 
                         # 检查FINAL标记
@@ -1255,7 +1274,15 @@ class AnthropicClient(BaseAIClient):
             logger.warning("Anthropic库未安装，请运行: pip install anthropic")
             self.client = None
 
-    async def chat(self, messages: List[AIMessage]) -> str:
+    async def chat(
+        self,
+        messages: List[AIMessage],
+        tools: Optional[List[Dict]] = None,
+        max_iterations: int = 20,
+        use_miya_prompt: bool = True,
+        tool_choice: str = "auto",
+        tool_context: Optional[Dict] = None,
+    ) -> str:
         """调用Anthropic聊天接口"""
         if not self.client:
             raise RuntimeError("Anthropic客户端未初始化，请安装anthropic库")
@@ -1301,7 +1328,15 @@ class ZhipuAIClient(BaseAIClient):
             logger.warning("智谱AI库未安装，请运行: pip install zhipuai")
             self.client = None
 
-    async def chat(self, messages: List[AIMessage]) -> str:
+    async def chat(
+        self,
+        messages: List[AIMessage],
+        tools: Optional[List[Dict]] = None,
+        max_iterations: int = 20,
+        use_miya_prompt: bool = True,
+        tool_choice: str = "auto",
+        tool_context: Optional[Dict] = None,
+    ) -> str:
         """调用智谱AI聊天接口"""
         if not self.client:
             raise RuntimeError("智谱AI客户端未初始化，请安装zhipuai库")

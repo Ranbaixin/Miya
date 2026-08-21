@@ -27,7 +27,6 @@ from hub.memory_manager import MemoryManager
 # 导入新的处理器类
 from hub.perception_handler import PerceptionHandler
 from hub.platform_tools import PlatformToolsManager
-from hub.response_generator import ResponseGenerator
 from hub.session_handler import SessionHandler
 
 # 导入智能记忆系统
@@ -239,17 +238,6 @@ class DecisionHub:
         self.memory_manager = MemoryManager(
             memory_net=self.memory_net,
             memory_engine=self.memory_engine,
-        )
-
-        # 4. 响应生成器
-        self.response_generator = ResponseGenerator(
-            ai_client=self.ai_client,
-            personality=self.personality,
-            prompt_manager=self.prompt_manager,
-            tool_subnet=self.tool_subnet,
-            memory_engine=self.memory_engine,
-            model_pool=self.model_pool,
-            identity=self.identity,
         )
 
         # 5. 对话上下文管理器
@@ -1227,7 +1215,9 @@ class DecisionHub:
         elif not isinstance(content, str):
             content = str(content) if content else ""
 
-        content = content.lower().strip()
+        # 2026-08 修复：不再用小写改写原文（AI prompt / 记忆 / 搜索需保留原始大小写）
+        content_lower = content.lower().strip()
+        content = content.strip()
 
         # AI 自主判断是否调用电脑控制工具 — 无需硬编码关键词
 
@@ -1265,7 +1255,7 @@ class DecisionHub:
                 "请",
                 "能不能",
             ]
-            use_v3 = any(kw in content for kw in think_keywords)
+            use_v3 = any(kw in content_lower for kw in think_keywords)
 
             if use_v3:
                 try:
@@ -1338,7 +1328,13 @@ class DecisionHub:
             # 【优化】Phase 1: 并行检索所有独立上下文源
             # conversation / knowledge / persona / awareness / search / group_chat
             # ============================================================
-            session_id = f"{platform}_{user_id}"
+            # 2026-08 修复：会话 key 按群隔离（此前同用户跨群共享对话上下文）
+            # 群聊: platform_g{group_id}_u{user_id}；私聊: platform_private_{user_id}
+            _group_for_session = context.get("group_id") or 0
+            if _group_for_session:
+                session_id = f"{platform}_g{_group_for_session}_u{user_id}"
+            else:
+                session_id = f"{platform}_private_{user_id}"
             user_id_str = str(user_id)
 
             async def fetch_conversation_context():
@@ -2158,11 +2154,13 @@ class DecisionHub:
                 user_msg = user_msg + cognition_context
             if ai_emotion_context:
                 user_msg = user_msg + ai_emotion_context
+            # 并发修复：tool_context 显式按调用传递（contextvar 隔离，防并发串台）
             response = await ai_client_to_use.chat_with_system_prompt(
                 system_prompt=prompt_info["system"],
                 user_message=user_msg,
                 tools=tools_schema if tools_schema else None,
                 tool_choice=tool_choice,
+                tool_context=tool_context if "tool_context" in locals() else None,
             )
 
             # 【新增】存储情绪记忆 - 无论_soul_result是否有效都存储
@@ -2828,7 +2826,7 @@ class DecisionHub:
 
     async def set_diary_reminder(self, user_id: str, time: str = "21:00") -> dict:
         """
-        设置日记提醒
+        设置日记提醒（每日重复，2026-08 修复：此前委托的 session_handler.set_diary_reminder 不存在）
 
         Args:
             user_id: 用户ID
@@ -2837,7 +2835,44 @@ class DecisionHub:
         Returns:
             设置结果
         """
-        return await self.session_handler.set_diary_reminder(user_id, time)
+        try:
+            hour, minute = (int(x) for x in time.split(":"))
+            if not (0 <= hour <= 23 and 0 <= minute <= 59):
+                return {"success": False, "message": f"时间格式错误: {time}（应为 HH:MM）"}
+        except (ValueError, TypeError):
+            return {"success": False, "message": f"时间格式错误: {time}（应为 HH:MM）"}
+
+        from datetime import datetime, timedelta
+
+        from hub.scheduler import Task, get_global_scheduler
+
+        now = datetime.now()
+        next_run = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        if next_run <= now:
+            next_run += timedelta(days=1)
+
+        scheduler = get_global_scheduler()
+        task = Task(
+            task_id=f"diary_reminder_{user_id}",
+            task_type="scheduled_reminder",
+            priority=5,
+            data={
+                "target_type": "private",
+                "target_id": int(user_id) if str(user_id).isdigit() else str(user_id),
+                "message": f"该写今天的日记啦~ ({time})",
+            },
+            execute_at=next_run,
+            repeat_daily_time=time,
+        )
+        scheduler.schedule(task)
+
+        # 同步给 SessionHandler 保留历史兼容（其自身无该方法，仅记录）
+        logger.info(f"[决策层] 日记提醒已设置: user={user_id} time={time} next={next_run.isoformat()}")
+        return {
+            "success": True,
+            "message": f"日记提醒已设置：每天 {time}（下次 {next_run.strftime('%Y-%m-%d %H:%M')}）",
+            "next_run": next_run.isoformat(),
+        }
 
     async def _detect_and_process_timer_task(
         self,

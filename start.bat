@@ -10,7 +10,7 @@ title MIYA v8.0
 ::  start.bat a         Launch all
 :: ============================================================
 
-set "DAEMON_CMD=set PYTHONIOENCODING=utf-8 && chcp 65001 >nul && python -X utf8 run/daemon.py --api-port 9800"
+set "DAEMON_CMD=set PYTHONIOENCODING=utf-8 && chcp 65001 >nul && uv run python -X utf8 run/daemon.py --api-port 9800"
 
 :: CLI direct
 if /i "%1"=="1" goto :terminal
@@ -64,7 +64,7 @@ echo ===========================================================================
 echo.
 
 echo Starting MIYA Terminal...
-set PYTHONIOENCODING=utf-8 && chcp 65001 >nul && python -X utf8 run/main.py
+set PYTHONIOENCODING=utf-8 && chcp 65001 >nul && uv run python -X utf8 run/main.py
 echo.
 echo [OK] Terminal session ended
 goto :restart

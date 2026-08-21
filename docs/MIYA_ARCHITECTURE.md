@@ -78,6 +78,10 @@
 - `Router` — 消息路由分发
 - `TrustTransmit` — 信任传播
 
+> ⚠️ **2026-08 现状说明**：当前主链路（平台 → DecisionHub）为**直连方法调用**
+> （MessageMixin.route_to_decision_hub），M-Link 总线尚未接入主链路，
+> 保留作为微服务化 / 跨进程消息路由的演进接口。
+
 ### 3. 感知层 (`perceive/`)
 
 - **PerceptualRing** — 全局感知环，接收所有平台输入

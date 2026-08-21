@@ -125,7 +125,7 @@ DISCORD_CONFIG = {
 # 功能: 单聊、群聊、消息卡片
 
 FEISHU_CONFIG = {
-    "enabled": True,
+    "enabled": False,  # 2026-08：默认禁用（需安装 lark-oapi 并配置凭据）
     "app_id": "",  # 从环境变量或 .env 读取, 勿硬编码
     "app_secret": "",  # 从环境变量或 .env 读取, 勿硬编码
     "verify_token": "",
@@ -304,7 +304,8 @@ SATORI_CONFIG = {
 # 访问: http://localhost:8080
 
 WEBCHAT_CONFIG = {
-    "enabled": True,
+    # 2026-08 平台诚实化：WebChatPlatform 为占位实现（不启服务器、不收发消息），默认禁用
+    "enabled": False,
     "port": 8080,
     # 可选: 主题和语言
     # "theme": "default",
@@ -338,7 +339,9 @@ AIOCQHTTP_CONFIG = {
 # 通过 Web API (/api/chat) 连接
 
 DESKTOP_CONFIG = {
-    "enabled": True,
+    # 2026-08 平台诚实化：无真实 desktop 平台实现（此前走 generic 占位虚报在线），默认禁用
+    # 桌面应用通过 Web API (8000) 直连，不注册为平台
+    "enabled": False,
     "description": "弥娅桌面应用 - MIYA Desktop",
 }
 

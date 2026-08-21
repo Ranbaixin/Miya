@@ -40,7 +40,11 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         self._connected = False
         self._pending_echoes: Dict[str, asyncio.Future] = {}
         self._loaded_config: dict = {}
-        self._process_lock = asyncio.Lock()
+        # 并发控制（2026-08 改造）：收包与处理解耦 —— 跨会话并发 + 同会话串行 + 全局限流
+        # 原 _process_lock 平台级全局锁会让 AI 调用阻塞收包循环（丢消息根源）
+        self._dispatch_semaphore = asyncio.Semaphore(4)  # 全局限流：最多同时处理 4 条消息
+        self._conv_locks: Dict[str, asyncio.Lock] = {}    # 会话级互斥锁 key -> Lock
+        self._conv_locks_max = 128
         self._poke_cooldown: Dict[str, float] = {}  # user_id → last_poke_time
         self._hub_refs_set = False
         self._queue_initialized = False
@@ -256,7 +260,8 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                                         if echo and echo in self._pending_echoes:
                                             self._pending_echoes.pop(echo).set_result(data)
                                             continue
-                                        await self._handle_onebot_message(data)
+                                        # 并发改造：收包与处理解耦，避免 AI 调用阻塞接收循环
+                                        self._spawn(self._dispatch_message(data))
                                     elif msg.type == aiohttp.WSMsgType.ERROR:
                                         logger.error(f"[{self.platform_id}] WebSocket 错误")
                                         break
@@ -306,7 +311,8 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                     if echo and echo in self._pending_echoes:
                         self._pending_echoes.pop(echo).set_result(data)
                         continue
-                    await self._handle_onebot_message(data)
+                    # 并发改造：收包与处理解耦，避免 AI 调用阻塞接收循环
+                    self._spawn(self._dispatch_message(data))
                 elif msg.type in (aiohttp.WSMsgType.ERROR, aiohttp.WSMsgType.CLOSED):
                     break
 
@@ -328,6 +334,69 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
         logger.info(f"[{self.platform_id}] 反向WS监听已启动: ws://{host}:{port} (等待NapCat连接)")
         return True
+
+    # ==================== 并发分发（2026-08 改造） ====================
+
+    @staticmethod
+    def _conv_key(msg_type: str, group_id: str, user_id: str) -> str:
+        """会话级互斥锁 key：群聊按群、私聊按用户"""
+        if msg_type == "group" and group_id:
+            return f"group:{group_id}"
+        return f"private:{user_id}"
+
+    def _get_conv_lock(self, key: str) -> asyncio.Lock:
+        """获取（或创建）会话锁；超过上限时淘汰最早条目（锁丢失仅缩小串行窗口，不破坏正确性）"""
+        lock = self._conv_locks.get(key)
+        if lock is None:
+            lock = asyncio.Lock()
+            if len(self._conv_locks) >= self._conv_locks_max:
+                self._conv_locks.pop(next(iter(self._conv_locks)), None)
+            self._conv_locks[key] = lock
+        return lock
+
+    async def _dispatch_message(self, data: Dict) -> None:
+        """消息分发：收包循环只负责入队，此处限流 + 会话串行后处理"""
+        try:
+            msg_type = data.get("message_type", "private")
+            sender = data.get("sender", {}) or {}
+            user_id = str(sender.get("user_id", ""))
+            group_id = str(data.get("group_id", ""))
+            key = self._conv_key(msg_type, group_id, user_id)
+            lock = self._get_conv_lock(key)
+            async with self._dispatch_semaphore:
+                async with lock:
+                    await self._handle_onebot_message(data)
+        except Exception as e:  # noqa: BLE001 — 分发层兜底，单条异常不影响后续消息
+            logger.error(f"[{self.platform_id}] 消息分发异常: {e}", exc_info=True)
+
+    async def _route_with_conv_lock(
+        self,
+        content: str,
+        user_id: str,
+        user_name: str = "",
+        message_type: str = "private",
+        group_id: str = "",
+        group_name: str = "",
+        sender_role: str = "member",
+        is_at_bot: bool = True,
+        extra: Optional[Dict] = None,
+    ) -> str:
+        """带会话锁的决策路由（拍一拍等非 message 路径复用同一并发门）"""
+        key = self._conv_key(message_type, str(group_id or ""), str(user_id or ""))
+        lock = self._get_conv_lock(key)
+        async with self._dispatch_semaphore:
+            async with lock:
+                return await self.route_to_decision_hub(
+                    content=content,
+                    user_id=user_id,
+                    user_name=user_name,
+                    message_type=message_type,
+                    group_id=group_id,
+                    group_name=group_name,
+                    sender_role=sender_role,
+                    is_at_bot=is_at_bot,
+                    extra=extra,
+                )
 
     async def _handle_onebot_message(self, data: Dict):
         """处理 OneBot 消息"""
@@ -373,9 +442,9 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                     poke_text = load_text_config().get("poke_responses", {}).get("local_emoji", "")
                     await self._send_onebot_poke_reply(user_id, group_id, poke_text)
 
-                    # 第二层：异步走 AI 生成情感回复
+                    # 第二层：异步走 AI 生成情感回复（走同一会话锁 + 限流，避免与消息并发污染 tool_context）
                     content = f"[拍一拍] 用户 {user_id} 拍了拍你"
-                    ai_response = await self.route_to_decision_hub(
+                    ai_response = await self._route_with_conv_lock(
                         content=content,
                         user_id=user_id,
                         user_name=user_id,
@@ -791,19 +860,19 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
         logger.debug(f"[{self.platform_id}] 收到消息: {content[:50]}, reply_id={reply_id}, is_at={is_at_bot}")
 
-        # === 16. 路由到决策中心（加锁防并发） ===
-        async with self._process_lock:
-            response = await self.route_to_decision_hub(
-                content=content,
-                user_id=user_id,
-                user_name=user_name,
-                message_type=msg_type,
-                group_id=group_id_str,
-                group_name=group_name,
-                sender_role=sender_role,
-                is_at_bot=is_at_bot,
-                extra=extra,
-            )
+        # === 16. 路由到决策中心 ===
+        # 并发改造：串行化已由 _dispatch_message 的会话锁 + 信号量完成，此处直接调用
+        response = await self.route_to_decision_hub(
+            content=content,
+            user_id=user_id,
+            user_name=user_name,
+            message_type=msg_type,
+            group_id=group_id_str,
+            group_name=group_name,
+            sender_role=sender_role,
+            is_at_bot=is_at_bot,
+            extra=extra,
+        )
 
         if response:
             await self._send_onebot_reply(data, response)

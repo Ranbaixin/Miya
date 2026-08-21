@@ -23,9 +23,9 @@ security:
 	@echo "[3/3] bandit security audit..."
 	bandit -r core/ hub/ run/ -ll -f custom || true
 
-# 单元测试 (pytest)
+# 单元测试 (pytest) — 与 CI 一致，只跑 tests/unit/（可信回归基线）
 test:
-	pytest tests/ -q --ignore=tests/e2e_test_scenarios.py --ignore=tests/integration_test_scenarios.py -p no:cacheprovider
+	pytest tests/unit/ -q -p no:cacheprovider
 
 # 死代码静态检查
 graph:

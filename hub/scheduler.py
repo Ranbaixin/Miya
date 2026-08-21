@@ -25,6 +25,7 @@ class Task:
         priority: int,
         data: Dict,
         execute_at: Optional[datetime] = None,
+        repeat_daily_time: Optional[str] = None,
     ):
         self.task_id = task_id
         self.task_type = task_type
@@ -35,6 +36,8 @@ class Task:
         self.execute_at = execute_at or datetime.now()
         self.completed_at = None
         self.status = "pending"
+        # 2026-08：每日重复时间（HH:MM），执行后自动重排到次日同一时刻
+        self.repeat_daily_time = repeat_daily_time
 
     def __lt__(self, other):
         # 按执行时间排序，如果时间相同则按优先级
@@ -231,6 +234,27 @@ class Scheduler:
                         }
                         result = await adapter.execute_tool("send_poke", args, tool_context)
                         logger.info(f"拍一拍动作已执行: {result}")
+
+            # 2026-08：每日重复任务自动重排到次日同一时刻
+            if task.repeat_daily_time:
+                try:
+                    hour, minute = (int(x) for x in task.repeat_daily_time.split(":"))
+                    tomorrow = datetime.now() + timedelta(days=1)
+                    next_run = tomorrow.replace(
+                        hour=hour, minute=minute, second=0, microsecond=0
+                    )
+                    repeat_task = Task(
+                        task_id=f"{task.task_id}_repeat",
+                        task_type=task.task_type,
+                        priority=task.priority,
+                        data=dict(task.data),
+                        execute_at=next_run,
+                        repeat_daily_time=task.repeat_daily_time,
+                    )
+                    self.schedule(repeat_task)
+                    logger.info(f"每日任务已重排: {task.task_id} → {next_run.isoformat()}")
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"每日任务重排失败: {e}")
 
             # 标记任务完成
             self.complete_task(task.task_id, {"result": "success"})

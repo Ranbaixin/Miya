@@ -91,6 +91,48 @@ class ManagementAPI:
             allow_headers=["*"],
         )
 
+        # 2026-08 安全加固：管理 API 访问网关
+        # - 未设置 MIYA_API_TOKEN：仅允许本机(loopback)访问，远程一律 403
+        # - 已设置 MIYA_API_TOKEN：任意来源需 Bearer token（恒时比较）
+        import hmac
+        import os
+
+        import json as _json
+        from fastapi.responses import JSONResponse
+
+        def _token_ok(request: Request, api_token: str) -> bool:
+            auth = request.headers.get("Authorization", "")
+            if auth.lower().startswith("bearer "):
+                provided = auth[7:].strip()
+            else:
+                provided = request.headers.get("X-Miya-Token", "")
+            return bool(provided) and hmac.compare_digest(provided, api_token)
+
+        @self.app.middleware("http")
+        async def auth_gate(request: Request, call_next):
+            client_host = request.client.host if request.client else ""
+            is_loopback = client_host in ("127.0.0.1", "::1", "localhost")
+            api_token = os.environ.get("MIYA_API_TOKEN", "").strip()
+            path = request.url.path
+
+            # 文档与健康探活：本机或带 token 可访问
+            if path in ("/docs", "/openapi.json", "/redoc") or path == "/api/v1/health":
+                if is_loopback or (api_token and _token_ok(request, api_token)):
+                    return await call_next(request)
+                return JSONResponse({"detail": "unauthorized"}, status_code=401)
+
+            if not api_token:
+                if is_loopback:
+                    return await call_next(request)
+                return JSONResponse(
+                    {"detail": "管理 API 仅允许本机访问；如需远程请设置 MIYA_API_TOKEN"},
+                    status_code=403,
+                )
+
+            if _token_ok(request, api_token):
+                return await call_next(request)
+            return JSONResponse({"detail": "invalid or missing token"}, status_code=401)
+
     def _setup_routes(self):
         """注册所有路由"""
         app = self.app

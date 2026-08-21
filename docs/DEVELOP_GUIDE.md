@@ -18,29 +18,26 @@
 
 ```
 Miya/
-├── run/           # 入口脚本
-├── core/          # 灵魂锚点 (214+ 文件)
-├── hub/           # 决策中枢
-├── memory/        # 统一记忆系统
-├── webnet/        # 蛛网子网
-├── mlink/         # M-Link 消息总线
-├── perceive/      # 感知层
-├── detect/        # 检测层
-├── evolve/        # 演化层
-├── trust/         # 信任系统
+├── run/           # 入口脚本 (main.py 终端 / daemon.py 守护进程)
+├── core/          # 灵魂锚点 (平台适配、AI 客户端、认证、Web API)
+├── hub/           # 决策中枢 (DecisionHub 门面)
+├── memory/        # 统一记忆系统 (六层架构)
+├── webnet/        # 蛛网子网 (ToolNet 工具网等)
+├── mlink/         # M-Link 消息总线（当前主链路为直连调用，总线预留）
 ├── config/        # 配置文件
-├── frontend/      # 前端 (React + Vue)
+├── frontend/      # React Ops Center (frontend/ui → packages/web/dist)
 ├── miya_frontend/ # Electron 桌面应用
-├── claude-code-engine/ # Claude Code 引擎
-├── data/          # 运行时数据
+├── mcpserver/     # MCP 服务 (独立进程)
+├── plugins/       # 插件 (yinmei 虚拟主播)
+├── data/          # 运行时数据（不入库，gitignore 全量忽略）
 ├── docs/          # 文档
-├── scripts/       # 实用脚本
-├── tests/         # 测试
-├── setup/         # 安装依赖
-├── storage/       # 存储抽象
-├── utils/         # 工具函数
-└── astrbot/       # AstrBot 框架集成
+├── scripts/       # 实用脚本 (含 build_hud.sh / scan_secrets.py)
+├── tests/         # 测试 (tests/unit/ 为可信回归基线)
+├── setup/         # 依赖清单
+└── utils/         # 工具函数
 ```
+
+> 2026-08 更新：perceive/detect/evolve/trust/storage/astrbot/claude-code-engine 目录已随清理移除。
 
 ---
 
