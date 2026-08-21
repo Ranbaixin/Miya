@@ -8,6 +8,8 @@ LifeBook - 多视角日记系统
 - 自动生成周/月/年总结
 """
 
+import asyncio  # 2026-08 修复：_append_together_entry 使用 asyncio.Lock 但从未导入，
+# 导致 LifeBook 日记记录每次静默失败（NameError 被 BLE001 吞噬）
 import json
 import logging
 from calendar import monthrange
