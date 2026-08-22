@@ -195,6 +195,29 @@ class MiyaDaemon:
         except Exception as e:  # noqa: BLE001 — 健康检查失败不影响核心
             logger.warning(f"⚠️ 记忆健康检查启动失败（不影响核心服务）: {e}")
 
+        # 2026-08：存量记忆转存 Neo4j 增量补课（后台线程，幂等；本地记忆只读）
+        try:
+            import subprocess
+            import sys
+
+            from pathlib import Path as _Path
+
+            migrate_script = _Path(__file__).parent.parent / "scripts" / "migrate_memory_to_neo4j.py"
+            if migrate_script.exists():
+                task = asyncio.create_task(
+                    asyncio.to_thread(
+                        subprocess.run,
+                        [sys.executable, str(migrate_script)],
+                        capture_output=True,
+                        text=True,
+                        timeout=600,
+                    )
+                )
+                self._background_tasks.append(task)
+                logger.info("记忆图迁移增量补课已启动（后台）")
+        except Exception as e:  # noqa: BLE001 — 迁移补课失败不影响核心
+            logger.warning(f"⚠️ 记忆图迁移启动失败（不影响核心服务）: {e}")
+
     async def _init_platforms(self, platform_ids: Optional[List[str]] = None):
         """初始化并连接所有平台"""
         self._registry.on_broadcast(self._on_platform_broadcast)

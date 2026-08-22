@@ -428,7 +428,9 @@ class GRAGMemoryManager:
                         """
                         MATCH (n:Entity)
                         OPTIONAL MATCH ()-[r:RELATION]->()
-                        RETURN count(DISTINCT n) as entities, count(r) as relations
+                        // 2026-08 修复：MATCH(n) x OPTIONAL MATCH(r) 是笛卡尔积，
+                        // count(r) 会变成 entities*relations；改用 DISTINCT 去重
+                        RETURN count(DISTINCT n) as entities, count(DISTINCT r) as relations
                         """
                     )
                     record = result.single()
