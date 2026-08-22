@@ -493,6 +493,18 @@ class MemoryManager:
                 except Exception as e:  # noqa: BLE001 — 自记忆分析失败仅跳过
                     logger.debug(f"[记忆管理器] 弥娅自记忆分析失败: {e}")
 
+                # 2026-08 修复：实时知识提取入库（此前 add_conversation_memory
+                # 位于无调用方的 store_assistant_response，实时链路从未工作，
+                # 仅靠迁移补课在 daemon 重启时兜底）
+                if self.memory_net and getattr(self.memory_net, "grag_memory", None):
+                    try:
+                        await self.memory_net.grag_memory.add_conversation_memory(
+                            user_input=str(user_input),
+                            ai_response=content,
+                        )
+                    except Exception as e:  # noqa: BLE001 — 实时提取失败不影响主流程
+                        logger.debug(f"[记忆管理器] Neo4j 实时提取跳过: {e}")
+
         except Exception as e:  # noqa: BLE001 — 存储失败不阻断消息处理
             logger.error(f"[记忆管理器] 存储统一记忆失败: {e}")
 

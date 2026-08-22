@@ -150,18 +150,23 @@ class GRAGMemoryManager:
                 self.recent_context = self.recent_context[-self.context_length :]
 
             # 自动提取五元组
-            if self.auto_extract and self._task_manager:
-                try:
-                    task_id = await self._task_manager.add_task(
-                        task_type="quintuple_extract",
-                        payload={"text": conversation_text},
-                        max_retries=3,
-                    )
-                    logger.info(f"[GRAG] 已提交提取任务: {task_id}")
-                    return True
-                except Exception as e:  # noqa: BLE001 — 提交提取任务失败
-                    logger.error(f"[GRAG] 提交提取任务失败: {e}")
-                    # 同步回退
+            if self.auto_extract:
+                if self._task_manager:
+                    try:
+                        task_id = await self._task_manager.add_task(
+                            task_type="quintuple_extract",
+                            payload={"text": conversation_text},
+                            max_retries=3,
+                        )
+                        logger.info(f"[GRAG] 已提交提取任务: {task_id}")
+                        return True
+                    except Exception as e:  # noqa: BLE001 — 提交提取任务失败
+                        logger.error(f"[GRAG] 提交提取任务失败: {e}")
+                        # 同步回退
+                        await self._extract_and_store_quintuples_sync(conversation_text)
+                else:
+                    # 2026-08 修复：任务管理器未初始化（grag_memory.initialize() 未调用）时
+                    # 此前静默跳过提取（return True）；改为同步提取兜底
                     await self._extract_and_store_quintuples_sync(conversation_text)
 
             return True

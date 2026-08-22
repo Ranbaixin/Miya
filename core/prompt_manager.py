@@ -277,7 +277,8 @@ class PromptManager:
                     context_parts.append(
                         "- 查询示例：用户说'你记得我都聊过什么吗' → 调用 memory_list() 查看所有长期记忆"
                     )
-                elif platform == "qq":
+                elif platform in ("qq", "aiocqhttp", "qqofficial"):
+                    # 2026-08 修复：实际 QQ 平台 ID 为 aiocqhttp（此前群聊环境提示词永不生效）
                     message_type = context.get("message_type", "unknown")
                     if message_type == "group":
                         group_id = context.get("group_id", "")

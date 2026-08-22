@@ -163,6 +163,15 @@ class MiyaDaemon:
             except Exception as e:  # noqa: BLE001 — MemoryNet 失败不影响核心，已记录日志
                 logger.warning(f"⚠️ MemoryNet 初始化失败（不影响核心服务）: {e}")
 
+        # 2026-08 修复：初始化 GRAG 任务管理器（此前从未调用，实时五元组提取静默失效）
+        grag = getattr(self._miya, "grag_memory", None)
+        if grag:
+            try:
+                await grag.initialize()
+                logger.info("✅ GRAG 任务管理器初始化成功（实时知识提取启用）")
+            except Exception as e:  # noqa: BLE001 — GRAG 初始化失败不影响核心，同步兜底仍可用
+                logger.warning(f"⚠️ GRAG 任务管理器初始化失败（将走同步提取）: {e}")
+
         # 主动聊天后台轮询（可选，失败不影响核心服务）
         try:
             dh = getattr(self._miya, "decision_hub", None)
