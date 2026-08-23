@@ -581,70 +581,93 @@ class PromptManager:
 
         return {"system": system_prompt, "user": user_prompt}
 
-    def _format_memory_context(self, memories: List[Dict]) -> str:
-        """
-        格式化记忆上下文（分层架构）
+    def _format_ts(self, ts) -> str:
+        if not ts:
+            return ""
+        try:
+            from datetime import datetime
+            dt = datetime.fromisoformat(str(ts))
+            return dt.strftime("%m-%d %H:%M")
+        except (ValueError, TypeError):
+            return ""
 
-        分层策略：
-        - 最近5条：完整对话
-        - 5条以上：压缩为摘要
-        """
+    def _smart_truncate(self, text: str, max_len: int = 60) -> str:
+        text = (text or "").strip()
+        if len(text) <= max_len:
+            return text
+        cut = text[:max_len]
+        for punct in ("。", "！", "？", "；", "，", " "):
+            idx = cut.rfind(punct)
+            if idx > max_len // 3:
+                return cut[: idx + 1].strip() + "…"
+        return cut.rstrip() + "…"
+
+    def _compress_chunk(self, chunk: List[Dict]) -> str:
+        items = []
+        times = []
+        for m in chunk:
+            ts = self._format_ts(m.get("timestamp", ""))
+            if ts:
+                times.append(ts)
+            role = m.get("role", "")
+            content = m.get("content", "") or m.get("input", "") or m.get("response", "")
+            if not content:
+                continue
+            if role == "user":
+                sender = "用户"
+            elif role == "assistant" or m.get("response"):
+                sender = "弥娅"
+            else:
+                sender = "用户"
+            items.append(sender + ":" + self._smart_truncate(content))
+        if not items:
+            return ""
+        time_range = ""
+        if len(times) >= 2:
+            time_range = " " + times[0] + "~" + times[-1]
+        elif len(times) == 1:
+            time_range = " " + times[0]
+        return "[" + str(len(chunk)) + "条对话" + time_range + "] " + " | ".join(items)
+
+    def _format_memory_context(self, memories: List[Dict]) -> str:
         if not memories:
             return ""
 
         lines = ["【最近对话记录】"]
-        lines.append("以下是你和用户之前的对话，请据此理解当前对话的上下文：")
+        lines.append("以下是按时间顺序的对话记录（格式：[时间] 说话者：内容），请据此理解当前对话的上下文：")
         lines.append("")
 
         total = len(memories)
-
-        # 最近5条完整显示
         recent_start = max(0, total - 5)
 
         for i, memory in enumerate(memories):
-            # 超过5条的旧消息，压缩显示
             if i < recent_start and total > 5:
-                # 每5条旧消息合并为一条摘要
                 if i % 5 == 0:
-                    chunk = memories[i : i + 5]
-                    senders = []
-                    topics = []
-                    for m in chunk:
-                        role = m.get("role", "")
-                        content = m.get("content", "")[:30]
-                        if role == "user":
-                            senders.append("用户")
-                        elif role == "assistant":
-                            senders.append("弥娅")
-                        if content:
-                            topics.append(content)
-
-                    unique_senders = list(dict.fromkeys(senders))
-                    summary = f"[{len(chunk)}条对话] {'/'.join(unique_senders)} 聊了：{'/'.join(topics[:3])}..."
-                    lines.append(summary)
+                    lines.append(self._compress_chunk(memories[i : i + 5]))
                 continue
 
+            ts = self._format_ts(memory.get("timestamp", ""))
+            ts_prefix = "[" + ts + "] " if ts else ""
             role = memory.get("role", "")
             content = memory.get("content", "")
-            memory.get("timestamp", "")
 
             if role and content:
                 if role == "user":
-                    lines.append(f"用户：{content}")
+                    lines.append(ts_prefix + "用户：" + content)
                 elif role == "assistant":
-                    lines.append(f"弥娅：{content}")
+                    lines.append(ts_prefix + "弥娅：" + content)
                 else:
-                    lines.append(f"{role}：{content}")
+                    lines.append(ts_prefix + str(role) + "：" + content)
             else:
                 input_text = memory.get("input", "")
                 response_text = memory.get("response", "")
                 if input_text:
-                    lines.append(f"用户：{input_text}")
+                    lines.append(ts_prefix + "用户：" + input_text)
                 if response_text:
-                    lines.append(f"弥娅：{response_text}")
+                    lines.append(ts_prefix + "弥娅：" + response_text)
             lines.append("---")
 
-        return "\n".join(lines)
+        return chr(10).join(lines)
 
     def get_user_prompt_template(self) -> str:
         """
