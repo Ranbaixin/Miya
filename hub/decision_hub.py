@@ -1421,6 +1421,19 @@ class DecisionHub:
                     logger.debug("[决策层] 意识感知失败", exc_info=True)
                 return ""
 
+            async def fetch_stable_persona():
+                try:
+                    from core.stable_persona import fetch_stable_persona as _build
+
+                    return await _build(
+                        self.memory_engine,
+                        user_id=context.get("user_id"),
+                        group_id=context.get("group_id"),
+                    )
+                except Exception as e:  # noqa: BLE001 — 稳定画像为增强上下文，失败降级空段
+                    logger.warning(f"[稳定画像] 获取失败: {e}")
+                    return ""
+
             async def fetch_search_context():
                 sc = ""
                 try:
@@ -1541,6 +1554,7 @@ class DecisionHub:
             persona_task = asyncio.create_task(fetch_user_persona(), name="persona")
             awareness_task = asyncio.create_task(fetch_awareness_text(), name="awareness")
             search_task = asyncio.create_task(fetch_search_context(), name="search")
+            sp_task = asyncio.create_task(fetch_stable_persona(), name="stable_persona")
             wm_task = asyncio.create_task(fetch_group_chat_context(), name="wm")
             diting_task = asyncio.create_task(fetch_diting_strategy(), name="diting")
 
@@ -1623,6 +1637,7 @@ class DecisionHub:
             user_persona_context, group_persona_context = await persona_task
             awareness_text = await awareness_task
             search_context = await search_task
+            stable_persona_context = await sp_task
             group_chat_context = await wm_task
 
             # 等待谛听策略结果并注入 perception
@@ -1819,6 +1834,8 @@ class DecisionHub:
                     # 【新增】用户/群聊侧写上下文
                     "user_persona": user_persona_context,
                     "group_persona": group_persona_context,
+                    # 【Step 6】稳定画像（长期记忆白名单标签，<=3 条结构化去重）
+                    "stable_persona": stable_persona_context,
                     # 【新增】引用消息和文件上下文
                     "reply_context": reply_context,
                     "files_context": files_context,
@@ -1978,25 +1995,15 @@ class DecisionHub:
                                 cognitive_memory_context if cognitive_memory_context else ""
                             )
 
-                        # 将认知记忆直接注入 system prompt，确保 AI 能看见
-                        final_system_prompt = prompt_info["system"]
-                        if cognitive_memory_context:
-                            final_system_prompt = (
-                                "\n\n【以下是弥娅记忆系统检索到的与你当前对话相关的过往记录，请在回复中自然引用这些记忆，让对话更连贯】\n"
-                                + cognitive_memory_context
-                                + "\n【记忆记录结束】\n\n"
-                                + final_system_prompt
-                            )
-                            logger.warning(
-                                f"[决策层] 认知记忆已注入 system prompt ({len(cognitive_memory_context)} 字符)"
-                            )
-
+                        # Step 5：认知记忆只经 build_full_prompt 注入 user_prompt 一次。
+                        # 不再重复注入 system prompt（此前 system+user 各带一份同一 cognitive_memory_context）。
+                        # tool_ctx["cognitive_memory"] 保留：供协作引擎内部 Soul Generator 读取。
                         collab_result = await self.collaboration_engine.process(
                             message=content,
                             task_type=task_type.value,
                             platform=platform,
                             context=tool_ctx_for_collab,
-                            system_prompt=final_system_prompt,
+                            system_prompt=prompt_info["system"],
                             user_prompt=prompt_info["user"],
                             tools=tools_schema,
                             ai_client_factory=AIClientFactory,

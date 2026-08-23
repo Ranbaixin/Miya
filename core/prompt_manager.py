@@ -513,6 +513,13 @@ class PromptManager:
             user_prompt = cognitive_memory + "\n\n" + user_prompt
             logger.info("[PromptManager] 已添加智能记忆上下文")
 
+        # 添加稳定画像上下文（长期记忆白名单标签，Step 6；在智能记忆之后、用户侧写之前）
+        if additional_context:
+            stable_persona = additional_context.get("stable_persona", "")
+            if stable_persona:
+                user_prompt = stable_persona + "\n\n" + user_prompt
+                logger.info("[PromptManager] 已添加稳定画像上下文")
+
         # 添加用户/群聊侧写上下文（在智能记忆之后）
         if additional_context:
             user_persona = additional_context.get("user_persona", "")
