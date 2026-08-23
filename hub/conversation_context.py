@@ -83,7 +83,7 @@ class ConversationContextManager:
         self,
         memory_net,
         enable_conversation_context: bool = True,
-        conversation_context_max_count: int = 20,
+        conversation_context_max_count: int = 30,
         conversation_context_max_tokens: int = 6000,
     ):
         # 从配置文件加载配置
@@ -316,15 +316,17 @@ class ConversationContextManager:
         needs_recall = self.check_needs_recall(current_input)
         is_deep_discussion = self._is_deep_discussion(current_input)
 
+        # Step 7：档位锚定配置 max_count（默认 30）；回忆/深聊有下限
+        base = self.conversation_context_max_count
         if needs_recall:
-            max_messages = 50
+            max_messages = max(80, base)
             logger.info(f"[对话上下文] 用户正在回忆过去，加载历史对话: {session_id}")
         elif is_deep_discussion:
-            max_messages = 30
-            logger.debug(f"[对话上下文] 检测到深度讨论，加载30条: {session_id}")
+            max_messages = max(50, base)
+            logger.debug(f"[对话上下文] 检测到深度讨论，加载{max_messages}条: {session_id}")
         else:
-            max_messages = 20
-            logger.debug(f"[对话上下文] 正常对话，加载20条: {session_id}")
+            max_messages = base
+            logger.debug(f"[对话上下文] 正常对话，加载{max_messages}条: {session_id}")
 
         context = []
         total_tokens = 0
@@ -345,7 +347,9 @@ class ConversationContextManager:
                         f"[对话上下文] 加载对话历史: {len(recent_messages)} 条"
                     )
 
-                    for msg in recent_messages:
+                    # Step 7：最新优先截断 —— 从最新往回累加，超预算即停，
+                    # 最后恢复时间正序（原实现正序累加，超限时保旧丢新）
+                    for msg in reversed(recent_messages):
                         # Step 1：中文感知的保守估算（原 len//4 严重低估中文）
                         token_estimate = estimate_tokens(msg.content)
                         if (
@@ -361,6 +365,7 @@ class ConversationContextManager:
                             }
                         )
                         total_tokens += token_estimate
+                    context.reverse()
             except Exception as e:  # noqa: BLE001 — 历史读取失败不阻断回复
                 logger.error(f"[对话上下文] 获取对话历史失败: {e}")
 

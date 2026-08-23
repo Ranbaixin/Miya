@@ -1308,7 +1308,7 @@
     },
     "conversation_context": {
         "enabled": true,
-        "max_count": 20,
+        "max_count": 30,
         "max_tokens": 6000,
         "recall_patterns": [
             "你记得",
