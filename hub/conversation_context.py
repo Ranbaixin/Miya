@@ -9,6 +9,8 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List
 
+from utils.token_budget import estimate_tokens
+
 logger = logging.getLogger(__name__)
 
 
@@ -344,7 +346,8 @@ class ConversationContextManager:
                     )
 
                     for msg in recent_messages:
-                        token_estimate = len(msg.content) // 4
+                        # Step 1：中文感知的保守估算（原 len//4 严重低估中文）
+                        token_estimate = estimate_tokens(msg.content)
                         if (
                             total_tokens + token_estimate
                             > self.conversation_context_max_tokens
