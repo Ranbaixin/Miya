@@ -4,9 +4,253 @@
 """
 
 import logging
+import re
 from typing import Dict, List
 
 logger = logging.getLogger(__name__)
+
+
+# ==================== 工具 schema 瘦身（Step 2） ====================
+
+# 语义关键句保留词：触发时机 / 禁止 / 风险 / 区分 / 参数语义
+_KEEP_SENTENCE = (
+    "当", "如果", "仅当", "调用时机", "用于", "必须", "不要", "请勿", "禁止",
+    "只能", "区别于", "不要与", "重要", "危险", "谨慎", "权限", "敏感", "注意",
+)
+# 示例/场景段标记：其后内容一律裁剪
+_DROP_SECTIONS = ("适用场景", "使用场景", "示例", "例子", "比如:", "例如:")
+_MAX_DESC_CHARS = 120
+_MAX_PROP_CHARS = 80
+
+
+def _split_keep_sentences(text: str, keep_keywords: tuple) -> list:
+    """按句子拆分，首句必留，其余仅保留含关键语义的句子"""
+    parts = re.split(r"[。！？\n]+", text)
+    kept = []
+    for p in parts:
+        p = p.strip(" \t-·、，,;；")
+        if not p:
+            continue
+        if kept and not any(k in p for k in keep_keywords):
+            continue
+        kept.append(p)
+    return kept
+
+
+def trim_tool_description(desc: str) -> str:
+    """裁剪工具描述：保留核心语义 + 触发时机/禁止/风险/区分，去掉示例与冗长列举。
+
+    保持约束（用户批准）：触发时机、禁止项、参数语义、工具区分、风险限制不可丢。
+    """
+    if not desc:
+        return ""
+    text = desc.strip()
+    # 1) 截断到示例段之前
+    for marker in _DROP_SECTIONS:
+        idx = text.find(marker)
+        if idx > 0:
+            text = text[:idx]
+    # 2) 句子级保留
+    kept = _split_keep_sentences(text, _KEEP_SENTENCE)
+    result = "。".join(kept)
+    # 3) 超长时按句子边界截断（不切半句话）
+    if len(result) > _MAX_DESC_CHARS:
+        acc = ""
+        for s in kept:
+            if acc and len(acc) + len(s) + 1 > _MAX_DESC_CHARS:
+                break
+            acc = acc + "。" + s if acc else s
+        result = acc
+    return result + "。" if result else ""
+
+
+def trim_property_description(desc: str) -> str:
+    """裁剪参数描述：保留主规则与补充规则，去掉示例与冗长解释。"""
+    if not desc:
+        return ""
+    text = desc.strip()
+    # 1) 去掉示例
+    for marker in ("例如", "比如", "示例"):
+        idx = text.find(marker)
+        if idx > 0:
+            text = text[:idx]
+    # 2) 保留前两句（主规则 + 补充规则）
+    idx = text.find("。")
+    if idx >= 0:
+        second = text.find("。", idx + 1)
+        if second >= 0:
+            text = text[: second + 1]
+    text = text.strip(" \t，,；;")
+    return text[: _MAX_PROP_CHARS]
+
+
+def trim_tool_schemas(schemas: List[Dict]) -> List[Dict]:
+    """对工具 schema 列表做描述瘦身（不改变结构，只裁剪文本字段）。
+
+    - 工具 description：trim_tool_description
+    - 参数 property description：trim_property_description
+    - 枚举/默认值/必填等结构字段保留（本身紧凑且承载语义）
+    """
+    out = []
+    for schema in schemas:
+        func = schema.get("function") or {}
+        trimmed = dict(schema)
+        tfunc = dict(func)
+        tool_name = func.get("name", "")
+        # 策展描述优先；未收录的工具走启发式裁剪
+        tfunc["description"] = QQ_DESC_OVERRIDES.get(
+            tool_name, trim_tool_description(func.get("description", ""))
+        )
+        params = func.get("parameters")
+        if isinstance(params, dict):
+            tparams = dict(params)
+            props = params.get("properties")
+            if isinstance(props, dict):
+                prop_overrides = QQ_PROP_OVERRIDES.get(tool_name, {})
+                tprops = {}
+                for pname, pdef in props.items():
+                    if isinstance(pdef, dict) and pdef.get("description"):
+                        pd = dict(pdef)
+                        if pname in prop_overrides:
+                            pd["description"] = prop_overrides[pname]
+                        else:
+                            pd["description"] = trim_property_description(pd["description"])
+                        tprops[pname] = pd
+                    else:
+                        tprops[pname] = pdef
+                tparams["properties"] = tprops
+            tfunc["parameters"] = tparams
+        trimmed["function"] = tfunc
+        out.append(trimmed)
+    return out
+
+
+# ==================== 工具包路由（Step 3） ====================
+
+# 7 个工具包：qq_core 恒在，扩展包按消息场景 0-2 个
+QQ_CORE_PACK = [
+    "send_message",          # 发消息（必带）
+    "get_user_info",         # 查用户信息
+    "memory_add",            # 主动记忆
+    "memory_list",           # 记忆查询
+    "get_current_time",      # 时间
+    "react_emoji",           # 表情回应
+    "send_poke",             # 拍一拍
+    "qq_like",               # 点赞
+]
+
+TOOL_PACKS = {
+    "qq_core": QQ_CORE_PACK,
+    "search": [
+        "web_search", "tavily_search", "crawl_webpage",
+        "baiduhot", "weibohot", "douyinhot", "grok_search",
+    ],
+    "qq_social": [
+        "get_member_list", "get_member_info", "find_member",
+        "qq_level_query", "weather_query",
+    ],
+    "media": [
+        "qq_file_reader", "qq_image_analyzer",
+        "group_file_downloader", "local_file_finder",
+    ],
+    "desktop": [
+        "execute_on_desktop", "send_to_desktop",
+        "send_to_terminal", "terminal_command",
+    ],
+    "game": [
+        "start_trpg", "roll_dice", "search_tavern_characters",
+    ],
+    "entertainment": [
+        "horoscope", "wenchang_dijun", "python_interpreter",
+    ],
+}
+
+# 扩展包关键词（消息命中即加入；同一关键词可命中多包，取命中数前 2）
+PACK_KEYWORDS = {
+    "search": (
+        "搜索", "搜一下", "新闻", "热搜", "资讯", "实时", "最新消息",
+        "网页", "链接", "网址", "资料", "查找资料", "帮我查",
+    ),
+    "qq_social": (
+        "群成员", "成员列表", "群友", "成员信息", "等级", "天气", "气温",
+    ),
+    "media": (
+        "图片", "照片", "看图", "分析图片", "文件", "读文件", "群文件",
+        "下载群文件", "找文件", "pdf", "文档",
+    ),
+    "desktop": (
+        "终端", "桌面", "电脑", "执行", "命令", "控制", "程序",
+    ),
+    "game": (
+        "骰子", "跑团", "trpg", "掷骰", "roll", "角色卡", "酒馆", "tavern",
+    ),
+    "entertainment": (
+        "星座", "运势", "抽签", "抽个签", "求签", "求个签", "占卜",
+        "灵签", "文昌", "算命", "代码", "计算", "python", "数据分析",
+    ),
+}
+
+# ==================== QQ 工具描述策展（Step 2/3） ====================
+# 人工压缩版描述：保留触发时机/禁止项/参数语义/工具区分/风险限制，
+# 去掉示例列举与冗长解释。未收录的工具走 trim_tool_description 启发式。
+QQ_DESC_OVERRIDES = {
+    "get_current_time": "获取当前系统时间。当用户问'现在几点/几点了/什么时间/今天日期'时必须调用，不要用文字回复。",
+    "get_user_info": "获取QQ用户详细信息。当用户明确请求时调用。",
+    "send_message": "发送消息到指定群或私聊。当用户需要发送消息时调用。",
+    "memory_add": "添加手动长期记忆。当用户明确要求记住/添加记忆/保存重要内容时必须调用，不要用文字回复。",
+    "memory_list": "列出记忆。当用户问过去的事/记忆/昨天前天上周时调用，可按时间范围查询。用自己的话回答，不要直接复制工具输出。",
+    "qq_like": "给指定QQ号点赞。当用户说'点赞/点个赞'时使用。",
+    "send_poke": "拍一拍。当用户说'拍一拍/戳一戳'时使用。",
+    "react_emoji": "给消息回复emoji表情。当用户说'回复表情/加个emoji'时使用。",
+    "horoscope": "查询星座运势。当用户问'运势/星座'时使用。",
+    "wenchang_dijun": "文昌帝君灵签抽签。当用户说'抽签/求签/算一卦'时使用。",
+    "qq_file_reader": "读取QQ文件内容。当用户说'读文件/查看文件/分析文件/读取PDF'时使用。",
+    "qq_image_analyzer": "分析QQ图片内容。当用户发送带图片的引用消息并要求分析时必须调用。",
+    "crawl_webpage": "爬取指定URL网页内容。当用户发链接想获取页面内容时使用。",
+    "tavily_search": "Tavily AI 搜索引擎。当用户询问实时信息/新闻/事实或你不知道答案时使用。",
+    "weather_query": "查询指定城市天气（温度/湿度/风力等）。当用户问'天气/气温/下雨'时使用。",
+    "group_file_downloader": "查看或下载QQ群文件。当用户说'看看群文件/下载群文件'时使用；未指定群号则用当前对话群。",
+    "local_file_finder": "在本地电脑搜索文件。当用户说'找不到文件/帮我找文件'时使用。",
+    "baiduhot": "获取百度热搜榜单。当用户问'百度热搜/baidu热榜'时使用。",
+    "douyinhot": "获取抖音热搜榜单。当用户问'抖音热搜/douyin热榜'时使用。",
+    "qq_level_query": "查询QQ号等级、活跃天数及升级进度。当用户问'QQ等级'时使用。",
+    "weibohot": "获取微博热搜榜单。当用户问'微博热搜/微博热门/有什么新闻'时使用。",
+    "web_search": "网络搜索（Bing/Google）。当用户需要搜索信息、查找资料时使用。",
+    "python_interpreter": "执行Python代码。当用户说'运行代码/计算/数据分析'时使用。",
+}
+
+# 参数描述压缩（仅收录冗长项；未收录的走 trim_property_description）
+QQ_PROP_OVERRIDES = {
+    "get_current_time": {"format": "时间格式：iso/text/json"},
+    "memory_list": {"time_range": "时间范围：今天/昨天/前天/上周/上月"},
+    "react_emoji": {"emoji": "emoji名称：心/赞/哈哈等"},
+    "memory_add": {"priority": "优先级0-1，越高越重要"},
+    "group_file_downloader": {"group_id": "群号；未指定则用当前对话群"},
+}
+
+MAX_EXTRA_PACKS = 2
+
+
+def classify_packs(user_input: str, max_extra: int = MAX_EXTRA_PACKS) -> List[str]:
+    """按消息关键词把场景归类到 0-2 个扩展工具包（qq_core 恒在，不计入）。
+
+    Args:
+        user_input: 用户消息原文
+        max_extra: 最多附加的扩展包数量（用户约束 0-2）
+
+    Returns:
+        扩展包名列表（按命中数降序，最多 max_extra 个）
+    """
+    if not user_input:
+        return []
+    text = str(user_input).lower()
+    scored = []
+    for pack, kws in PACK_KEYWORDS.items():
+        hits = sum(1 for kw in kws if kw in text)
+        if hits:
+            scored.append((hits, pack))
+    scored.sort(key=lambda item: -item[0])
+    return [p for _, p in scored[:max_extra]]
 
 
 class PlatformToolsManager:
@@ -548,6 +792,70 @@ class PlatformToolsManager:
         """
         self.tool_subnet = tool_subnet
 
+    # ==================== Step 3：按场景选包 ====================
+
+    def _schemas_for_names(self, names: List[str]) -> List[Dict]:
+        """从注册表取指定工具名的 schema（不存在则跳过）"""
+        try:
+            all_schemas = self.tool_subnet.get_tools_schema()
+            name_set = set(names)
+            return [
+                s
+                for s in all_schemas
+                if s.get("function", {}).get("name") in name_set
+            ]
+        except Exception as e:  # noqa: BLE001 — 注册表异常时降级空集
+            logger.warning(f"[平台工具] 获取 schema 失败: {e}")
+            return []
+
+    def _qq_available_names(self) -> List[str]:
+        """QQ 平台可用工具名（核心 + 扩展，去重，排除屏幕视觉）"""
+        seen = set()
+        names = []
+        for name in self.CORE_TOOLS + self.QQ_EXTENDED_TOOLS:
+            if name in seen:
+                continue
+            seen.add(name)
+            if name in ("mcp_screen_vision_look_screen", "mcp_screen_vision_screenshot"):
+                continue
+            names.append(name)
+        return names
+
+    def select_tools_for_message(self, platform: str, user_input: str = "") -> List[Dict]:
+        """Step 3：按消息场景选择工具包（调用前分类，而非全量 68 工具）。
+
+        - QQ 平台：qq_core + 0-2 个扩展包（按关键词分类），描述瘦身
+        - 其他平台：维持原平台全集（不引入分类复杂度）
+        - 任何失败降级为 qq_core，绝不回退全量 68
+        """
+        if platform not in ("qq", "aiocqhttp"):
+            return self.get_platform_specific_tools(platform)
+
+        packs = ["qq_core"] + classify_packs(user_input or "")
+        names = []
+        seen = set()
+        for pack in packs:
+            for name in TOOL_PACKS.get(pack, []):
+                if name not in seen:
+                    seen.add(name)
+                    names.append(name)
+
+        available = set(self._qq_available_names())
+        names = [n for n in names if n in available]
+        if not names:
+            names = list(QQ_CORE_PACK)
+
+        schemas = self._schemas_for_names(names)
+        if not schemas:
+            # 降级：仅 qq_core（双重保险，绝不回退全量）
+            schemas = self._schemas_for_names(QQ_CORE_PACK)
+        return trim_tool_schemas(schemas)
+
+    def get_qq_core_schemas(self) -> List[Dict]:
+        """仅 qq_core 包（兜底/降级用），描述瘦身。"""
+        schemas = self._schemas_for_names(QQ_CORE_PACK)
+        return trim_tool_schemas(schemas)
+
     def get_platform_tools(self, platform: str) -> List[str]:
         """
         获取平台可用工具列表
@@ -603,14 +911,20 @@ class PlatformToolsManager:
                 if s.get("function", {}).get("name") in selected_tools
             ]
 
+            # Step 2：QQ 聊天场景对工具描述瘦身（保留触发/禁止/参数语义/区分/风险）
+            if platform in ("qq", "aiocqhttp"):
+                platform_schemas = trim_tool_schemas(platform_schemas)
+
             logger.info(
                 f"[平台工具] 平台 {platform} 使用 {len(platform_schemas)} 个工具"
             )
             return platform_schemas
 
-        except Exception as e:  # noqa: BLE001 — 工具过滤失败降级为全量
-            logger.warning(f"[平台工具] 获取平台工具失败: {e}，使用全部工具")
-            return self.tool_subnet.get_tools_schema()
+        except Exception as e:  # noqa: BLE001 — 工具过滤失败降级为平台集，绝不回退全量 68
+            logger.warning(f"[平台工具] 获取平台工具失败: {e}，降级平台核心集")
+            if platform in ("qq", "aiocqhttp"):
+                return self.get_qq_core_schemas()
+            return self._schemas_for_names(selected_tools)
 
     def is_creator(self, user_id: int, onebot_client) -> bool:
         """

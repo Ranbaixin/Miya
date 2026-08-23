@@ -1893,10 +1893,16 @@ class DecisionHub:
             # 注意：不使用 required，因为很多 API 不支持此参数
             tool_choice = "auto"
 
-            # 只获取当前平台相关的核心工具，减少 API 负担
-            # 避免 101 个工具导致 500 错误
-            platform_tools = self.platform_tools_manager.get_platform_specific_tools(platform)
-            tools_schema = platform_tools if platform_tools else self.tool_subnet.get_tools_schema()
+            # Step 3：调用前按消息场景分类，只选 qq_core + 0-2 扩展包
+            # （分类在工具选择之前；失败降级 qq_core，绝不回退全量 68 工具）
+            platform_tools = self.platform_tools_manager.select_tools_for_message(
+                platform, user_input=content
+            )
+            tools_schema = (
+                platform_tools
+                if platform_tools
+                else self.platform_tools_manager.get_qq_core_schemas()
+            )
 
             logger.info(f"[决策层-跨平台] 使用平台工具: {platform}, 工具数量: {len(tools_schema)}")
 
