@@ -1923,6 +1923,36 @@ class DecisionHub:
 
             logger.info(f"[决策层-跨平台] 使用平台工具: {platform}, 工具数量: {len(tools_schema)}")
 
+            # Step 4/S4：首请求分段预算日志（无隐私，超限告警）
+            # 工具调用轮次（tool tasks）在后续轮按实际 billed 单独计量
+            try:
+                import json as _json
+
+                from utils.token_budget import (
+                    budget_log,
+                    context_limit,
+                    count_segments,
+                )
+
+                _seg = {
+                    "system": prompt_info["system"],
+                    "tools.schema": _json.dumps(
+                        tools_schema, ensure_ascii=False, separators=(",", ":")
+                    ),
+                    "user": prompt_info["user"],
+                }
+                _counted = count_segments(_seg)
+                _total_in = _counted["total_input"]
+                _limit = context_limit()
+                if _total_in > _limit:
+                    logger.warning(
+                        f"[预算] 首请求超限 {_total_in} > {_limit} | {budget_log(_counted)}"
+                    )
+                else:
+                    logger.info(f"[预算] 首请求 {budget_log(_counted)}")
+            except Exception as _e:  # noqa: BLE001 — 预算日志为观测功能，失败不影响主流程
+                logger.debug(f"[预算] 日志失败: {_e}")
+
             # 使用模型池动态选择模型
             ai_client_to_use = self.ai_client  # 默认使用传入的AI客户端
 
