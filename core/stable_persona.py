@@ -70,6 +70,35 @@ def merge_and_dedupe(
     return out
 
 
+def _exclusion_keys(items) -> set:
+    """构建双轨去重键集（ID 优先，归一化文本兜底）"""
+    keys = set()
+    for it in items or []:
+        mid = _item_id(it)
+        if mid:
+            keys.add(f"id:{mid}")
+        else:
+            n = normalize_text(getattr(it, "content", "") or "")
+            if n:
+                keys.add(f"text:{n}")
+    return keys
+
+
+def dedupe_against(items: List, exclude_items: Optional[List] = None) -> List:
+    """剔除与另一轨（如认知记忆）重复的条目：按 ID/归一化文本。"""
+    excl = _exclusion_keys(exclude_items)
+    if not excl:
+        return list(items)
+    out = []
+    for it in items:
+        mid = _item_id(it)
+        key = f"id:{mid}" if mid else f"text:{normalize_text(getattr(it, 'content', '') or '')}"
+        if key in excl:
+            continue
+        out.append(it)
+    return out
+
+
 def format_stable_persona(items: List) -> str:
     """格式化为提示词段；空列表返回空串。"""
     if not items:
@@ -97,18 +126,24 @@ async def fetch_stable_persona(
     memory_core,
     user_id: Optional[str] = None,
     group_id: Optional[str] = None,
+    exclude_items: Optional[List] = None,
 ) -> str:
     """从长期记忆构建稳定画像段。
 
     Args:
         memory_core: MiyaMemoryCore 实例（或 None → 空段）
-        user_id: 当前用户 ID（None → 不限定用户）
+        user_id: 当前用户 ID；**缺失时返回空段**（隐私硬约束：不退化为全局检索）
         group_id: 当前群 ID（仅群聊传入，用于进一步收敛）
+        exclude_items: 另一轨（认知记忆）的结构化条目，用于双轨去重
 
     Returns:
         稳定画像提示段；任何失败返回空串（不阻断主流程）。
     """
     if memory_core is None:
+        return ""
+    # 隐私硬约束：缺少用户身份时不检索，避免跨用户泄漏
+    if user_id is None:
+        logger.info("[稳定画像] 缺少 user_id，跳过稳定画像（隐私保护）")
         return ""
     try:
         from memory.core import MemoryLevel, MemoryQuery
@@ -117,19 +152,20 @@ async def fetch_stable_persona(
             level=MemoryLevel.LONG_TERM,
             tags=list(STABLE_TAGS),
             any_tag=True,
-            user_id=str(user_id) if user_id is not None else None,
+            user_id=str(user_id),
             group_id=str(group_id) if group_id else None,
             limit=20,
             sort_by="priority",
             sort_order="desc",
         )
         items = await memory_core.retrieve(q)
-        merged = merge_and_dedupe(
-            items,
-            target_user_id=str(user_id) if user_id is not None else None,
-        )
+        # Step 6 补：双轨去重（先剔除与认知记忆重复的条目，再合并去重）
+        items = dedupe_against(items, exclude_items)
+        merged = merge_and_dedupe(items, target_user_id=str(user_id))
         segment = format_stable_persona(merged)
-        logger.info(f"[稳定画像] 白名单命中 {len(items)} 条，去重后 {len(merged)} 条")
+        logger.info(
+            f"[稳定画像] 白名单命中 {len(items)} 条，双轨去重后 {len(merged)} 条"
+        )
         return segment
     except Exception as e:  # noqa: BLE001 — 稳定画像为增强上下文，失败降级空段
         logger.warning(f"[稳定画像] 构建失败: {e}")

@@ -14,6 +14,14 @@ import re
 import subprocess
 import sys
 
+# Windows 兼容：默认 CP936/GBK 控制台打印 ✅/❌ 会 UnicodeEncodeError（exit 1）
+if sys.platform == "win32":
+    for _stream in (sys.stdout, sys.stderr):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:  # noqa: BLE001,S110 — 重配置失败仅跳过
+            pass
+
 SUSPICIOUS_PATTERNS = [
     (r"sk-[A-Za-z0-9]{20,}", "OpenAI 风格 API Key"),
     (r"AKIA[0-9A-Z]{16}", "AWS Access Key"),

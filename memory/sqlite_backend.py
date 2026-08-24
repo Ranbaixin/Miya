@@ -318,9 +318,15 @@ class SQLiteBackend(MemoryBackend):
                 conditions.append("(content LIKE ? OR tags LIKE ?)")
                 params.extend([pattern, pattern])
             if query.tags:
-                for tag in query.tags:
-                    conditions.append("tags LIKE ?")
-                    params.append(f'%"{tag}"%')
+                # 2026-08 修复：多标签按 any_tag 语义连接（此前一律 AND，any_tag=True 失效）
+                if query.any_tag:
+                    tag_conds = ["tags LIKE ?" for _ in query.tags]
+                    conditions.append("(" + " OR ".join(tag_conds) + ")")
+                    params.extend(f'%"{tag}"%' for tag in query.tags)
+                else:
+                    for tag in query.tags:
+                        conditions.append("tags LIKE ?")
+                        params.append(f'%"{tag}"%')
             # 归档过滤（P8 Step2 暴露：SQLite 查询缺此过滤，归档记忆不应出现在普通检索）
             if not query.include_archived:
                 conditions.append("is_archived = 0")

@@ -603,6 +603,7 @@ class CognitiveEngine:
         limit: int = 5,
         user_id: Optional[str] = None,
         group_id: Optional[str] = None,
+        memories: Optional[List[MemoryItem]] = None,
     ) -> str:
         """构建记忆上下文文本
 
@@ -612,6 +613,8 @@ class CognitiveEngine:
             limit: 记忆数量限制
             user_id: 用户ID（用于过滤特定用户的记忆）
             group_id: 群ID（用于过滤特定群聊的记忆）
+            memories: 预取的结构化记忆条目（Step 6 双轨去重用）；
+                     传入时跳过内部 retrieve，避免二次检索
 
         Returns:
             格式化的记忆上下文文本
@@ -619,7 +622,8 @@ class CognitiveEngine:
         # 确保内存核心已初始化
         await self._ensure_memory_core_initialized()
 
-        memories = await self.retrieve(user_input, conversation_history, limit, user_id, group_id)
+        if memories is None:
+            memories = await self.retrieve(user_input, conversation_history, limit, user_id, group_id)
 
         if not memories:
             return ""

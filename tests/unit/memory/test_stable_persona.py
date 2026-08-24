@@ -14,6 +14,7 @@ import pytest
 from core.stable_persona import (
     MAX_STABLE_ITEMS,
     STABLE_TAGS,
+    dedupe_against,
     fetch_stable_persona,
     format_stable_persona,
     merge_and_dedupe,
@@ -140,3 +141,68 @@ async def test_fetch_logs_counts_not_content(caplog):
 
 def test_whitelist_tags_defined():
     assert set(STABLE_TAGS) == {"喜好", "信息", "identity", "重要"}
+
+
+# ==================== 隐私硬约束（验收补充） ====================
+
+@pytest.mark.asyncio
+async def test_fetch_without_user_id_returns_empty_no_global_retrieval():
+    """缺少 user_id 时返回空段，绝不退化为全局检索（隐私硬约束）"""
+    core = _FakeCore([_item("OTHER_USER_PRIVATE", mid="m9", uid="999")])
+    seg = await fetch_stable_persona(core, user_id=None, group_id=None)
+    assert seg == ""
+    assert "OTHER_USER_PRIVATE" not in seg
+
+
+@pytest.mark.asyncio
+async def test_fetch_without_user_id_no_query():
+    """缺少 user_id 时不应构造查询（记录查询次数）"""
+    class _CountingCore:
+        def __init__(self):
+            self.queries = 0
+
+        async def retrieve(self, query):
+            self.queries += 1
+            return [_item("OTHER_USER_PRIVATE", mid="m9", uid="999")]
+
+    core = _CountingCore()
+    await fetch_stable_persona(core, user_id=None)
+    assert core.queries == 0  # 未发起任何检索
+
+
+# ==================== 双轨去重（验收补充） ====================
+
+def test_dedupe_against_by_id():
+    a = _item("用户喜欢读书", mid="m1")
+    b = _item("用户喜欢读书", mid="m1")  # 同一 ID
+    result = dedupe_against([a], [b])
+    assert result == []
+
+
+def test_dedupe_against_by_normalized_text():
+    from types import SimpleNamespace
+
+    a = SimpleNamespace(id="", content="喜欢 读书", user_id="global", created_at="", updated_at="")
+    excl = SimpleNamespace(id="", content="喜欢读书", user_id="global", created_at="", updated_at="")
+    result = dedupe_against([a], [excl])
+    assert result == []
+
+
+def test_dedupe_against_keeps_distinct():
+    a = _item("用户喜欢读书", mid="m1")
+    b = _item("用户是程序员", mid="m2")
+    excl = _item("无关条目", mid="m9")
+    result = dedupe_against([a, b], [excl])
+    assert len(result) == 2
+
+
+@pytest.mark.asyncio
+async def test_fetch_excludes_cognitive_duplicates():
+    """同一记忆同时被认知引擎与稳定画像命中 → 稳定画像剔除（双轨不重复）"""
+    cognitive_item = _item("用户喜欢读书", mid="m1")
+    persona_item = _item("用户喜欢读书", mid="m1")  # 双轨命中同一条
+    core = _FakeCore([persona_item])
+    seg = await fetch_stable_persona(
+        core, user_id="123", exclude_items=[cognitive_item]
+    )
+    assert seg == ""  # 与认知记忆重复 → 稳定画像为空

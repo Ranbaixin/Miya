@@ -87,6 +87,35 @@ class BaseAIClient:
         """
         self.personality = personality
 
+    def _record_usage_calibration(self, request_params: Dict, response, provider: str = ""):
+        """Step 1 补：provider 返回真实 usage 后回灌预算器。
+
+        校准只记录最大值、永不降低预算（见 utils/token_budget.record_calibration）。
+        估算口径 = 序列化后的实际请求参数（含 tools），与 S1 一致。
+
+        Args:
+            request_params: 实际发送给 API 的请求参数字典
+            response: API 响应（含 usage）
+            provider: 提供方标识（deepseek/openai/anthropic/zhipu）
+        """
+        try:
+            from utils.token_budget import estimate_tokens, record_calibration
+
+            usage = getattr(response, "usage", None)
+            actual = int(getattr(usage, "prompt_tokens", 0) or 0)
+            if actual <= 0:
+                return
+            provider = provider or "deepseek"
+            estimated = estimate_tokens(
+                json.dumps(request_params, ensure_ascii=False, default=str),
+                provider=provider,
+                model=self.model,
+            )
+            record_calibration(provider, self.model, estimated, actual)
+            logger.info(f"[校准] {self.model} 估算 {estimated} → 实际 {actual} 已记录")
+        except Exception as e:  # noqa: BLE001 — 校准为观测功能，失败不影响对话
+            logger.debug(f"[校准] usage 回灌失败: {e}")
+
     def _load_miya_prompt(self):
         """加载弥娅人设提示词（已弃用，使用YAML配置）"""
         # 现在系统使用 YAML 配置和人格模块，不再使用 prompts/ 目录
@@ -706,6 +735,7 @@ class OpenAIClient(BaseAIClient):
                 #     request_params["enable_search"] = True
 
                 response = await self.client.chat.completions.create(**request_params)
+                self._record_usage_calibration(request_params, response, provider="openai")
 
                 choice = response.choices[0]
                 message = choice.message
@@ -1082,6 +1112,7 @@ class DeepSeekClient(BaseAIClient):
                 #     request_params["enable_search"] = True
 
                 response = await self.client.chat.completions.create(**request_params)
+                self._record_usage_calibration(request_params, response, provider="deepseek")
 
                 # 增强调试日志
                 choice = response.choices[0]
@@ -1304,6 +1335,16 @@ class AnthropicClient(BaseAIClient):
                 messages=user_messages,
                 max_tokens=self.config.get("max_tokens", 2000),
             )
+            self._record_usage_calibration(
+                {
+                    "model": self.model,
+                    "system": system_prompt,
+                    "messages": user_messages,
+                    "max_tokens": self.config.get("max_tokens", 2000),
+                },
+                response,
+                provider="anthropic",
+            )
 
             if response.content and len(response.content) > 0:
                 return response.content[0].text
@@ -1349,6 +1390,17 @@ class ZhipuAIClient(BaseAIClient):
                     {"role": msg.role, "content": msg.content} for msg in messages
                 ],
                 temperature=self.config.get("temperature", 0.7),
+            )
+            self._record_usage_calibration(
+                {
+                    "model": self.model,
+                    "messages": [
+                        {"role": msg.role, "content": msg.content} for msg in messages
+                    ],
+                    "temperature": self.config.get("temperature", 0.7),
+                },
+                response,
+                provider="zhipu",
             )
 
             return response.choices[0].message.content

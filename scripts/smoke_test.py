@@ -21,6 +21,17 @@ import threading
 from pathlib import Path
 from typing import Dict, List, Set, Optional, Any
 
+# Windows 兼容：统一 UTF-8 输出，避免 CP936/GBK 下 emoji/中文崩溃
+os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+if sys.platform == "win32":
+    for _stream in (sys.stdout, sys.stderr):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:  # noqa: BLE001,S110 — 重配置失败仅跳过
+            pass
+    # 子进程（如 python -c 检查）默认继承 UTF-8
+    os.environ["PYTHONIOENCODING"] = "utf-8"
+
 ROOT = Path(__file__).resolve().parent.parent
 BASELINE_FILE = ROOT / "scripts" / ".smoke_baseline.json"
 LOG_BLACKLIST_FILE = ROOT / "scripts" / ".smoke_log_blacklist.json"

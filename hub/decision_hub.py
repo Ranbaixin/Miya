@@ -1421,14 +1421,18 @@ class DecisionHub:
                     logger.debug("[决策层] 意识感知失败", exc_info=True)
                 return ""
 
-            async def fetch_stable_persona():
+            async def fetch_stable_persona(exclude_items=None):
                 try:
                     from core.stable_persona import fetch_stable_persona as _build
+                    from memory import get_memory_core
 
+                    # Step 6 修复：使用真实 MiyaMemoryCore（hub.memory_engine 无 retrieve 接口）
+                    core = await get_memory_core()
                     return await _build(
-                        self.memory_engine,
+                        core,
                         user_id=context.get("user_id"),
                         group_id=context.get("group_id"),
+                        exclude_items=exclude_items,
                     )
                 except Exception as e:  # noqa: BLE001 — 稳定画像为增强上下文，失败降级空段
                     logger.warning(f"[稳定画像] 获取失败: {e}")
@@ -1554,7 +1558,7 @@ class DecisionHub:
             persona_task = asyncio.create_task(fetch_user_persona(), name="persona")
             awareness_task = asyncio.create_task(fetch_awareness_text(), name="awareness")
             search_task = asyncio.create_task(fetch_search_context(), name="search")
-            sp_task = asyncio.create_task(fetch_stable_persona(), name="stable_persona")
+            # 稳定画像任务在认知记忆之后启动（双轨结构化去重需要认知条目，见 Phase 2）
             wm_task = asyncio.create_task(fetch_group_chat_context(), name="wm")
             diting_task = asyncio.create_task(fetch_diting_strategy(), name="diting")
 
@@ -1565,18 +1569,31 @@ class DecisionHub:
             # Phase 2: 先获取认知记忆，再注入灵魂发生器（保证内心独白连贯）
             # Soul Generator 需要认知记忆上下文来生成连贯的内心独白
             # ============================================================
+            # Step 6 补：认知记忆结构化条目（供稳定画像双轨去重）
+            cognitive_items: list = []
+
             async def fetch_cognitive_memory():
                 cmc = ""
                 try:
                     cognitive_engine = get_cognitive_engine()
                     query_user_id = user_id_str if context.get("user_id") else None
                     query_group_id = str(context.get("group_id")) if context.get("group_id") else None
+                    # 先取结构化条目，再复用同一批条目格式化（避免二次检索）
+                    items = await cognitive_engine.retrieve(
+                        user_input=content,
+                        conversation_history=conversation_context,
+                        limit=5,
+                        user_id=query_user_id,
+                        group_id=query_group_id,
+                    )
+                    cognitive_items.extend(items)
                     cmc = await cognitive_engine.build_context(
                         user_input=content,
                         conversation_history=conversation_context,
                         limit=5,
                         user_id=query_user_id,
                         group_id=query_group_id,
+                        memories=items,
                     )
                     if cmc:
                         logger.warning(f"[决策层] 智能记忆检索到相关记忆 (user_id={query_user_id})")
@@ -1637,7 +1654,6 @@ class DecisionHub:
             user_persona_context, group_persona_context = await persona_task
             awareness_text = await awareness_task
             search_context = await search_task
-            stable_persona_context = await sp_task
             group_chat_context = await wm_task
 
             # 等待谛听策略结果并注入 perception
@@ -1681,6 +1697,13 @@ class DecisionHub:
 
             # 等待 Phase 2 任务
             cognitive_memory_context = await cog_task
+
+            # Step 6：稳定画像在认知记忆之后构建，双轨按结构化条目去重后注入
+            sp_task = asyncio.create_task(
+                fetch_stable_persona(exclude_items=cognitive_items), name="stable_persona"
+            )
+            stable_persona_context = await sp_task
+
             soul_result = await run_soul_generator(cognitive_memory=cognitive_memory_context)
 
             # 处理 Soul Generator 结果 (共用于两条路径)
@@ -1943,6 +1966,22 @@ class DecisionHub:
                 }
                 _counted = count_segments(_seg)
                 _total_in = _counted["total_input"]
+                # S4 粒度：历史/稳定画像/认知记忆/知识为独立观测段（已并入 user 的正文，
+                # 这里单独估算便于观察各段占比；total_input 仍以实际发送的 3 段为准）
+                from utils.token_budget import estimate_tokens
+
+                _hist_text = "\n".join(
+                    str(m.get("content", "")) for m in (conversation_context or [])
+                )
+                for _name, _text in (
+                    ("history", _hist_text),
+                    ("stable_memory", stable_persona_context),
+                    ("cognitive_memory", cognitive_memory_context),
+                    ("knowledge", knowledge_context or ""),
+                ):
+                    if _text:
+                        _counted[_name] = estimate_tokens(_text)
+                _counted["total_input"] = _total_in
                 _limit = context_limit()
                 if _total_in > _limit:
                     logger.warning(
