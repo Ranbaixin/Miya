@@ -4,6 +4,7 @@ TTS 提供商实现
 
 MIYA TTS 系统的提供商层
 """
+
 import asyncio
 import builtins
 import contextlib
@@ -79,8 +80,9 @@ class APITTSEngine(TTSEngine):
             logger.error(f"API TTS synthesis failed: {e}")
             return None
 
-    async def synthesize_to_file(self, text: str, output_path: str,
-                                output_format: str = "mp3", **kwargs) -> Optional[str]:
+    async def synthesize_to_file(
+        self, text: str, output_path: str, output_format: str = "mp3", **kwargs
+    ) -> Optional[str]:
         """合成语音并保存到文件"""
         try:
             speed = kwargs.get("speed", self.speed)
@@ -109,20 +111,12 @@ class APITTSEngine(TTSEngine):
         """调用OpenAI TTS API"""
         try:
             import requests
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
-            }
-            data = {
-                "model": "tts-1",
-                "input": text,
-                "voice": voice,
-                "response_format": self.format
-            }
+
+            headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+            data = {"model": "tts-1", "input": text, "voice": voice, "response_format": self.format}
             loop = asyncio.get_event_loop()
             response = await loop.run_in_executor(
-                None,
-                lambda: requests.post(self.api_url, headers=headers, json=data, timeout=60)
+                None, lambda: requests.post(self.api_url, headers=headers, json=data, timeout=60)
             )
             if response.status_code == HTTPStatus.OK:
                 with open(output_path, "wb") as f:
@@ -142,10 +136,11 @@ class APITTSEngine(TTSEngine):
         """调用Azure TTS API"""
         try:
             import requests
+
             headers = {
                 "Ocp-Apim-Subscription-Key": self.api_key,
                 "Content-Type": "application/ssml+xml",
-                "X-Microsoft-OutputFormat": f"audio-{self.format}"
+                "X-Microsoft-OutputFormat": f"audio-{self.format}",
             }
             ssml = f"""
             <speak version='1.0' xml:lang='zh-CN'>
@@ -158,8 +153,7 @@ class APITTSEngine(TTSEngine):
             """
             loop = asyncio.get_event_loop()
             response = await loop.run_in_executor(
-                None,
-                lambda: requests.post(self.api_url, headers=headers, data=ssml, timeout=60)
+                None, lambda: requests.post(self.api_url, headers=headers, data=ssml, timeout=60)
             )
             if response.status_code == HTTPStatus.OK:
                 with open(output_path, "wb") as f:
@@ -216,6 +210,7 @@ class SystemTTSEngine(TTSEngine):
             if self.os_type == "Windows":
                 try:
                     import win32com.client
+
                     win32com.client.Dispatch("SAPI.SpVoice")
                     logger.info("Windows SAPI TTS available")
                 except ImportError:
@@ -258,8 +253,9 @@ class SystemTTSEngine(TTSEngine):
             logger.error(f"System TTS synthesis failed: {e}")
             return None
 
-    async def synthesize_to_file(self, text: str, output_path: str,
-                                output_format: str = "mp3", **kwargs) -> Optional[str]:
+    async def synthesize_to_file(
+        self, text: str, output_path: str, output_format: str = "mp3", **kwargs
+    ) -> Optional[str]:
         """合成语音并保存到文件"""
         try:
             speed = kwargs.get("speed", self.speed)
@@ -279,11 +275,13 @@ class SystemTTSEngine(TTSEngine):
             logger.error(f"System TTS synthesis to file failed: {e}")
             return None
 
-    async def _synthesize_windows(self, text: str, output_path: str,
-                                  voice_id: Optional[str], speed: float) -> Optional[str]:
+    async def _synthesize_windows(
+        self, text: str, output_path: str, voice_id: Optional[str], speed: float
+    ) -> Optional[str]:
         """Windows系统使用SAPI"""
         try:
             import win32com.client
+
             speaker = win32com.client.Dispatch("SAPI.SpVoice")
             speaker.Rate = int((speed - 1.0) * 10)
             if voice_id:
@@ -303,9 +301,9 @@ class SystemTTSEngine(TTSEngine):
             logger.error(f"Windows TTS synthesis failed: {e}")
             return None
 
-    async def _synthesize_macos(self, text: str, output_path: str,
-                              voice_id: Optional[str], speed: float,
-                              output_format: str) -> Optional[str]:
+    async def _synthesize_macos(
+        self, text: str, output_path: str, voice_id: Optional[str], speed: float, output_format: str
+    ) -> Optional[str]:
         """macOS使用say命令"""
         try:
             cmd = ["say", "-o", output_path]
@@ -321,9 +319,9 @@ class SystemTTSEngine(TTSEngine):
             logger.error(f"macOS TTS synthesis failed: {e}")
             return None
 
-    async def _synthesize_linux(self, text: str, output_path: str,
-                              voice_id: Optional[str], speed: float,
-                              output_format: str) -> Optional[str]:
+    async def _synthesize_linux(
+        self, text: str, output_path: str, voice_id: Optional[str], speed: float, output_format: str
+    ) -> Optional[str]:
         """Linux使用espeak或festival"""
         try:
             if self._check_command("espeak"):
@@ -366,14 +364,15 @@ class SystemTTSEngine(TTSEngine):
         try:
             if self.os_type == "Windows":
                 import win32com.client
+
                 speaker = win32com.client.Dispatch("SAPI.SpVoice")
                 voices = speaker.GetVoices()
                 return [voices.Item(i).GetDescription() for i in range(voices.Count)]
             elif self.os_type == "Darwin":
                 result = subprocess.run(["say", "-v", "?"], capture_output=True, text=True)
                 if result.returncode == 0:
-                    lines = result.stdout.split('\n')
-                    voices = [line.strip() for line in lines if line.strip() and not line.startswith('#')]
+                    lines = result.stdout.split("\n")
+                    voices = [line.strip() for line in lines if line.strip() and not line.startswith("#")]
                     return voices[:20]
             return []
         except Exception as e:  # noqa: BLE001 — TTS引擎调用失败降级
@@ -437,7 +436,7 @@ class GPTSoviTSEngine(TTSEngine):
                 logger.error("GPT-SOViTS api_url is required")
                 return False
 
-            if not self.api_url.endswith('/tts'):
+            if not self.api_url.endswith("/tts"):
                 self.api_url = f"{self.api_url.rstrip('/')}/tts"
 
             self.is_initialized = True
@@ -456,6 +455,7 @@ class GPTSoviTSEngine(TTSEngine):
             reference_text = kwargs.get("reference_text", self.reference_text)
 
             from .utils import filter_text
+
             text = filter_text(text, self.filter_brackets, self.filter_special_chars)
 
             if not text:
@@ -480,8 +480,9 @@ class GPTSoviTSEngine(TTSEngine):
             logger.error(f"GPT-SOViTS synthesis failed: {e}")
             return None
 
-    async def synthesize_to_file(self, text: str, output_path: str,
-                                output_format: str = "wav", **kwargs) -> Optional[str]:
+    async def synthesize_to_file(
+        self, text: str, output_path: str, output_format: str = "wav", **kwargs
+    ) -> Optional[str]:
         """合成语音并保存到文件"""
         try:
             speed = kwargs.get("speed", self.speed)
@@ -489,6 +490,7 @@ class GPTSoviTSEngine(TTSEngine):
             reference_text = kwargs.get("reference_text", self.reference_text)
 
             from .utils import filter_text
+
             text = filter_text(text, self.filter_brackets, self.filter_special_chars)
 
             if not text:
@@ -501,9 +503,9 @@ class GPTSoviTSEngine(TTSEngine):
             logger.error(f"GPT-SOViTS synthesis to file failed: {e}")
             return None
 
-    async def _call_api(self, text: str, output_path: str, speed: float,
-                       reference_audio: Optional[str],
-                       reference_text: Optional[str]) -> Optional[str]:
+    async def _call_api(
+        self, text: str, output_path: str, speed: float, reference_audio: Optional[str], reference_text: Optional[str]
+    ) -> Optional[str]:
         """调用GPT-SOViTS v2 API"""
         try:
             import requests
@@ -535,10 +537,7 @@ class GPTSoviTSEngine(TTSEngine):
 
             loop = asyncio.get_event_loop()
 
-            response = await loop.run_in_executor(
-                None,
-                lambda: requests.post(self.api_url, json=data, timeout=60)
-            )
+            response = await loop.run_in_executor(None, lambda: requests.post(self.api_url, json=data, timeout=60))
 
             if response.status_code == HTTPStatus.OK:
                 with open(output_path, "wb") as f:

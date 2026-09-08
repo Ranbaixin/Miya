@@ -303,9 +303,7 @@ class AuditLogger:
 
             # Also redact in message if it's a string
             if "message" in event_dict and isinstance(event_dict["message"], str):
-                event_dict["message"] = self._redact_sensitive_data(
-                    event_dict["message"]
-                )
+                event_dict["message"] = self._redact_sensitive_data(event_dict["message"])
 
             # 写入事件
             event_json = json.dumps(event_dict, ensure_ascii=False) + "\n"
@@ -334,9 +332,7 @@ class AuditLogger:
         # 从缓存查询
         with self._cache_lock:
             for event in self._event_cache:
-                if self._matches_filter(
-                    event, event_type, level, user_id, api_key_id, start_time, end_time
-                ):
+                if self._matches_filter(event, event_type, level, user_id, api_key_id, start_time, end_time):
                     results.append(event)
 
         # 如果缓存不够,从文件查询
@@ -464,9 +460,7 @@ class AuditLogger:
         output_file: Optional[Path] = None,
     ) -> str:
         """生成审计报告"""
-        events = self.query_events(
-            start_time=start_time, end_time=end_time, limit=10000
-        )
+        events = self.query_events(start_time=start_time, end_time=end_time, limit=10000)
 
         # 统计分析
         event_type_stats = defaultdict(int)
@@ -491,30 +485,22 @@ class AuditLogger:
             "## 事件类型统计",
         ]
 
-        for event_type, count in sorted(
-            event_type_stats.items(), key=lambda x: x[1], reverse=True
-        ):
+        for event_type, count in sorted(event_type_stats.items(), key=lambda x: x[1], reverse=True):
             report_lines.append(f"- {event_type}: {count}")
 
         report_lines.extend(["", "## 事件级别统计"])
 
-        for level, count in sorted(
-            level_stats.items(), key=lambda x: x[1], reverse=True
-        ):
+        for level, count in sorted(level_stats.items(), key=lambda x: x[1], reverse=True):
             report_lines.append(f"- {level}: {count}")
 
         report_lines.extend(["", "## 用户活动统计"])
 
-        for user_id, count in sorted(
-            user_stats.items(), key=lambda x: x[1], reverse=True
-        )[:10]:
+        for user_id, count in sorted(user_stats.items(), key=lambda x: x[1], reverse=True)[:10]:
             report_lines.append(f"- {user_id}: {count}")
 
         report_lines.extend(["", "## 状态统计"])
 
-        for status, count in sorted(
-            status_stats.items(), key=lambda x: x[1], reverse=True
-        ):
+        for status, count in sorted(status_stats.items(), key=lambda x: x[1], reverse=True):
             report_lines.append(f"- {status}: {count}")
 
         # 添加重要事件
@@ -602,9 +588,7 @@ if __name__ == "__main__":
     )
 
     # 查询事件
-    events = audit_logger.query_events(
-        event_type=AuditEventType.API_KEY_CREATE, limit=10
-    )
+    events = audit_logger.query_events(event_type=AuditEventType.API_KEY_CREATE, limit=10)
 
     print(f"查询到 {len(events)} 个事件")
     for event in events:

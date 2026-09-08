@@ -243,10 +243,7 @@ class UnifiedPlatformManager:
 
     def list_platforms(self) -> Dict[str, Dict]:
         """列出所有平台状态"""
-        return {
-            pid: p.get_stats() if hasattr(p, "get_stats") else {"id": pid}
-            for pid, p in self._platforms.items()
-        }
+        return {pid: p.get_stats() if hasattr(p, "get_stats") else {"id": pid} for pid, p in self._platforms.items()}
 
     def get_event_queue(self) -> asyncio.Queue:
         """获取事件队列"""

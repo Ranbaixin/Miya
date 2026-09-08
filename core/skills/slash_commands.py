@@ -156,16 +156,12 @@ class SlashCommandManager:
             if subcommands:
                 self.register_command("system", "系统操作", subcommands)
 
-    def register_command(
-        self, name: str, description: str, subcommands: List[tuple] = None
-    ):
+    def register_command(self, name: str, description: str, subcommands: List[tuple] = None):
         """注册命令"""
         cmd = CommandDefinition(name=name, description=description)
         if subcommands:
             for sub_name, sub_desc, _ in subcommands:
-                cmd.subcommands[sub_name] = CommandDefinition(
-                    name=sub_name, description=sub_desc
-                )
+                cmd.subcommands[sub_name] = CommandDefinition(name=sub_name, description=sub_desc)
         self.commands[name] = cmd
 
     def parse(self, input_str: str) -> Optional[Dict[str, Any]]:

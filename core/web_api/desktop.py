@@ -19,13 +19,14 @@ from core.text_loader import get_permission
 logger = logging.getLogger(__name__)
 
 try:
-    from fastapi import APIRouter, HTTPException
+    from fastapi import APIRouter, HTTPException, Request
 
     FASTAPI_AVAILABLE = True
 except ImportError:
     FASTAPI_AVAILABLE = False
     APIRouter = object
     HTTPException = Exception
+    Request = object
 
 
 class DesktopRoutes:
@@ -112,9 +113,7 @@ class DesktopRoutes:
                 try:
                     base_path.relative_to(project_path)
                 except ValueError:
-                    raise HTTPException(
-                        status_code=403, detail="访问被拒绝：路径超出项目范围"
-                    )
+                    raise HTTPException(status_code=403, detail="访问被拒绝：路径超出项目范围")
 
                 files = list(base_path.rglob("*")) if recursive else list(base_path.iterdir())
 
@@ -127,9 +126,7 @@ class DesktopRoutes:
                                 "path": str(f),
                                 "is_dir": f.is_dir(),
                                 "size": f.stat().st_size if f.is_file() else 0,
-                                "modified": datetime.fromtimestamp(
-                                    f.stat().st_mtime
-                                ).isoformat(),
+                                "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
                             }
                         )
 
@@ -155,9 +152,7 @@ class DesktopRoutes:
                 try:
                     file_path.relative_to(project_path)
                 except ValueError:
-                    raise HTTPException(
-                        status_code=403, detail="访问被拒绝：路径超出项目范围"
-                    )
+                    raise HTTPException(status_code=403, detail="访问被拒绝：路径超出项目范围")
 
                 if not file_path.is_file():
                     raise HTTPException(status_code=404, detail="文件不存在")
@@ -183,18 +178,33 @@ class DesktopRoutes:
                 return {"success": False, "error": str(e)}
 
         @self.router.post("/files/write")
-        async def write_file_api(path: str, content: str):
-            """写入文件内容"""
+        async def write_file_api(request: Request):
+            """写入文件内容
+
+            2026-09 修复：此前签名 `path: str, content: str` 是裸 str 参数，
+            FastAPI 会把它们当 query 参数，前端 JSON body 调用必然 422。
+            现同时兼容 JSON body {path, content} 与 query 参数。
+            """
             try:
+                try:
+                    body = await request.json()
+                except Exception:  # noqa: BLE001 — 无 body 或非 JSON 时降级
+                    body = {}
+                body = body if isinstance(body, dict) else {}
+                path = body.get("path") or request.query_params.get("path") or ""
+                content = body.get("content")
+                if content is None:
+                    content = request.query_params.get("content", "")
+                if not path:
+                    raise HTTPException(status_code=422, detail="缺少 path 参数")
+
                 file_path = Path(path).resolve()
                 # 安全检查
                 project_path = Path(__file__).parent.parent.parent.resolve()
                 try:
                     file_path.relative_to(project_path)
                 except ValueError:
-                    raise HTTPException(
-                        status_code=403, detail="访问被拒绝：路径超出项目范围"
-                    )
+                    raise HTTPException(status_code=403, detail="访问被拒绝：路径超出项目范围")
 
                 # 创建父目录
                 file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -214,6 +224,73 @@ class DesktopRoutes:
                 logger.error(f"[DesktopRoutes] 写入文件失败: {e}", exc_info=True)
                 return {"success": False, "error": str(e)}
 
+        @self.router.post("/files/parse")
+        async def parse_file_api(request: Request):
+            """解析上传文件为文本（2026-09 新增：桌面端文档解析此前 404）
+
+            纯文本类（txt/md/code/json/csv）直接读取；其余类型明确报不支持。
+            """
+            try:
+                form = await request.form()
+                upload = form.get("file")
+                if upload is None or not hasattr(upload, "read"):
+                    raise HTTPException(status_code=422, detail="缺少 file 字段")
+                filename = getattr(upload, "filename", "") or "upload"
+                suffix = Path(filename).suffix.lower()
+                data = await upload.read()
+                if len(data) > 10 * 1024 * 1024:
+                    raise HTTPException(status_code=400, detail="文件过大（>10MB）")
+                if suffix in (".pdf", ".docx", ".doc", ".pptx", ".xlsx"):
+                    return {
+                        "success": False,
+                        "truncated": False,
+                        "content": "",
+                        "error": f"暂不支持解析 {suffix} 格式，请先转换为文本",
+                    }
+                text = data.decode("utf-8", errors="replace")
+                truncated = len(text) > 200_000
+                return {
+                    "success": True,
+                    "filename": filename,
+                    "truncated": truncated,
+                    "content": text[:200_000],
+                }
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"[DesktopRoutes] 解析文件失败: {e}", exc_info=True)
+                return {"success": False, "error": str(e)}
+
+        @self.router.post("/files/upload")
+        async def upload_file_api(request: Request):
+            """上传文件到 data/uploads（2026-09 新增：桌面端文档上传此前 404）"""
+            try:
+                form = await request.form()
+                upload = form.get("file")
+                if upload is None or not hasattr(upload, "read"):
+                    raise HTTPException(status_code=422, detail="缺少 file 字段")
+                filename = Path(getattr(upload, "filename", "") or "upload").name
+                data = await upload.read()
+                if len(data) > 10 * 1024 * 1024:
+                    raise HTTPException(status_code=400, detail="文件过大（>10MB）")
+                project_path = Path(__file__).parent.parent.parent.resolve()
+                uploads_dir = project_path / "data" / "uploads"
+                uploads_dir.mkdir(parents=True, exist_ok=True)
+                stamp = datetime.now().strftime("%Y%m%d%H%M%S")
+                safe_name = f"{stamp}_{filename}"
+                dest = uploads_dir / safe_name
+                dest.write_bytes(data)
+                return {
+                    "success": True,
+                    "filePath": str(dest.relative_to(project_path)),
+                    "size": len(data),
+                }
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"[DesktopRoutes] 上传文件失败: {e}", exc_info=True)
+                return {"success": False, "error": str(e)}
+
         @self.router.delete("/files/delete")
         async def delete_file_api(path: str):
             """删除文件"""
@@ -224,9 +301,7 @@ class DesktopRoutes:
                 try:
                     file_path.relative_to(project_path)
                 except ValueError:
-                    raise HTTPException(
-                        status_code=403, detail="访问被拒绝：路径超出项目范围"
-                    )
+                    raise HTTPException(status_code=403, detail="访问被拒绝：路径超出项目范围")
 
                 if not file_path.exists():
                     raise HTTPException(status_code=404, detail="文件不存在")
@@ -268,15 +343,21 @@ class DesktopRoutes:
                         "percent": psutil.virtual_memory().percent,
                     },
                     "disk": {
-                        "total": psutil.disk_usage("/").total
-                        if platform.system() != "Windows"
-                        else psutil.disk_usage("C:\\").total,
-                        "used": psutil.disk_usage("/").used
-                        if platform.system() != "Windows"
-                        else psutil.disk_usage("C:\\").used,
-                        "free": psutil.disk_usage("/").free
-                        if platform.system() != "Windows"
-                        else psutil.disk_usage("C:\\").free,
+                        "total": (
+                            psutil.disk_usage("/").total
+                            if platform.system() != "Windows"
+                            else psutil.disk_usage("C:\\").total
+                        ),
+                        "used": (
+                            psutil.disk_usage("/").used
+                            if platform.system() != "Windows"
+                            else psutil.disk_usage("C:\\").used
+                        ),
+                        "free": (
+                            psutil.disk_usage("/").free
+                            if platform.system() != "Windows"
+                            else psutil.disk_usage("C:\\").free
+                        ),
                     },
                 }
             except Exception as e:
@@ -288,9 +369,7 @@ class DesktopRoutes:
             """列出运行中的进程"""
             try:
                 processes = []
-                for proc in psutil.process_iter(
-                    ["pid", "name", "username", "cpu_percent", "memory_percent"]
-                ):
+                for proc in psutil.process_iter(["pid", "name", "username", "cpu_percent", "memory_percent"]):
                     with contextlib.suppress(builtins.BaseException):
                         processes.append(
                             {
@@ -326,9 +405,7 @@ class DesktopRoutes:
             except psutil.AccessDenied:
                 raise HTTPException(
                     status_code=403,
-                    detail=get_permission(
-                        "tool_permissions.process_kill_denied", "权限不足"
-                    ),
+                    detail=get_permission("tool_permissions.process_kill_denied", "权限不足"),
                 )
             except Exception as e:
                 logger.error(f"[DesktopRoutes] 终止进程失败: {e}", exc_info=True)
@@ -338,10 +415,7 @@ class DesktopRoutes:
         async def get_available_tools():
             """获取可用工具列表（MCP/Skill）"""
             try:
-                if (
-                    hasattr(self.decision_hub, "tool_subnet")
-                    and self.decision_hub.tool_subnet
-                ):
+                if hasattr(self.decision_hub, "tool_subnet") and self.decision_hub.tool_subnet:
                     # 使用 get_tools_schema 获取工具信息
                     tools_schema = self.decision_hub.tool_subnet.get_tools_schema()
 
@@ -350,13 +424,9 @@ class DesktopRoutes:
                         tool_list.append(
                             {
                                 "name": tool_schema.get("function", {}).get("name", ""),
-                                "description": tool_schema.get("function", {}).get(
-                                    "description", ""
-                                ),
+                                "description": tool_schema.get("function", {}).get("description", ""),
                                 "category": tool_schema.get("category", "general"),
-                                "parameters": tool_schema.get("function", {}).get(
-                                    "parameters", {}
-                                ),
+                                "parameters": tool_schema.get("function", {}).get("parameters", {}),
                             }
                         )
 

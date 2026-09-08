@@ -76,9 +76,9 @@ const ConfigCenterPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`http://localhost:8000/api/config/file`, {
+      const res = await fetch(`http://localhost:8000/api/desktop/files/write`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Undefined-API-Key': 'changeme' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path: selected.path, content }),
       });
       if (res.ok) {

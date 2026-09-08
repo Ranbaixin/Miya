@@ -80,9 +80,7 @@ class SingingEngine(ABC):
         pass
 
     @abstractmethod
-    async def download_accompany(
-        self, song_name: str, output_dir: str
-    ) -> Optional[str]:
+    async def download_accompany(self, song_name: str, output_dir: str) -> Optional[str]:
         """下载伴奏文件，返回文件路径"""
         pass
 

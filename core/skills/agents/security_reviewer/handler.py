@@ -58,9 +58,7 @@ async def _scan_security(terminal, target: str) -> str:
                 content = file.read_text(encoding="utf-8", errors="ignore")
                 for pattern, issue_type in patterns:
                     if re.search(pattern, content, re.IGNORECASE):
-                        issues.append(
-                            {"file": str(file), "type": issue_type, "pattern": pattern}
-                        )
+                        issues.append({"file": str(file), "type": issue_type, "pattern": pattern})
             except (OSError, ValueError) as exc:
                 logger.debug("[SecurityReviewer] 读取文件失败: %s: %s", file, exc)
 

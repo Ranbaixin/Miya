@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 
 class MetricType(Enum):
     """指标类型"""
+
     COUNTER = "counter"  # 计数器
     GAUGE = "gauge"  # 仪表
     HISTOGRAM = "histogram"  # 直方图
@@ -40,6 +41,7 @@ class MetricType(Enum):
 
 class AlertSeverity(Enum):
     """告警严重级别"""
+
     INFO = "info"
     WARNING = "warning"
     ERROR = "error"
@@ -48,6 +50,7 @@ class AlertSeverity(Enum):
 
 class AlertStatus(Enum):
     """告警状态"""
+
     ACTIVE = "active"
     RESOLVED = "resolved"
     ACKNOWLEDGED = "acknowledged"
@@ -56,6 +59,7 @@ class AlertStatus(Enum):
 @dataclass
 class Metric:
     """指标"""
+
     name: str
     value: float
     metric_type: MetricType
@@ -67,6 +71,7 @@ class Metric:
 @dataclass
 class MetricData:
     """指标数据(用于历史记录)"""
+
     metric_name: str
     values: deque
     max_size: int = 1000
@@ -97,13 +102,14 @@ class MetricData:
             "max": max(values),
             "avg": statistics.mean(values),
             "median": statistics.median(values) if values else 0.0,
-            "stddev": statistics.stdev(values) if len(values) > 1 else 0.0
+            "stddev": statistics.stdev(values) if len(values) > 1 else 0.0,
         }
 
 
 @dataclass
 class AlertRule:
     """告警规则"""
+
     rule_id: str
     name: str
     metric_name: str
@@ -119,6 +125,7 @@ class AlertRule:
 @dataclass
 class Alert:
     """告警"""
+
     alert_id: str
     rule_id: str
     metric_name: str
@@ -144,17 +151,14 @@ class MetricCollector:
         value: float,
         metric_type: MetricType = MetricType.GAUGE,
         labels: Optional[Dict[str, str]] = None,
-        tags: Optional[Dict[str, str]] = None
+        tags: Optional[Dict[str, str]] = None,
     ):
         """记录指标"""
         timestamp = datetime.now()
 
         with self._lock:
             if name not in self._metrics:
-                self._metrics[name] = MetricData(
-                    metric_name=name,
-                    values=deque(maxlen=1000)
-                )
+                self._metrics[name] = MetricData(metric_name=name, values=deque(maxlen=1000))
 
             self._metrics[name].add_value(value, timestamp)
 
@@ -167,11 +171,7 @@ class MetricCollector:
         """获取所有指标"""
         with self._lock:
             return {
-                name: {
-                    "name": metric.metric_name,
-                    "count": len(metric.values),
-                    "stats": metric.get_stats()
-                }
+                name: {"name": metric.metric_name, "count": len(metric.values), "stats": metric.get_stats()}
                 for name, metric in self._metrics.items()
             }
 
@@ -194,7 +194,7 @@ class MetricCollector:
                     "max": max(values),
                     "avg": statistics.mean(values),
                     "median": statistics.median(values),
-                    "latest": values[-1]
+                    "latest": values[-1],
                 }
         return {}
 
@@ -240,7 +240,20 @@ class AlertEngine:
 
         # 检查条件
         triggered = False
-        if rule.condition == "gt" and metric_value > rule.threshold or rule.condition == "lt" and metric_value < rule.threshold or rule.condition == "gte" and metric_value >= rule.threshold or rule.condition == "lte" and metric_value <= rule.threshold or rule.condition == "eq" and metric_value == rule.threshold or rule.condition == "ne" and metric_value != rule.threshold:
+        if (
+            rule.condition == "gt"
+            and metric_value > rule.threshold
+            or rule.condition == "lt"
+            and metric_value < rule.threshold
+            or rule.condition == "gte"
+            and metric_value >= rule.threshold
+            or rule.condition == "lte"
+            and metric_value <= rule.threshold
+            or rule.condition == "eq"
+            and metric_value == rule.threshold
+            or rule.condition == "ne"
+            and metric_value != rule.threshold
+        ):
             triggered = True
 
         if triggered:
@@ -277,8 +290,8 @@ class AlertEngine:
                     "rule_name": rule.name,
                     "threshold": rule.threshold,
                     "current_value": current_value,
-                    "description": rule.description
-                }
+                    "description": rule.description,
+                },
             )
 
             self._alerts[rule.rule_id] = alert
@@ -342,12 +355,7 @@ class NotificationService:
         self._webhook_urls: List[str] = []
 
     def configure_email(
-        self,
-        smtp_server: str,
-        smtp_port: int,
-        sender_email: str,
-        sender_password: str,
-        use_tls: bool = True
+        self, smtp_server: str, smtp_port: int, sender_email: str, sender_password: str, use_tls: bool = True
     ):
         """配置邮件通知"""
         self._email_config = {
@@ -355,7 +363,7 @@ class NotificationService:
             "smtp_port": smtp_port,
             "sender_email": sender_email,
             "sender_password": sender_password,
-            "use_tls": use_tls
+            "use_tls": use_tls,
         }
         logger.info("[通知服务] 邮件通知已配置")
 
@@ -379,16 +387,10 @@ class NotificationService:
             msg["From"] = self._email_config["sender_email"]
             msg["To"] = ", ".join(recipients)
 
-            with smtplib.SMTP(
-                self._email_config["smtp_server"],
-                self._email_config["smtp_port"]
-            ) as server:
+            with smtplib.SMTP(self._email_config["smtp_server"], self._email_config["smtp_port"]) as server:
                 if self._email_config["use_tls"]:
                     server.starttls()
-                server.login(
-                    self._email_config["sender_email"],
-                    self._email_config["sender_password"]
-                )
+                server.login(self._email_config["sender_email"], self._email_config["sender_password"])
                 server.send_message(msg)
 
             logger.info(f"[通知服务] 邮件告警已发送: {alert.alert_id}")
@@ -408,16 +410,15 @@ class NotificationService:
             "status": alert.status.value,
             "message": alert.message,
             "details": alert.details,
-            "triggered_at": alert.triggered_at.isoformat()
+            "triggered_at": alert.triggered_at.isoformat(),
         }
 
         for webhook_url in self._webhook_urls:
             try:
-                async with aiohttp.ClientSession() as session, session.post(
-                    webhook_url,
-                    json=payload,
-                    timeout=aiohttp.ClientTimeout(total=10)
-                ) as response:
+                async with (
+                    aiohttp.ClientSession() as session,
+                    session.post(webhook_url, json=payload, timeout=aiohttp.ClientTimeout(total=10)) as response,
+                ):
                     if response.status == 200:
                         logger.info(f"[通知服务] Webhook告警已发送: {webhook_url}")
                     else:
@@ -437,7 +438,7 @@ class NotificationService:
             f"告警消息: {alert.message}",
             f"触发时间: {alert.triggered_at.isoformat()}",
             "",
-            "详细信息:"
+            "详细信息:",
         ]
 
         if alert.details:
@@ -476,40 +477,46 @@ class MonitoringSystem:
     def add_default_rules(self):
         """添加默认告警规则"""
         # CPU使用率告警
-        self.alert_engine.add_rule(AlertRule(
-            rule_id="cpu_high",
-            name="CPU使用率过高",
-            metric_name="system.cpu.usage",
-            condition="gt",
-            threshold=80.0,
-            severity=AlertSeverity.WARNING,
-            duration=300.0,
-            description="CPU使用率超过80%持续5分钟"
-        ))
+        self.alert_engine.add_rule(
+            AlertRule(
+                rule_id="cpu_high",
+                name="CPU使用率过高",
+                metric_name="system.cpu.usage",
+                condition="gt",
+                threshold=80.0,
+                severity=AlertSeverity.WARNING,
+                duration=300.0,
+                description="CPU使用率超过80%持续5分钟",
+            )
+        )
 
         # 内存使用率告警
-        self.alert_engine.add_rule(AlertRule(
-            rule_id="memory_high",
-            name="内存使用率过高",
-            metric_name="system.memory.usage",
-            condition="gt",
-            threshold=85.0,
-            severity=AlertSeverity.WARNING,
-            duration=300.0,
-            description="内存使用率超过85%持续5分钟"
-        ))
+        self.alert_engine.add_rule(
+            AlertRule(
+                rule_id="memory_high",
+                name="内存使用率过高",
+                metric_name="system.memory.usage",
+                condition="gt",
+                threshold=85.0,
+                severity=AlertSeverity.WARNING,
+                duration=300.0,
+                description="内存使用率超过85%持续5分钟",
+            )
+        )
 
         # API错误率告警
-        self.alert_engine.add_rule(AlertRule(
-            rule_id="api_error_rate",
-            name="API错误率过高",
-            metric_name="api.error_rate",
-            condition="gt",
-            threshold=5.0,
-            severity=AlertSeverity.ERROR,
-            duration=300.0,
-            description="API错误率超过5%持续5分钟"
-        ))
+        self.alert_engine.add_rule(
+            AlertRule(
+                rule_id="api_error_rate",
+                name="API错误率过高",
+                metric_name="api.error_rate",
+                condition="gt",
+                threshold=5.0,
+                severity=AlertSeverity.ERROR,
+                duration=300.0,
+                description="API错误率超过5%持续5分钟",
+            )
+        )
 
         logger.info("[监控系统] 添加默认告警规则")
 
@@ -556,7 +563,7 @@ class MonitoringSystem:
         self.collector.record("system.memory.available", memory.available, MetricType.GAUGE)
 
         # 磁盘使用率
-        disk = psutil.disk_usage('/')
+        disk = psutil.disk_usage("/")
         disk_percent = (disk.used / disk.total) * 100
         self.collector.record("system.disk.usage", disk_percent, MetricType.GAUGE)
 
@@ -585,10 +592,10 @@ class MonitoringSystem:
                     "severity": alert.severity.value,
                     "status": alert.status.value,
                     "message": alert.message,
-                    "triggered_at": alert.triggered_at.isoformat()
+                    "triggered_at": alert.triggered_at.isoformat(),
                 }
                 for alert in self.alert_engine.get_active_alerts()
-            ]
+            ],
         }
 
 
@@ -613,6 +620,7 @@ def set_global_monitoring(monitoring: MonitoringSystem):
 
 # 示例使用
 if __name__ == "__main__":
+
     async def test_monitoring():
         # 创建监控系统
         monitoring = MonitoringSystem(check_interval=10.0)

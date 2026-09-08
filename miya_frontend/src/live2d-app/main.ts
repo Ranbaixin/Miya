@@ -147,7 +147,7 @@ const YINMEI_MAX_FAILS = 20
 const YINMEI_INTERVAL = 5000  // 每 5 秒轮询一次
 
 function startYinmeiPolling(): void {
-  const apiPort = (window as any).__MIYA_API_PORT__ || 9800
+  const apiPort = (window as any).__MIYA_API_PORT__ || 8000
   const pollUrl = `http://127.0.0.1:${apiPort}/api/yinmei/live2d/commands`
 
   _yinmeiPollTimer = setInterval(async () => {

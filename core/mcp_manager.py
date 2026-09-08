@@ -115,9 +115,7 @@ class MCPManager:
             logger.info("[MCP] 正在扫描并注册MCP服务...")
             registered = await self.scan_and_register()
             self._initialized = True
-            logger.info(
-                f"[MCP] 初始化完成，已注册 {len(registered)} 个服务: {registered}"
-            )
+            logger.info(f"[MCP] 初始化完成，已注册 {len(registered)} 个服务: {registered}")
         except Exception as e:  # noqa: BLE001 — 初始化失败已记录日志
             logger.error(f"[MCP] 初始化失败: {e}")
 
@@ -159,9 +157,7 @@ class MCPManager:
 
                 if await self.register_service(manifest):
                     registered.append(manifest.name)
-                    logger.info(
-                        f"[MCP] ✅ 注册服务: {manifest.name} ({manifest.display_name})"
-                    )
+                    logger.info(f"[MCP] ✅ 注册服务: {manifest.name} ({manifest.display_name})")
 
             except Exception as e:  # noqa: BLE001 — 处理manifest失败已记录日志
                 logger.error(f"[MCP] 处理manifest失败 {manifest_file}: {e}")
@@ -234,9 +230,7 @@ class MCPManager:
             logger.error(f"[MCP] 创建实例失败 {manifest.name}: {e}")
             return None
 
-    async def call(
-        self, service_name: str, tool_name: str = "", message: str = "", **kwargs
-    ) -> MCPCallResult:
+    async def call(self, service_name: str, tool_name: str = "", message: str = "", **kwargs) -> MCPCallResult:
         """
         调用MCP服务工具
 
@@ -330,11 +324,7 @@ class MCPManager:
                 service_name=call.get("service_name"),
                 tool_name=call.get("tool_name", ""),
                 message=call.get("message", ""),
-                **{
-                    k: v
-                    for k, v in call.items()
-                    if k not in ["service_name", "tool_name", "message"]
-                },
+                **{k: v for k, v in call.items() if k not in ["service_name", "tool_name", "message"]},
             )
             for call in calls
         ]
@@ -403,9 +393,7 @@ class MCPManager:
 
     def get_statistics(self) -> Dict[str, Any]:
         """获取统计信息"""
-        total_tools = sum(
-            len(self._get_service_tools(service)) for service in self._services.values()
-        )
+        total_tools = sum(len(self._get_service_tools(service)) for service in self._services.values())
 
         return {
             "total_services": len(self._services),
@@ -470,9 +458,7 @@ class MCPManager:
 _MCP_MANAGER: Optional[MCPManager] = None
 
 
-def get_mcp_manager(
-    mcp_dir: Optional[str] = None, auto_register: bool = True
-) -> MCPManager:
+def get_mcp_manager(mcp_dir: Optional[str] = None, auto_register: bool = True) -> MCPManager:
     """获取MCP管理器单例"""
     global _MCP_MANAGER
 

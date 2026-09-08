@@ -44,9 +44,7 @@ def select_model_by_task(task: str) -> Optional[Model]:
     return select_model(task)
 
 
-def select_model_for_task(
-    task_type: str, endpoint_id: str = None, priority: str = "balanced"
-) -> Optional[Model]:
+def select_model_for_task(task_type: str, endpoint_id: str = None, priority: str = "balanced") -> Optional[Model]:
     """为任务选择模型"""
     return _get_new_pool().select_model_for_task(task_type, endpoint_id, priority)
 
@@ -104,9 +102,7 @@ class ModelConfig:
             id=model.id,
             name=model.name,
             type=ModelType(model.type) if model.type else ModelType.TEXT,
-            provider=ModelProvider(model.provider)
-            if model.provider
-            else ModelProvider.OPENAI,
+            provider=ModelProvider(model.provider) if model.provider else ModelProvider.OPENAI,
             base_url=model.base_url,
             api_key=get_api_key(model.id),
             description=model.description,

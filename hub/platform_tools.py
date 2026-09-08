@@ -14,8 +14,24 @@ logger = logging.getLogger(__name__)
 
 # 语义关键句保留词：触发时机 / 禁止 / 风险 / 区分 / 参数语义
 _KEEP_SENTENCE = (
-    "当", "如果", "仅当", "调用时机", "用于", "必须", "不要", "请勿", "禁止",
-    "只能", "区别于", "不要与", "重要", "危险", "谨慎", "权限", "敏感", "注意",
+    "当",
+    "如果",
+    "仅当",
+    "调用时机",
+    "用于",
+    "必须",
+    "不要",
+    "请勿",
+    "禁止",
+    "只能",
+    "区别于",
+    "不要与",
+    "重要",
+    "危险",
+    "谨慎",
+    "权限",
+    "敏感",
+    "注意",
 )
 # 示例/场景段标记：其后内容一律裁剪
 _DROP_SECTIONS = ("适用场景", "使用场景", "示例", "例子", "比如:", "例如:")
@@ -81,7 +97,7 @@ def trim_property_description(desc: str) -> str:
         if second >= 0:
             text = text[: second + 1]
     text = text.strip(" \t，,；;")
-    return text[: _MAX_PROP_CHARS]
+    return text[:_MAX_PROP_CHARS]
 
 
 def trim_tool_schemas(schemas: List[Dict]) -> List[Dict]:
@@ -98,9 +114,7 @@ def trim_tool_schemas(schemas: List[Dict]) -> List[Dict]:
         tfunc = dict(func)
         tool_name = func.get("name", "")
         # 策展描述优先；未收录的工具走启发式裁剪
-        tfunc["description"] = QQ_DESC_OVERRIDES.get(
-            tool_name, trim_tool_description(func.get("description", ""))
-        )
+        tfunc["description"] = QQ_DESC_OVERRIDES.get(tool_name, trim_tool_description(func.get("description", "")))
         params = func.get("parameters")
         if isinstance(params, dict):
             tparams = dict(params)
@@ -129,64 +143,131 @@ def trim_tool_schemas(schemas: List[Dict]) -> List[Dict]:
 
 # 7 个工具包：qq_core 恒在，扩展包按消息场景 0-2 个
 QQ_CORE_PACK = [
-    "send_message",          # 发消息（必带）
-    "get_user_info",         # 查用户信息
-    "memory_add",            # 主动记忆
-    "memory_list",           # 记忆查询
-    "get_current_time",      # 时间
-    "react_emoji",           # 表情回应
-    "send_poke",             # 拍一拍
-    "qq_like",               # 点赞
+    "send_message",  # 发消息（必带）
+    "get_user_info",  # 查用户信息
+    "memory_add",  # 主动记忆
+    "memory_list",  # 记忆查询
+    "get_current_time",  # 时间
+    "react_emoji",  # 表情回应
+    "send_poke",  # 拍一拍
+    "qq_like",  # 点赞
 ]
 
 TOOL_PACKS = {
     "qq_core": QQ_CORE_PACK,
     "search": [
-        "web_search", "tavily_search", "crawl_webpage",
-        "baiduhot", "weibohot", "douyinhot", "grok_search",
+        "web_search",
+        "tavily_search",
+        "crawl_webpage",
+        "baiduhot",
+        "weibohot",
+        "douyinhot",
+        "grok_search",
     ],
     "qq_social": [
-        "get_member_list", "get_member_info", "find_member",
-        "qq_level_query", "weather_query",
+        "get_member_list",
+        "get_member_info",
+        "find_member",
+        "qq_level_query",
+        "weather_query",
     ],
     "media": [
-        "qq_file_reader", "qq_image_analyzer",
-        "group_file_downloader", "local_file_finder",
+        "qq_file_reader",
+        "qq_image_analyzer",
+        "group_file_downloader",
+        "local_file_finder",
     ],
     "desktop": [
-        "execute_on_desktop", "send_to_desktop",
-        "send_to_terminal", "terminal_command",
+        "execute_on_desktop",
+        "send_to_desktop",
+        "send_to_terminal",
+        "terminal_command",
     ],
     "game": [
-        "start_trpg", "roll_dice", "search_tavern_characters",
+        "start_trpg",
+        "roll_dice",
+        "search_tavern_characters",
     ],
     "entertainment": [
-        "horoscope", "wenchang_dijun", "python_interpreter",
+        "horoscope",
+        "wenchang_dijun",
+        "python_interpreter",
     ],
 }
 
 # 扩展包关键词（消息命中即加入；同一关键词可命中多包，取命中数前 2）
 PACK_KEYWORDS = {
     "search": (
-        "搜索", "搜一下", "新闻", "热搜", "资讯", "实时", "最新消息",
-        "网页", "链接", "网址", "资料", "查找资料", "帮我查",
+        "搜索",
+        "搜一下",
+        "新闻",
+        "热搜",
+        "资讯",
+        "实时",
+        "最新消息",
+        "网页",
+        "链接",
+        "网址",
+        "资料",
+        "查找资料",
+        "帮我查",
     ),
     "qq_social": (
-        "群成员", "成员列表", "群友", "成员信息", "等级", "天气", "气温",
+        "群成员",
+        "成员列表",
+        "群友",
+        "成员信息",
+        "等级",
+        "天气",
+        "气温",
     ),
     "media": (
-        "图片", "照片", "看图", "分析图片", "文件", "读文件", "群文件",
-        "下载群文件", "找文件", "pdf", "文档",
+        "图片",
+        "照片",
+        "看图",
+        "分析图片",
+        "文件",
+        "读文件",
+        "群文件",
+        "下载群文件",
+        "找文件",
+        "pdf",
+        "文档",
     ),
     "desktop": (
-        "终端", "桌面", "电脑", "执行", "命令", "控制", "程序",
+        "终端",
+        "桌面",
+        "电脑",
+        "执行",
+        "命令",
+        "控制",
+        "程序",
     ),
     "game": (
-        "骰子", "跑团", "trpg", "掷骰", "roll", "角色卡", "酒馆", "tavern",
+        "骰子",
+        "跑团",
+        "trpg",
+        "掷骰",
+        "roll",
+        "角色卡",
+        "酒馆",
+        "tavern",
     ),
     "entertainment": (
-        "星座", "运势", "抽签", "抽个签", "求签", "求个签", "占卜",
-        "灵签", "文昌", "算命", "代码", "计算", "python", "数据分析",
+        "星座",
+        "运势",
+        "抽签",
+        "抽个签",
+        "求签",
+        "求个签",
+        "占卜",
+        "灵签",
+        "文昌",
+        "算命",
+        "代码",
+        "计算",
+        "python",
+        "数据分析",
     ),
 }
 
@@ -799,11 +880,7 @@ class PlatformToolsManager:
         try:
             all_schemas = self.tool_subnet.get_tools_schema()
             name_set = set(names)
-            return [
-                s
-                for s in all_schemas
-                if s.get("function", {}).get("name") in name_set
-            ]
+            return [s for s in all_schemas if s.get("function", {}).get("name") in name_set]
         except Exception as e:  # noqa: BLE001 — 注册表异常时降级空集
             logger.warning(f"[平台工具] 获取 schema 失败: {e}")
             return []
@@ -895,29 +972,20 @@ class PlatformToolsManager:
             selected_tools = self.CORE_TOOLS + self.QQ_EXTENDED_TOOLS
             # QQ 聊天场景不需要屏幕视觉工具，移除避免 AI 混淆
             selected_tools = [
-                t
-                for t in selected_tools
-                if t
-                not in ("mcp_screen_vision_look_screen", "mcp_screen_vision_screenshot")
+                t for t in selected_tools if t not in ("mcp_screen_vision_look_screen", "mcp_screen_vision_screenshot")
             ]
 
         # 从 tool_subnet 获取工具 schema
         try:
             all_schemas = self.tool_subnet.get_tools_schema()
             # 只返回在 selected_tools 列表中的工具
-            platform_schemas = [
-                s
-                for s in all_schemas
-                if s.get("function", {}).get("name") in selected_tools
-            ]
+            platform_schemas = [s for s in all_schemas if s.get("function", {}).get("name") in selected_tools]
 
             # Step 2：QQ 聊天场景对工具描述瘦身（保留触发/禁止/参数语义/区分/风险）
             if platform in ("qq", "aiocqhttp"):
                 platform_schemas = trim_tool_schemas(platform_schemas)
 
-            logger.info(
-                f"[平台工具] 平台 {platform} 使用 {len(platform_schemas)} 个工具"
-            )
+            logger.info(f"[平台工具] 平台 {platform} 使用 {len(platform_schemas)} 个工具")
             return platform_schemas
 
         except Exception as e:  # noqa: BLE001 — 工具过滤失败降级为平台集，绝不回退全量 68

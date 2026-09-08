@@ -114,11 +114,7 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
                         or getattr(author, "id", None)
                         or ""
                     )
-                    user_name = (
-                        getattr(author, "username", "")
-                        or getattr(author, "nick", "")
-                        or user_id
-                    )
+                    user_name = getattr(author, "username", "") or getattr(author, "nick", "") or user_id
                     content = msg.content.strip() if msg.content else ""
                     if not content:
                         return
@@ -131,9 +127,7 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
                     )
                     resp_text = response or ""
                     if resp_text:
-                        voice_sent = await platform._tts_process_and_send_qqofficial(
-                            resp_text, msg, None
-                        )
+                        voice_sent = await platform._tts_process_and_send_qqofficial(resp_text, msg, None)
                         if not voice_sent:
                             for chunk in platform._split_message(resp_text, 500):
                                 await msg.reply(
@@ -146,11 +140,7 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
             async def _do_handle_group(msg):
                 try:
                     user_id = str(msg.author.member_openid)
-                    user_name = (
-                        getattr(msg.author, "username", "")
-                        or getattr(msg.author, "nick", "")
-                        or user_id
-                    )
+                    user_name = getattr(msg.author, "username", "") or getattr(msg.author, "nick", "") or user_id
                     content = msg.content.strip() if msg.content else ""
                     group_id = msg.group_openid
                     if not content:
@@ -165,9 +155,7 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
                     )
                     resp_text = response or ""
                     if resp_text:
-                        voice_sent = await platform._tts_process_and_send_qqofficial(
-                            resp_text, None, msg
-                        )
+                        voice_sent = await platform._tts_process_and_send_qqofficial(resp_text, None, msg)
                         if not voice_sent:
                             for chunk in platform._split_message(resp_text, 500):
                                 await msg._api.post_group_message(
@@ -218,9 +206,7 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
             return False
         return not self._bot_task.done()
 
-    async def _tts_process_and_send_qqofficial(
-        self, text: str, private_msg=None, group_msg=None
-    ) -> bool:
+    async def _tts_process_and_send_qqofficial(self, text: str, private_msg=None, group_msg=None) -> bool:
         """QQ 官方平台的 TTS 处理：合成 → 发语音 → 本地播，返回是否已发语音"""
         audio_path, sent = await self._tts_process(text)
         if not sent or not audio_path:
@@ -250,8 +236,6 @@ class QQOfficialPlatform(MessageMixin, BasePlatform):
 
         _asyncio.get_event_loop().call_later(
             30,
-            lambda p=audio_path: __import__("os").unlink(p)
-            if __import__("os").path.exists(p)
-            else None,
+            lambda p=audio_path: __import__("os").unlink(p) if __import__("os").path.exists(p) else None,
         )
         return True

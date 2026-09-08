@@ -27,12 +27,8 @@ class LarkPlatform(WebhookPlatform):
         super().__init__(config)
         import os
 
-        self._app_id = (config.get("app_id", "") if config else "") or os.environ.get(
-            "LARK_APP_ID", ""
-        )
-        self._app_secret = (
-            config.get("app_secret", "") if config else ""
-        ) or os.environ.get("LARK_APP_SECRET", "")
+        self._app_id = (config.get("app_id", "") if config else "") or os.environ.get("LARK_APP_ID", "")
+        self._app_secret = (config.get("app_secret", "") if config else "") or os.environ.get("LARK_APP_SECRET", "")
         self._ws_client = None
 
     async def _do_connect(self) -> bool:
@@ -52,26 +48,16 @@ class LarkPlatform(WebhookPlatform):
                 try:
                     event = data.event
                     msg = event.message
-                    content = (
-                        json.loads(msg.content).get("text", "") if msg.content else ""
-                    )
+                    content = json.loads(msg.content).get("text", "") if msg.content else ""
                     user_id = event.sender.sender_id.user_id if event.sender else ""
                     chat_id = msg.chat_id or ""
                     msg_type = "group" if msg.chat_type == "group" else "private"
                     if content.strip():
-                        platform._spawn(
-                            platform._handle_lark_message(
-                                content, user_id, chat_id, msg_type
-                            )
-                        )
+                        platform._spawn(platform._handle_lark_message(content, user_id, chat_id, msg_type))
                 except Exception as e:  # noqa: BLE001 — Level 2：SDK 回调解析失败仅记日志，上抛会中断长连接
                     logger.warning(f"[lark] 消息异常: {e}")
 
-            handler = (
-                EventDispatcherHandler.builder("", "")
-                .register_p2_im_message_receive_v1(on_message)
-                .build()
-            )
+            handler = EventDispatcherHandler.builder("", "").register_p2_im_message_receive_v1(on_message).build()
             self._ws_client = Client(
                 app_id=self._app_id,
                 app_secret=self._app_secret,
@@ -117,18 +103,8 @@ class LarkPlatform(WebhookPlatform):
                     .content(json.dumps({"text": response}))
                     .build()
                 )
-                req = (
-                    CreateMessageRequest.builder()
-                    .receive_id_type("chat_id")
-                    .request_body(body)
-                    .build()
-                )
-                client = (
-                    lark.Client.builder()
-                    .app_id(self._app_id)
-                    .app_secret(self._app_secret)
-                    .build()
-                )
+                req = CreateMessageRequest.builder().receive_id_type("chat_id").request_body(body).build()
+                client = lark.Client.builder().app_id(self._app_id).app_secret(self._app_secret).build()
                 client.im.v1.message.create(req)
             except Exception as e:  # noqa: BLE001 — Level 2：回复失败仅记日志，fire-and-forget 任务无上层兜底
                 logger.warning(f"[lark] 回复失败: {e}")
@@ -204,10 +180,7 @@ class SlackPlatform(WebhookPlatform):
                     return {"challenge": body.get("challenge", "")}
 
                 event = body.get("event", {})
-                if (
-                    event.get("type") != "app_mention"
-                    and event.get("type") != "message"
-                ):
+                if event.get("type") != "app_mention" and event.get("type") != "message":
                     return {"ok": True}
 
                 text = event.get("text", "")
@@ -251,11 +224,7 @@ class LINEPlatform(WebhookPlatform):
                     message = event.get("message", {})
                     text = message.get("text", "")
                     user_id = event.get("source", {}).get("userId", "")
-                    msg_type = (
-                        "group"
-                        if event.get("source", {}).get("type") == "group"
-                        else "private"
-                    )
+                    msg_type = "group" if event.get("source", {}).get("type") == "group" else "private"
 
                     if text.strip():
                         await self.route_to_decision_hub(
@@ -286,11 +255,7 @@ class DingTalkPlatform(WebhookPlatform):
         async def webhook_handler(request):
             try:
                 body = await request.json()
-                text = (
-                    body.get("text", {}).get("content", "")
-                    if isinstance(body, dict)
-                    else ""
-                )
+                text = body.get("text", {}).get("content", "") if isinstance(body, dict) else ""
                 sender_id = body.get("senderId", "") if isinstance(body, dict) else ""
 
                 if text.strip():
@@ -332,9 +297,7 @@ class SatoriPlatform(WebhookPlatform):
                 content = msg.get("content", "")
                 user = body.get("user", body.get("payload", {}).get("user", {}))
                 user_id = user.get("id", "")
-                body.get(
-                    "channel", body.get("payload", {}).get("channel", {})
-                )
+                body.get("channel", body.get("payload", {}).get("channel", {}))
 
                 if content.strip():
                     await self.route_to_decision_hub(

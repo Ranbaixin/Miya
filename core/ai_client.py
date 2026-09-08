@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 
 # 2026-08 并发修复：tool_context 通过 contextvar 按协程传递，
 # 避免并发 AI 调用（用户消息 / 拍一拍 / 主动聊天）互相覆盖 self.tool_context
-_tool_context_var: "contextvars.ContextVar[Optional[Dict[str, Any]]]" = (
-    contextvars.ContextVar("miya_tool_context", default=None)
+_tool_context_var: "contextvars.ContextVar[Optional[Dict[str, Any]]]" = contextvars.ContextVar(
+    "miya_tool_context", default=None
 )
 
 
@@ -47,15 +47,9 @@ class BaseAIClient:
         self.personality = kwargs.get("personality")  # 人格实例
         self._miya_prompt: Optional[str] = None  # 弥娅人设提示词缓存
         self._miya_prompt_full: Optional[str] = None  # 弥娅人设完整版提示词
-        self.use_compact_prompt: bool = kwargs.get(
-            "use_compact_prompt", False
-        )  # 是否使用紧凑版提示词
-        self.enable_prompt_cache: bool = kwargs.get(
-            "enable_prompt_cache", True
-        )  # 是否启用提示词缓存
-        self.prompt_cache = (
-            get_global_prompt_cache() if self.enable_prompt_cache else None
-        )
+        self.use_compact_prompt: bool = kwargs.get("use_compact_prompt", False)  # 是否使用紧凑版提示词
+        self.enable_prompt_cache: bool = kwargs.get("enable_prompt_cache", True)  # 是否启用提示词缓存
+        self.prompt_cache = get_global_prompt_cache() if self.enable_prompt_cache else None
 
         # 【新增】存储最后一次AI思考过程，供外部获取
         self.last_reasoning_content: str = ""
@@ -123,9 +117,7 @@ class BaseAIClient:
         self._miya_prompt = ""
         self._miya_prompt_full = ""
 
-    def get_miya_system_prompt(
-        self, additional_context: Optional[Dict] = None, use_full: bool = False
-    ) -> str:
+    def get_miya_system_prompt(self, additional_context: Optional[Dict] = None, use_full: bool = False) -> str:
         """
         获取弥娅人设系统提示词（支持缓存）
 
@@ -184,9 +176,7 @@ class BaseAIClient:
 
         return prompt
 
-    def _generate_miya_prompt(
-        self, base_only: bool = True, use_full: bool = False
-    ) -> str:
+    def _generate_miya_prompt(self, base_only: bool = True, use_full: bool = False) -> str:
         """
         生成弥娅基础提示词
 
@@ -242,11 +232,7 @@ class BaseAIClient:
                     if match:
                         additional_context[ph] = match.group(1)
 
-                messages[0].content = (
-                    miya_prompt
-                    + "\n\n"
-                    + self._extract_tools_instruction(system_prompt)
-                )
+                messages[0].content = miya_prompt + "\n\n" + self._extract_tools_instruction(system_prompt)
 
         raise NotImplementedError
 
@@ -392,9 +378,7 @@ class BaseAIClient:
 
         return False
 
-    def _convert_messages_to_openai_format(
-        self, messages: List[AIMessage]
-    ) -> List[Dict]:
+    def _convert_messages_to_openai_format(self, messages: List[AIMessage]) -> List[Dict]:
         """
         将消息列表转换为OpenAI API格式
 
@@ -501,9 +485,7 @@ class BaseAIClient:
             return "auto"
         return tool_choice
 
-    async def _execute_tool_call(
-        self, tool_call, tool_context: Optional[Dict] = None
-    ) -> tuple:
+    async def _execute_tool_call(self, tool_call, tool_context: Optional[Dict] = None) -> tuple:
         """
         执行单个工具调用
 
@@ -527,15 +509,11 @@ class BaseAIClient:
 
             # 记录日志（过滤敏感信息）
             safe_args = self._sanitize_args_for_log(tool_args)
-            logger.info(
-                f"[AIClient] 工具调用: {tool_call.function.name}, 参数: {safe_args}"
-            )
+            logger.info(f"[AIClient] 工具调用: {tool_call.function.name}, 参数: {safe_args}")
 
             # 执行工具
             gestalt = get_gestalt_controller()
-            result = await gestalt.execute_tool(
-                tool_call.function.name, tool_args, tool_context or {}
-            )
+            result = await gestalt.execute_tool(tool_call.function.name, tool_args, tool_context or {})
 
             # 显示工具结果
             print(TerminalFormatter.tool_result(tool_call.function.name))
@@ -691,13 +669,9 @@ class OpenAIClient(BaseAIClient):
         if tools is None and self.tool_registry:
             tools = self.tool_registry()
 
-        logger.info(
-            f"[AIClient] 开始聊天 (模型: {self.model})，工具数量: {len(tools) if tools else 0}"
-        )
+        logger.info(f"[AIClient] 开始聊天 (模型: {self.model})，工具数量: {len(tools) if tools else 0}")
         if tools:
-            logger.info(
-                f"[AIClient] 可用工具: {[t.get('function', {}).get('name', 'unknown') for t in tools]}"
-            )
+            logger.info(f"[AIClient] 可用工具: {[t.get('function', {}).get('name', 'unknown') for t in tools]}")
             # 打印start_trpg工具的schema
             for t in tools:
                 if t.get("function", {}).get("name") == "start_trpg":
@@ -711,9 +685,7 @@ class OpenAIClient(BaseAIClient):
         while iteration < max_iterations:
             try:
                 # 转换为OpenAI格式（使用公共方法）
-                openai_messages = self._convert_messages_to_openai_format(
-                    current_messages
-                )
+                openai_messages = self._convert_messages_to_openai_format(current_messages)
 
                 # 构建请求参数
                 request_params = {
@@ -726,9 +698,7 @@ class OpenAIClient(BaseAIClient):
                 # 添加工具相关参数
                 if tools:
                     request_params["tools"] = tools
-                    request_params["tool_choice"] = self._normalize_tool_choice(
-                        tool_choice
-                    )
+                    request_params["tool_choice"] = self._normalize_tool_choice(tool_choice)
 
                 # DeepSeek V4 内置联网搜索需要通过特定端点启用，目前API暂不支持
                 # if "deepseek" in self.model.lower() and "v4" in self.model.lower():
@@ -746,22 +716,14 @@ class OpenAIClient(BaseAIClient):
                 )
 
                 # 提取思考过程（DeepSeek R1等模型特有）
-                reasoning_content = getattr(
-                    message, "reasoning_content", None
-                ) or getattr(message, "reasoning", None)
+                reasoning_content = getattr(message, "reasoning_content", None) or getattr(message, "reasoning", None)
                 if reasoning_content:
-                    logger.info(
-                        f"[AIClient] 检测到思考过程，长度: {len(reasoning_content)}"
-                    )
+                    logger.info(f"[AIClient] 检测到思考过程，长度: {len(reasoning_content)}")
 
                 # 如果没有工具调用，检查是否需要强制调用工具
                 if not message.tool_calls:
-                    logger.debug(
-                        f"[AIClient] OpenAI返回纯文本（无工具调用），tool_choice={tool_choice}"
-                    )
-                    logger.debug(
-                        f"[AIClient] 返回内容预览: {message.content[:200] if message.content else '(无内容)'}"
-                    )
+                    logger.debug(f"[AIClient] OpenAI返回纯文本（无工具调用），tool_choice={tool_choice}")
+                    logger.debug(f"[AIClient] 返回内容预览: {message.content[:200] if message.content else '(无内容)'}")
 
                     # 【修复】检测用户输入是否需要执行操作，如果是则强制AI重新考虑
                     # 获取用户最新消息（排除系统提醒消息）
@@ -776,9 +738,7 @@ class OpenAIClient(BaseAIClient):
 
                     # 限制强制重新请求次数，避免无限循环
                     force_retry_count = sum(
-                        1
-                        for msg in current_messages
-                        if msg.role == "user" and "【系统提醒】" in msg.content
+                        1 for msg in current_messages if msg.role == "user" and "【系统提醒】" in msg.content
                     )
 
                     if needs_action and tool_choice == "auto" and force_retry_count < 2:
@@ -810,9 +770,7 @@ class OpenAIClient(BaseAIClient):
                         from core.terminal_formatter import TerminalFormatter
 
                         thinking_lines = thinking_content.split("\n")[:10]
-                        print(
-                            TerminalFormatter.thinking_block("\n".join(thinking_lines))
-                        )
+                        print(TerminalFormatter.thinking_block("\n".join(thinking_lines)))
 
                     # 【新增】保存思考过程供外部获取
                     self.last_reasoning_content = thinking_content
@@ -822,9 +780,7 @@ class OpenAIClient(BaseAIClient):
 
                 # 有工具调用，执行工具
                 tool_calls = message.tool_calls
-                logger.info(
-                    f"AI请求调用工具: {[tc.function.name for tc in tool_calls]}"
-                )
+                logger.info(f"AI请求调用工具: {[tc.function.name for tc in tool_calls]}")
 
                 # 添加助手消息（包含工具调用）
                 current_messages.append(
@@ -881,22 +837,14 @@ class OpenAIClient(BaseAIClient):
                             # 【新增】检查是否包含嵌入的消息内容
                             if "|||" in result:
                                 parts = result.split("|||", 1)
-                                embedded_message = (
-                                    parts[0].replace("[FINAL]", "").strip()
-                                )
+                                embedded_message = parts[0].replace("[FINAL]", "").strip()
                                 if embedded_message:
-                                    logger.info(
-                                        f"[AIClient] 提取嵌入消息内容: {embedded_message[:50]}..."
-                                    )
+                                    logger.info(f"[AIClient] 提取嵌入消息内容: {embedded_message[:50]}...")
                                     return embedded_message
 
                             final_detected = True
 
-                        current_messages.append(
-                            AIMessage(
-                                role="tool", content=result, tool_call_id=tool_call.id
-                            )
-                        )
+                        current_messages.append(AIMessage(role="tool", content=result, tool_call_id=tool_call.id))
 
                     if final_detected:
                         # FINAL 标记检测到，让 AI 生成最终文本回复（不再调用工具）
@@ -904,10 +852,7 @@ class OpenAIClient(BaseAIClient):
                         try:
                             final_resp = await self.client.chat.completions.create(
                                 model=self.model,
-                                messages=[
-                                    {"role": m.role, "content": m.content}
-                                    for m in current_messages
-                                ],
+                                messages=[{"role": m.role, "content": m.content} for m in current_messages],
                                 tool_choice="none",
                             )
                             if final_resp.choices and final_resp.choices[0].message:
@@ -931,10 +876,7 @@ class OpenAIClient(BaseAIClient):
                             try:
                                 final_resp = await self.client.chat.completions.create(
                                     model=self.model,
-                                    messages=[
-                                        {"role": m.role, "content": m.content}
-                                        for m in current_messages
-                                    ],
+                                    messages=[{"role": m.role, "content": m.content} for m in current_messages],
                                     tool_choice="none",
                                 )
                                 if final_resp.choices and final_resp.choices[0].message:
@@ -984,19 +926,13 @@ class OpenAIClient(BaseAIClient):
                             "python_interpreter",
                         ]
                     if tool_call.function.name in direct_return_tools:
-                        logger.info(
-                            f"[AIClient] 检测到直接返回工具: {tool_call.function.name}，直接返回结果"
-                        )
+                        logger.info(f"[AIClient] 检测到直接返回工具: {tool_call.function.name}，直接返回结果")
                         return result
 
                     # 添加工具结果消息
-                    tool_result_msg = AIMessage(
-                        role="tool", content=result, tool_call_id=tool_call.id
-                    )
+                    tool_result_msg = AIMessage(role="tool", content=result, tool_call_id=tool_call.id)
                     current_messages.append(tool_result_msg)
-                    logger.info(
-                        f"[AIClient] 工具结果已添加到对话历史: {result[:100] if result else '(无结果)'}"
-                    )
+                    logger.info(f"[AIClient] 工具结果已添加到对话历史: {result[:100] if result else '(无结果)'}")
 
                 iteration += 1
 
@@ -1078,9 +1014,7 @@ class DeepSeekClient(BaseAIClient):
             f"[AIClient] 开始聊天 (模型: {self.model})，工具数量: {len(tools) if tools else 0}, has_tool_context={bool(_tool_context_var.get() or self.tool_context)}, tool_choice={tool_choice}"
         )
         if tools:
-            logger.info(
-                f"[AIClient] 可用工具: {[t.get('function', {}).get('name', 'unknown') for t in tools]}"
-            )
+            logger.info(f"[AIClient] 可用工具: {[t.get('function', {}).get('name', 'unknown') for t in tools]}")
 
         iteration = 0
         current_messages = messages.copy()
@@ -1088,9 +1022,7 @@ class DeepSeekClient(BaseAIClient):
         while iteration < max_iterations:
             try:
                 # 转换为OpenAI格式（使用公共方法）
-                openai_messages = self._convert_messages_to_openai_format(
-                    current_messages
-                )
+                openai_messages = self._convert_messages_to_openai_format(current_messages)
 
                 # 构建请求参数
                 request_params = {
@@ -1103,9 +1035,7 @@ class DeepSeekClient(BaseAIClient):
                 # 添加工具相关参数
                 if tools:
                     request_params["tools"] = tools
-                    request_params["tool_choice"] = self._normalize_tool_choice(
-                        tool_choice
-                    )
+                    request_params["tool_choice"] = self._normalize_tool_choice(tool_choice)
 
                 # DeepSeek V4 内置联网搜索需要通过特定端点启用（API暂不支持）
                 # if "deepseek" in self.model.lower() and "v4" in self.model.lower():
@@ -1124,12 +1054,8 @@ class DeepSeekClient(BaseAIClient):
 
                 # 如果没有工具调用，检查是否需要强制调用工具
                 if not message.tool_calls:
-                    logger.debug(
-                        f"[AIClient] DeepSeek返回纯文本（无工具调用），tool_choice={tool_choice}"
-                    )
-                    logger.debug(
-                        f"[AIClient] 返回内容预览: {message.content[:200] if message.content else '(无内容)'}"
-                    )
+                    logger.debug(f"[AIClient] DeepSeek返回纯文本（无工具调用），tool_choice={tool_choice}")
+                    logger.debug(f"[AIClient] 返回内容预览: {message.content[:200] if message.content else '(无内容)'}")
 
                     # 【修复】检测用户输入是否需要执行操作，如果是则强制AI重新考虑
                     # 获取用户最新消息（排除系统提醒消息）
@@ -1144,9 +1070,7 @@ class DeepSeekClient(BaseAIClient):
 
                     # 限制强制重新请求次数，避免无限循环
                     force_retry_count = sum(
-                        1
-                        for msg in current_messages
-                        if msg.role == "user" and "【系统提醒】" in msg.content
+                        1 for msg in current_messages if msg.role == "user" and "【系统提醒】" in msg.content
                     )
 
                     if needs_action and tool_choice == "auto" and force_retry_count < 2:
@@ -1168,13 +1092,11 @@ class DeepSeekClient(BaseAIClient):
                         )
 
                     # 提取思考过程（DeepSeek R1等模型特有）
-                    reasoning_content = getattr(
-                        message, "reasoning_content", None
-                    ) or getattr(message, "reasoning", None)
+                    reasoning_content = getattr(message, "reasoning_content", None) or getattr(
+                        message, "reasoning", None
+                    )
                     if reasoning_content:
-                        logger.info(
-                            f"[AIClient] DeepSeek检测到思考过程，长度: {len(reasoning_content)}"
-                        )
+                        logger.info(f"[AIClient] DeepSeek检测到思考过程，长度: {len(reasoning_content)}")
 
                     # 过滤思考过程（如 DeepSeek R1 的 reasoning_content）
                     final_content = message.content or ""
@@ -1189,9 +1111,7 @@ class DeepSeekClient(BaseAIClient):
                         from core.terminal_formatter import TerminalFormatter
 
                         thinking_lines = thinking_content.split("\n")[:10]
-                        print(
-                            TerminalFormatter.thinking_block("\n".join(thinking_lines))
-                        )
+                        print(TerminalFormatter.thinking_block("\n".join(thinking_lines)))
 
                     # 【新增】保存思考过程供外部获取
                     self.last_reasoning_content = thinking_content
@@ -1201,14 +1121,10 @@ class DeepSeekClient(BaseAIClient):
 
                 # 有工具调用，执行工具
                 tool_calls = message.tool_calls
-                logger.info(
-                    f"DeepSeek AI请求调用工具: {[tc.function.name for tc in tool_calls]}"
-                )
+                logger.info(f"DeepSeek AI请求调用工具: {[tc.function.name for tc in tool_calls]}")
 
                 # 添加助手消息（包含工具调用和思考过程）- 修复 V4 thinking mode 问题
-                reasoning_content = getattr(
-                    message, "reasoning_content", None
-                ) or getattr(message, "reasoning", None)
+                reasoning_content = getattr(message, "reasoning_content", None) or getattr(message, "reasoning", None)
                 current_messages.append(
                     AIMessage(
                         role="assistant",
@@ -1245,10 +1161,7 @@ class DeepSeekClient(BaseAIClient):
                             try:
                                 final_resp = await self.client.chat.completions.create(
                                     model=self.model,
-                                    messages=[
-                                        {"role": m.role, "content": m.content}
-                                        for m in current_messages
-                                    ],
+                                    messages=[{"role": m.role, "content": m.content} for m in current_messages],
                                     tool_choice="none",
                                 )
                                 if final_resp.choices and final_resp.choices[0].message:
@@ -1270,11 +1183,7 @@ class DeepSeekClient(BaseAIClient):
                             return result
 
                         # 添加工具响应消息
-                        current_messages.append(
-                            AIMessage(
-                                role="tool", content=result, tool_call_id=tool_call.id
-                            )
-                        )
+                        current_messages.append(AIMessage(role="tool", content=result, tool_call_id=tool_call.id))
 
                 # 更新迭代计数
                 iteration += 1
@@ -1386,17 +1295,13 @@ class ZhipuAIClient(BaseAIClient):
             # 同步调用（智谱AI暂不支持async）
             response = self.client.chat.completions.create(
                 model=self.model,
-                messages=[
-                    {"role": msg.role, "content": msg.content} for msg in messages
-                ],
+                messages=[{"role": msg.role, "content": msg.content} for msg in messages],
                 temperature=self.config.get("temperature", 0.7),
             )
             self._record_usage_calibration(
                 {
                     "model": self.model,
-                    "messages": [
-                        {"role": msg.role, "content": msg.content} for msg in messages
-                    ],
+                    "messages": [{"role": msg.role, "content": msg.content} for msg in messages],
                     "temperature": self.config.get("temperature", 0.7),
                 },
                 response,
@@ -1422,9 +1327,7 @@ class AIClientFactory:
     }
 
     @classmethod
-    def create_client(
-        cls, provider: str, api_key: str, model: str, **kwargs
-    ) -> BaseAIClient:
+    def create_client(cls, provider: str, api_key: str, model: str, **kwargs) -> BaseAIClient:
         """
         创建AI客户端
 
@@ -1441,9 +1344,7 @@ class AIClientFactory:
         client_class = cls._clients.get(provider)
 
         if not client_class:
-            raise ValueError(
-                f"不支持的AI提供商: {provider}，支持的提供商: {list(cls._clients.keys())}"
-            )
+            raise ValueError(f"不支持的AI提供商: {provider}，支持的提供商: {list(cls._clients.keys())}")
 
         logger.info(f"创建{provider}客户端，模型: {model}")
         client = client_class(api_key=api_key, model=model, **kwargs)
@@ -1451,9 +1352,7 @@ class AIClientFactory:
         # 如果传入了 tool_context，设置到新客户端
         if "tool_context" in kwargs and kwargs["tool_context"]:
             client.set_tool_context(kwargs["tool_context"])
-            logger.info(
-                f"[AIClientFactory] 为新客户端设置 tool_context, keys: {list(kwargs['tool_context'].keys())}"
-            )
+            logger.info(f"[AIClientFactory] 为新客户端设置 tool_context, keys: {list(kwargs['tool_context'].keys())}")
 
         logger.info(
             f"[AIClientFactory] create_client完成，client.tool_context keys: {list(client.tool_context.keys()) if client.tool_context else 'None'}"

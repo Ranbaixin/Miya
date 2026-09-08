@@ -155,9 +155,7 @@ class SkillMarkdownParser:
 
             # 解析参数
             params = []
-            param_section = re.search(
-                rf"{tool_name}.*?parameters:(.*?)(?=- \w+:|$)", tools_text, re.DOTALL
-            )
+            param_section = re.search(rf"{tool_name}.*?parameters:(.*?)(?=- \w+:|$)", tools_text, re.DOTALL)
             if param_section:
                 params_text = param_section.group(1)
                 for p in re.finditer(
@@ -348,9 +346,7 @@ class SkillManager:
                     return tool
         return None
 
-    async def execute_skill_tool(
-        self, tool_name: str, arguments: Dict, context: Dict
-    ) -> str:
+    async def execute_skill_tool(self, tool_name: str, arguments: Dict, context: Dict) -> str:
         """执行技能工具"""
         # 查找工具所属技能
         for skill in self._skills.values():

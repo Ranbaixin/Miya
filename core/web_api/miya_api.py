@@ -7,9 +7,10 @@
 import asyncio
 import json
 import logging
+from core.version import VERSION
 from datetime import datetime
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +95,7 @@ class MiyaAPI:
                     "success": True,
                     "identity": {
                         "name": "弥娅",
-                        "version": "1.0.0",
+                        "version": VERSION,  # 2026-09 统一版本号单一真源 core/version.py
                         "description": "AI 虚拟化身",
                     },
                     "emotion": self._get_emotion_state(),
@@ -228,11 +229,21 @@ class MiyaAPI:
 
         @self.router.post("/api/memory/add")
         async def add_memory(request_data: dict = None):
-            """添加记忆 - 适配前端格式"""
+            """添加记忆 - 适配前端格式
+
+            2026-09 兼容：除 text/content 外，同时接受桌面端五元组
+            {subject, predicate, object}（拼为一条陈述文本入库）。
+            """
             if request_data is None:
                 request_data = {}
             try:
                 content = request_data.get("text") or request_data.get("content", "")
+                if not content:
+                    subj = request_data.get("subject", "")
+                    pred = request_data.get("predicate", "")
+                    obj = request_data.get("object") or request_data.get("obj", "")
+                    if subj or obj:
+                        content = f"{subj} {pred} {obj}".strip()
                 user_id = request_data.get("user_id") or request_data.get("userId")
                 tags = request_data.get("tags", [])
 
@@ -256,17 +267,22 @@ class MiyaAPI:
                 return {"success": False, "message": str(e)}
 
         @self.router.get("/api/memory/search")
-        async def search_memory(request: dict = None):
-            """搜索记忆"""
-            if request is None:
-                request = {}
-            try:
-                query = request.get("query", "")
-                user_id = request.get("user_id") or request.get("userId")
+        async def search_memory(
+            query: str = "",
+            user_id: Optional[str] = None,
+            limit: Optional[int] = None,
+        ):
+            """搜索记忆
 
+            2026-09 修复：此前签名 `request: dict = None`（GET 无 body），
+            query 参数恒为空串，搜索永远搜不到东西。
+            """
+            try:
                 from memory import search_memory
 
                 results = await search_memory(query, user_id=user_id)
+                if limit:
+                    results = results[:limit]
 
                 memories = []
                 for r in results:
@@ -427,17 +443,21 @@ class MiyaAPI:
                 engine = status.get("engine", {})
                 logs = []
                 if engine.get("total_decisions", 0) > 0:
-                    logs.append({
-                        "time": datetime.now().isoformat(),
-                        "action": f"总决策: {engine.get('total_decisions', 0)}",
-                        "result": f"成功修复: {engine.get('successful_fixes', 0)}, 失败: {engine.get('failed_fixes', 0)}",
-                    })
+                    logs.append(
+                        {
+                            "time": datetime.now().isoformat(),
+                            "action": f"总决策: {engine.get('total_decisions', 0)}",
+                            "result": f"成功修复: {engine.get('successful_fixes', 0)}, 失败: {engine.get('failed_fixes', 0)}",
+                        }
+                    )
                 if not logs:
-                    logs.append({
-                        "time": datetime.now().isoformat(),
-                        "action": "系统运行中",
-                        "result": "正常",
-                    })
+                    logs.append(
+                        {
+                            "time": datetime.now().isoformat(),
+                            "action": "系统运行中",
+                            "result": "正常",
+                        }
+                    )
                 return {"success": True, "logs": logs, "total": len(logs)}
             except Exception as e:  # noqa: BLE001 — 决策日志读取失败降级空日志
                 logger.warning(f"[API] 读取自主决策日志失败: {e}")
@@ -701,9 +721,7 @@ class MiyaAPI:
                 personas = loader.list_available()
                 return {
                     "success": True,
-                    "personas": [
-                        {"id": p, "name": p, "enabled": True} for p in personas
-                    ],
+                    "personas": [{"id": p, "name": p, "enabled": True} for p in personas],
                 }
             except Exception as e:  # noqa: BLE001 — 人格列表读取失败降级默认值
                 logger.warning(f"[MiyaAPI] 读取人格列表失败: {e}")
@@ -771,14 +789,18 @@ class MiyaAPI:
                         provider_name = getattr(model_info, "provider", "unknown")
                         if provider_type and provider_name not in provider_type:
                             continue
-                        providers.append({
-                            "id": model_id,
-                            "name": getattr(model_info, "name", model_id),
-                            "provider_type": "chat_completion" if getattr(model_info, "type", "") == "text" else "embedding",
-                            "provider_source_id": provider_name,
-                            "model": getattr(model_info, "id", model_id),
-                            "enabled": True,
-                        })
+                        providers.append(
+                            {
+                                "id": model_id,
+                                "name": getattr(model_info, "name", model_id),
+                                "provider_type": (
+                                    "chat_completion" if getattr(model_info, "type", "") == "text" else "embedding"
+                                ),
+                                "provider_source_id": provider_name,
+                                "model": getattr(model_info, "id", model_id),
+                                "enabled": True,
+                            }
+                        )
             except ImportError:
                 pass
             except Exception as e:  # noqa: BLE001 — 提供商列表失败降级空列表
@@ -1040,16 +1062,27 @@ class MiyaAPI:
 
         @self.router.get("/api/chat/get_session")
         async def get_session(session_id: str):
-            """获取会话历史 - 从记忆系统动态读取"""
+            """获取会话历史 - 从记忆系统动态读取
+
+            2026-09 修复：此前调用不存在的 `conv_history.get_session()`（实际
+            方法名为 get_history），AttributeError 被吞后永远返回空历史——
+            桌面/Web 端打开会话始终空白。
+            """
             history = []
             try:
                 if self.decision_hub and hasattr(self.decision_hub, "memory_net"):
                     memory_net = self.decision_hub.memory_net
                     if memory_net and hasattr(memory_net, "conversation_history"):
                         conv_history = memory_net.conversation_history
-                        raw = await conv_history.get_session(session_id)
-                        if raw:
-                            history = raw
+                        raw = await conv_history.get_history(session_id)
+                        history = [
+                            {
+                                "role": m.role,
+                                "content": m.content,
+                                "timestamp": m.timestamp,
+                            }
+                            for m in (raw or [])
+                        ]
             except Exception as e:  # noqa: BLE001 — 会话历史读取失败降级空历史
                 logger.warning(f"[MiyaAPI] 获取会话历史失败: {e}")
             return {
@@ -1144,6 +1177,10 @@ class MiyaAPI:
                     "user_id": user_id,
                     "sender_name": f"{platform}用户-{user_id[:8]}" if user_id else f"{platform}用户",
                     "message_type": "private",
+                    # 2026-09 修复：把 API 会话 ID 透传给存储层。此前存储层自行推导
+                    # session_id（web_private_default 等），与 API/前端使用的 default
+                    # 永远对不上，导致 get_session 读到的历史永远为空。
+                    "api_session_id": session_id,
                 }
 
                 # 注入 is_owner 标记（桌面端超管权限）
@@ -1493,120 +1530,52 @@ class MiyaAPI:
                 },
             }
 
-        # ========== 配置写入 API ==========
-
-        @self.router.get("/api/config/system_prompt")
-        async def get_system_prompt():
-            """获取当前 system prompt - 从 PromptManager 动态读取"""
-            try:
-                if self.decision_hub and hasattr(self.decision_hub, "prompt_manager"):
-                    pm = self.decision_hub.prompt_manager
-                    prompt = pm.get_system_prompt(is_owner=True, owner_name="然鑫")
-                    return {"success": True, "system_prompt": prompt}
-            except Exception as e:  # noqa: BLE001 — system prompt读取失败降级错误提示
-                logger.warning(f"[MiyaAPI] 读取 system prompt 失败: {e}")
-            return {"success": False, "message": "无法读取 system prompt"}
-
-        @self.router.post("/api/config/system_prompt")
-        async def set_system_prompt(request_data: dict = None):
-            """设置 system prompt - 写入文本配置并热重载"""
-            if request_data is None:
-                request_data = {}
-            prompt = request_data.get("system_prompt") or request_data.get("content", "")
-            if not prompt:
-                return {"success": False, "message": "缺少 system_prompt 字段"}
-            try:
-                # 写入 config/text_config.json 的 system_prompts 部分
-                text_config_path = Path("config/text_config.json")
-                config_data = {}
-                if text_config_path.exists():
-                    with open(text_config_path, "r", encoding="utf-8") as f:
-                        config_data = json.load(f)
-                if "system_prompts" not in config_data:
-                    config_data["system_prompts"] = {}
-                config_data["system_prompts"]["default_system_prompt"] = prompt
-                with open(text_config_path, "w", encoding="utf-8") as f:
-                    json.dump(config_data, f, ensure_ascii=False, indent=2)
-
-                # 触发热重载（如果 PromptManager 实例存在）
-                if self.decision_hub and hasattr(self.decision_hub, "prompt_manager"):
-                    self.decision_hub.prompt_manager.text_config = config_data
-                    logger.info("[MiyaAPI] System prompt 已更新并热重载")
-                return {"success": True, "message": "System prompt 已保存"}
-            except Exception as e:  # noqa: BLE001 — 保存system prompt失败已返回错误
-                logger.error(f"[MiyaAPI] 保存 system prompt 失败: {e}")
-                return {"success": False, "message": str(e)}
-
-        @self.router.post("/api/config/set")
-        async def set_config(request_data: dict = None):
-            """写入系统配置 - 支持 platform / personality / prompt 多类型"""
-            if request_data is None:
-                request_data = {}
-            config = request_data.get("config") or request_data
-            config_type = request_data.get("type", "")
-            saved = []
-            try:
-                # Platform 配置
-                if config_type == "platform" or "platform" in config:
-                    platform_config = config.get("platform", config)
-                    logger.info(f"[MiyaAPI] Platform 配置更新: {list(platform_config.keys()) if isinstance(platform_config, dict) else '非dict'}")
-                    saved.append("platform")
-
-                # Personality 配置
-                if config_type == "personality" or "personality" in config:
-                    pers_data = config.get("personality", {})
-                    if pers_data and self.decision_hub and self.decision_hub.personality:
-                        form_name = pers_data.get("form", pers_data.get("current_form", ""))
-                        if form_name:
-                            self.decision_hub.personality.set_form(form_name)
-                    saved.append("personality")
-
-                # System prompt
-                if config_type == "system_prompt" or "system_prompt" in config:
-                    sp = config.get("system_prompt", "")
-                    if sp and isinstance(sp, str) and len(sp) > 10:
-                        tm_path = Path("config/text_config.json")
-                        tm_data = {}
-                        if tm_path.exists():
-                            with open(tm_path, "r", encoding="utf-8") as f:
-                                tm_data = json.load(f)
-                        tm_data.setdefault("system_prompts", {})["default_system_prompt"] = sp
-                        with open(tm_path, "w", encoding="utf-8") as f:
-                            json.dump(tm_data, f, ensure_ascii=False, indent=2)
-                        if self.decision_hub and hasattr(self.decision_hub, "prompt_manager"):
-                            self.decision_hub.prompt_manager.text_config = tm_data
-                    saved.append("system_prompt")
-
-                if not saved:
-                    return {"success": False, "message": "未识别的配置类型"}
-                return {"success": True, "message": f"已保存: {', '.join(saved)}"}
-            except Exception as e:  # noqa: BLE001 — 保存配置失败已返回错误
-                logger.error(f"[MiyaAPI] 保存配置失败: {e}")
-                return {"success": False, "message": str(e)}
+        # （2026-09 清理：此处原有一组与 863-960 行完全重复的
+        # /api/config/system_prompt 与 /api/config/set 路由注册，
+        # FastAPI 先注册者生效，重复注册导致 OpenAPI Duplicate Operation ID
+        # 警告，已删除。）
 
         # ========== 工具 ==========
         @self.router.get("/api/tools")
         async def get_tools():
-            """可用工具列表 - 从 ToolNet 动态读取"""
-            try:
-                from webnet.ToolNet.registry import get_registry
+            """可用工具列表 - 从 ToolNet 动态读取
 
-                registry = get_registry()
+            2026-09 修复：此前 import 不存在的 `registry.get_registry` 必然
+            ImportError，被吞后返回 `success:True, tools:[]` 的假成功。
+            现优先取运行中的 decision_hub.tool_subnet.registry（带真实依赖），
+            失败时返回 success:False 不再伪造成功。
+            """
+            try:
+                registry = None
+                tool_subnet = getattr(self.decision_hub, "tool_subnet", None)
+                if tool_subnet is not None:
+                    registry = getattr(tool_subnet, "registry", None)
+                if registry is None:
+                    from webnet.ToolNet import get_tool_registry
+
+                    registry = get_tool_registry()
+
                 tools = []
                 for name, tool in registry.tools.items():
-                    tools.append({
-                        "name": name,
-                        "description": getattr(tool, "description", "") or name,
-                        "enabled": True,
-                    })
+                    try:
+                        desc = (tool.config or {}).get("description") or name
+                    except Exception:  # noqa: BLE001 — 个别工具 config 未实现时降级
+                        desc = name
+                    tools.append(
+                        {
+                            "name": name,
+                            "description": desc,
+                            "enabled": True,
+                        }
+                    )
                 return {
                     "success": True,
                     "tools": tools,
                     "total": len(tools),
                 }
-            except Exception as e:  # noqa: BLE001 — 工具列表获取失败降级空列表
+            except Exception as e:  # noqa: BLE001 — 工具列表获取失败如实报错
                 logger.warning(f"[MiyaAPI] 获取工具列表失败: {e}")
-                return {"success": True, "tools": [], "total": 0}
+                return {"success": False, "tools": [], "total": 0, "error": str(e)}
 
         @self.router.get("/api/agents")
         async def get_agents():
@@ -2464,10 +2433,15 @@ class MiyaAPI:
             return StreamingResponse(log_generator(), media_type="text/event-stream")
 
         @self.router.get("/api/logs")
-        async def get_logs(limit: int = 100):
-            """日志列表 - 从日志文件动态读取"""
+        async def get_logs(limit: int = 100, level: str = ""):
+            """日志列表 - 从日志文件动态读取
+
+            2026-09 修复：新增 level 过滤参数（此前前端传 level 被静默忽略），
+            支持 ERROR/WARNING/INFO/DEBUG 大小写不敏感匹配。
+            """
             log_lines = []
             try:
+                level_upper = (level or "").strip().upper()
                 log_dir = Path("logs")
                 if log_dir.exists():
                     log_files = sorted(
@@ -2479,10 +2453,14 @@ class MiyaAPI:
                         with open(log_file, "r", encoding="utf-8", errors="replace") as f:
                             file_lines = f.readlines()[-limit:]
                             for line in file_lines:
-                                log_lines.append({
-                                    "file": log_file.name,
-                                    "line": line.strip(),
-                                })
+                                if level_upper and level_upper not in line.upper():
+                                    continue
+                                log_lines.append(
+                                    {
+                                        "file": log_file.name,
+                                        "line": line.strip(),
+                                    }
+                                )
             except Exception as e:  # noqa: BLE001 — 日志读取失败降级空日志
                 logger.warning(f"[MiyaAPI] 读取日志失败: {e}")
             return {"success": True, "logs": log_lines, "total": len(log_lines)}
@@ -2743,7 +2721,7 @@ class MiyaAPI:
             "success": True,
             "identity": {
                 "name": "弥娅",
-                "version": "1.0.0",
+                "version": VERSION,  # 2026-09 统一版本号单一真源 core/version.py
                 "description": "AI 虚拟化身 - 爱然鑫的女孩",
             },
             "emotion": self._get_emotion_state(),

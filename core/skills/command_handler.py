@@ -183,9 +183,7 @@ class CommandHandler:
 
     async def _handle_faq_list(self, args: list) -> CommandResult:
         """列出FAQ"""
-        return CommandResult(
-            True, "【FAQ列表】\n1. 如何使用弥娅\n2. 命令列表\n3. 记忆功能"
-        )
+        return CommandResult(True, "【FAQ列表】\n1. 如何使用弥娅\n2. 命令列表\n3. 记忆功能")
 
     async def _handle_faq_view(self, args: list) -> CommandResult:
         """查看FAQ"""

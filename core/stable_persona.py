@@ -163,9 +163,7 @@ async def fetch_stable_persona(
         items = dedupe_against(items, exclude_items)
         merged = merge_and_dedupe(items, target_user_id=str(user_id))
         segment = format_stable_persona(merged)
-        logger.info(
-            f"[稳定画像] 白名单命中 {len(items)} 条，双轨去重后 {len(merged)} 条"
-        )
+        logger.info(f"[稳定画像] 白名单命中 {len(items)} 条，双轨去重后 {len(merged)} 条")
         return segment
     except Exception as e:  # noqa: BLE001 — 稳定画像为增强上下文，失败降级空段
         logger.warning(f"[稳定画像] 构建失败: {e}")

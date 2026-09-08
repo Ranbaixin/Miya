@@ -167,9 +167,7 @@ Refactoring suggestions:
 
 async def _analyze_dependencies(target: str, terminal) -> str:
     """Analyze dependencies"""
-    result = await terminal.terminal_exec(
-        "pip list" if target.endswith(".py") or not target else "npm list"
-    )
+    result = await terminal.terminal_exec("pip list" if target.endswith(".py") or not target else "npm list")
 
     if not result.success:
         return "Cannot get dependency list"

@@ -21,11 +21,7 @@ def _get_sing_control_words() -> list:
     from core.text_loader import get_command_keywords
 
     ck = get_command_keywords()
-    return (
-        ck.get("sing_control_list", [])
-        + ck.get("sing_control_skip", [])
-        + ck.get("sing_control_stop", [])
-    )
+    return ck.get("sing_control_list", []) + ck.get("sing_control_skip", []) + ck.get("sing_control_stop", [])
 
 
 def _get_singing_text(key: str, default: str = "", **kwargs) -> str:

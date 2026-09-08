@@ -190,13 +190,15 @@ class MyNet(BaseSubnet):
 net_manager.register(MyNet())
 ```
 
-#### Web 服务
+#### 现状说明（2026-09）
 
-`webnet/web_main.py` — FastAPI 服务器：
-- 端口：8000 (自动查找)
-- 代理 API 到守护进程 (端口优先 9800)
-- 服务 React 前端静态文件
-- 健康检查 `/api/health`
+- `NetManager`/`CrossNetEngine` 已于 2026-09 从 `run/main.py` 移除（构造后无消费者的死对象）；
+  ToolNet（68+ 工具注册表，`webnet/ToolNet/`）与 MemoryNet（`webnet/memory.py`，装配
+  `ConversationHistoryManager`）是当前真正活跃的子网。
+- 8000 端口的 Web API 由 `run/main.py` 挂载 `core/web_api/` 提供（**不是** web_main.py，该文件已删）；
+  `webnet/miya_webui.py` 提供 `/api/management/*` 管理路由。路由清单见 `docs/API_REFERENCE.md`。
+- `webnet/ToolNet/registry.py` 的占位工具（knowledge/cognitive/group 等）已于 2026-09 暂停注册，
+  接入真实现后在 `_load_*_tools` 中恢复。
 
 ---
 
@@ -264,41 +266,6 @@ await mlink.send(msg)
 @mlink.on("chat")
 async def handle_chat(msg: Message):
     pass
-```
-
----
-
-### perceive/ — 感知层
-
-```python
-from perceive import PerceptualRing, AttentionGate
-
-ring = PerceptualRing()
-gate = AttentionGate(threshold=0.5)
-
-# 感知输入
-percepts = ring.perceive(raw_input)
-
-# 注意力过滤
-focused = gate.filter(percepts)
-```
-
----
-
-### evolve/ — 演化层
-
-```python
-from evolve import Sandbox, ABTest
-
-# 沙盒执行
-sandbox = Sandbox()
-result = await sandbox.execute(code)
-
-# AB 测试
-ab = ABTest()
-ab.register_variant("A", handler_a)
-ab.register_variant("B", handler_b)
-result = await ab.run(input_data)
 ```
 
 ---
@@ -371,18 +338,36 @@ LOG_LEVEL=WARNING  # 精简
 
 日志文件：`logs/miya.log`
 
-### 常用脚本
+### 常用脚本（全部用 `uv run python -X utf8` 执行）
 
 ```bash
-# 记忆初始化
-python scripts/init_memory.py
+# 质量门禁（三道全绿才算合格）
+uv run ruff check .
+uv run black --check core/ hub/ run/
+uv run python -X utf8 -m pytest -q
 
-# 模型池测试
-python scripts/test_model_pool.py
+# 冒烟测试（--fast 跳过核心构造；全量含 S6 链路探针/S7 日志白名单/S8 基线对比）
+uv run python -X utf8 scripts/smoke_test.py --fast
+uv run python -X utf8 scripts/smoke_test.py
+uv run python -X utf8 scripts/smoke_test.py --write-baseline   # 结构性删改后重建基线
 
-# 表情包管理
-python scripts/emoji_manager.py
+# 导入图检查（删除模块后跑；可达集变化需 --write-baseline 重建）
+uv run python -X utf8 scripts/import_graph.py --check
+
+# HUD 构建（路径含 '#' 时自动复制到无#临时目录构建）
+bash scripts/build_hud.sh
+bash scripts/verify_hud_build.sh
+
+# 依赖一致性（扫描 import 与 pyproject/setup 声明）
+uv run python -X utf8 scripts/check_imports_vs_requirements.py
+
+# vite realpath 补丁（miya_frontend/frontend-ui 的 postinstall 自动执行）
+node scripts/patch_vite_realpath.mjs
 ```
+
+> 冒烟基线文件：`scripts/.smoke_baseline.json` 与 `scripts/.import_baseline.json`。
+> 删除模块/工具/配置属结构性变更，S1/S8 对比失败时重建基线即可；日志新增 ERROR 属预期时更新
+> `DEFAULT_LOG_WHITELIST`（`scripts/smoke_test.py` 顶部）。详见 `scripts/README.md`。
 
 ---
 
@@ -478,3 +463,67 @@ python build_release.py --clean --desktop
 # 桌面应用 — 直接分发 miya_frontend/release/Miya 1.0.0.exe
 # 接收者双击运行，首次启动后在 _internal/config/.env 填入 API key
 ```
+
+---
+
+## 2026-09 二次开发须知（重要新约定）
+
+> 本节记录 2026-09 加固/修复引入的架构约定。改动相关代码前先读；完整背景见
+> `docs/AUDIT_REPORT_20260906.md` 与 `docs/ACCEPTANCE_REPORT_20260907.md`。
+
+### 1. 质量门禁（提交前三道全绿）
+
+```bash
+make quality   # ruff + black --check（已移除 || true，格式失败会真实拦截）
+make test      # pytest tests/unit -q（当前基线 132 passed）
+make smoke     # 冒烟全量 9 阶段
+```
+
+- `core/ hub/ run/` 受 black 管辖（line-length 120），**改完先 `black` 再提交**。
+- 新增测试放 `tests/unit/<域>/`；`tests/unit/webapi/` 是 Web API 安全回归（token gate/RCE 封堵/假成功），动鉴权或工具路由前先跑。
+
+### 2. API 鉴权网关（勿绕过）
+
+- 两端口统一走 `core/web_api/auth_security.py: install_token_gate()`（本机放行、远程验 `MIYA_API_TOKEN`）。
+- **新增敏感端点必须**：不加入 `public_paths`；如仅限本机，加入 `local_only_paths`。
+- WebSocket 新端点必须在握手前调用 `websocket_gate(ws)`（HTTP 中间件不拦 WS）。
+
+### 3. 会话存储语义
+
+- 写路径统一经 `hub/memory_manager.py`（`store_user_message`/`store_unified_memory`），session_id 取
+  `perception["api_session_id"]`（API 透传）否则按 `{platform}_private_{user_id}` 推导。
+- 读路径 `/api/chat/get_session` 用 `ConversationHistoryManager.get_history()`（**没有** `get_session` 方法）。
+- 新增平台接入时若希望会话与桌面/终端共享，在 perception 里带 `api_session_id`。
+
+### 4. 事件总线（跨组件解耦通知）
+
+- `core/event_bus.py`：`emit_event({...})` / `on_event(fn)`。零依赖、监听器异常绝不影响主链路。
+- 当前消费者：ManagementAPI → WS `/api/v1/ws` 推送 `new_message`/`platform_event`。
+- 新增实时通知需求走事件总线，不要在业务代码里直接持有 WS 客户端。
+
+### 5. AI 降级可观测
+
+- AI 客户端初始化失败置 `miya.ai_degraded=True`，经 `MiyaDaemon.get_daemon_status()["degraded"]`
+  暴露到 `/api/v1/health`。新增子系统时按此模式暴露降级状态，禁止"失败后静默继续"。
+- 决策层 `ai_client=None` 时走 `_fallback_response_cross_platform` 罐头回复——排查"回复千篇一律"先看 health。
+
+### 6. 谛听（消息策略）边界
+
+- `memory/diteng_listener.py` 只管 QQ 类平台的防打扰；`terminal`/`web` 平台在
+  `decision_hub.fetch_diting_strategy` 入口直接跳过（用户主动界面不拦截）。
+- `config/diteng_strategy_config.json` 是谛听的策略选项配置（response_strategies/intent_types/reply_styles），
+  **不是死配置**——它被路径拼接方式引用，删除会导致 LLM 分析退化、消息被静默丢弃（2026-09 实际事故）。
+
+### 7. 项目路径含 `#` 的工具链规避
+
+- Vite 把路径中 `#` 当 URL 锚点截断，Node 的 `realpathSync.native` 会穿透目录映射。
+- 方案：`start.bat :ensure_nohash` 自动创建 **subst 盘符**（从 Z: 找空闲）+ `scripts/patch_vite_realpath.mjs`
+  把 vite 内部 `realpathSync.native` 替换为非 native（已挂两个前端的 postinstall，重装依赖自动生效）。
+- 新增前端工程时：package.json 加同款 postinstall，vite.config 参考 `miya_frontend/vite.config.ts`
+  的 `hashPathFixPlugin`。
+- 根治方案仍是把项目迁到无 `#` 路径；迁移后可移除 patch 与 subst。
+
+### 8. 版本号单一真源
+
+- 一切版本显示引用 `core/version.py: VERSION`（README/identity/management_api 均已统一）。
+- 新增显示点禁止硬编码。

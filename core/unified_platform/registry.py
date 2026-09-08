@@ -129,9 +129,7 @@ class PlatformRegistry:
 
     # ==================== 批量操作 ====================
 
-    async def start_all(
-        self, platform_ids: Optional[List[str]] = None, miya_core=None
-    ) -> Dict[str, bool]:
+    async def start_all(self, platform_ids: Optional[List[str]] = None, miya_core=None) -> Dict[str, bool]:
         """启动所有（或指定）平台"""
         ids = platform_ids or list(self._platform_classes.keys())
         results = {}
@@ -199,10 +197,7 @@ class PlatformRegistry:
 
     def list_registered(self) -> List[Dict[str, str]]:
         """列出已注册的平台类型"""
-        return [
-            {"id": pid, "name": cls.platform_name}
-            for pid, cls in self._platform_classes.items()
-        ]
+        return [{"id": pid, "name": cls.platform_name} for pid, cls in self._platform_classes.items()]
 
     # ==================== 事件广播 ====================
 

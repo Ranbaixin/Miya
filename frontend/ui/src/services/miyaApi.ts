@@ -480,10 +480,11 @@ export async function cleanupResources(forceGc = false) {
 
 export async function terminalChat(message: string, sessionId?: string) {
   try {
-    const r = await fetch(`${CORE}/api/terminal/chat`, {
+    // 2026-09 修复：/api/terminal/chat 已迁移 Open-ClaudeCode（404），改用 /api/chat/send
+    const r = await fetch(`${CORE}/api/chat/send`, {
       method: 'POST',
       headers: hdrs(),
-      body: JSON.stringify({ message, session_id: sessionId || 'web-terminal', from_terminal: true }),
+      body: JSON.stringify({ message, session_id: sessionId || 'web-terminal', platform: 'web' }),
     });
     if (r.ok) return await r.json();
   } catch { /* ignore */ }

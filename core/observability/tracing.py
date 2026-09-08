@@ -91,9 +91,7 @@ def trace_async_function(func):
         tracer = get_tracer()
         if tracer is None:
             return await func(*args, **kwargs)
-        with tracer.start_as_current_span(
-            func.__name__, kind=SpanKind.INTERNAL
-        ) as span:
+        with tracer.start_as_current_span(func.__name__, kind=SpanKind.INTERNAL) as span:
             try:
                 result = await func(*args, **kwargs)
                 span.set_status(Status(StatusCode.OK))
@@ -118,9 +116,7 @@ def trace_function(func):
         tracer = get_tracer()
         if tracer is None:
             return func(*args, **kwargs)
-        with tracer.start_as_current_span(
-            func.__name__, kind=SpanKind.INTERNAL
-        ) as span:
+        with tracer.start_as_current_span(func.__name__, kind=SpanKind.INTERNAL) as span:
             try:
                 result = func(*args, **kwargs)
                 span.set_status(Status(StatusCode.OK))

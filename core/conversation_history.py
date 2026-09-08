@@ -1,6 +1,7 @@
 """
 对话历史持久化系统
 """
+
 import asyncio
 import contextlib
 import json
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ConversationMessage:
     """对话消息数据结构"""
+
     role: str  # user, assistant, system
     content: str
     timestamp: str
@@ -45,10 +47,7 @@ class ConversationHistoryManager:
     """
 
     def __init__(
-        self,
-        data_dir: Optional[Path] = None,
-        max_messages_per_session: int = 200,
-        max_memory_sessions: int = 100
+        self, data_dir: Optional[Path] = None, max_messages_per_session: int = 200, max_memory_sessions: int = 100
     ):
         self.data_dir = data_dir or Path("data/conversations")
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -70,7 +69,8 @@ class ConversationHistoryManager:
         """获取会话历史文件路径"""
         # 使用session_id的hash避免文件名过长
         import hashlib
-        hash_obj = hashlib.md5(session_id.encode('utf-8'))
+
+        hash_obj = hashlib.md5(session_id.encode("utf-8"))
         filename = f"session_{hash_obj.hexdigest()[:16]}.json"
         return self.data_dir / filename
 
@@ -82,7 +82,7 @@ class ConversationHistoryManager:
             return []
 
         try:
-            async with aiofiles.open(file_path, 'r', encoding=Encoding.UTF8) as f:
+            async with aiofiles.open(file_path, "r", encoding=Encoding.UTF8) as f:
                 content = await f.read()
                 if not content or not content.strip():
                     return []
@@ -118,11 +118,11 @@ class ConversationHistoryManager:
 
                 # 尝试使用 aiofiles 保存，失败则回退到同步保存
                 try:
-                    async with aiofiles.open(file_path, 'w', encoding=Encoding.UTF8) as f:
+                    async with aiofiles.open(file_path, "w", encoding=Encoding.UTF8) as f:
                         await f.write(json.dumps(data, ensure_ascii=False, indent=2))
                 except RuntimeError:
                     # 如果事件循环已关闭，使用同步保存
-                    with open(file_path, 'w', encoding='utf-8') as f:
+                    with open(file_path, "w", encoding="utf-8") as f:
                         json.dump(data, f, ensure_ascii=False, indent=2)
 
                 self._session_counts[session_id] = len(messages)
@@ -133,7 +133,7 @@ class ConversationHistoryManager:
                 # 尝试同步保存
                 try:
                     data = [asdict(m) for m in messages]
-                    with open(file_path, 'w', encoding='utf-8') as f:
+                    with open(file_path, "w", encoding="utf-8") as f:
                         json.dump(data, f, ensure_ascii=False, indent=2)
                     logger.info(f"同步保存会话历史 {session_id}: {len(messages)} 条消息")
                 except Exception:  # noqa: BLE001 — 同步保存兜底失败已记录日志
@@ -143,7 +143,7 @@ class ConversationHistoryManager:
                 # 尝试同步保存作为最后手段
                 try:
                     data = [asdict(m) for m in messages]
-                    with open(file_path, 'w', encoding='utf-8') as f:
+                    with open(file_path, "w", encoding="utf-8") as f:
                         json.dump(data, f, ensure_ascii=False, indent=2)
                     logger.info(f"同步保存会话历史 {session_id}: {len(messages)} 条消息")
                 except Exception as e:  # noqa: BLE001 — 同步保存兜底失败已记录日志
@@ -156,7 +156,7 @@ class ConversationHistoryManager:
         content: str,
         agent_id: Optional[str] = None,
         images: Optional[List[str]] = None,
-        metadata: Optional[Dict] = None
+        metadata: Optional[Dict] = None,
     ) -> None:
         """添加消息到会话历史
 
@@ -175,7 +175,7 @@ class ConversationHistoryManager:
             session_id=session_id,
             images=images,
             agent_id=agent_id,
-            metadata=metadata or {}
+            metadata=metadata or {},
         )
 
         # 确保会话已加载
@@ -187,7 +187,7 @@ class ConversationHistoryManager:
 
         # 限制数量
         if len(self._memory_cache[session_id]) > self.max_messages_per_session:
-            self._memory_cache[session_id] = self._memory_cache[session_id][-self.max_messages_per_session:]
+            self._memory_cache[session_id] = self._memory_cache[session_id][-self.max_messages_per_session :]
 
         # 创建保存任务并跟踪（避免任务被销毁）
         async def _save_with_cleanup():
@@ -217,11 +217,7 @@ class ConversationHistoryManager:
 
         logger.debug(f"添加消息到会话 {session_id}: {role} - {content[:50]}...")
 
-    async def get_history(
-        self,
-        session_id: str,
-        limit: Optional[int] = None
-    ) -> List[ConversationMessage]:
+    async def get_history(self, session_id: str, limit: Optional[int] = None) -> List[ConversationMessage]:
         """获取会话历史
 
         Args:
@@ -320,7 +316,7 @@ class ConversationHistoryManager:
             "cached_sessions": len(self._memory_cache),
             "total_messages": total_messages,
             "max_messages_per_session": self.max_messages_per_session,
-            "max_memory_sessions": self.max_memory_sessions
+            "max_memory_sessions": self.max_memory_sessions,
         }
 
     async def export_session(self, session_id: str, output_path: Optional[Path] = None) -> Path:
@@ -342,10 +338,10 @@ class ConversationHistoryManager:
             "session_id": session_id,
             "export_time": datetime.now().isoformat(),
             "message_count": len(messages),
-            "messages": [asdict(m) for m in messages]
+            "messages": [asdict(m) for m in messages],
         }
 
-        async with aiofiles.open(output_path, 'w', encoding=Encoding.UTF8) as f:
+        async with aiofiles.open(output_path, "w", encoding=Encoding.UTF8) as f:
             await f.write(json.dumps(data, ensure_ascii=False, indent=2))
 
         logger.info(f"导出会话历史: {session_id} -> {output_path}")

@@ -133,6 +133,14 @@ export function createWindow(): BrowserWindow {
     return { action: 'deny' }
   })
 
+  // 2026-09 调试增强：dev 下把渲染进程 console 转发到主进程 stdout，
+  // 便于诊断白屏（渲染层 JS 错误在终端直接可见）
+  mainWindow.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+    if (level >= 2) {
+      console.log(`[Renderer:${level}] ${message} (${sourceId}:${line})`)
+    }
+  })
+
   // Load the app
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)

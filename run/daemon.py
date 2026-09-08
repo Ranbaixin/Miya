@@ -5,7 +5,7 @@
   python run/daemon.py                  # 启动守护进程 + API
   python run/daemon.py --no-api         # 仅守护进程，不启动 API
   python run/daemon.py --api-port 9800  # 指定 API 端口
-  python run/daemon.py --platforms qqofficial,webchat  # 仅启动指定平台
+  python run/daemon.py --platforms aiocqhttp       # 仅启动指定平台（须为已启用平台）
 
 环境变量:
   MIYA_API_PORT=9800   API 端口 (默认 9800)
@@ -36,6 +36,7 @@ os.environ["MIYA_DAEMON_MODE"] = "1"  # v8.0: 标记 daemon 模式，避免重�
 
 def setup_logging():
     from datetime import datetime
+
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     logging.basicConfig(
@@ -180,7 +181,7 @@ def main():
     parser.add_argument(
         "--platforms",
         type=str,
-        help="仅启动指定平台（逗号分隔），如 qqofficial,webchat",
+        help="仅启动指定平台（逗号分隔），须为已启用平台（--list-platforms 查看）",
     )
     parser.add_argument(
         "--list-platforms",

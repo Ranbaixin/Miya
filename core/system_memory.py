@@ -2,6 +2,7 @@
 系统记忆模块
 第四阶段核心模块 - 让弥娅记住系统配置、修复历史和最佳实践
 """
+
 import hashlib
 import json
 import logging
@@ -17,23 +18,25 @@ logger = logging.getLogger(__name__)
 
 class MemoryType(Enum):
     """记忆类型"""
-    SYSTEM_CONFIG = "system_config"     # 系统配置
-    FIX_HISTORY = "fix_history"         # 修复历史
-    BEST_PRACTICE = "best_practice"     # 最佳实践
-    PATTERN = "pattern"                 # 模式
-    USER_PREFERENCE = "user_preference" # 用户偏好
+
+    SYSTEM_CONFIG = "system_config"  # 系统配置
+    FIX_HISTORY = "fix_history"  # 修复历史
+    BEST_PRACTICE = "best_practice"  # 最佳实践
+    PATTERN = "pattern"  # 模式
+    USER_PREFERENCE = "user_preference"  # 用户偏好
 
 
 @dataclass
 class MemoryItem:
     """记忆项"""
+
     id: str
     type: MemoryType
-    key: str                    # 唯一键
-    value: Any                  # 值
+    key: str  # 唯一键
+    value: Any  # 值
     metadata: Dict[str, Any] = field(default_factory=dict)
-    confidence: float = 1.0     # 置信度 0.0-1.0
-    access_count: int = 0       # 访问次数
+    confidence: float = 1.0  # 置信度 0.0-1.0
+    access_count: int = 0  # 访问次数
     last_accessed: datetime = field(default_factory=datetime.now)
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
@@ -41,26 +44,27 @@ class MemoryItem:
     def to_dict(self) -> Dict:
         """转换为字典"""
         data = asdict(self)
-        data['type'] = self.type.value
-        data['created_at'] = self.created_at.isoformat()
-        data['updated_at'] = self.updated_at.isoformat()
-        data['last_accessed'] = self.last_accessed.isoformat()
+        data["type"] = self.type.value
+        data["created_at"] = self.created_at.isoformat()
+        data["updated_at"] = self.updated_at.isoformat()
+        data["last_accessed"] = self.last_accessed.isoformat()
         return data
 
     @classmethod
-    def from_dict(cls, data: Dict) -> 'MemoryItem':
+    def from_dict(cls, data: Dict) -> "MemoryItem":
         """从字典创建"""
         data = data.copy()
-        data['type'] = MemoryType(data['type'])
-        data['created_at'] = datetime.fromisoformat(data['created_at'])
-        data['updated_at'] = datetime.fromisoformat(data['updated_at'])
-        data['last_accessed'] = datetime.fromisoformat(data['last_accessed'])
+        data["type"] = MemoryType(data["type"])
+        data["created_at"] = datetime.fromisoformat(data["created_at"])
+        data["updated_at"] = datetime.fromisoformat(data["updated_at"])
+        data["last_accessed"] = datetime.fromisoformat(data["last_accessed"])
         return cls(**data)
 
 
 @dataclass
 class FixRecord:
     """修复记录"""
+
     id: str
     problem_id: str
     problem_type: str
@@ -76,39 +80,40 @@ class FixRecord:
     def to_dict(self) -> Dict:
         """转换为字典"""
         data = asdict(self)
-        data['timestamp'] = self.timestamp.isoformat()
+        data["timestamp"] = self.timestamp.isoformat()
         return data
 
     @classmethod
-    def from_dict(cls, data: Dict) -> 'FixRecord':
+    def from_dict(cls, data: Dict) -> "FixRecord":
         """从字典创建"""
         data = data.copy()
-        data['timestamp'] = datetime.fromisoformat(data['timestamp'])
+        data["timestamp"] = datetime.fromisoformat(data["timestamp"])
         return cls(**data)
 
 
 @dataclass
 class SystemConfig:
     """系统配置记忆"""
+
     id: str
-    config_type: str           # 配置类型：python, node, project, etc.
-    config_path: str           # 配置文件路径
-    config_hash: str           # 内容哈希
-    config_value: Dict         # 配置内容
+    config_type: str  # 配置类型：python, node, project, etc.
+    config_path: str  # 配置文件路径
+    config_hash: str  # 内容哈希
+    config_value: Dict  # 配置内容
     detected_issues: List[str] = field(default_factory=list)
     timestamp: datetime = field(default_factory=datetime.now)
 
     def to_dict(self) -> Dict:
         """转换为字典"""
         data = asdict(self)
-        data['timestamp'] = data['timestamp'].isoformat()
+        data["timestamp"] = data["timestamp"].isoformat()
         return data
 
     @classmethod
-    def from_dict(cls, data: Dict) -> 'SystemConfig':
+    def from_dict(cls, data: Dict) -> "SystemConfig":
         """从字典创建"""
         data = data.copy()
-        data['timestamp'] = datetime.fromisoformat(data['timestamp'])
+        data["timestamp"] = datetime.fromisoformat(data["timestamp"])
         return cls(**data)
 
 
@@ -137,11 +142,11 @@ class SystemMemory:
 
         # 统计
         self.stats = {
-            'total_memories': 0,
-            'total_fixes': 0,
-            'successful_fixes': 0,
-            'failed_fixes': 0,
-            'config_snapshots': 0,
+            "total_memories": 0,
+            "total_fixes": 0,
+            "successful_fixes": 0,
+            "failed_fixes": 0,
+            "config_snapshots": 0,
         }
 
         # 加载已有记忆
@@ -149,9 +154,7 @@ class SystemMemory:
 
     def _generate_id(self) -> str:
         """生成唯一ID"""
-        return hashlib.md5(
-            datetime.now().isoformat().encode()
-        ).hexdigest()[:16]
+        return hashlib.md5(datetime.now().isoformat().encode()).hexdigest()[:16]
 
     def _generate_key(self, type: MemoryType, key_parts: List[str]) -> str:
         """生成记忆键"""
@@ -163,7 +166,7 @@ class SystemMemory:
         key_parts: List[str],
         value: Any,
         metadata: Optional[Dict[str, Any]] = None,
-        confidence: float = 1.0
+        confidence: float = 1.0,
     ) -> str:
         """
         记住一个信息
@@ -193,7 +196,7 @@ class SystemMemory:
         self.memories[memory_id] = memory
         self.by_type[type].append(memory)
         self.by_key[key] = memory
-        self.stats['total_memories'] += 1
+        self.stats["total_memories"] += 1
 
         self.logger.debug(f"记住: {key}")
         return memory_id
@@ -265,7 +268,7 @@ class SystemMemory:
         self.by_type[type].remove(memory)
         del self.by_key[key]
 
-        self.stats['total_memories'] -= 1
+        self.stats["total_memories"] -= 1
 
         self.logger.debug(f"忘记: {key}")
         return True
@@ -280,7 +283,7 @@ class SystemMemory:
         success: bool,
         execution_time: float,
         backup_path: Optional[str] = None,
-        error_message: Optional[str] = None
+        error_message: Optional[str] = None,
     ) -> str:
         """
         记录修复历史
@@ -315,12 +318,12 @@ class SystemMemory:
         )
 
         self.fix_records.append(record)
-        self.stats['total_fixes'] += 1
+        self.stats["total_fixes"] += 1
 
         if success:
-            self.stats['successful_fixes'] += 1
+            self.stats["successful_fixes"] += 1
         else:
-            self.stats['failed_fixes'] += 1
+            self.stats["failed_fixes"] += 1
 
         # 记住这个修复模式
         self._learn_fix_pattern(record)
@@ -334,7 +337,7 @@ class SystemMemory:
         pattern_key = [
             record.problem_type,
             record.severity,
-            Path(record.file_path).suffix if record.file_path else 'unknown',
+            Path(record.file_path).suffix if record.file_path else "unknown",
         ]
 
         # 计算成功率
@@ -345,25 +348,28 @@ class SystemMemory:
             type=MemoryType.PATTERN,
             key_parts=pattern_key,
             value={
-                'success_rate': success_rate,
-                'total_attempts': self._count_fixes(pattern_key),
-                'last_success': record.success,
-                'last_time': record.execution_time,
+                "success_rate": success_rate,
+                "total_attempts": self._count_fixes(pattern_key),
+                "last_success": record.success,
+                "last_time": record.execution_time,
             },
             metadata={
-                'file_pattern': str(record.file_path),
-                'fix_action': record.fix_action,
+                "file_pattern": str(record.file_path),
+                "fix_action": record.fix_action,
             },
-            confidence=min(1.0, success_rate)
+            confidence=min(1.0, success_rate),
         )
 
     def _calculate_success_rate(self, pattern_key: List[str]) -> float:
         """计算模式的成功率"""
         matching_records = [
-            r for r in self.fix_records
-            if (r.problem_type == pattern_key[0] and
-                r.severity == pattern_key[1] and
-                Path(r.file_path).suffix == pattern_key[2])
+            r
+            for r in self.fix_records
+            if (
+                r.problem_type == pattern_key[0]
+                and r.severity == pattern_key[1]
+                and Path(r.file_path).suffix == pattern_key[2]
+            )
         ]
 
         if not matching_records:
@@ -374,18 +380,20 @@ class SystemMemory:
 
     def _count_fixes(self, pattern_key: List[str]) -> int:
         """计算匹配的修复次数"""
-        return len([
-            r for r in self.fix_records
-            if (r.problem_type == pattern_key[0] and
-                r.severity == pattern_key[1] and
-                Path(r.file_path).suffix == pattern_key[2])
-        ])
+        return len(
+            [
+                r
+                for r in self.fix_records
+                if (
+                    r.problem_type == pattern_key[0]
+                    and r.severity == pattern_key[1]
+                    and Path(r.file_path).suffix == pattern_key[2]
+                )
+            ]
+        )
 
     def get_fix_history(
-        self,
-        problem_type: Optional[str] = None,
-        file_path: Optional[str] = None,
-        limit: int = 100
+        self, problem_type: Optional[str] = None, file_path: Optional[str] = None, limit: int = 100
     ) -> List[FixRecord]:
         """
         获取修复历史
@@ -412,11 +420,7 @@ class SystemMemory:
         return records[:limit]
 
     def save_system_config(
-        self,
-        config_type: str,
-        config_path: str,
-        config_value: Dict,
-        detected_issues: Optional[List[str]] = None
+        self, config_type: str, config_path: str, config_value: Dict, detected_issues: Optional[List[str]] = None
     ) -> str:
         """
         保存系统配置
@@ -446,7 +450,7 @@ class SystemMemory:
         )
 
         self.system_configs[config_id] = config
-        self.stats['config_snapshots'] += 1
+        self.stats["config_snapshots"] += 1
 
         # 记住配置
         self.remember(
@@ -454,19 +458,15 @@ class SystemMemory:
             key_parts=[config_type, config_path],
             value=config_value,
             metadata={
-                'hash': config_hash,
-                'detected_issues': detected_issues,
-            }
+                "hash": config_hash,
+                "detected_issues": detected_issues,
+            },
         )
 
         self.logger.debug(f"保存配置: {config_type}:{config_path}")
         return config_id
 
-    def get_system_config(
-        self,
-        config_type: str,
-        config_path: Optional[str] = None
-    ) -> Optional[SystemConfig]:
+    def get_system_config(self, config_type: str, config_path: Optional[str] = None) -> Optional[SystemConfig]:
         """
         获取系统配置
 
@@ -480,16 +480,12 @@ class SystemMemory:
         # 如果有路径，直接查找
         if config_path:
             for config in self.system_configs.values():
-                if (config.config_type == config_type and
-                    config.config_path == config_path):
+                if config.config_type == config_type and config.config_path == config_path:
                     return config
             return None
 
         # 否则返回该类型的最新配置
-        configs = [
-            c for c in self.system_configs.values()
-            if c.config_type == config_type
-        ]
+        configs = [c for c in self.system_configs.values() if c.config_type == config_type]
 
         if not configs:
             return None
@@ -514,12 +510,7 @@ class SystemMemory:
 
         return None
 
-    def save_best_practice(
-        self,
-        context: str,
-        practice: Dict,
-        confidence: float = 1.0
-    ) -> str:
+    def save_best_practice(self, context: str, practice: Dict, confidence: float = 1.0) -> str:
         """
         保存最佳实践
 
@@ -531,12 +522,7 @@ class SystemMemory:
         Returns:
             记忆ID
         """
-        return self.remember(
-            type=MemoryType.BEST_PRACTICE,
-            key_parts=[context],
-            value=practice,
-            confidence=confidence
-        )
+        return self.remember(type=MemoryType.BEST_PRACTICE, key_parts=[context], value=practice, confidence=confidence)
 
     def get_user_preference(self, key: str) -> Optional[Any]:
         """
@@ -566,29 +552,20 @@ class SystemMemory:
         Returns:
             记忆ID
         """
-        return self.remember(
-            type=MemoryType.USER_PREFERENCE,
-            key_parts=[key],
-            value=value
-        )
+        return self.remember(type=MemoryType.USER_PREFERENCE, key_parts=[key], value=value)
 
     def get_statistics(self) -> Dict[str, Any]:
         """获取统计信息"""
         return {
-            'total_memories': self.stats['total_memories'],
-            'total_fixes': self.stats['total_fixes'],
-            'successful_fixes': self.stats['successful_fixes'],
-            'failed_fixes': self.stats['failed_fixes'],
-            'success_rate': (
-                self.stats['successful_fixes'] / self.stats['total_fixes']
-                if self.stats['total_fixes'] > 0
-                else 0.0
+            "total_memories": self.stats["total_memories"],
+            "total_fixes": self.stats["total_fixes"],
+            "successful_fixes": self.stats["successful_fixes"],
+            "failed_fixes": self.stats["failed_fixes"],
+            "success_rate": (
+                self.stats["successful_fixes"] / self.stats["total_fixes"] if self.stats["total_fixes"] > 0 else 0.0
             ),
-            'config_snapshots': self.stats['config_snapshots'],
-            'memories_by_type': {
-                t.value: len(self.by_type[t])
-                for t in MemoryType
-            },
+            "config_snapshots": self.stats["config_snapshots"],
+            "memories_by_type": {t.value: len(self.by_type[t]) for t in MemoryType},
         }
 
     def get_report(self) -> str:
@@ -603,26 +580,25 @@ class SystemMemory:
         stats = self.get_statistics()
 
         for key, value in stats.items():
-            if key == 'memories_by_type':
+            if key == "memories_by_type":
                 lines.append(f"  {key}:")
                 for type_name, count in value.items():
                     lines.append(f"    - {type_name}: {count}")
             else:
                 lines.append(f"  {key}: {value}")
 
-        lines.extend([
-            "",
-            "最近修复:",
-        ])
+        lines.extend(
+            [
+                "",
+                "最近修复:",
+            ]
+        )
 
         recent_fixes = self.fix_records[-5:] if self.fix_records else []
         if recent_fixes:
             for fix in recent_fixes:
                 status = "✅" if fix.success else "❌"
-                lines.append(
-                    f"  {status} {fix.problem_type}/{fix.severity}: "
-                    f"{fix.file_path or 'N/A'}"
-                )
+                lines.append(f"  {status} {fix.problem_type}/{fix.severity}: " f"{fix.file_path or 'N/A'}")
         else:
             lines.append("  暂无")
 
@@ -635,13 +611,13 @@ class SystemMemory:
 
         try:
             data = {
-                'memories': [m.to_dict() for m in self.memories.values()],
-                'fix_records': [r.to_dict() for r in self.fix_records],
-                'system_configs': [c.to_dict() for c in self.system_configs.values()],
-                'stats': self.stats,
+                "memories": [m.to_dict() for m in self.memories.values()],
+                "fix_records": [r.to_dict() for r in self.fix_records],
+                "system_configs": [c.to_dict() for c in self.system_configs.values()],
+                "stats": self.stats,
             }
 
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
 
             self.logger.info(f"记忆已保存: {file_path}")
@@ -659,7 +635,7 @@ class SystemMemory:
                 self.logger.info(f"记忆文件不存在: {file_path}")
                 return
 
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
             # 恢复记忆
@@ -667,26 +643,20 @@ class SystemMemory:
             self.by_type = defaultdict(list)
             self.by_key = {}
 
-            for m_data in data.get('memories', []):
+            for m_data in data.get("memories", []):
                 memory = MemoryItem.from_dict(m_data)
                 self.memories[memory.id] = memory
                 self.by_type[memory.type].append(memory)
                 self.by_key[memory.key] = memory
 
             # 恢复修复记录
-            self.fix_records = [
-                FixRecord.from_dict(r_data)
-                for r_data in data.get('fix_records', [])
-            ]
+            self.fix_records = [FixRecord.from_dict(r_data) for r_data in data.get("fix_records", [])]
 
             # 恢复系统配置
-            self.system_configs = {
-                c['id']: SystemConfig.from_dict(c)
-                for c in data.get('system_configs', [])
-            }
+            self.system_configs = {c["id"]: SystemConfig.from_dict(c) for c in data.get("system_configs", [])}
 
             # 恢复统计
-            self.stats.update(data.get('stats', {}))
+            self.stats.update(data.get("stats", {}))
 
             self.logger.info(f"记忆已加载: {file_path}")
 

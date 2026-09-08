@@ -92,11 +92,11 @@ class GameModeAdapter(IGameModeAdapter):
             mode = self._game_mode_manager.get_mode(chat_id)
             if mode:
                 return {
-                    'mode_type': mode.mode_type.value,
-                    'game_id': mode.game_id,
-                    'prompt_key': mode.prompt_key,
-                    'tool_whitelist': mode.tool_whitelist,
-                    'extra_config': mode.extra_config
+                    "mode_type": mode.mode_type.value,
+                    "game_id": mode.game_id,
+                    "prompt_key": mode.prompt_key,
+                    "tool_whitelist": mode.tool_whitelist,
+                    "extra_config": mode.extra_config,
                 }
             return None
         except Exception as e:  # noqa: BLE001 — 读取模式失败降级返回空
@@ -121,12 +121,12 @@ class GameModeAdapter(IGameModeAdapter):
             save_data = self._game_memory_manager.load_game(game_id)
             if save_data:
                 return {
-                    'game_id': save_data.game_id,
-                    'save_id': save_data.save_id,
-                    'save_name': save_data.save_name,
-                    'story_progress': save_data.story_progress,
-                    'game_state': save_data.game_state,
-                    'characters': save_data.characters
+                    "game_id": save_data.game_id,
+                    "save_id": save_data.save_id,
+                    "save_name": save_data.save_name,
+                    "story_progress": save_data.story_progress,
+                    "game_state": save_data.game_state,
+                    "characters": save_data.characters,
                 }
             return None
         except Exception as e:  # noqa: BLE001 — 读取游戏记忆失败降级返回空
@@ -189,14 +189,14 @@ class GameModeAdapter(IGameModeAdapter):
             total = 0
             for msg in messages:
                 total += 10  # 角色标记约10个token
-                total += self.estimate_tokens(msg.get('content', ''))
+                total += self.estimate_tokens(msg.get("content", ""))
             return total
 
         try:
             return self._game_memory_manager.estimate_conversation_history_tokens(messages)
         except Exception as e:  # noqa: BLE001 — 估算失败降级为简易估算
             logger.warning(f"[GameModeAdapter] 对话token估算失败: {e}")
-            return self.estimate_tokens(' '.join([m.get('content', '') for m in messages]))
+            return self.estimate_tokens(" ".join([m.get("content", "") for m in messages]))
 
     async def compress_conversation(self, game_id: str) -> bool:
         """
@@ -219,12 +219,7 @@ class GameModeAdapter(IGameModeAdapter):
             return False
 
     def add_conversation_message(
-        self,
-        game_id: str,
-        role: str,
-        content: str,
-        player_id: Optional[int] = None,
-        player_name: Optional[str] = None
+        self, game_id: str, role: str, content: str, player_id: Optional[int] = None, player_name: Optional[str] = None
     ) -> bool:
         """
         添加游戏对话消息
@@ -244,19 +239,12 @@ class GameModeAdapter(IGameModeAdapter):
             return False
 
         try:
-            return self._game_memory_manager.add_conversation_message(
-                game_id, role, content, player_id, player_name
-            )
+            return self._game_memory_manager.add_conversation_message(game_id, role, content, player_id, player_name)
         except Exception as e:  # noqa: BLE001 — 写入失败返回 False 由调用方处理
             logger.error(f"[GameModeAdapter] 添加对话消息失败: {e}")
             return False
 
-    def get_game_characters(
-        self,
-        game_id: str,
-        player_id: int,
-        is_admin: bool = False
-    ) -> List[Dict]:
+    def get_game_characters(self, game_id: str, player_id: int, is_admin: bool = False) -> List[Dict]:
         """
         获取游戏角色卡
 
@@ -272,9 +260,7 @@ class GameModeAdapter(IGameModeAdapter):
             return []
 
         try:
-            characters = self._game_memory_manager.get_visible_characters(
-                game_id, player_id, is_admin
-            )
+            characters = self._game_memory_manager.get_visible_characters(game_id, player_id, is_admin)
             return [char.to_dict() for char in characters]
         except Exception as e:  # noqa: BLE001 — 角色卡读取失败降级返回空
             logger.error(f"[GameModeAdapter] 获取角色卡失败: {e}")
@@ -307,18 +293,14 @@ class GameModeAdapter(IGameModeAdapter):
             for _chat_id, mode in self._game_mode_manager.modes.items():
                 if mode.game_id:
                     # 检查该游戏是否有这个用户的角色
-                    characters = self._game_memory_manager.get_visible_characters(
-                        mode.game_id,
-                        user_id,
-                        is_admin=False
-                    )
+                    characters = self._game_memory_manager.get_visible_characters(mode.game_id, user_id, is_admin=False)
                     if characters:
                         return {
-                            'mode_type': mode.mode_type.value,
-                            'game_id': mode.game_id,
-                            'prompt_key': mode.prompt_key,
-                            'tool_whitelist': mode.tool_whitelist,
-                            'extra_config': mode.extra_config
+                            "mode_type": mode.mode_type.value,
+                            "game_id": mode.game_id,
+                            "prompt_key": mode.prompt_key,
+                            "tool_whitelist": mode.tool_whitelist,
+                            "extra_config": mode.extra_config,
                         }
             return None
         except Exception as e:  # noqa: BLE001 — 查找失败降级返回空

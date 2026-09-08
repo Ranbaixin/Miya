@@ -72,26 +72,16 @@ class AIInjectionDetector:
         # 加载配置
         self._config = _get_security_config()
         self._enabled = self._config.get("enabled", _DEFAULT_CONFIG["enabled"])
-        self._protection_prompt = self._config.get(
-            "protection_prompt", _DEFAULT_CONFIG["protection_prompt"]
-        )
-        self._block_on_detection = self._config.get(
-            "block_on_detection", _DEFAULT_CONFIG["block_on_detection"]
-        )
-        self._fallback_response = self._config.get(
-            "fallback_response", _DEFAULT_CONFIG["fallback_response"]
-        )
+        self._protection_prompt = self._config.get("protection_prompt", _DEFAULT_CONFIG["protection_prompt"])
+        self._block_on_detection = self._config.get("block_on_detection", _DEFAULT_CONFIG["block_on_detection"])
+        self._fallback_response = self._config.get("fallback_response", _DEFAULT_CONFIG["fallback_response"])
 
         logger.info(f"[AI注入检测] 初始化完成: enabled={self._enabled}")
 
         # 从配置加载检测模式，回退到默认值
-        raw_patterns = self._config.get(
-            "detection_patterns", _DEFAULT_CONFIG["detection_patterns"]
-        )
+        raw_patterns = self._config.get("detection_patterns", _DEFAULT_CONFIG["detection_patterns"])
         self._detection_patterns = raw_patterns
-        self._patterns = [
-            re.compile(p, re.IGNORECASE) for p in self._detection_patterns
-        ]
+        self._patterns = [re.compile(p, re.IGNORECASE) for p in self._detection_patterns]
 
     async def detect(self, content: str) -> tuple[bool, str]:
         """
@@ -190,14 +180,10 @@ class AIInjectionDetector:
                 {"role": "user", "content": f"输入：{content}\n输出："},
             ]
 
-            response = await self.ai_client.chat(
-                messages=messages, max_tokens=10, temperature=0
-            )
+            response = await self.ai_client.chat(messages=messages, max_tokens=10, temperature=0)
 
             # response 直接是字符串，不需要 .get() 解析
-            result = (
-                response.strip() if isinstance(response, str) else str(response).strip()
-            )
+            result = response.strip() if isinstance(response, str) else str(response).strip()
 
             is_injection = "INJECTION_DETECTED" in result.upper()
 

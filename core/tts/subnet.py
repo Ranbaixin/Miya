@@ -4,6 +4,7 @@ TTSNet - TTS子网
 
 MIYA TTS 系统的M-Link集成层
 """
+
 import logging
 from typing import Any, Dict, Optional
 
@@ -12,6 +13,7 @@ from .providers import APITTSEngine, GPTSoviTSEngine, SystemTTSEngine
 
 try:
     from mlink.message import FlowType, Message, MessageType
+
     MLINK_AVAILABLE = True
 except ImportError:
     MLINK_AVAILABLE = False
@@ -92,35 +94,28 @@ class TTSNet:
                     sender="tts",
                     content={"error": "Text is required"},
                     message_type=MessageType.ERROR,
-                    flow_type=FlowType.RESPONSE
+                    flow_type=FlowType.RESPONSE,
                 )
                 return error_msg
 
             # 执行TTS
             if output_path:
                 result_path = await self.registry.synthesize_to_file(
-                    text=text,
-                    output_path=output_path,
-                    engine_name=engine,
-                    output_format=output_format
+                    text=text, output_path=output_path, engine_name=engine, output_format=output_format
                 )
                 response = Message(
                     sender="tts",
                     content={"text": text, "output_path": result_path},
                     message_type=MessageType.TTS,
-                    flow_type=FlowType.RESPONSE
+                    flow_type=FlowType.RESPONSE,
                 )
             else:
-                audio_data = await self.registry.synthesize(
-                    text=text,
-                    engine_name=engine,
-                    output_format=output_format
-                )
+                audio_data = await self.registry.synthesize(text=text, engine_name=engine, output_format=output_format)
                 response = Message(
                     sender="tts",
                     content={"text": text, "audio_data": audio_data, "format": output_format},
                     message_type=MessageType.TTS,
-                    flow_type=FlowType.RESPONSE
+                    flow_type=FlowType.RESPONSE,
                 )
 
             return response
@@ -129,16 +124,14 @@ class TTSNet:
             logger.error(f"TTS message handling failed: {e}")
             if MLINK_AVAILABLE:
                 error_msg = Message(
-                    sender="tts",
-                    content={"error": str(e)},
-                    message_type=MessageType.ERROR,
-                    flow_type=FlowType.RESPONSE
+                    sender="tts", content={"error": str(e)}, message_type=MessageType.ERROR, flow_type=FlowType.RESPONSE
                 )
                 return error_msg
             return None
 
-    async def synthesize(self, text: str, engine: Optional[str] = None,
-                        output_format: str = "mp3", **kwargs) -> Optional[bytes]:
+    async def synthesize(
+        self, text: str, engine: Optional[str] = None, output_format: str = "mp3", **kwargs
+    ) -> Optional[bytes]:
         """
         合成语音
 
@@ -153,9 +146,9 @@ class TTSNet:
         """
         return await self.registry.synthesize(text, engine, output_format, **kwargs)
 
-    async def synthesize_to_file(self, text: str, output_path: str,
-                                engine: Optional[str] = None,
-                                output_format: str = "mp3", **kwargs) -> Optional[str]:
+    async def synthesize_to_file(
+        self, text: str, output_path: str, engine: Optional[str] = None, output_format: str = "mp3", **kwargs
+    ) -> Optional[str]:
         """
         合成语音并保存到文件
 

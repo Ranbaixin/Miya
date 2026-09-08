@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class BatchedEvent:
     """批量事件"""
+
     events: List[Dict[str, Any]] = field(default_factory=list)
     batch_id: str = ""
     batch_size: int = 0
@@ -37,6 +38,7 @@ class BatchedEvent:
 @dataclass
 class BatchConfig:
     """批处理配置"""
+
     max_batch_size: int = 100  # 最大批量大小
     max_batch_delay: float = 1.0  # 最大批处理延迟(秒)
     min_batch_size: int = 10  # 最小批量大小
@@ -46,11 +48,7 @@ class BatchConfig:
 class EventBatcher:
     """事件批处理器"""
 
-    def __init__(
-        self,
-        config: Optional[BatchConfig] = None,
-        max_workers: int = 4
-    ):
+    def __init__(self, config: Optional[BatchConfig] = None, max_workers: int = 4):
         self.config = config or BatchConfig()
         self.max_workers = max_workers
 
@@ -70,7 +68,7 @@ class EventBatcher:
             "batches_processed": 0,
             "batched_events": 0,
             "direct_events": 0,
-            "avg_batch_size": 0.0
+            "avg_batch_size": 0.0,
         }
 
         # 锁
@@ -148,7 +146,7 @@ class EventBatcher:
             batch_id=f"{event_type}_{int(time.time() * 1000)}",
             batch_size=len(events),
             timestamp=time.time(),
-            event_type=event_type
+            event_type=event_type,
         )
 
         # 通知订阅者
@@ -236,17 +234,11 @@ class EventBatcher:
     def get_stats(self) -> Dict[str, Any]:
         """获取统计信息"""
         with self._lock:
-            queue_sizes = {
-                event_type: len(queue)
-                for event_type, queue in self._event_queues.items()
-            }
+            queue_sizes = {event_type: len(queue) for event_type, queue in self._event_queues.items()}
             return {
                 **self.stats,
                 "queue_sizes": queue_sizes,
-                "subscriber_counts": {
-                    event_type: len(subs)
-                    for event_type, subs in self._subscribers.items()
-                }
+                "subscriber_counts": {event_type: len(subs) for event_type, subs in self._subscribers.items()},
             }
 
     def clear_stats(self):
@@ -257,7 +249,7 @@ class EventBatcher:
                 "batches_processed": 0,
                 "batched_events": 0,
                 "direct_events": 0,
-                "avg_batch_size": 0.0
+                "avg_batch_size": 0.0,
             }
 
     async def shutdown(self):
@@ -330,13 +322,10 @@ def set_global_batcher(batcher: EventBatcher):
 
 # 示例使用
 if __name__ == "__main__":
+
     async def test_event_batcher():
         # 创建批处理器
-        batcher = AdaptiveEventBatcher(BatchConfig(
-            max_batch_size=10,
-            max_batch_delay=1.0,
-            min_batch_size=3
-        ))
+        batcher = AdaptiveEventBatcher(BatchConfig(max_batch_size=10, max_batch_delay=1.0, min_batch_size=3))
 
         # 添加订阅者
         async def subscriber(event):

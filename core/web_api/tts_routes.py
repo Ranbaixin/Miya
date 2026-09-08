@@ -77,9 +77,10 @@ async def _synthesize_gpt_sovits(config, text):
         "ref_free": sovits.get("ref_free", False),
     }
 
-    async with aiohttp.ClientSession(
-        timeout=aiohttp.ClientTimeout(total=timeout)
-    ) as session, session.post(f"{api_url.rstrip('/')}/tts", json=payload) as resp:
+    async with (
+        aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)) as session,
+        session.post(f"{api_url.rstrip('/')}/tts", json=payload) as resp,
+    ):
         if resp.status != 200:
             text_err = await resp.text()
             raise RuntimeError(f"GPT-SoVITS {resp.status}: {text_err[:200]}")
@@ -104,13 +105,14 @@ async def _synthesize_api_tts(config, text):
         "speed": api_conf.get("speed", 1.0),
     }
 
-    async with aiohttp.ClientSession(
-        timeout=aiohttp.ClientTimeout(total=30)
-    ) as session, session.post(
-        api_url,
-        json=payload,
-        headers={"Authorization": f"Bearer {api_key}"},
-    ) as resp:
+    async with (
+        aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as session,
+        session.post(
+            api_url,
+            json=payload,
+            headers={"Authorization": f"Bearer {api_key}"},
+        ) as resp,
+    ):
         if resp.status != 200:
             text_err = await resp.text()
             raise RuntimeError(f"API TTS {resp.status}: {text_err[:200]}")
@@ -138,9 +140,7 @@ class TTSRoutes:
             input_text = request.get("input") or request.get("text", "")
             voice = request.get("voice", "zh-CN-XiaoxiaoNeural")
             speed = request.get("speed", 1.0)
-            response_format = request.get("response_format") or request.get(
-                "format", "mp3"
-            )
+            response_format = request.get("response_format") or request.get("format", "mp3")
             engine = request.get("engine") or request.get("model", "")
 
             if not input_text:
@@ -150,9 +150,7 @@ class TTSRoutes:
             if not engine or engine in ("default", "tts-1"):
                 engine = config.get("preferred_engine", "edge_tts")
 
-            logger.info(
-                f"[TTS] {engine} request: voice={voice}, speed={speed}, len={len(input_text)}"
-            )
+            logger.info(f"[TTS] {engine} request: voice={voice}, speed={speed}, len={len(input_text)}")
 
             try:
                 if engine == "gpt_sovits":
@@ -168,14 +166,8 @@ class TTSRoutes:
                     content_type = "audio/mpeg"
                 else:
                     engine_cfg = config.get("engines", {}).get("edge_tts", {})
-                    actual_voice = (
-                        voice
-                        if voice != "zh-CN-XiaoxiaoNeural"
-                        else engine_cfg.get("voice", voice)
-                    )
-                    audio_data = await _synthesize_edge_tts(
-                        input_text, actual_voice, speed, response_format
-                    )
+                    actual_voice = voice if voice != "zh-CN-XiaoxiaoNeural" else engine_cfg.get("voice", voice)
+                    audio_data = await _synthesize_edge_tts(input_text, actual_voice, speed, response_format)
                     content_type_map = {
                         "mp3": "audio/mpeg",
                         "wav": "audio/wav",
@@ -197,9 +189,7 @@ class TTSRoutes:
 
             except ImportError:
                 logger.error(f"[TTS] {engine} 依赖未安装")
-                raise HTTPException(
-                    status_code=500, detail=f"{engine} dependencies missing"
-                )
+                raise HTTPException(status_code=500, detail=f"{engine} dependencies missing")
             except Exception as e:  # noqa: BLE001 — TTS 合成失败，上抛 500
                 logger.error(f"[TTS] {engine} 合成失败: {e}")
                 raise HTTPException(status_code=500, detail=str(e))

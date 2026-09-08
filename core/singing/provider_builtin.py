@@ -102,6 +102,7 @@ class BuiltinSingingEngine(SingingEngine):
             self.mix_chord_volume = config.get("mix_chord_volume", 50)
 
             from core.singing._paths import find_singing_python
+
             self.uvr5_python = config.get(
                 "uvr5_python",
                 find_singing_python() or "",

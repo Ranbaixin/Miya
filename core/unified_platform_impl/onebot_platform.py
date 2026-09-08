@@ -43,7 +43,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         # 并发控制（2026-08 改造）：收包与处理解耦 —— 跨会话并发 + 同会话串行 + 全局限流
         # 原 _process_lock 平台级全局锁会让 AI 调用阻塞收包循环（丢消息根源）
         self._dispatch_semaphore = asyncio.Semaphore(4)  # 全局限流：最多同时处理 4 条消息
-        self._conv_locks: Dict[str, asyncio.Lock] = {}    # 会话级互斥锁 key -> Lock
+        self._conv_locks: Dict[str, asyncio.Lock] = {}  # 会话级互斥锁 key -> Lock
         self._conv_locks_max = 128
         self._poke_cooldown: Dict[str, float] = {}  # user_id → last_poke_time
         self._hub_refs_set = False
@@ -1629,6 +1629,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                     file_path = result.get("file") or result.get("path") or result.get("data") or ""
                     if file_path and not file_path.startswith("/9j/"):  # 排除 base64 数据被误判
                         from pathlib import Path as _Path
+
                         p = _Path(file_path)
                         if p.exists() and p.stat().st_size > 1024:
                             logger.debug(f"[{self.platform_id}] OneBot get_image(file) 成功: {file_path}")

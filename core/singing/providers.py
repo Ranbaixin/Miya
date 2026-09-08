@@ -51,9 +51,7 @@ class AutoConvertMusicEngine(SingingEngine):
 
             os.makedirs(self.output_base_dir, exist_ok=True)
             self.is_initialized = True
-            logger.info(
-                f"Auto-Convert-Music engine initialized: {self.api_url} speaker={self.speaker}"
-            )
+            logger.info(f"Auto-Convert-Music engine initialized: {self.api_url} speaker={self.speaker}")
             return True
         except Exception as e:  # noqa: BLE001 — 唱歌引擎API调用失败降级
             logger.error(f"Auto-Convert-Music initialization failed: {e}")
@@ -81,9 +79,7 @@ class AutoConvertMusicEngine(SingingEngine):
             return None
 
     async def search_song(self, query: str) -> Optional[SongInfo]:
-        resp = await asyncio.get_event_loop().run_in_executor(
-            None, lambda: self._get(f"/musicInfo/{query}")
-        )
+        resp = await asyncio.get_event_loop().run_in_executor(None, lambda: self._get(f"/musicInfo/{query}"))
         if resp is None:
             return None
         try:
@@ -145,9 +141,7 @@ class AutoConvertMusicEngine(SingingEngine):
     async def download_vocal(self, song_name: str, output_dir: str) -> Optional[str]:
         resp = await asyncio.get_event_loop().run_in_executor(
             None,
-            lambda: self._get(
-                f"/get_vocal/{song_name}{self._speaker_param()}", timeout=120
-            ),
+            lambda: self._get(f"/get_vocal/{song_name}{self._speaker_param()}", timeout=120),
         )
         if resp is None or resp.status_code != 200:
             return None
@@ -158,9 +152,7 @@ class AutoConvertMusicEngine(SingingEngine):
         logger.info(f"Vocal downloaded: {path}")
         return path
 
-    async def download_accompany(
-        self, song_name: str, output_dir: str
-    ) -> Optional[str]:
+    async def download_accompany(self, song_name: str, output_dir: str) -> Optional[str]:
         resp = await asyncio.get_event_loop().run_in_executor(
             None, lambda: self._get(f"/get_accompany/{song_name}", timeout=120)
         )
@@ -208,9 +200,7 @@ class AutoConvertMusicEngine(SingingEngine):
         """下载混音成品（人声+伴奏已混合）"""
         resp = await asyncio.get_event_loop().run_in_executor(
             None,
-            lambda: self._get(
-                f"/get_mix/{song_name}{self._speaker_param()}", timeout=120
-            ),
+            lambda: self._get(f"/get_mix/{song_name}{self._speaker_param()}", timeout=120),
         )
         if resp is None or resp.status_code != 200:
             return None
@@ -275,9 +265,7 @@ class RVCEngine(SingingEngine):
 
             os.makedirs(self.output_base_dir, exist_ok=True)
             self.is_initialized = True
-            logger.info(
-                f"RVC engine initialized: {self.api_url} model={self.model_name}"
-            )
+            logger.info(f"RVC engine initialized: {self.api_url} model={self.model_name}")
             return True
         except Exception as e:  # noqa: BLE001 — 唱歌引擎API调用失败降级
             logger.error(f"RVC initialization failed: {e}")
@@ -296,9 +284,7 @@ class RVCEngine(SingingEngine):
             logger.debug(f"RVC GET failed: {url} — {e}")
             return None
 
-    def _post(
-        self, path: str, data: dict = None, files: dict = None, timeout: int = None
-    ) -> Optional[Any]:
+    def _post(self, path: str, data: dict = None, files: dict = None, timeout: int = None) -> Optional[Any]:
         import requests
 
         url = f"{self.api_url}{path}"
@@ -312,9 +298,7 @@ class RVCEngine(SingingEngine):
             return None
 
     async def list_models(self) -> List[str]:
-        resp = await asyncio.get_event_loop().run_in_executor(
-            None, lambda: self._get("/speakers")
-        )
+        resp = await asyncio.get_event_loop().run_in_executor(None, lambda: self._get("/speakers"))
         if resp is None:
             return []
         try:
@@ -350,9 +334,7 @@ class RVCEngine(SingingEngine):
                 }
                 resp = await asyncio.get_event_loop().run_in_executor(
                     None,
-                    lambda d=data, f=files: self._post(
-                        "/vc", data=d, files=f, timeout=120
-                    ),
+                    lambda d=data, f=files: self._post("/vc", data=d, files=f, timeout=120),
                 )
             if resp is None or resp.status_code != 200:
                 return False
@@ -366,9 +348,7 @@ class RVCEngine(SingingEngine):
 
     async def search_song(self, query: str) -> Optional[SongInfo]:
         """搜索歌曲 — 调用 ACM 的 musicInfo 或直接查 NetEase"""
-        resp = await asyncio.get_event_loop().run_in_executor(
-            None, lambda: self._get(f"/musicInfo/{query}")
-        )
+        resp = await asyncio.get_event_loop().run_in_executor(None, lambda: self._get(f"/musicInfo/{query}"))
         if resp is None:
             return None
         try:
@@ -385,9 +365,7 @@ class RVCEngine(SingingEngine):
             return None
 
     async def get_available_songs(self) -> List[str]:
-        resp = await asyncio.get_event_loop().run_in_executor(
-            None, lambda: self._get("/accompany_vocal_status")
-        )
+        resp = await asyncio.get_event_loop().run_in_executor(None, lambda: self._get("/accompany_vocal_status"))
         if resp is None:
             return []
         try:
@@ -396,9 +374,7 @@ class RVCEngine(SingingEngine):
             return []
 
     async def request_learn(self, song_name: str) -> LearnTask:
-        resp = await asyncio.get_event_loop().run_in_executor(
-            None, lambda: self._get(f"/append_song/{song_name}")
-        )
+        resp = await asyncio.get_event_loop().run_in_executor(None, lambda: self._get(f"/append_song/{song_name}"))
         if resp is None:
             return LearnTask(song_name=song_name, status=LearnStatus.FAILED)
         try:
@@ -410,9 +386,7 @@ class RVCEngine(SingingEngine):
             return LearnTask(song_name=song_name, status=LearnStatus.FAILED)
 
     async def get_learn_status(self, song_name: str) -> LearnStatus:
-        resp = await asyncio.get_event_loop().run_in_executor(
-            None, lambda: self._get("/accompany_vocal_status")
-        )
+        resp = await asyncio.get_event_loop().run_in_executor(None, lambda: self._get("/accompany_vocal_status"))
         if resp is None:
             return LearnStatus.FAILED
         try:
@@ -440,9 +414,7 @@ class RVCEngine(SingingEngine):
         logger.info(f"[RVC] Vocal downloaded: {path}")
         return path
 
-    async def download_accompany(
-        self, song_name: str, output_dir: str
-    ) -> Optional[str]:
+    async def download_accompany(self, song_name: str, output_dir: str) -> Optional[str]:
         resp = await asyncio.get_event_loop().run_in_executor(
             None, lambda: self._get(f"/get_accompany/{song_name}", timeout=120)
         )
@@ -493,9 +465,7 @@ class RVCEngine(SingingEngine):
         return path
 
     async def get_failed_songs(self) -> List[str]:
-        resp = await asyncio.get_event_loop().run_in_executor(
-            None, lambda: self._get("/accompany_vocal_status")
-        )
+        resp = await asyncio.get_event_loop().run_in_executor(None, lambda: self._get("/accompany_vocal_status"))
         if resp is None:
             return []
         try:

@@ -104,9 +104,7 @@ class KnowledgeBaseBridge:
 
     def list_kbs(self) -> List[Dict]:
         """列出知识库"""
-        return [
-            {"name": v["name"], "doc_count": v["doc_count"]} for v in self._kbs.values()
-        ]
+        return [{"name": v["name"], "doc_count": v["doc_count"]} for v in self._kbs.values()]
 
 
 # 全局实例

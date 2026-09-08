@@ -183,9 +183,7 @@ class UserPersonaManager:
         except Exception as e:  # noqa: BLE001 — 保存群聊侧写失败已记录日志
             logger.warning(f"[用户侧写系统] 保存群聊侧写失败 {group_id}: {e}")
 
-    def get_or_create_user_persona(
-        self, user_id: str, user_name: str = "", group_id: str = ""
-    ) -> UserPersona:
+    def get_or_create_user_persona(self, user_id: str, user_name: str = "", group_id: str = "") -> UserPersona:
         """获取或创建用户侧写"""
         key = f"{group_id}:{user_id}" if group_id else user_id
 
@@ -203,9 +201,7 @@ class UserPersonaManager:
 
         return self.user_personas[key]
 
-    def get_or_create_group_persona(
-        self, group_id: str, group_name: str = ""
-    ) -> GroupPersona:
+    def get_or_create_group_persona(self, group_id: str, group_name: str = "") -> GroupPersona:
         """获取或创建群聊侧写"""
         if group_id not in self.group_personas:
             self.group_personas[group_id] = GroupPersona(
@@ -407,9 +403,7 @@ class UserPersonaManager:
 
         # 【新增】行为模式
         if persona.active_hours:
-            lines.append(
-                f"活跃时间段: {', '.join(map(str, persona.active_hours[-3:]))}点"
-            )
+            lines.append(f"活跃时间段: {', '.join(map(str, persona.active_hours[-3:]))}点")
         if persona.response_length_prefer:
             lines.append(f"回复偏好: {persona.response_length_prefer}")
         if persona.emoji_frequency > 5:

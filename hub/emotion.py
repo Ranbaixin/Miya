@@ -164,9 +164,7 @@ class Emotion:
         """
         if emotion_type in self.current_emotions:
             # 叠加染色效果
-            self.current_emotions[emotion_type] = min(
-                1.0, self.current_emotions[emotion_type] * (1 + intensity)
-            )
+            self.current_emotions[emotion_type] = min(1.0, self.current_emotions[emotion_type] * (1 + intensity))
 
             # 更新染色层
             self.coloring_layer[emotion_type] = intensity
@@ -188,9 +186,7 @@ class Emotion:
             if new_intensity > 0:
                 self.coloring_layer[emotion_type] = new_intensity
                 # 恢复基础情绪
-                self.current_emotions[emotion_type] = self.base_emotions[
-                    emotion_type
-                ] * (1 + new_intensity)
+                self.current_emotions[emotion_type] = self.base_emotions[emotion_type] * (1 + new_intensity)
             else:
                 del self.coloring_layer[emotion_type]
                 self.current_emotions[emotion_type] = self.base_emotions[emotion_type]
@@ -242,9 +238,7 @@ class Emotion:
             else:
                 # 使用默认情绪配置
                 default_emotions = self._yaml_emotions.get("_default", {})
-                form_style = self._yaml_emotions.get(
-                    self.current_form, default_emotions
-                )
+                form_style = self._yaml_emotions.get(self.current_form, default_emotions)
 
             # 检查回复中是否已经包含情绪词
             emotion_words = {
@@ -260,9 +254,7 @@ class Emotion:
                 phrases = form_style[dominant]
 
                 # 检查回复中是否已有情绪词
-                has_emotion_word = any(
-                    word in response for word in emotion_words.get(dominant, [])
-                )
+                has_emotion_word = any(word in response for word in emotion_words.get(dominant, []))
 
                 if not has_emotion_word and phrases:
                     # 随机选择或根据响应长度选择
@@ -323,9 +315,7 @@ class Emotion:
 
     def get_dominant_existential(self) -> str:
         """获取主导的存在性情感"""
-        return max(
-            self.existential_emotions, key=lambda k: self.existential_emotions[k]
-        )
+        return max(self.existential_emotions, key=lambda k: self.existential_emotions[k])
 
     def adjust_existential(self, emotion_type: str, delta: float) -> bool:
         """调整存在性情感的强度"""

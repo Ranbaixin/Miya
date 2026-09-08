@@ -110,20 +110,14 @@ class TerminalFormatter:
     @classmethod
     def parallel_step(cls, models: list) -> str:
         """并行投票步骤"""
-        models_str = f"{cls.CYAN}, {cls.RESET}".join(
-            f"{cls.CYAN}{m}{cls.RESET}" for m in models
-        )
+        models_str = f"{cls.CYAN}, {cls.RESET}".join(f"{cls.CYAN}{m}{cls.RESET}" for m in models)
         text = f"  {cls.AMBER}{cls.BOLT}{cls.RESET} {cls.DIM}并行调用:{cls.RESET} {models_str}"
         return text
 
     @classmethod
     def role_step(cls, role: str, model_id: str) -> str:
         """角色协作步骤"""
-        text = (
-            f"  {cls.VIOLET}[{role}]{cls.RESET}"
-            f" {cls.DIM}→{cls.RESET}"
-            f" {cls.TEAL}{model_id}{cls.RESET}"
-        )
+        text = f"  {cls.VIOLET}[{role}]{cls.RESET}" f" {cls.DIM}→{cls.RESET}" f" {cls.TEAL}{model_id}{cls.RESET}"
         return text
 
     # ==================== 思考过程 ====================
@@ -131,12 +125,7 @@ class TerminalFormatter:
     @classmethod
     def thinking_block(cls, thinking: str) -> str:
         """思考过程 — 紫罗兰头部 + 琥珀金内容"""
-        text = (
-            f"{cls.VIOLET}{cls.BOLD}"
-            f"◇ 思考过程"
-            f"{cls.RESET}\n"
-            f"{cls.AMBER}{cls.ITALIC}{thinking}{cls.RESET}"
-        )
+        text = f"{cls.VIOLET}{cls.BOLD}" f"◇ 思考过程" f"{cls.RESET}\n" f"{cls.AMBER}{cls.ITALIC}{thinking}{cls.RESET}"
         return text
 
     # ==================== 工具调用 ====================
@@ -151,10 +140,7 @@ class TerminalFormatter:
 
         args_str = ""
         if args:
-            args_str = (
-                f" {cls.DIM}|{cls.RESET}"
-                f" {', '.join(f'{k}={v}' for k, v in list(args.items())[:3])}"
-            )
+            args_str = f" {cls.DIM}|{cls.RESET}" f" {', '.join(f'{k}={v}' for k, v in list(args.items())[:3])}"
 
         if tool_source:
             text = (
@@ -164,9 +150,7 @@ class TerminalFormatter:
             )
         else:
             text = (
-                f"{cls.TEAL}[{cls.BOLT} TOOL]{cls.RESET}"
-                f" {cls.WHITE}{cls.BOLD}{tool_name}{cls.RESET}"
-                f"{args_str}"
+                f"{cls.TEAL}[{cls.BOLT} TOOL]{cls.RESET}" f" {cls.WHITE}{cls.BOLD}{tool_name}{cls.RESET}" f"{args_str}"
             )
         return text
 

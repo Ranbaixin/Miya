@@ -175,9 +175,7 @@ class DatabaseManager:
             cursor.execute("SELECT * FROM sessions WHERE session_id = ?", (session_id,))
             row = cursor.fetchone()
         else:
-            cursor = await self._db.execute(
-                "SELECT * FROM sessions WHERE session_id = ?", (session_id,)
-            )
+            cursor = await self._db.execute("SELECT * FROM sessions WHERE session_id = ?", (session_id,))
             row = await cursor.fetchone()
 
         if row:
@@ -221,18 +219,14 @@ class DatabaseManager:
             try:
                 if self._use_sqlite3:
                     cursor = self._conn.cursor()
-                    cursor.execute(
-                        "DELETE FROM sessions WHERE session_id = ?", (session_id,)
-                    )
+                    cursor.execute("DELETE FROM sessions WHERE session_id = ?", (session_id,))
                     cursor.execute(
                         "DELETE FROM conversation_messages WHERE session_id = ?",
                         (session_id,),
                     )
                     self._conn.commit()
                 else:
-                    await self._db.execute(
-                        "DELETE FROM sessions WHERE session_id = ?", (session_id,)
-                    )
+                    await self._db.execute("DELETE FROM sessions WHERE session_id = ?", (session_id,))
                     await self._db.execute(
                         "DELETE FROM conversation_messages WHERE session_id = ?",
                         (session_id,),
@@ -277,9 +271,7 @@ class DatabaseManager:
                 logger.error(f"[DatabaseManager] 添加消息失败: {e}")
                 return False
 
-    async def get_messages(
-        self, session_id: str, limit: int = 100
-    ) -> List[ConversationMessage]:
+    async def get_messages(self, session_id: str, limit: int = 100) -> List[ConversationMessage]:
         """获取消息历史"""
         if self._use_sqlite3:
             cursor = self._conn.cursor()
@@ -340,9 +332,7 @@ class DatabaseManager:
             cursor.execute("SELECT value FROM config WHERE key = ?", (key,))
             row = cursor.fetchone()
         else:
-            cursor = await self._db.execute(
-                "SELECT value FROM config WHERE key = ?", (key,)
-            )
+            cursor = await self._db.execute("SELECT value FROM config WHERE key = ?", (key,))
             row = await cursor.fetchone()
 
         if row:

@@ -4,6 +4,7 @@ TTS注册管理器
 
 MIYA TTS 系统的管理层
 """
+
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -99,8 +100,9 @@ class TTSRegistry:
         """
         return list(self.engines.keys())
 
-    async def synthesize(self, text: str, engine_name: Optional[str] = None,
-                        output_format: str = "mp3", **kwargs) -> Optional[bytes]:
+    async def synthesize(
+        self, text: str, engine_name: Optional[str] = None, output_format: str = "mp3", **kwargs
+    ) -> Optional[bytes]:
         """
         合成语音
 
@@ -124,9 +126,9 @@ class TTSRegistry:
 
         return await engine.synthesize(text, output_format=output_format, **kwargs)
 
-    async def synthesize_to_file(self, text: str, output_path: str,
-                                engine_name: Optional[str] = None,
-                                output_format: str = "mp3", **kwargs) -> Optional[str]:
+    async def synthesize_to_file(
+        self, text: str, output_path: str, engine_name: Optional[str] = None, output_format: str = "mp3", **kwargs
+    ) -> Optional[str]:
         """
         合成语音并保存到文件
 

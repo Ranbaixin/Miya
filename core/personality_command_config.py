@@ -87,9 +87,7 @@ def get_available_speak_modes() -> List[str]:
     """获取所有可用说话模式"""
     base = _load_base_config()
     speak_modes = base.get("speaking_modes", {})
-    return (
-        list(speak_modes.keys()) if speak_modes else ["casual", "catching", "confiding"]
-    )
+    return list(speak_modes.keys()) if speak_modes else ["casual", "catching", "confiding"]
 
 
 def get_form_info(form_name: str) -> Optional[Dict[str, Any]]:

@@ -45,9 +45,7 @@ class FeatureDevWorkflow:
         """开始功能开发工作流"""
         session_id = context.get("session_id", "default") if context else "default"
 
-        ctx = FeatureContext(
-            feature_name=feature_request, current_phase=Phase.DISCOVERY
-        )
+        ctx = FeatureContext(feature_name=feature_request, current_phase=Phase.DISCOVERY)
         self.active_workflows[session_id] = ctx
 
         return self._format_discovery_phase(feature_request)
@@ -67,16 +65,12 @@ class FeatureDevWorkflow:
 
 请回答这些问题，我会继续进行下一阶段。"""
 
-    async def continue_workflow(
-        self, user_response: str, context: Dict[str, Any] = None
-    ) -> str:
+    async def continue_workflow(self, user_response: str, context: Dict[str, Any] = None) -> str:
         """继续工作流"""
         session_id = context.get("session_id", "default") if context else "default"
 
         if session_id not in self.active_workflows:
-            return (
-                "没有活跃的功能开发会话。请使用 /feature-dev start 来开始新功能开发。"
-            )
+            return "没有活跃的功能开发会话。请使用 /feature-dev start 来开始新功能开发。"
 
         ctx = self.active_workflows[session_id]
 
@@ -228,16 +222,12 @@ class FeatureDevWorkflow:
 _workflow = FeatureDevWorkflow()
 
 
-async def start_feature_dev(
-    feature_request: str, context: Dict[str, Any] = None
-) -> str:
+async def start_feature_dev(feature_request: str, context: Dict[str, Any] = None) -> str:
     """开始功能开发"""
     return await _workflow.start(feature_request, context)
 
 
-async def continue_feature_dev(
-    user_response: str, context: Dict[str, Any] = None
-) -> str:
+async def continue_feature_dev(user_response: str, context: Dict[str, Any] = None) -> str:
     """继续功能开发"""
     return await _workflow.continue_workflow(user_response, context)
 

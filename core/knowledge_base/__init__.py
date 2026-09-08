@@ -83,9 +83,7 @@ class KnowledgeBaseManager:
     ) -> "KnowledgeBase":
         """创建知识库"""
         kb = KnowledgeBase(
-            kb_id=asyncio.current_task().get_name()
-            if asyncio.current_task()
-            else "default",
+            kb_id=asyncio.current_task().get_name() if asyncio.current_task() else "default",
             kb_name=kb_name,
             description=description,
             embedding_provider_id=embedding_provider_id,
@@ -103,10 +101,7 @@ class KnowledgeBaseManager:
         context_text = "以下是相关的知识库内容,请参考这些信息回答用户的问题:\n"
 
         # 简化实现
-        lines = [
-            f"【知识 {i + 1}】\n内容: ...\n相关度: {1.0 - i * 0.1}"
-            for i in range(min(top_k, 5))
-        ]
+        lines = [f"【知识 {i + 1}】\n内容: ...\n相关度: {1.0 - i * 0.1}" for i in range(min(top_k, 5))]
 
         return {
             "context_text": context_text + "\n".join(lines),
@@ -165,9 +160,7 @@ class SparseRetriever:
         self.kb_db = kb_db
         self._index = {}
 
-    async def search(
-        self, query: str, kb_ids: list[str], top_k: int = 50
-    ) -> list[RetrievalResult]:
+    async def search(self, query: str, kb_ids: list[str], top_k: int = 50) -> list[RetrievalResult]:
         """BM25 搜索"""
         # 简化实现
         return []

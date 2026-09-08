@@ -113,12 +113,8 @@ class HookManager:
             enabled=frontmatter.get("enabled", "true").lower() == "true",
             event=frontmatter.get("event", "all"),
             pattern=frontmatter.get("pattern", ""),
-            action=ActionType.BLOCK
-            if frontmatter.get("action") == "block"
-            else ActionType.WARN,
-            message=content[content.find("---", 3) + 3 :]
-            if "---" in content[3:]
-            else "",
+            action=ActionType.BLOCK if frontmatter.get("action") == "block" else ActionType.WARN,
+            message=content[content.find("---", 3) + 3 :] if "---" in content[3:] else "",
         )
 
     def check(self, event: str, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -207,9 +203,7 @@ def check_hook(event: str, context: Dict[str, Any]) -> Dict[str, Any]:
     return _hook_manager.check(event, context)
 
 
-def add_hook_rule(
-    name: str, event: str, pattern: str, action: str = "warn", message: str = ""
-):
+def add_hook_rule(name: str, event: str, pattern: str, action: str = "warn", message: str = ""):
     """添加 hook 规则"""
     rule = HookRule(
         name=name,

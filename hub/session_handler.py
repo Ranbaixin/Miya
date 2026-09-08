@@ -106,23 +106,15 @@ class SessionHandler:
             logger.error(f"[会话处理] 处理会话结束失败: {e}", exc_info=True)
             return {"success": False, "message": str(e)}
 
-    async def _fetch_messages(
-        self, session_id: str, platform: str, memory_net=None
-    ) -> List[Dict]:
+    async def _fetch_messages(self, session_id: str, platform: str, memory_net=None) -> List[Dict]:
         """获取对话消息"""
         messages = []
 
         # 尝试从 memory_net 获取
-        if (
-            memory_net
-            and hasattr(memory_net, "conversation_history")
-            and memory_net.conversation_history
-        ):
+        if memory_net and hasattr(memory_net, "conversation_history") and memory_net.conversation_history:
             try:
                 full_session_id = f"{platform}_{session_id}"
-                msgs = await memory_net.conversation_history.get_history(
-                    full_session_id, limit=100
-                )
+                msgs = await memory_net.conversation_history.get_history(full_session_id, limit=100)
                 if msgs:
                     return [{"role": m.role, "content": m.content} for m in msgs]
             except Exception as e:  # noqa: BLE001 — 消息读取失败降级为空
@@ -157,9 +149,7 @@ class SessionHandler:
                 topics.append(topic)
         return topics
 
-    async def generate_daily_summary(
-        self, date_key: Optional[str] = None, custom_summary: str = ""
-    ) -> Dict:
+    async def generate_daily_summary(self, date_key: Optional[str] = None, custom_summary: str = "") -> Dict:
         """生成每日总结"""
         try:
             file_path = await self.lifebook.generate_daily_summary(

@@ -372,21 +372,23 @@ class ToolRegistry:
         )
 
     def _load_group_tools(self):
-        """加载群工具"""
-        from webnet.ToolNet.tools.group.add_member import AddMemberTool
-        from webnet.ToolNet.tools.group.get_group_info import GetGroupInfoTool
-        from webnet.ToolNet.tools.group.list_members import ListMembersTool
-        from webnet.ToolNet.tools.group.remove_member import RemoveMemberTool
-        from webnet.ToolNet.tools.group.set_group_name import SetGroupNameTool
-
-        self.register(ListMembersTool())
-        self.register(AddMemberTool())
-        self.register(RemoveMemberTool())
-        self.register(SetGroupNameTool())
-        self.register(GetGroupInfoTool())
-        self.logger.info(
-            "已加载群工具: ListMembersTool, AddMemberTool, RemoveMemberTool, SetGroupNameTool, GetGroupInfoTool"
-        )
+        """群工具 —— 2026-09 暂停注册：当前全部为占位实现（返回占位文案），
+        暴露给 LLM 会消耗 function-call 并误导用户；接入真实现后再恢复注册。"""
+        self.logger.info("群工具为占位实现，暂不注册（见 registry.py _load_group_tools 注释）")
+        # from webnet.ToolNet.tools.group.add_member import AddMemberTool
+        # from webnet.ToolNet.tools.group.get_group_info import GetGroupInfoTool
+        # from webnet.ToolNet.tools.group.list_members import ListMembersTool
+        # from webnet.ToolNet.tools.group.remove_member import RemoveMemberTool
+        # from webnet.ToolNet.tools.group.set_group_name import SetGroupNameTool
+        #
+        # self.register(ListMembersTool())
+        # self.register(AddMemberTool())
+        # self.register(RemoveMemberTool())
+        # self.register(SetGroupNameTool())
+        # self.register(GetGroupInfoTool())
+        # self.logger.info(
+        #     "已加载群工具: ListMembersTool, AddMemberTool, RemoveMemberTool, SetGroupNameTool, GetGroupInfoTool"
+        # )
 
     def _load_memory_tools(self):
         """加载记忆工具（使用统一记忆接口）"""
@@ -416,30 +418,34 @@ class ToolRegistry:
         )
 
     def _load_knowledge_tools(self):
-        """加载知识库工具"""
-        from webnet.ToolNet.tools.knowledge.add_knowledge import AddKnowledgeTool
-        from webnet.ToolNet.tools.knowledge.delete_knowledge import DeleteKnowledgeTool
-        from webnet.ToolNet.tools.knowledge.search_knowledge import SearchKnowledgeTool
-
-        self.register(AddKnowledgeTool())
-        self.register(SearchKnowledgeTool())
-        self.register(DeleteKnowledgeTool())
-        self.logger.info(
-            "已加载知识库工具: AddKnowledgeTool, SearchKnowledgeTool, DeleteKnowledgeTool"
-        )
+        """知识库工具 —— 2026-09 暂停注册：当前为占位实现；真实知识检索
+        走 core/knowledge_base/bridge.py 的 search_knowledge，待桥接后恢复。"""
+        self.logger.info("知识库工具为占位实现，暂不注册（真实检索走 knowledge_base.bridge）")
+        # from webnet.ToolNet.tools.knowledge.add_knowledge import AddKnowledgeTool
+        # from webnet.ToolNet.tools.knowledge.delete_knowledge import DeleteKnowledgeTool
+        # from webnet.ToolNet.tools.knowledge.search_knowledge import SearchKnowledgeTool
+        #
+        # self.register(AddKnowledgeTool())
+        # self.register(SearchKnowledgeTool())
+        # self.register(DeleteKnowledgeTool())
+        # self.logger.info(
+        #     "已加载知识库工具: AddKnowledgeTool, SearchKnowledgeTool, DeleteKnowledgeTool"
+        # )
 
     def _load_cognitive_tools(self):
-        """加载认知工具"""
-        from webnet.ToolNet.tools.cognitive.get_profile import GetProfileTool
-        from webnet.ToolNet.tools.cognitive.search_events import SearchEventsTool
-        from webnet.ToolNet.tools.cognitive.search_profiles import SearchProfilesTool
-
-        self.register(GetProfileTool())
-        self.register(SearchProfilesTool())
-        self.register(SearchEventsTool())
-        self.logger.info(
-            "已加载认知工具: GetProfileTool, SearchProfilesTool, SearchEventsTool"
-        )
+        """认知工具 —— 2026-09 暂停注册：当前为占位实现，暴露给 LLM 只会
+        返回占位文案；接入真实现后再恢复注册。"""
+        self.logger.info("认知工具为占位实现，暂不注册（见 _load_cognitive_tools 注释）")
+        # from webnet.ToolNet.tools.cognitive.get_profile import GetProfileTool
+        # from webnet.ToolNet.tools.cognitive.search_events import SearchEventsTool
+        # from webnet.ToolNet.tools.cognitive.search_profiles import SearchProfilesTool
+        #
+        # self.register(GetProfileTool())
+        # self.register(SearchProfilesTool())
+        # self.register(SearchEventsTool())
+        # self.logger.info(
+        #     "已加载认知工具: GetProfileTool, SearchProfilesTool, SearchEventsTool"
+        # )
 
     def _load_bilibili_tools(self):
         """加载B站工具"""

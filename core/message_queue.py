@@ -100,9 +100,7 @@ class LaneQueue:
         return items
 
     def retry_count(self) -> int:
-        return sum(
-            1 for item in self._items if int(item.get("_retry_count", 0) or 0) > 0
-        )
+        return sum(1 for item in self._items if int(item.get("_retry_count", 0) or 0) > 0)
 
 
 @dataclass
@@ -169,9 +167,7 @@ class MessageQueueManager:
             if isinstance(name, str) and name.strip():
                 normalized[name.strip()] = max(0.1, float(interval))
         self._model_intervals = normalized
-        logger.info(
-            f"[消息队列] 已更新模型发车节奏: count={len(self._model_intervals)}"
-        )
+        logger.info(f"[消息队列] 已更新模型发车节奏: count={len(self._model_intervals)}")
 
     def get_interval(self, model_name: str) -> float:
         """获取模型发车节奏"""
@@ -258,9 +254,7 @@ class MessageQueueManager:
         else:
             await lane_queue.put(request)
 
-        logger.info(
-            f"[入队][{model_name}] {display_name}: size={lane_queue.qsize()} {self._format_meta(request)}"
-        )
+        logger.info(f"[入队][{model_name}] {display_name}: size={lane_queue.qsize()} {self._format_meta(request)}")
 
         return QueueReceipt(
             model_name=model_name,
@@ -269,54 +263,30 @@ class MessageQueueManager:
             estimated_wait_seconds=self.estimate_wait(model_name, lane),
         )
 
-    async def add_superadmin(
-        self, request: dict, model_name: str = "default"
-    ) -> QueueReceipt:
-        return await self._enqueue(
-            request, model_name, QUEUE_LANE_SUPERADMIN, "超级管理员私聊"
-        )
+    async def add_superadmin(self, request: dict, model_name: str = "default") -> QueueReceipt:
+        return await self._enqueue(request, model_name, QUEUE_LANE_SUPERADMIN, "超级管理员私聊")
 
-    async def add_group_superadmin(
-        self, request: dict, model_name: str = "default"
-    ) -> QueueReceipt:
-        return await self._enqueue(
-            request, model_name, QUEUE_LANE_GROUP_SUPERADMIN, "群聊超级管理员"
-        )
+    async def add_group_superadmin(self, request: dict, model_name: str = "default") -> QueueReceipt:
+        return await self._enqueue(request, model_name, QUEUE_LANE_GROUP_SUPERADMIN, "群聊超级管理员")
 
-    async def add_private(
-        self, request: dict, model_name: str = "default"
-    ) -> QueueReceipt:
+    async def add_private(self, request: dict, model_name: str = "default") -> QueueReceipt:
         return await self._enqueue(request, model_name, QUEUE_LANE_PRIVATE, "普通私聊")
 
-    async def add_group_mention(
-        self, request: dict, model_name: str = "default"
-    ) -> QueueReceipt:
-        return await self._enqueue(
-            request, model_name, QUEUE_LANE_GROUP_MENTION, "群聊被@"
-        )
+    async def add_group_mention(self, request: dict, model_name: str = "default") -> QueueReceipt:
+        return await self._enqueue(request, model_name, QUEUE_LANE_GROUP_MENTION, "群聊被@")
 
-    async def add_group_normal(
-        self, request: dict, model_name: str = "default"
-    ) -> QueueReceipt:
-        return await self._enqueue(
-            request, model_name, QUEUE_LANE_GROUP_NORMAL, "群聊普通"
-        )
+    async def add_group_normal(self, request: dict, model_name: str = "default") -> QueueReceipt:
+        return await self._enqueue(request, model_name, QUEUE_LANE_GROUP_NORMAL, "群聊普通")
 
-    async def add_background(
-        self, request: dict, model_name: str = "default"
-    ) -> QueueReceipt:
-        return await self._enqueue(
-            request, model_name, QUEUE_LANE_BACKGROUND, "后台请求"
-        )
+    async def add_background(self, request: dict, model_name: str = "default") -> QueueReceipt:
+        return await self._enqueue(request, model_name, QUEUE_LANE_BACKGROUND, "后台请求")
 
     async def _process_model_loop(self, model_name: str) -> None:
         """模型处理循环（非阻塞发车）"""
         model_queue = self._model_queues[model_name]
         lane_queues = model_queue.lane_queues()
         rotating_queues = [lane_queues[lane] for lane in ROTATING_QUEUE_LANES]
-        rotating_names = [
-            QUEUE_LANE_DISPLAY_NAMES[lane] for lane in ROTATING_QUEUE_LANES
-        ]
+        rotating_names = [QUEUE_LANE_DISPLAY_NAMES[lane] for lane in ROTATING_QUEUE_LANES]
 
         current_idx = 0
         processed_count = 0
@@ -359,12 +329,8 @@ class MessageQueueManager:
                     dispatch_name = QUEUE_LANE_DISPLAY_NAMES[QUEUE_LANE_BACKGROUND]
 
                 if request and self._request_handler:
-                    logger.info(
-                        f"[发车][{model_name}] {dispatch_name}: {self._format_meta(request)}"
-                    )
-                    task = asyncio.create_task(
-                        self._safe_handle(request, model_name, dispatch_name)
-                    )
+                    logger.info(f"[发车][{model_name}] {dispatch_name}: {self._format_meta(request)}")
+                    task = asyncio.create_task(self._safe_handle(request, model_name, dispatch_name))
                     self._track_inflight(task)
 
                 elapsed = time.perf_counter() - cycle_start
@@ -375,23 +341,17 @@ class MessageQueueManager:
         except Exception as e:
             logger.exception(f"[消息队列] 处理循环异常: {model_name} - {e}")
 
-    async def _safe_handle(
-        self, request: dict, model_name: str, queue_name: str
-    ) -> None:
+    async def _safe_handle(self, request: dict, model_name: str, queue_name: str) -> None:
         """安全执行请求"""
         start = time.perf_counter()
         try:
             if self._request_handler:
                 await self._request_handler(request)
             elapsed = time.perf_counter() - start
-            logger.info(
-                f"[完成][{model_name}] {queue_name}: {elapsed:.2f}s {self._format_meta(request)}"
-            )
+            logger.info(f"[完成][{model_name}] {queue_name}: {elapsed:.2f}s {self._format_meta(request)}")
         except Exception as e:  # noqa: BLE001 — 请求处理失败已记录日志
             elapsed = time.perf_counter() - start
-            logger.error(
-                f"[失败][{model_name}] {queue_name}: {elapsed:.2f}s {self._format_meta(request)} - {e}"
-            )
+            logger.error(f"[失败][{model_name}] {queue_name}: {elapsed:.2f}s {self._format_meta(request)} - {e}")
 
     def snapshot(self) -> dict:
         """队列状态快照"""

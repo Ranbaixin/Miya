@@ -56,13 +56,9 @@ class BasePlatform(ABC):
         self.config = config or {}
         self._health = PlatformHealth()
         self._health.status = PlatformStatus.DISABLED
-        self._health.max_reconnect_attempts = (
-            self.reconnect_policy.max_attempts if self.reconnect_policy else 10
-        )
+        self._health.max_reconnect_attempts = self.reconnect_policy.max_attempts if self.reconnect_policy else 10
 
-        self._event_listeners: Dict[PlatformEvent, list[Callable]] = {
-            e: [] for e in PlatformEvent
-        }
+        self._event_listeners: Dict[PlatformEvent, list[Callable]] = {e: [] for e in PlatformEvent}
         self._tasks: list[asyncio.Task] = []
         self._lock = asyncio.Lock()
 
@@ -114,16 +110,12 @@ class BasePlatform(ABC):
                     await self._do_start()
 
                     if self.health_check_interval > 0:
-                        self._tasks.append(
-                            asyncio.create_task(self._health_check_loop())
-                        )
+                        self._tasks.append(asyncio.create_task(self._health_check_loop()))
                     return True
                 else:
                     self._set_status(PlatformStatus.ERROR)
                     self._health.last_error = "_do_connect 返回 False"
-                    await self._emit(
-                        PlatformEvent.ERROR, {"error": "connect returned False"}
-                    )
+                    await self._emit(PlatformEvent.ERROR, {"error": "connect returned False"})
                     return False
 
             except Exception as e:  # noqa: BLE001 — 连接异常设置错误状态已记录日志
@@ -187,16 +179,10 @@ class BasePlatform(ABC):
         success = await run_reconnect_loop(
             policy=self.reconnect_policy,
             connect_fn=try_connect,
-            on_reconnecting=lambda a, d: self._emit(
-                PlatformEvent.RECONNECTING, {"attempt": a, "delay": d}
-            ),
-            on_reconnected=lambda a: self._emit(
-                PlatformEvent.RECONNECTED, {"attempt": a}
-            ),
+            on_reconnecting=lambda a, d: self._emit(PlatformEvent.RECONNECTING, {"attempt": a, "delay": d}),
+            on_reconnected=lambda a: self._emit(PlatformEvent.RECONNECTED, {"attempt": a}),
             on_give_up=lambda a: self._on_reconnect_failed(a),
-            on_error=lambda a, e: logger.warning(
-                f"[{self.platform_id}] 重连 {a} 失败: {e}"
-            ),
+            on_error=lambda a, e: logger.warning(f"[{self.platform_id}] 重连 {a} 失败: {e}"),
         )
 
         if success:
@@ -220,9 +206,7 @@ class BasePlatform(ABC):
             PlatformEvent.RECONNECT_FAILED,
             {
                 "attempt": attempt,
-                "max_attempts": self.reconnect_policy.max_attempts
-                if self.reconnect_policy
-                else 0,
+                "max_attempts": self.reconnect_policy.max_attempts if self.reconnect_policy else 0,
             },
         )
 
@@ -238,9 +222,7 @@ class BasePlatform(ABC):
                     consecutive_failures += 1
                     # 仅首次失败或每 10 次记录一次，避免日志刷屏
                     if consecutive_failures == 1 or consecutive_failures % 10 == 0:
-                        logger.warning(
-                            f"[{self.platform_id}] 健康检查失败 (第{consecutive_failures}次)"
-                        )
+                        logger.warning(f"[{self.platform_id}] 健康检查失败 (第{consecutive_failures}次)")
                     if self.auto_reconnect:
                         await self._reconnect()
                         consecutive_failures = 0

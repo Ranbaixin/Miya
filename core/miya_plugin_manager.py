@@ -95,9 +95,7 @@ class MiyaPluginManager:
                 for name, p in self._plugins.items()
             }
         }
-        config_path.write_text(
-            json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
+        config_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
     async def install(self, plugin_name: str, zip_path: Path) -> bool:
         """安装插件
@@ -134,9 +132,7 @@ class MiyaPluginManager:
             logger.error(f"安装插件 {plugin_name} 失败: {e}")
             return False
 
-    async def _detect_plugin_info(
-        self, plugin_name: str, plugin_dir: Path
-    ) -> InstalledPlugin:
+    async def _detect_plugin_info(self, plugin_name: str, plugin_dir: Path) -> InstalledPlugin:
         """检测插件信息"""
         description = ""
         author = ""

@@ -28,16 +28,12 @@ def _load_vision_config():
         from pathlib import Path
 
         # 从 multi_model_config.json 加载视觉配置
-        config_path = (
-            Path(__file__).parent.parent / "config" / "multi_model_config.json"
-        )
+        config_path = Path(__file__).parent.parent / "config" / "multi_model_config.json"
         try:
             with open(config_path, "r", encoding="utf-8") as f:
                 full_config = json.load(f)
                 _vision_config = full_config.get("vision_preferences", {})
-                logger.info(
-                    "[MultiVisionAnalyzer] 已从 multi_model_config.json 加载视觉配置"
-                )
+                logger.info("[MultiVisionAnalyzer] 已从 multi_model_config.json 加载视觉配置")
         except Exception as e:  # noqa: BLE001 — 加载视觉配置失败回退默认
             logger.warning(f"[MultiVisionAnalyzer] 加载视觉配置失败: {e}, 使用默认配置")
             _vision_config = {}
@@ -187,17 +183,12 @@ class MultiVisionAnalyzer:
                 provider = model_cfg.get("provider", "siliconflow")
                 api_base = model_cfg.get("base_url", "")
                 if not api_base:
-                    logger.warning(
-                        f"[MultiVisionAnalyzer] {model_id} 无 base_url，跳过"
-                    )
+                    logger.warning(f"[MultiVisionAnalyzer] {model_id} 无 base_url，跳过")
                     continue
 
                 # 选择模型类型
                 model_name = model_cfg.get("name", "").lower()
-                if any(
-                    kw in model_name
-                    for kw in ["qwen", "glm", "internvl", "llava", "kimi", "moonshot"]
-                ):
+                if any(kw in model_name for kw in ["qwen", "glm", "internvl", "llava", "kimi", "moonshot"]):
                     v_model_type = VisionModelType.ZHIPU_VL if "glm" in model_name else VisionModelType.SILICONFLOW_VL
                 else:
                     v_model_type = VisionModelType.SIMPLE_ANALYSIS
@@ -211,19 +202,13 @@ class MultiVisionAnalyzer:
                     api_key_env="",
                     enabled=defaults.get("enabled", True),
                     cost_per_call=defaults.get("cost_per_call", 0.0),
-                    max_tokens=model_cfg.get(
-                        "max_tokens", defaults.get("max_tokens", 500)
-                    ),
-                    timeout=quality_settings.get(
-                        "timeout_seconds", 0
-                    ),  # 0 表示使用配置文件的 timeout
+                    max_tokens=model_cfg.get("max_tokens", defaults.get("max_tokens", 500)),
+                    timeout=quality_settings.get("timeout_seconds", 0),  # 0 表示使用配置文件的 timeout
                     priority=priority_map.get(model_id) or defaults.get("priority", 1),
                 )
                 self.models[model_id] = vision_config
                 available_models.append(model_id)
-                logger.info(
-                    f"[MultiVisionAnalyzer] {model_cfg.get('name')} 已启用 (来自配置)"
-                )
+                logger.info(f"[MultiVisionAnalyzer] {model_cfg.get('name')} 已启用 (来自配置)")
 
             # 添加模型池中已有的视觉模型（排除禁用的）
             for model_config in pool_vision_models:
@@ -252,17 +237,12 @@ class MultiVisionAnalyzer:
                     "siliconflow": "siliconflow",
                     "openai": "openai",
                 }
-                provider = provider_map.get(
-                    model_config.provider, str(model_config.provider)
-                )
+                provider = provider_map.get(model_config.provider, str(model_config.provider))
 
                 model_name = model_config.name.lower()
                 if "glm" in model_name:
                     v_model_type = VisionModelType.ZHIPU_VL
-                elif any(
-                    kw in model_name
-                    for kw in ["qwen", "internvl", "llava", "kimi", "moonshot"]
-                ):
+                elif any(kw in model_name for kw in ["qwen", "internvl", "llava", "kimi", "moonshot"]):
                     v_model_type = VisionModelType.SILICONFLOW_VL
                 else:
                     v_model_type = VisionModelType.SIMPLE_ANALYSIS
@@ -276,8 +256,7 @@ class MultiVisionAnalyzer:
                     api_key_env="",
                     enabled=defaults.get("enabled", True),
                     cost_per_call=defaults.get("cost_per_call", 0.0),
-                    max_tokens=model_config.max_tokens
-                    or defaults.get("max_tokens", 500),
+                    max_tokens=model_config.max_tokens or defaults.get("max_tokens", 500),
                     timeout=0,  # 使用配置文件 timeout
                     priority=priority_map.get(model_id) or defaults.get("priority", 1),
                     error_count=defaults.get("error_count", 0),
@@ -286,9 +265,7 @@ class MultiVisionAnalyzer:
                 )
                 self.models[model_id] = vision_config
                 available_models.append(model_id)
-                logger.info(
-                    f"[MultiVisionAnalyzer] {model_config.name} 已启用 (来自模型池)"
-                )
+                logger.info(f"[MultiVisionAnalyzer] {model_config.name} 已启用 (来自模型池)")
 
             # 添加简单分析作为兜底
             simple_defaults = config.get("simple_fallback", {})
@@ -305,18 +282,12 @@ class MultiVisionAnalyzer:
             )
 
             if not available_models:
-                logger.warning(
-                    "[MultiVisionAnalyzer] 没有可用的视觉模型API，将使用本地分析"
-                )
+                logger.warning("[MultiVisionAnalyzer] 没有可用的视觉模型API，将使用本地分析")
 
             self._initialized = True
-            logger.info(
-                f"[MultiVisionAnalyzer] 初始化完成，已启用 {len(available_models)} 个视觉模型"
-            )
+            logger.info(f"[MultiVisionAnalyzer] 初始化完成，已启用 {len(available_models)} 个视觉模型")
 
-    async def analyze_image(
-        self, image_data: bytes, max_retries: int = 3
-    ) -> ImageAnalysisResult:
+    async def analyze_image(self, image_data: bytes, max_retries: int = 3) -> ImageAnalysisResult:
         """
         分析图片（多模型智能路由 + 协作模式）
 
@@ -365,12 +336,8 @@ class MultiVisionAnalyzer:
                 else:
                     # API调用
                     logger.info(f"[MultiVisionAnalyzer] 调用API: {selected_model.name}")
-                    result = await self._call_vision_api(
-                        selected_model, image_base64, image_format
-                    )
-                    logger.info(
-                        f"[MultiVisionAnalyzer] API返回结果: {result.get('description', 'empty')[:50]}"
-                    )
+                    result = await self._call_vision_api(selected_model, image_base64, image_format)
+                    logger.info(f"[MultiVisionAnalyzer] API返回结果: {result.get('description', 'empty')[:50]}")
 
                 # 更新模型统计
                 self._update_model_stats(selected_model, success=True)
@@ -395,9 +362,7 @@ class MultiVisionAnalyzer:
                 )
 
             except Exception as e:  # noqa: BLE001 — 模型分析失败已记录日志
-                logger.warning(
-                    f"[MultiVisionAnalyzer] {selected_model.name} 分析失败: {e}"
-                )
+                logger.warning(f"[MultiVisionAnalyzer] {selected_model.name} 分析失败: {e}")
 
                 # 更新模型统计
                 self._update_model_stats(selected_model, success=False)
@@ -409,9 +374,7 @@ class MultiVisionAnalyzer:
 
                 if fallback and fallback.name not in tried_models:
                     selected_model = fallback
-                    logger.info(
-                        f"[MultiVisionAnalyzer] 切换到备用模型: {selected_model.name}"
-                    )
+                    logger.info(f"[MultiVisionAnalyzer] 切换到备用模型: {selected_model.name}")
                     continue
 
                 # 没有备用模型，直接返回简单分析
@@ -433,9 +396,7 @@ class MultiVisionAnalyzer:
                 )
 
         # 所有模型重试完毕仍失败 → 回退到简单分析
-        logger.warning(
-            "[MultiVisionAnalyzer] 所有 API 模型均已失败，回退到本地简单分析"
-        )
+        logger.warning("[MultiVisionAnalyzer] 所有 API 模型均已失败，回退到本地简单分析")
         processing_time_ms = (time.time() - start_time) * 1000
         simple_result = self._simple_image_analysis(image_data)
         return ImageAnalysisResult(
@@ -451,9 +412,7 @@ class MultiVisionAnalyzer:
             processing_time_ms=processing_time_ms,
         )
 
-    async def _select_best_model(
-        self, exclude: Optional[set] = None
-    ) -> VisionModelConfig:
+    async def _select_best_model(self, exclude: Optional[set] = None) -> VisionModelConfig:
         """选择最佳模型（基于优先级、成本和可用性）"""
         available_models = [
             model
@@ -487,16 +446,12 @@ class MultiVisionAnalyzer:
         )
         return best_model
 
-    async def _select_fallback_model(
-        self, current_model: VisionModelConfig
-    ) -> Optional[VisionModelConfig]:
+    async def _select_fallback_model(self, current_model: VisionModelConfig) -> Optional[VisionModelConfig]:
         """选择备用模型 - 简单轮换"""
         available_models = [
             model
             for model in self.models.values()
-            if model.enabled
-            and model != current_model
-            and model.model_type != VisionModelType.SIMPLE_ANALYSIS
+            if model.enabled and model != current_model and model.model_type != VisionModelType.SIMPLE_ANALYSIS
         ]
 
         if not available_models:
@@ -504,9 +459,7 @@ class MultiVisionAnalyzer:
 
         # 按优先级排序，返回第一个
         available_models.sort(key=lambda m: m.priority)
-        logger.info(
-            f"[MultiVisionAnalyzer] 备用模型列表: {[m.name for m in available_models]}"
-        )
+        logger.info(f"[MultiVisionAnalyzer] 备用模型列表: {[m.name for m in available_models]}")
 
         return available_models[0]
 
@@ -529,9 +482,7 @@ class MultiVisionAnalyzer:
 
         if len(available_models) < 2:
             # 只有一个模型，回退到传统模式
-            return await self._analyze_single_model(
-                image_data, image_base64, image_format, image_size_kb, start_time
-            )
+            return await self._analyze_single_model(image_data, image_base64, image_format, image_size_kb, start_time)
 
         # 按优先级排序
         available_models.sort(key=lambda m: m.priority)
@@ -540,9 +491,7 @@ class MultiVisionAnalyzer:
         logger.info("[MultiVisionAnalyzer] 使用链式协作模式")
 
         model_1 = available_models[0]
-        model_2 = (
-            available_models[1] if len(available_models) > 1 else available_models[0]
-        )
+        model_2 = available_models[1] if len(available_models) > 1 else available_models[0]
 
         # 步骤1: 模型1语义理解
         logger.info(f"[MultiVisionAnalyzer] 步骤1: {model_1.name} 语义理解")
@@ -556,12 +505,8 @@ class MultiVisionAnalyzer:
         result_2 = await self._call_vision_api(model_2, image_base64, image_format)
 
         # 合并结果
-        final_description = (
-            f"{understanding}\n\n详细分析：{result_2.get('description', '')}"
-        )
-        final_labels = list(
-            set(result_1.get("labels", []) + result_2.get("labels", []))
-        )
+        final_description = f"{understanding}\n\n详细分析：{result_2.get('description', '')}"
+        final_labels = list(set(result_1.get("labels", []) + result_2.get("labels", [])))
 
         # 更新模型统计
         self._update_model_stats(model_1, success=True)
@@ -570,8 +515,7 @@ class MultiVisionAnalyzer:
         processing_time_ms = (time.time() - start_time) * 1000
 
         logger.info(
-            f"[MultiVisionAnalyzer] 协作完成: {model_1.name} + {model_2.name}, "
-            f"耗时{processing_time_ms:.0f}ms"
+            f"[MultiVisionAnalyzer] 协作完成: {model_1.name} + {model_2.name}, " f"耗时{processing_time_ms:.0f}ms"
         )
 
         return ImageAnalysisResult(
@@ -606,9 +550,7 @@ class MultiVisionAnalyzer:
         if selected_model.model_type == VisionModelType.SIMPLE_ANALYSIS:
             result = self._simple_image_analysis(image_data)
         else:
-            result = await self._call_vision_api(
-                selected_model, image_base64, image_format
-            )
+            result = await self._call_vision_api(selected_model, image_base64, image_format)
 
         self._update_model_stats(selected_model, success=True)
 
@@ -659,9 +601,7 @@ class MultiVisionAnalyzer:
                             {"type": "text", "text": prompt},
                             {
                                 "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/{image_format};base64,{image_base64}"
-                                },
+                                "image_url": {"url": f"data:image/{image_format};base64,{image_base64}"},
                             },
                         ],
                     }
@@ -681,9 +621,7 @@ class MultiVisionAnalyzer:
                             {"type": "text", "text": prompt},
                             {
                                 "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/{image_format};base64,{image_base64}"
-                                },
+                                "image_url": {"url": f"data:image/{image_format};base64,{image_base64}"},
                             },
                         ],
                     }
@@ -702,9 +640,7 @@ class MultiVisionAnalyzer:
                             "role": "user",
                             "content": [
                                 {"text": prompt},
-                                {
-                                    "image": f"data:image/{image_format};base64,{image_base64}"
-                                },
+                                {"image": f"data:image/{image_format};base64,{image_base64}"},
                             ],
                         }
                     ]
@@ -716,35 +652,21 @@ class MultiVisionAnalyzer:
             raise ValueError(f"不支持的提供商: {model_config.provider}")
 
         # 使用配置文件的 timeout（如果 model_config.timeout 为 0）
-        timeout_value = (
-            model_config.timeout
-            if model_config.timeout > 0
-            else _load_vision_config().get("timeout", 60)
-        )
+        timeout_value = model_config.timeout if model_config.timeout > 0 else _load_vision_config().get("timeout", 60)
 
         try:
-            response = await self.http_client.post(
-                url, json=payload, headers=headers, timeout=timeout_value
-            )
+            response = await self.http_client.post(url, json=payload, headers=headers, timeout=timeout_value)
 
             if response.status_code == 200:
                 result = response.json()
 
                 # 提取分析结果
                 if model_config.provider == "zhipu":
-                    content = (
-                        result.get("choices", [{}])[0]
-                        .get("message", {})
-                        .get("content", "")
-                    )
+                    content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
                 elif model_config.provider == "dashscope":
                     content = result.get("output", {}).get("text", "")
                 else:
-                    content = (
-                        result.get("choices", [{}])[0]
-                        .get("message", {})
-                        .get("content", "")
-                    )
+                    content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
 
                 labels = self._extract_labels_from_description(content)
 
@@ -852,20 +774,11 @@ class MultiVisionAnalyzer:
 
             # 判断是否可能是表情包
             is_emoji_like = (
-                width <= 500
-                and height <= 500
-                and size_kb < 500
-                and (image_format == "gif" or image_format == "png")
+                width <= 500 and height <= 500 and size_kb < 500 and (image_format == "gif" or image_format == "png")
             )
 
             # 判断是否可能是截图
-            is_screenshot = (
-                width >= 800
-                and height >= 600
-                and image_format == "png"
-                and avg_b > avg_r
-                and avg_b > avg_g
-            )
+            is_screenshot = width >= 800 and height >= 600 and image_format == "png" and avg_b > avg_r and avg_b > avg_g
 
             # 从配置加载模板
             config = _load_vision_config()
@@ -892,13 +805,9 @@ class MultiVisionAnalyzer:
             if image_format == "gif":
                 description += "，" + simple_config.get("gif_addon", "这是一张GIF动图")
             if is_emoji_like:
-                description += "，" + simple_config.get(
-                    "emoji_like_addon", "看起来像是一个表情包"
-                )
+                description += "，" + simple_config.get("emoji_like_addon", "看起来像是一个表情包")
             if is_screenshot:
-                description += "，" + simple_config.get(
-                    "screenshot_addon", "可能是一张截图"
-                )
+                description += "，" + simple_config.get("screenshot_addon", "可能是一张截图")
 
             # 生成标签
             labels = [image_format.upper()]
@@ -1020,9 +929,7 @@ class MultiVisionAnalyzer:
             stats["error_calls"] += 1
             model.error_count += 1
 
-    def _create_error_result(
-        self, error_message: str, processing_time_ms: float
-    ) -> ImageAnalysisResult:
+    def _create_error_result(self, error_message: str, processing_time_ms: float) -> ImageAnalysisResult:
         """创建错误结果"""
         return ImageAnalysisResult(
             success=False,
@@ -1061,9 +968,7 @@ async def get_vision_analyzer() -> MultiVisionAnalyzer:
     return _global_analyzer
 
 
-async def analyze_image_multi_model(
-    image_data: bytes, max_retries: int = 3
-) -> ImageAnalysisResult:
+async def analyze_image_multi_model(image_data: bytes, max_retries: int = 3) -> ImageAnalysisResult:
     """
     使用多模型分析图片（便捷函数）
 
@@ -1074,9 +979,7 @@ async def analyze_image_multi_model(
     Returns:
         ImageAnalysisResult 对象
     """
-    logger.info(
-        f"[MultiVisionAnalyzer] analyze_image_multi_model 开始, max_retries={max_retries}"
-    )
+    logger.info(f"[MultiVisionAnalyzer] analyze_image_multi_model 开始, max_retries={max_retries}")
     analyzer = await get_vision_analyzer()
     result = await analyzer.analyze_image(image_data, max_retries)
     logger.info(

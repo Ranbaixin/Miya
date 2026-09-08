@@ -70,9 +70,7 @@ class LocalFileSource(MusicSource):
         for f in os.listdir(self.input_dir):
             name, ext = os.path.splitext(f)
             if ext.lower() in audio_exts and query in name:
-                return SongResult(
-                    song_id=f"local:{name}", song_name=name, source="local"
-                )
+                return SongResult(song_id=f"local:{name}", song_name=name, source="local")
         return None
 
     async def download(self, song: SongResult, output_dir: str) -> Optional[str]:
@@ -140,9 +138,7 @@ class NeteaseMusicSource(MusicSource):
         import requests
 
         try:
-            data = await self._get(
-                f"/song/url/v1?id={song.song_id}&level={self.quality}"
-            )
+            data = await self._get(f"/song/url/v1?id={song.song_id}&level={self.quality}")
             dl_url = data.get("data", [{}])[0].get("url", "")
             if not dl_url:
                 return None
@@ -159,9 +155,7 @@ class NeteaseMusicSource(MusicSource):
             with open(path, "wb") as f:
                 for chunk in resp.iter_content(8192):
                     f.write(chunk)
-            logger.info(
-                f"Netease: {song.song_name} ({os.path.getsize(path)}B, q={self.quality})"
-            )
+            logger.info(f"Netease: {song.song_name} ({os.path.getsize(path)}B, q={self.quality})")
             return path
         except Exception as e:  # noqa: BLE001 — 网易云下载失败降级
             logger.warning(f"Netease download failed: {e}")
@@ -179,6 +173,7 @@ class BilibiliMusicSource(MusicSource):
 
     def initialize(self, config: dict) -> bool:
         from core.singing._paths import find_singing_python
+
         self.timeout = config.get("timeout", 30)
         self.python_exe = config.get(
             "bilibili_python",
@@ -215,11 +210,7 @@ class BilibiliMusicSource(MusicSource):
             if not videos:
                 return None
             v = videos[0]
-            title = (
-                v.get("title", query)
-                .replace('<em class="keyword">', "")
-                .replace("</em>", "")
-            )
+            title = v.get("title", query).replace('<em class="keyword">', "").replace("</em>", "")
             return SongResult(
                 song_id=v.get("bvid", ""),
                 song_name=title,
@@ -272,9 +263,7 @@ class BilibiliMusicSource(MusicSource):
 
         src = new_files.pop()
         src_path = os.path.join(dl_dir, src)
-        safe = re.sub(
-            r'[&@#$%^【】。，\'：；"《》？（）\s]+', "_", os.path.splitext(src)[0]
-        )
+        safe = re.sub(r'[&@#$%^【】。，\'：；"《》？（）\s]+', "_", os.path.splitext(src)[0])
         ext = os.path.splitext(src)[1] or ".mkv"
         dst = os.path.join(output_dir, f"{safe}{ext}")
         os.makedirs(output_dir, exist_ok=True)
@@ -320,14 +309,10 @@ class AutoMusicSource(MusicSource):
         return None
 
     async def download(self, song: SongResult, output_dir: str) -> Optional[str]:
-        actual = (
-            song.source.removeprefix("auto:") if song.source.startswith("auto:") else ""
-        )
+        actual = song.source.removeprefix("auto:") if song.source.startswith("auto:") else ""
         candidates = self.sources
         if actual:
-            candidates = [s for s in self.sources if s.name == actual] + [
-                s for s in self.sources if s.name != actual
-            ]
+            candidates = [s for s in self.sources if s.name == actual] + [s for s in self.sources if s.name != actual]
         for src in candidates:
             try:
                 path = await src.download(song, output_dir)

@@ -62,9 +62,7 @@ class VectorStore:
         self._metadatas.append(metadata)
         self._contents.append(content)
 
-    async def search(
-        self, query_vector: List[float], top_k: int = 10
-    ) -> List[SearchResult]:
+    async def search(self, query_vector: List[float], top_k: int = 10) -> List[SearchResult]:
         """搜索"""
         if not self._vectors:
             return []
@@ -76,9 +74,7 @@ class VectorStore:
             scores.append(score)
 
         # 取 top_k
-        top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[
-            :top_k
-        ]
+        top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
 
         results = []
         for idx in top_indices:
@@ -151,9 +147,7 @@ class BM25SparseRetriever:
         for word in set(words):
             self._doc_freqs[word] = self._doc_freqs.get(word, 0) + 1
 
-        self._avgdl = sum(len(d.split()) for d in self._documents) / max(
-            len(self._documents), 1
-        )
+        self._avgdl = sum(len(d.split()) for d in self._documents) / max(len(self._documents), 1)
 
     async def search(self, query: str, top_k: int = 10) -> List[SearchResult]:
         """搜索"""
@@ -182,17 +176,13 @@ class BM25SparseRetriever:
                     tf = doc_word_freq[word]
                     idf = math.log((N - df + 0.5) / (df + 0.5) + 1)
 
-                    tf_score = (tf * (self.k1 + 1)) / (
-                        tf + self.k1 * (1 - self.b + self.b * doc_len / self._avgdl)
-                    )
+                    tf_score = (tf * (self.k1 + 1)) / (tf + self.k1 * (1 - self.b + self.b * doc_len / self._avgdl))
                     score += idf * tf_score
 
             scores.append(score)
 
         # 取 top_k
-        top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[
-            :top_k
-        ]
+        top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
 
         results = []
         for idx in top_indices:
@@ -275,9 +265,7 @@ class RankFusion:
             rrf_scores[doc_id] = score
 
         # 排序
-        sorted_docs = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)[
-            :top_k
-        ]
+        sorted_docs = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)[:top_k]
 
         # 构建结果
         doc_map = {r.doc_id: r for r in dense_results + sparse_results}
@@ -429,9 +417,7 @@ class KnowledgeBaseManager:
         doc_path = f"data/knowledge_base/{kb_id}/{doc_id}.json"
         os.makedirs(f"data/knowledge_base/{kb_id}", exist_ok=True)
         with open(doc_path, "w") as f:
-            json.dump(
-                {"content": content, "metadata": metadata, "embedding": embedding}, f
-            )
+            json.dump({"content": content, "metadata": metadata, "embedding": embedding}, f)
 
         logger.info(f"[KnowledgeBaseManager] 添加文档: {doc_id}")
 

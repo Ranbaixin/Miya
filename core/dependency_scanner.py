@@ -2,6 +2,7 @@
 依赖扫描器
 扫描项目依赖问题
 """
+
 import ast
 import logging
 import re
@@ -28,15 +29,15 @@ class DependencyScanner(BaseScanner):
     def __init__(self):
         super().__init__("dependency")
         self._dependency_files = {
-            'python': ['requirements.txt', 'requirements-dev.txt', 'pyproject.toml', 'setup.py'],
-            'node': ['package.json'],
-            'go': ['go.mod', 'go.sum'],
-            'java': ['pom.xml', 'build.gradle'],
-            'ruby': ['Gemfile'],
-            'php': ['composer.json'],
+            "python": ["requirements.txt", "requirements-dev.txt", "pyproject.toml", "setup.py"],
+            "node": ["package.json"],
+            "go": ["go.mod", "go.sum"],
+            "java": ["pom.xml", "build.gradle"],
+            "ruby": ["Gemfile"],
+            "php": ["composer.json"],
         }
 
-    async def scan(self, path: str = '.', **kwargs) -> List[Problem]:
+    async def scan(self, path: str = ".", **kwargs) -> List[Problem]:
         """
         扫描依赖问题
 
@@ -89,45 +90,49 @@ class DependencyScanner(BaseScanner):
         problems = []
 
         try:
-            with open(req_file, 'r', encoding='utf-8') as f:
+            with open(req_file, "r", encoding="utf-8") as f:
                 lines = f.readlines()
 
             for i, line in enumerate(lines, 1):
                 line = line.strip()
 
                 # 跳过注释和空行
-                if not line or line.startswith('#'):
+                if not line or line.startswith("#"):
                     continue
 
                 # 检查依赖格式
                 if not self._is_valid_requirement(line):
-                    problems.append(Problem(
-                        id="",
-                        type=ProblemType.DEPENDENCY,
-                        severity=ProblemSeverity.LOW,
-                        title=f"无效的依赖格式: {line[:50]}",
-                        description=f"requirements.txt 第 {i} 行的依赖格式可能不正确: {line}",
-                        file_path=str(req_file),
-                        line_number=i,
-                        suggestions=["检查依赖格式，参考 pip 文档"],
-                        auto_fixable=False,
-                        confidence=0.7,
-                    ))
+                    problems.append(
+                        Problem(
+                            id="",
+                            type=ProblemType.DEPENDENCY,
+                            severity=ProblemSeverity.LOW,
+                            title=f"无效的依赖格式: {line[:50]}",
+                            description=f"requirements.txt 第 {i} 行的依赖格式可能不正确: {line}",
+                            file_path=str(req_file),
+                            line_number=i,
+                            suggestions=["检查依赖格式，参考 pip 文档"],
+                            auto_fixable=False,
+                            confidence=0.7,
+                        )
+                    )
 
                 # 检查版本锁定
                 if not self._has_version_spec(line):
-                    problems.append(Problem(
-                        id="",
-                        type=ProblemType.DEPENDENCY,
-                        severity=ProblemSeverity.LOW,
-                        title=f"依赖未锁定版本: {line.split('==')[0] if '==' in line else line}",
-                        description="建议锁定依赖版本以确保可重现构建",
-                        file_path=str(req_file),
-                        line_number=i,
-                        suggestions=["使用 == 指定精确版本，或使用 >=, <= 等约束"],
-                        auto_fixable=True,
-                        confidence=0.6,
-                    ))
+                    problems.append(
+                        Problem(
+                            id="",
+                            type=ProblemType.DEPENDENCY,
+                            severity=ProblemSeverity.LOW,
+                            title=f"依赖未锁定版本: {line.split('==')[0] if '==' in line else line}",
+                            description="建议锁定依赖版本以确保可重现构建",
+                            file_path=str(req_file),
+                            line_number=i,
+                            suggestions=["使用 == 指定精确版本，或使用 >=, <= 等约束"],
+                            auto_fixable=True,
+                            confidence=0.6,
+                        )
+                    )
 
         except Exception as e:  # noqa: BLE001 — 解析依赖文件失败已记录日志
             self.logger.warning(f"分析 {req_file} 失败: {e}")
@@ -138,12 +143,12 @@ class DependencyScanner(BaseScanner):
         """检查依赖格式是否有效"""
         # 基本验证：应该包含包名
         # 包名规则：字母开头，包含字母、数字、下划线、短横线
-        package_name = line.split('==')[0].split('>=')[0].split('<=')[0].split('~=')[0].split('!=')[0].strip()
-        return bool(re.match(r'^[a-zA-Z][a-zA-Z0-9_-]+$', package_name))
+        package_name = line.split("==")[0].split(">=")[0].split("<=")[0].split("~=")[0].split("!=")[0].strip()
+        return bool(re.match(r"^[a-zA-Z][a-zA-Z0-9_-]+$", package_name))
 
     def _has_version_spec(self, line: str) -> bool:
         """检查是否有版本规范"""
-        return any(op in line for op in ['==', '>=', '<=', '~=', '!=', '>', '<'])
+        return any(op in line for op in ["==", ">=", "<=", "~=", "!=", ">", "<"])
 
     async def _scan_node_deps(self, path: str) -> List[Problem]:
         """扫描 Node.js 依赖"""
@@ -164,29 +169,32 @@ class DependencyScanner(BaseScanner):
 
         try:
             import json
-            with open(package_file, 'r', encoding='utf-8') as f:
+
+            with open(package_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
             # 检查依赖字段
-            dependencies = data.get('dependencies', {})
-            dev_dependencies = data.get('devDependencies', {})
+            dependencies = data.get("dependencies", {})
+            dev_dependencies = data.get("devDependencies", {})
 
             # 检查未锁定的依赖
             all_deps = {**dependencies, **dev_dependencies}
             for name, version in all_deps.items():
                 # 检查是否使用了范围版本（可能导致不可重现构建）
-                if version.startswith('^') or version.startswith('~'):
-                    problems.append(Problem(
-                        id="",
-                        type=ProblemType.DEPENDENCY,
-                        severity=ProblemSeverity.LOW,
-                        title=f"依赖版本范围: {name}@{version}",
-                        description="使用了版本范围 (^ 或 ~)，可能导致不同环境安装不同版本",
-                        file_path=str(package_file),
-                        suggestions=["考虑使用精确版本或 package-lock.json"],
-                        auto_fixable=True,
-                        confidence=0.6,
-                    ))
+                if version.startswith("^") or version.startswith("~"):
+                    problems.append(
+                        Problem(
+                            id="",
+                            type=ProblemType.DEPENDENCY,
+                            severity=ProblemSeverity.LOW,
+                            title=f"依赖版本范围: {name}@{version}",
+                            description="使用了版本范围 (^ 或 ~)，可能导致不同环境安装不同版本",
+                            file_path=str(package_file),
+                            suggestions=["考虑使用精确版本或 package-lock.json"],
+                            auto_fixable=True,
+                            confidence=0.6,
+                        )
+                    )
 
         except Exception as e:  # noqa: BLE001 — 解析包文件失败已记录日志
             self.logger.warning(f"分析 {package_file} 失败: {e}")
@@ -211,22 +219,24 @@ class DependencyScanner(BaseScanner):
         problems = []
 
         try:
-            with open(go_mod_file, 'r', encoding='utf-8') as f:
+            with open(go_mod_file, "r", encoding="utf-8") as f:
                 content = f.read()
 
             # 检查是否使用了间接依赖
-            if '// indirect' in content:
-                problems.append(Problem(
-                    id="",
-                    type=ProblemType.DEPENDENCY,
-                    severity=ProblemSeverity.LOW,
-                    title="存在间接依赖",
-                    description="go.mod 中存在间接依赖，考虑清理或显式声明",
-                    file_path=str(go_mod_file),
-                    suggestions=["运行 go mod tidy 清理依赖"],
-                    auto_fixable=True,
-                    confidence=0.7,
-                ))
+            if "// indirect" in content:
+                problems.append(
+                    Problem(
+                        id="",
+                        type=ProblemType.DEPENDENCY,
+                        severity=ProblemSeverity.LOW,
+                        title="存在间接依赖",
+                        description="go.mod 中存在间接依赖，考虑清理或显式声明",
+                        file_path=str(go_mod_file),
+                        suggestions=["运行 go mod tidy 清理依赖"],
+                        auto_fixable=True,
+                        confidence=0.7,
+                    )
+                )
 
         except Exception as e:  # noqa: BLE001 — 解析go.mod失败已记录日志
             self.logger.warning(f"分析 {go_mod_file} 失败: {e}")
@@ -246,7 +256,7 @@ class DependencyScanner(BaseScanner):
         missing_imports = []
 
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
             # 解析 AST
@@ -257,15 +267,15 @@ class DependencyScanner(BaseScanner):
             for node in ast.walk(tree):
                 if isinstance(node, ast.Import):
                     for alias in node.names:
-                        imported_modules.add(alias.name.split('.')[0])
+                        imported_modules.add(alias.name.split(".")[0])
                 elif isinstance(node, ast.ImportFrom) and node.module:
-                    imported_modules.add(node.module.split('.')[0])
+                    imported_modules.add(node.module.split(".")[0])
 
             # 收集所有使用的模块（简化版）
             for node in ast.walk(tree):
                 if isinstance(node, ast.Name):
                     # 检查是否是常用模块
-                    if node.id in ['os', 'sys', 'json', 're', 'datetime', 'pathlib']:
+                    if node.id in ["os", "sys", "json", "re", "datetime", "pathlib"]:
                         if node.id not in imported_modules:
                             missing_imports.append(node.id)
 

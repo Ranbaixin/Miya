@@ -2,6 +2,7 @@
 自动修复器
 自动修复可修复的问题
 """
+
 import logging
 import re
 import shutil
@@ -19,6 +20,7 @@ from core.problem_scanner import Problem, ProblemSeverity, ProblemType
 @dataclass
 class FixResult:
     """修复结果"""
+
     success: bool
     problem: Problem
     action_taken: str
@@ -31,21 +33,22 @@ class FixResult:
     def to_dict(self) -> Dict:
         """转换为字典"""
         return {
-            'success': self.success,
-            'problem_id': self.problem.id,
-            'problem_title': self.problem.title,
-            'action_taken': self.action_taken,
-            'output': self.output,
-            'time_taken': self.time_taken,
-            'backup_created': self.backup_created,
-            'backup_path': self.backup_path,
-            'error': self.error,
+            "success": self.success,
+            "problem_id": self.problem.id,
+            "problem_title": self.problem.title,
+            "action_taken": self.action_taken,
+            "output": self.output,
+            "time_taken": self.time_taken,
+            "backup_created": self.backup_created,
+            "backup_path": self.backup_path,
+            "error": self.error,
         }
 
 
 @dataclass
 class FixPlan:
     """修复计划"""
+
     problems: List[Problem] = field(default_factory=list)
     estimated_time: float = 0.0
     requires_approval: bool = False
@@ -74,12 +77,12 @@ class FixPlan:
     def to_dict(self) -> Dict:
         """转换为字典"""
         return {
-            'problem_count': self.problem_count,
-            'auto_fixable_count': self.auto_fixable_count,
-            'high_risk_count': self.high_risk_count,
-            'estimated_time': self.estimated_time,
-            'requires_approval': self.requires_approval,
-            'problems': [p.id for p in self.problems],
+            "problem_count": self.problem_count,
+            "auto_fixable_count": self.auto_fixable_count,
+            "high_risk_count": self.high_risk_count,
+            "estimated_time": self.estimated_time,
+            "requires_approval": self.requires_approval,
+            "problems": [p.id for p in self.problems],
         }
 
 
@@ -107,7 +110,7 @@ class AutoFixer:
             self.backup_dir = Path(backup_dir)
         else:
             # 默认使用项目根目录下的 .backup
-            self.backup_dir = Path(__file__).parent.parent / '.backup'
+            self.backup_dir = Path(__file__).parent.parent / ".backup"
 
         self.backup_dir.mkdir(parents=True, exist_ok=True)
 
@@ -136,10 +139,7 @@ class AutoFixer:
         return strategy
 
     def create_fix_plan(
-        self,
-        problems: List[Problem],
-        max_count: int = 10,
-        require_approval_for: Optional[List[ProblemSeverity]] = None
+        self, problems: List[Problem], max_count: int = 10, require_approval_for: Optional[List[ProblemSeverity]] = None
     ) -> FixPlan:
         """
         创建修复计划
@@ -156,6 +156,7 @@ class AutoFixer:
 
         # 按优先级排序
         from core.problem_scanner import ProblemScanner
+
         scanner = ProblemScanner()
         prioritized = scanner.prioritize_problems(problems, max_count=max_count)
 
@@ -168,18 +169,11 @@ class AutoFixer:
 
                 plan.add_problem(problem)
 
-        self.logger.info(
-            f"创建修复计划: {len(plan.problems)} 个问题, "
-            f"预计耗时 {plan.estimated_time:.1f} 秒"
-        )
+        self.logger.info(f"创建修复计划: {len(plan.problems)} 个问题, " f"预计耗时 {plan.estimated_time:.1f} 秒")
 
         return plan
 
-    async def fix_problem(
-        self,
-        problem: Problem,
-        create_backup: bool = True
-    ) -> FixResult:
+    async def fix_problem(self, problem: Problem, create_backup: bool = True) -> FixResult:
         """
         修复单个问题
 
@@ -220,7 +214,7 @@ class AutoFixer:
                 output=output,
                 time_taken=time_taken,
                 backup_created=backup_created,
-                backup_path=backup_path
+                backup_path=backup_path,
             )
 
             self.logger.info(f"修复成功: {problem.title} (耗时 {time_taken:.2f}秒)")
@@ -239,16 +233,13 @@ class AutoFixer:
                 time_taken=time_taken,
                 backup_created=backup_created,
                 backup_path=backup_path,
-                error=error_msg
+                error=error_msg,
             )
 
         return result
 
     async def fix_batch(
-        self,
-        problems: List[Problem],
-        create_backup: bool = True,
-        stop_on_error: bool = False
+        self, problems: List[Problem], create_backup: bool = True, stop_on_error: bool = False
     ) -> List[FixResult]:
         """
         批量修复问题
@@ -319,14 +310,14 @@ class AutoFixer:
             raise ValueError(f"文件不存在: {file_path}")
 
         # 读取文件
-        with open(source, 'r', encoding='utf-8') as f:
+        with open(source, "r", encoding="utf-8") as f:
             lines = f.readlines()
 
         # 根据问题描述修复
         action_taken = "无"
         output = ""
 
-        if 'unused import' in problem.description.lower():
+        if "unused import" in problem.description.lower():
             # 删除未使用的 import
             if problem.line_number:
                 line_idx = problem.line_number - 1
@@ -335,19 +326,19 @@ class AutoFixer:
                     action_taken = f"删除了未使用的 import: {removed_line.strip()}"
                     output = f"已删除第 {problem.line_number} 行的未使用的 import"
 
-        elif 'trailing whitespace' in problem.description.lower():
+        elif "trailing whitespace" in problem.description.lower():
             # 删除尾随空格
             if problem.line_number:
                 line_idx = problem.line_number - 1
                 if line_idx < len(lines):
-                    lines[line_idx] = lines[line_idx].rstrip() + '\n'
+                    lines[line_idx] = lines[line_idx].rstrip() + "\n"
                     action_taken = f"删除了第 {problem.line_number} 行的尾随空格"
                     output = "已删除尾随空格"
 
-        elif 'missing newline' in problem.description.lower():
+        elif "missing newline" in problem.description.lower():
             # 添加缺失的换行符
-            if not lines or not lines[-1].endswith('\n'):
-                lines.append('\n')
+            if not lines or not lines[-1].endswith("\n"):
+                lines.append("\n")
                 action_taken = "在文件末尾添加了换行符"
                 output = "已添加缺失的换行符"
 
@@ -355,7 +346,7 @@ class AutoFixer:
             raise ValueError(f"不支持的 Linter 问题类型: {problem.description}")
 
         # 写回文件
-        with open(source, 'w', encoding='utf-8') as f:
+        with open(source, "w", encoding="utf-8") as f:
             f.writelines(lines)
 
         return action_taken, output
@@ -380,32 +371,32 @@ class AutoFixer:
             raise ValueError(f"文件不存在: {file_path}")
 
         # 读取文件
-        with open(source, 'r', encoding='utf-8') as f:
+        with open(source, "r", encoding="utf-8") as f:
             content = f.read()
 
         # 根据问题描述修复
         action_taken = "无"
         output = ""
 
-        if 'toml' in file_path.lower() and '等号' in problem.description:
+        if "toml" in file_path.lower() and "等号" in problem.description:
             # 替换冒号为等号
-            content = re.sub(r'^([^=]+):(.+)$', r'\1=\2', content, flags=re.MULTILINE)
+            content = re.sub(r"^([^=]+):(.+)$", r"\1=\2", content, flags=re.MULTILINE)
             action_taken = "替换了 TOML 文件中的冒号为等号"
             output = "已修复 TOML 语法错误"
 
-        elif 'ini' in file_path.lower():
+        elif "ini" in file_path.lower():
             # INI 文件修复
-            lines = content.split('\n')
+            lines = content.split("\n")
             fixed_lines = []
 
             for line in lines:
                 # 检查是否有冒号但不是节标题
-                if ':' in line and not line.startswith('['):
+                if ":" in line and not line.startswith("["):
                     # 尝试替换为等号
-                    line = line.replace(':', '=', 1)
+                    line = line.replace(":", "=", 1)
                 fixed_lines.append(line)
 
-            content = '\n'.join(fixed_lines)
+            content = "\n".join(fixed_lines)
             action_taken = "修复了 INI 文件格式"
             output = "已修复 INI 语法错误"
 
@@ -413,7 +404,7 @@ class AutoFixer:
             raise ValueError(f"不支持的配置问题: {problem.description}")
 
         # 写回文件
-        with open(source, 'w', encoding='utf-8') as f:
+        with open(source, "w", encoding="utf-8") as f:
             f.write(content)
 
         return action_taken, output

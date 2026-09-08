@@ -2,6 +2,7 @@
 StoryMaker/Amphion多模态库集成
 提供多模态生成的一致性管理接口
 """
+
 import logging
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
@@ -12,6 +13,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MultimodalConfig:
     """多模态配置"""
+
     image_model_path: Optional[str] = None
     audio_model_path: Optional[str] = None
     device: str = "cpu"
@@ -36,6 +38,7 @@ class MultimodalIntegrator:
         """获取视觉一致性管理器"""
         if self._visual_manager is None:
             from core.visual_consistency_manager import VisualConsistencyManager
+
             self._visual_manager = VisualConsistencyManager()
         return self._visual_manager
 
@@ -44,6 +47,7 @@ class MultimodalIntegrator:
         """获取音频一致性管理器"""
         if self._audio_manager is None:
             from core.audio_consistency_manager import AudioConsistencyManager
+
             self._audio_manager = AudioConsistencyManager()
         return self._audio_manager
 
@@ -52,6 +56,7 @@ class MultimodalIntegrator:
         """获取多模态记忆存储"""
         if self._multimodal_store is None:
             from memory.multimodal_memory_store import MultiModalMemoryStore
+
             self._multimodal_store = MultiModalMemoryStore()
         return self._multimodal_store
 
@@ -60,7 +65,7 @@ class MultimodalIntegrator:
         character_id: str,
         visual_reference: Optional[bytes] = None,
         audio_reference: Optional[bytes] = None,
-        attributes: Optional[Dict[str, Any]] = None
+        attributes: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, bool]:
         """
         添加角色完整配置（视觉+音频）
@@ -74,50 +79,31 @@ class MultimodalIntegrator:
         Returns:
             各模态添加结果
         """
-        results = {
-            'visual': False,
-            'audio': False
-        }
+        results = {"visual": False, "audio": False}
 
         if visual_reference:
-            results['visual'] = self.visual_manager.add_character_reference(
-                character_id,
-                visual_reference,
-                attributes
-            )
+            results["visual"] = self.visual_manager.add_character_reference(character_id, visual_reference, attributes)
 
         if audio_reference:
-            results['audio'] = self.audio_manager.add_speaker_reference(
-                character_id,
-                audio_reference,
-                attributes
-            )
+            results["audio"] = self.audio_manager.add_speaker_reference(character_id, audio_reference, attributes)
 
         # 保存到多模态记忆
         content = {
-            'character_id': character_id,
-            'has_visual': results['visual'],
-            'has_audio': results['audio'],
-            'attributes': attributes
+            "character_id": character_id,
+            "has_visual": results["visual"],
+            "has_audio": results["audio"],
+            "attributes": attributes,
         }
 
         from memory.multimodal_memory_store import ModalityType
-        self.multimodal_store.add_memory(
-            content=content,
-            modality=ModalityType.MULTIMODAL,
-            metadata=attributes or {}
-        )
+
+        self.multimodal_store.add_memory(content=content, modality=ModalityType.MULTIMODAL, metadata=attributes or {})
 
         logger.info(f"[Multimodal] 添加角色配置: {character_id}")
         return results
 
     def generate_consistent_scene(
-        self,
-        character_id: str,
-        description: str,
-        generate_image: bool = True,
-        generate_audio: bool = False,
-        **kwargs
+        self, character_id: str, description: str, generate_image: bool = True, generate_audio: bool = False, **kwargs
     ) -> Dict[str, Optional[bytes]]:
         """
         生成一致的场景（图像+音频）
@@ -135,39 +121,30 @@ class MultimodalIntegrator:
         result = {}
 
         if generate_image:
-            result['image'] = self.visual_manager.generate_consistent_image(
-                character_id,
-                description,
-                **kwargs
-            )
+            result["image"] = self.visual_manager.generate_consistent_image(character_id, description, **kwargs)
 
         if generate_audio:
-            result['audio'] = self.audio_manager.generate_consistent_tts(
-                description,
-                character_id,
-                **kwargs
-            )
+            result["audio"] = self.audio_manager.generate_consistent_tts(description, character_id, **kwargs)
 
         # 保存到多模态记忆
-        if result.get('image') or result.get('audio'):
+        if result.get("image") or result.get("audio"):
             from memory.multimodal_memory_store import ModalityType
+
             self.multimodal_store.add_memory(
                 content={
-                    'character_id': character_id,
-                    'description': description,
-                    'has_image': 'image' in result,
-                    'has_audio': 'audio' in result
+                    "character_id": character_id,
+                    "description": description,
+                    "has_image": "image" in result,
+                    "has_audio": "audio" in result,
                 },
                 modality=ModalityType.MULTIMODAL,
-                metadata={'scene': True}
+                metadata={"scene": True},
             )
 
         return result
 
     def generate_story_sequence(
-        self,
-        character_id: str,
-        scenes: List[Dict[str, Any]]
+        self, character_id: str, scenes: List[Dict[str, Any]]
     ) -> List[Dict[str, Optional[bytes]]]:
         """
         生成故事序列（多场景）
@@ -184,28 +161,18 @@ class MultimodalIntegrator:
         for scene in scenes:
             scene_result = {}
 
-            if scene.get('visual'):
-                scene_result['image'] = self.visual_manager.generate_consistent_image(
-                    character_id,
-                    scene['text']
-                )
+            if scene.get("visual"):
+                scene_result["image"] = self.visual_manager.generate_consistent_image(character_id, scene["text"])
 
-            if scene.get('audio'):
-                scene_result['audio'] = self.audio_manager.generate_consistent_tts(
-                    scene['text'],
-                    character_id
-                )
+            if scene.get("audio"):
+                scene_result["audio"] = self.audio_manager.generate_consistent_tts(scene["text"], character_id)
 
             results.append(scene_result)
 
         logger.info(f"[Multimodal] 生成故事序列: {character_id}, {len(scenes)}场景")
         return results
 
-    def voice_conversion(
-        self,
-        source_audio: bytes,
-        target_character_id: str
-    ) -> Optional[bytes]:
+    def voice_conversion(self, source_audio: bytes, target_character_id: str) -> Optional[bytes]:
         """
         语音转换
 
@@ -216,16 +183,10 @@ class MultimodalIntegrator:
         Returns:
             转换后的音频
         """
-        return self.audio_manager.generate_consistent_vc(
-            source_audio,
-            target_character_id
-        )
+        return self.audio_manager.generate_consistent_vc(source_audio, target_character_id)
 
     def get_character_consistency_scores(
-        self,
-        character_id: str,
-        test_images: Optional[List[bytes]] = None,
-        test_audios: Optional[List[bytes]] = None
+        self, character_id: str, test_images: Optional[List[bytes]] = None, test_audios: Optional[List[bytes]] = None
     ) -> Dict[str, float]:
         """
         获取角色一致性分数
@@ -243,30 +204,20 @@ class MultimodalIntegrator:
         if test_images:
             image_scores = []
             for img in test_images:
-                score = self.visual_manager.calculate_consistency_score(
-                    img,  # 需要参考图像
-                    img  # 简化
-                )
+                score = self.visual_manager.calculate_consistency_score(img, img)  # 需要参考图像  # 简化
                 image_scores.append(score)
-            scores['visual'] = sum(image_scores) / len(image_scores) if image_scores else 0.0
+            scores["visual"] = sum(image_scores) / len(image_scores) if image_scores else 0.0
 
         if test_audios:
             audio_scores = []
             for aud in test_audios:
-                score = self.audio_manager.calculate_consistency_score(
-                    aud,
-                    aud  # 简化
-                )
+                score = self.audio_manager.calculate_consistency_score(aud, aud)  # 简化
                 audio_scores.append(score)
-            scores['audio'] = sum(audio_scores) / len(audio_scores) if audio_scores else 0.0
+            scores["audio"] = sum(audio_scores) / len(audio_scores) if audio_scores else 0.0
 
         return scores
 
-    def search_multimodal_memories(
-        self,
-        query: str,
-        limit: int = 10
-    ) -> List[Dict[str, Any]]:
+    def search_multimodal_memories(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
         """
         搜索多模态记忆
 
@@ -277,27 +228,19 @@ class MultimodalIntegrator:
         Returns:
             记忆列表
         """
-        memories = self.multimodal_store.search_by_semantic(
-            query,
-            limit=limit
-        )
+        memories = self.multimodal_store.search_by_semantic(query, limit=limit)
 
         return [
-            {
-                'memory_id': m.memory_id,
-                'modality': m.modality.value,
-                'metadata': m.metadata,
-                'timestamp': m.timestamp
-            }
+            {"memory_id": m.memory_id, "modality": m.modality.value, "metadata": m.metadata, "timestamp": m.timestamp}
             for m in memories
         ]
 
     def get_statistics(self) -> Dict[str, Any]:
         """获取统计信息"""
         return {
-            'visual': self.visual_manager.get_statistics(),
-            'audio': self.audio_manager.get_statistics(),
-            'multimodal': self.multimodal_store.get_statistics()
+            "visual": self.visual_manager.get_statistics(),
+            "audio": self.audio_manager.get_statistics(),
+            "multimodal": self.multimodal_store.get_statistics(),
         }
 
     def cleanup(self):

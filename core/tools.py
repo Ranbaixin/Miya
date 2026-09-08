@@ -84,9 +84,7 @@ class FileWriteTool(Tool):
     name = "file_write"
     description = "写入文件内容"
 
-    async def execute(
-        self, path: str, content: str, encoding: str = "utf-8", **kwargs
-    ) -> ToolResult:
+    async def execute(self, path: str, content: str, encoding: str = "utf-8", **kwargs) -> ToolResult:
         try:
             os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, "w", encoding=encoding) as f:
@@ -102,9 +100,7 @@ class FileListTool(Tool):
     name = "file_list"
     description = "列出目录文件"
 
-    async def execute(
-        self, path: str = ".", pattern: str = "*", **kwargs
-    ) -> ToolResult:
+    async def execute(self, path: str = ".", pattern: str = "*", **kwargs) -> ToolResult:
         try:
             from pathlib import Path
 
@@ -131,9 +127,7 @@ class ShellTool(Tool):
             )
 
             try:
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(), timeout=timeout
-                )
+                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
 
                 result = {
                     "stdout": stdout.decode("utf-8") if stdout else "",
@@ -231,16 +225,13 @@ class WebSearchTool(Tool):
                         params={"q": query, "format": "json"},
                     )
                     data = resp.json()
-                    results = [
-                        {"title": r.get("Text"), "url": r.get("URL")}
-                        for r in data.get("RelatedTopics", [])
-                    ][:num_results]
+                    results = [{"title": r.get("Text"), "url": r.get("URL")} for r in data.get("RelatedTopics", [])][
+                        :num_results
+                    ]
                     return ToolResult(success=True, result=results)
 
             else:
-                return ToolResult(
-                    success=False, error=f"不支持的搜索引擎: {self.search_engine}"
-                )
+                return ToolResult(success=False, error=f"不支持的搜索引擎: {self.search_engine}")
 
         except Exception as e:  # noqa: BLE001 — 搜索失败返回错误结果
             return ToolResult(success=False, error=str(e))
@@ -268,14 +259,9 @@ class KnowledgeBaseTool(Tool):
         **kwargs,
     ) -> ToolResult:
         try:
-            results = await self.kb_manager.query(
-                kb_id=kb_id, query=query, top_k=top_k, method=method
-            )
+            results = await self.kb_manager.query(kb_id=kb_id, query=query, top_k=top_k, method=method)
 
-            formatted = [
-                {"content": r.content, "score": r.score, "metadata": r.metadata}
-                for r in results
-            ]
+            formatted = [{"content": r.content, "score": r.score, "metadata": r.metadata} for r in results]
 
             return ToolResult(success=True, result=formatted)
         except Exception as e:  # noqa: BLE001 — 知识库查询失败返回错误结果
@@ -362,9 +348,7 @@ def get_tools_definition() -> List[Dict]:
                 "description": "读取文件内容",
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                        "path": {"type": "string", "description": "文件路径"}
-                    },
+                    "properties": {"path": {"type": "string", "description": "文件路径"}},
                     "required": ["path"],
                 },
             },
@@ -391,9 +375,7 @@ def get_tools_definition() -> List[Dict]:
                 "description": "执行Shell命令",
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                        "command": {"type": "string", "description": "要执行的命令"}
-                    },
+                    "properties": {"command": {"type": "string", "description": "要执行的命令"}},
                     "required": ["command"],
                 },
             },
@@ -405,9 +387,7 @@ def get_tools_definition() -> List[Dict]:
                 "description": "执行Python代码",
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                        "code": {"type": "string", "description": "Python代码"}
-                    },
+                    "properties": {"code": {"type": "string", "description": "Python代码"}},
                     "required": ["code"],
                 },
             },

@@ -58,14 +58,9 @@ class EmbeddingClient:
 
         # 模型必须由调用方指定，不再设置默认值
         if self.model is None:
-            raise ValueError(
-                "[EmbeddingClient] model 参数必须提供，请检查 multi_model_config.json"
-            )
+            raise ValueError("[EmbeddingClient] model 参数必须提供，请检查 multi_model_config.json")
 
-        logger.info(
-            f"[EmbeddingClient] 初始化完成 - "
-            f"provider={provider.value}, model={self.model}"
-        )
+        logger.info(f"[EmbeddingClient] 初始化完成 - " f"provider={provider.value}, model={self.model}")
 
     async def initialize(self):
         """初始化客户端"""
@@ -148,13 +143,9 @@ class EmbeddingClient:
 
             # 同步加载模型
             self._client = SentenceTransformer(self.model)
-            logger.info(
-                f"[EmbeddingClient] Sentence Transformers模型加载完成: {self.model}"
-            )
+            logger.info(f"[EmbeddingClient] Sentence Transformers模型加载完成: {self.model}")
         except ImportError:
-            raise ImportError(
-                "请安装sentence-transformers包: pip install sentence-transformers"
-            )
+            raise ImportError("请安装sentence-transformers包: pip install sentence-transformers")
 
     async def embed(self, text: str) -> List[float]:
         """
@@ -193,20 +184,14 @@ class EmbeddingClient:
                         if cap[0] >= 5:
                             device = "cuda"
                         else:
-                            logger.warning(
-                                f"[Embedding] GPU compute capability {cap} not supported, using CPU"
-                            )
+                            logger.warning(f"[Embedding] GPU compute capability {cap} not supported, using CPU")
                     except Exception as e:  # noqa: BLE001 — GPU检测失败已记录日志
-                        logger.warning(
-                            f"[Embedding] GPU detection failed: {e}, using CPU"
-                        )
+                        logger.warning(f"[Embedding] GPU detection failed: {e}, using CPU")
                 vector = self._client.encode(text, convert_to_numpy=True, device=device)
                 return vector.tolist()
             else:
                 # API调用（异步）
-                response = await self._client.embeddings.create(
-                    model=self.model, input=text
-                )
+                response = await self._client.embeddings.create(model=self.model, input=text)
                 return response.data[0].embedding
 
         except Exception as e:
@@ -214,18 +199,14 @@ class EmbeddingClient:
             # 如果CUDA失败，重试使用CPU
             if self.provider == EmbeddingProvider.SENTENCE_TRANSFORMERS:
                 try:
-                    vector = self._client.encode(
-                        text, convert_to_numpy=True, device="cpu"
-                    )
+                    vector = self._client.encode(text, convert_to_numpy=True, device="cpu")
                     logger.warning("[EmbeddingClient] 使用CPU重新生成向量成功")
                     return vector.tolist()
                 except Exception:  # noqa: S110, BLE001 — CPU重试失败时忽略，保留原异常上抛
                     pass
             raise
 
-    async def embed_batch(
-        self, texts: List[str], batch_size: int = 32
-    ) -> List[List[float]]:
+    async def embed_batch(self, texts: List[str], batch_size: int = 32) -> List[List[float]]:
         """
         批量生成向量嵌入
 
@@ -263,17 +244,13 @@ class EmbeddingClient:
                             device = "cuda"
                     except Exception:  # noqa: S110, BLE001 — GPU探测失败静默跳过
                         pass
-                vectors_batch = self._client.encode(
-                    texts, convert_to_numpy=True, device=device
-                )
+                vectors_batch = self._client.encode(texts, convert_to_numpy=True, device=device)
                 vectors = [v.tolist() for v in vectors_batch]
             else:
                 # API批量调用
                 for i in range(0, len(texts), batch_size):
                     batch = texts[i : i + batch_size]
-                    response = await self._client.embeddings.create(
-                        model=self.model, input=batch
-                    )
+                    response = await self._client.embeddings.create(model=self.model, input=batch)
                     batch_vectors = [item.embedding for item in response.data]
                     vectors.extend(batch_vectors)
 
@@ -302,9 +279,7 @@ class EmbeddingClient:
                 "BAAI/bge-large-zh-v1.5": 1024,
                 "BAAI/bge-base-zh-v1.5": 768,
             },
-            EmbeddingProvider.SENTENCE_TRANSFORMERS: {
-                "paraphrase-multilingual-MiniLM-L12-v2": 384
-            },
+            EmbeddingProvider.SENTENCE_TRANSFORMERS: {"paraphrase-multilingual-MiniLM-L12-v2": 384},
         }
 
         provider_dims = dimensions.get(self.provider, {})
@@ -335,9 +310,7 @@ async def get_embedding_client(
     Returns:
         EmbeddingClient实例
     """
-    client = EmbeddingClient(
-        provider=provider, model=model, api_key=api_key
-    )
+    client = EmbeddingClient(provider=provider, model=model, api_key=api_key)
     await client.initialize()
     return client
 

@@ -91,9 +91,7 @@ class AuthRoutes:
                 logger.debug(f"[WebAPI] 生成初始密码提示失败: {e}")
 
             try:
-                result = await self.web_net.login_user(
-                    username=username, password=password
-                )
+                result = await self.web_net.login_user(username=username, password=password)
                 return result
             except Exception as e:  # noqa: BLE001 — 登录异常显式返回错误，不放行
                 logger.error(f"[WebAPI] 用户登录失败: {e}")
@@ -113,9 +111,7 @@ class AuthRoutes:
 
         @self.router.get("/me")
         async def get_current_user(
-            credentials: Optional[HTTPAuthorizationCredentials] = Depends(
-                HTTPBearer(auto_error=False)
-            ),
+            credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
         ):
             """获取当前用户信息"""
             try:
@@ -167,9 +163,7 @@ class AuthRoutes:
         """设置权限检查中间件"""
 
         async def check_api_permission(
-            token: Optional[HTTPAuthorizationCredentials] = Depends(
-                HTTPBearer(auto_error=False)
-            ),
+            token: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
         ):
             """检查 API 权限"""
             try:

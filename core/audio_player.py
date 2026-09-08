@@ -79,9 +79,7 @@ class AudioPlayer:
         self._stop_event.clear()
 
         # 在后台任务中播放
-        self._current_task = asyncio.create_task(
-            self._play_in_background(audio_path, play_volume)
-        )
+        self._current_task = asyncio.create_task(self._play_in_background(audio_path, play_volume))
 
         try:
             await self._current_task
@@ -126,21 +124,15 @@ class AudioPlayer:
                         elif sampwidth == 1:
                             samples = array.array("B", audio_data)
                             for i in range(len(samples)):
-                                samples[i] = max(
-                                    0, min(255, int((samples[i] - 128) * volume + 128))
-                                )
+                                samples[i] = max(0, min(255, int((samples[i] - 128) * volume + 128)))
                             audio_data = samples.tobytes()
                         elif sampwidth == 3:
                             count = len(audio_data) // 3
                             result = bytearray(len(audio_data))
                             for i in range(count):
-                                raw = int.from_bytes(
-                                    audio_data[i * 3 : i * 3 + 3], "little", signed=True
-                                )
+                                raw = int.from_bytes(audio_data[i * 3 : i * 3 + 3], "little", signed=True)
                                 val = max(-8388608, min(8388607, int(raw * volume)))
-                                result[i * 3 : i * 3 + 3] = val.to_bytes(
-                                    3, "little", signed=True
-                                )
+                                result[i * 3 : i * 3 + 3] = val.to_bytes(3, "little", signed=True)
                             audio_data = bytes(result)
                         elif sampwidth == 4:
                             samples = array.array("i", audio_data)

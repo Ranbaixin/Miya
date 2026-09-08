@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class ConfigUpdater:
     """配置更新器
-    
+
     职责：
     - 更新各个系统的配置
     - 处理不同配置类型的更新逻辑
@@ -47,12 +47,7 @@ class ConfigUpdater:
         """
         self.event_publisher = event_publisher
 
-    def apply_updates(
-        self,
-        new_config: Dict[str, Any],
-        changes: Dict[str, Any],
-        context: Any
-    ) -> None:
+    def apply_updates(self, new_config: Dict[str, Any], changes: Dict[str, Any], context: Any) -> None:
         """应用配置更新
 
         Args:
@@ -63,25 +58,25 @@ class ConfigUpdater:
         changed_keys = set(changes.keys())
 
         # 更新队列管理器
-        if hasattr(context, 'queue_manager') and context.queue_manager and "queue_intervals" in changed_keys:
+        if hasattr(context, "queue_manager") and context.queue_manager and "queue_intervals" in changed_keys:
             intervals = new_config.get("queue_intervals", {})
             context.queue_manager.update_model_intervals(intervals)
             logger.info("[配置更新] 队列间隔已更新")
 
         # 更新人格系统
-        if hasattr(context, 'personality') and context.personality and "personality" in changed_keys:
+        if hasattr(context, "personality") and context.personality and "personality" in changed_keys:
             personality_config = new_config.get("personality", {})
             self._update_personality_config(context.personality, personality_config)
             logger.info("[配置更新] 人格配置已更新")
 
         # 更新情绪系统
-        if hasattr(context, 'emotion') and context.emotion and "emotion" in changed_keys:
+        if hasattr(context, "emotion") and context.emotion and "emotion" in changed_keys:
             emotion_config = new_config.get("emotion", {})
             self._update_emotion_config(context.emotion, emotion_config)
             logger.info("[配置更新] 情绪配置已更新")
 
         # 更新记忆系统
-        if hasattr(context, 'memory') and context.memory and "memory" in changed_keys:
+        if hasattr(context, "memory") and context.memory and "memory" in changed_keys:
             memory_config = new_config.get("memory", {})
             self._update_memory_config(context.memory, memory_config)
             logger.info("[配置更新] 记忆配置已更新")
@@ -93,19 +88,19 @@ class ConfigUpdater:
             logger.info("[配置更新] TTS配置已更新")
 
         # 更新WebAPI配置
-        if hasattr(context, 'web_api') and context.web_api and "web_api" in changed_keys:
+        if hasattr(context, "web_api") and context.web_api and "web_api" in changed_keys:
             webapi_config = new_config.get("web_api", {})
             self._update_webapi_config(context.web_api, webapi_config)
             logger.info("[配置更新] WebAPI配置已更新")
 
         # 更新终端管理器配置
-        if hasattr(context, 'terminal_manager') and context.terminal_manager and "terminal" in changed_keys:
+        if hasattr(context, "terminal_manager") and context.terminal_manager and "terminal" in changed_keys:
             terminal_config = new_config.get("terminal", {})
             self._update_terminal_config(context.terminal_manager, terminal_config)
             logger.info("[配置更新] 终端管理器配置已更新")
 
         # 更新IoT管理器配置
-        if hasattr(context, 'iot_manager') and context.iot_manager and "iot" in changed_keys:
+        if hasattr(context, "iot_manager") and context.iot_manager and "iot" in changed_keys:
             iot_config = new_config.get("iot", {})
             self._update_iot_config(context.iot_manager, iot_config)
             logger.info("[配置更新] IoT管理器配置已更新")
@@ -184,9 +179,9 @@ class ConfigUpdater:
             if engine:
                 tts_instance = self._get_tts_instance(context)
                 if tts_instance:
-                    if hasattr(tts_instance, 'engine_name'):
+                    if hasattr(tts_instance, "engine_name"):
                         tts_instance.engine_name = engine
-                    elif hasattr(tts_instance, 'set_engine'):
+                    elif hasattr(tts_instance, "set_engine"):
                         tts_instance.set_engine(engine)
                     logger.info(f"[配置更新] TTS引擎已切换到: {engine}")
 
@@ -194,9 +189,9 @@ class ConfigUpdater:
             if voice:
                 tts_instance = self._get_tts_instance(context)
                 if tts_instance:
-                    if hasattr(tts_instance, 'voice'):
+                    if hasattr(tts_instance, "voice"):
                         tts_instance.voice = voice
-                    elif hasattr(tts_instance, 'set_voice'):
+                    elif hasattr(tts_instance, "set_voice"):
                         tts_instance.set_voice(voice)
                     logger.info(f"[配置更新] TTS音色已切换到: {voice}")
 
@@ -205,9 +200,13 @@ class ConfigUpdater:
 
     def _get_tts_instance(self, context: Any) -> Optional[Any]:
         """获取TTS实例"""
-        if hasattr(context, 'agent_manager') and context.agent_manager and hasattr(context.agent_manager, 'tts_engine'):
+        if hasattr(context, "agent_manager") and context.agent_manager and hasattr(context.agent_manager, "tts_engine"):
             return context.agent_manager.tts_engine
-        elif hasattr(context, 'config_manager') and context.config_manager and hasattr(context.config_manager, 'tts_engine'):
+        elif (
+            hasattr(context, "config_manager")
+            and context.config_manager
+            and hasattr(context.config_manager, "tts_engine")
+        ):
             return context.config_manager.tts_engine
         return None
 
@@ -217,30 +216,30 @@ class ConfigUpdater:
             # 更新API密钥
             api_key = config.get("api_key")
             if api_key:
-                if hasattr(web_api, 'api_key'):
+                if hasattr(web_api, "api_key"):
                     web_api.api_key = api_key
-                elif hasattr(web_api, 'set_api_key'):
+                elif hasattr(web_api, "set_api_key"):
                     web_api.set_api_key(api_key)
 
             # 更新CORS配置
             cors_origins = config.get("cors_origins")
             if cors_origins:
                 if isinstance(cors_origins, str):
-                    origins_list = [origin.strip() for origin in cors_origins.split(',')]
+                    origins_list = [origin.strip() for origin in cors_origins.split(",")]
                 else:
                     origins_list = list(cors_origins)
 
-                if hasattr(web_api, 'cors_origins'):
+                if hasattr(web_api, "cors_origins"):
                     web_api.cors_origins = origins_list
-                elif hasattr(web_api, 'update_cors'):
+                elif hasattr(web_api, "update_cors"):
                     web_api.update_cors(origins_list)
 
             # 更新速率限制
             rate_limit = config.get("rate_limit")
             if rate_limit and isinstance(rate_limit, int) and rate_limit > 0:
-                if hasattr(web_api, 'rate_limit'):
+                if hasattr(web_api, "rate_limit"):
                     web_api.rate_limit = rate_limit
-                elif hasattr(web_api, 'set_rate_limit'):
+                elif hasattr(web_api, "set_rate_limit"):
                     web_api.set_rate_limit(rate_limit)
 
         except Exception as e:
@@ -251,26 +250,27 @@ class ConfigUpdater:
         try:
             timeout = config.get("timeout")
             if timeout and isinstance(timeout, (int, float)) and timeout > 0:
-                if hasattr(terminal_manager, 'timeout'):
+                if hasattr(terminal_manager, "timeout"):
                     terminal_manager.timeout = timeout
-                elif hasattr(terminal_manager, 'set_timeout'):
+                elif hasattr(terminal_manager, "set_timeout"):
                     terminal_manager.set_timeout(timeout)
 
             buffer_size = config.get("buffer_size")
             if buffer_size and isinstance(buffer_size, int) and buffer_size > 0:
-                if hasattr(terminal_manager, 'buffer_size'):
+                if hasattr(terminal_manager, "buffer_size"):
                     terminal_manager.buffer_size = buffer_size
-                elif hasattr(terminal_manager, 'set_buffer_size'):
+                elif hasattr(terminal_manager, "set_buffer_size"):
                     terminal_manager.set_buffer_size(buffer_size)
 
             default_shell = config.get("default_shell")
             if default_shell:
                 from pathlib import Path
+
                 shell_path = Path(default_shell)
                 if shell_path.exists():
-                    if hasattr(terminal_manager, 'default_shell'):
+                    if hasattr(terminal_manager, "default_shell"):
                         terminal_manager.default_shell = default_shell
-                    elif hasattr(terminal_manager, 'set_default_shell'):
+                    elif hasattr(terminal_manager, "set_default_shell"):
                         terminal_manager.set_default_shell(default_shell)
 
         except Exception as e:
@@ -285,23 +285,23 @@ class ConfigUpdater:
 
             heartbeat_interval = config.get("heartbeat_interval")
             if heartbeat_interval and isinstance(heartbeat_interval, (int, float)) and heartbeat_interval > 0:
-                if hasattr(iot_manager, 'heartbeat_interval'):
+                if hasattr(iot_manager, "heartbeat_interval"):
                     iot_manager.heartbeat_interval = heartbeat_interval
 
                 # 重启心跳定时器
-                if hasattr(iot_manager, 'heartbeat_task') and iot_manager.heartbeat_task:
+                if hasattr(iot_manager, "heartbeat_task") and iot_manager.heartbeat_task:
                     iot_manager.heartbeat_task.cancel()
-                    if hasattr(iot_manager, 'start_heartbeat'):
+                    if hasattr(iot_manager, "start_heartbeat"):
                         iot_manager.start_heartbeat()
 
             automation_rules = config.get("automation_rules")
             if automation_rules:
                 if isinstance(automation_rules, list):
-                    rules_dict = {rule.get('id', f'rule_{i}'): rule for i, rule in enumerate(automation_rules)}
+                    rules_dict = {rule.get("id", f"rule_{i}"): rule for i, rule in enumerate(automation_rules)}
                 else:
                     rules_dict = automation_rules
 
-                if hasattr(iot_manager, 'automation_rules'):
+                if hasattr(iot_manager, "automation_rules"):
                     iot_manager.automation_rules = rules_dict
 
         except Exception as e:

@@ -9,7 +9,7 @@ import os
 import time
 from typing import Any, Dict, Optional
 
-from starlette.responses import StreamingResponse
+from starlette.responses import JSONResponse, StreamingResponse
 
 
 def _is_process_running(process):
@@ -155,6 +155,7 @@ class WebAPI:
             # 终端路由已迁移至 Open-ClaudeCode
             from .system import SystemRoutes
             from .tools import ToolRoutes
+
             # 跨终端路由已迁移至 Open-ClaudeCode
 
             # 初始化路由模块
@@ -245,9 +246,11 @@ class WebAPI:
                     "disk_usage_percent": d.percent,
                     "disk_used_gb": round(d.used / (1024**3), 1),
                     "disk_total_gb": round(d.total / (1024**3), 1),
-                    "uptime_seconds": int(time.time() - getattr(psutil, "boot_time", lambda: time.time() - 1)())
-                    if hasattr(psutil, "boot_time")
-                    else 0,
+                    "uptime_seconds": (
+                        int(time.time() - getattr(psutil, "boot_time", lambda: time.time() - 1)())
+                        if hasattr(psutil, "boot_time")
+                        else 0
+                    ),
                     "process_count": len(psutil.pids()),
                     "timestamp": datetime.utcnow().isoformat(),
                 }
@@ -302,7 +305,11 @@ class WebAPI:
                     queue_size = 0
                     processing = False
                     if mlink.message_queue:
-                        queue_size = mlink.message_queue.size() if hasattr(mlink.message_queue, "size") else len(getattr(mlink.message_queue, "queue", []))
+                        queue_size = (
+                            mlink.message_queue.size()
+                            if hasattr(mlink.message_queue, "size")
+                            else len(getattr(mlink.message_queue, "queue", []))
+                        )
                         processing = getattr(mlink.message_queue, "processing", False)
                     return {
                         "size": queue_size,
@@ -323,16 +330,47 @@ class WebAPI:
 
         @self.router.get("/api/config/file")
         async def get_config_file(path: str = ""):
-            """读取配置文件内容"""
+            """读取配置文件内容
+
+            2026-09 安全加固：
+            - 用 os.path.commonpath 做真正的路径边界校验（原 startswith 可被
+              同前缀兄弟目录绕过，如 ../Miya2/xxx）
+            - 拒绝读取 .env 等敏感文件（含 API Key / JWT 密钥 / 口令哈希）
+            """
             try:
+                from pathlib import Path as _Path
+
                 fp = os.path.join(os.getcwd(), path)
                 fp = os.path.normpath(fp)
-                if not fp.startswith(os.path.normpath(os.getcwd())) or not os.path.isfile(fp):
+                cwd = os.path.normpath(os.getcwd())
+                # 路径边界校验：必须真实位于工作目录内部
+                try:
+                    if os.path.commonpath([cwd, fp]) != cwd:
+                        return {"error": "文件不存在"}
+                except ValueError:  # 不同盘符等无法求公共前缀的情形
+                    return {"error": "文件不存在"}
+                # 敏感文件黑名单：任何层级的 .env* 一律拒绝
+                parts = [p.lower() for p in _Path(fp).parts]
+                if any(p == ".env" or p.startswith(".env.") for p in parts):
+                    return {"error": "该文件受安全策略保护，禁止读取"}
+                if not os.path.isfile(fp):
                     return {"error": "文件不存在"}
                 with open(fp, "r", encoding="utf-8", errors="ignore") as f:
                     return {"path": path, "content": f.read()}
             except Exception as e:  # noqa: BLE001 — 配置文件读取失败，返回错误响应
                 return {"error": str(e)}
+
+        @self.router.post("/api/audio/transcribe")
+        async def transcribe_audio():
+            """语音转写（2026-09 新增：桌面端此前 404）
+
+            当前无可用转写后端，明确返回 501 而非 404，
+            前端可据此提示"语音输入不可用"。
+            """
+            return JSONResponse(
+                {"success": False, "error": "语音转写服务未配置（缺少转写后端）"},
+                status_code=501,
+            )
 
         @self.router.get("/api/status")
         async def get_legacy_system_status():

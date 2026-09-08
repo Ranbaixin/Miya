@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PoolConfig:
     """连接池配置"""
+
     min_connections: int = 2
     max_connections: int = 10
     connection_timeout: float = 5.0
@@ -39,6 +40,7 @@ class PoolConfig:
 @dataclass
 class ConnectionWrapper:
     """连接包装器"""
+
     connection: Any
     created_at: float
     last_used_at: float
@@ -49,12 +51,7 @@ class ConnectionWrapper:
 class ConnectionPool:
     """通用数据库连接池"""
 
-    def __init__(
-        self,
-        connection_factory: Type[Any],
-        config: Optional[PoolConfig] = None,
-        **connection_params
-    ):
+    def __init__(self, connection_factory: Type[Any], config: Optional[PoolConfig] = None, **connection_params):
         self.connection_factory = connection_factory
         self.config = config or PoolConfig()
         self.connection_params = connection_params
@@ -71,7 +68,7 @@ class ConnectionPool:
             "closed": 0,
             "health_checks": 0,
             "failed_checks": 0,
-            "max_concurrent": 0
+            "max_concurrent": 0,
         }
 
         # 锁
@@ -79,9 +76,7 @@ class ConnectionPool:
         self._shutdown = False
 
         logger.info(
-            f"[连接池] 初始化完成, "
-            f"min={self.config.min_connections}, "
-            f"max={self.config.max_connections}"
+            f"[连接池] 初始化完成, " f"min={self.config.min_connections}, " f"max={self.config.max_connections}"
         )
 
     async def initialize(self):
@@ -115,7 +110,7 @@ class ConnectionPool:
                 created_at=time.time(),
                 last_used_at=time.time(),
                 is_busy=False,
-                health_status="healthy"
+                health_status="healthy",
             )
 
             with self._lock:
@@ -155,10 +150,7 @@ class ConnectionPool:
                 wrapper.last_used_at = time.time()
                 self._busy_connections[id(wrapper.connection)] = wrapper
                 self.stats["reused"] += 1
-                self.stats["max_concurrent"] = max(
-                    self.stats["max_concurrent"],
-                    len(self._busy_connections)
-                )
+                self.stats["max_concurrent"] = max(self.stats["max_concurrent"], len(self._busy_connections))
 
             logger.debug("[连接池] 获取连接成功")
             return wrapper.connection
@@ -204,8 +196,7 @@ class ConnectionPool:
 
         # 检查是否需要关闭连接(超时或超寿命)
         now = time.time()
-        if (now - wrapper.created_at > self.config.max_lifetime or
-            now - wrapper.last_used_at > self.config.idle_timeout):
+        if now - wrapper.created_at > self.config.max_lifetime or now - wrapper.last_used_at > self.config.idle_timeout:
             await self._close_connection(wrapper)
             logger.debug("[连接池] 连接已超时,关闭并重新创建")
 
@@ -226,14 +217,14 @@ class ConnectionPool:
             conn = wrapper.connection
 
             # 检查是否有ping方法
-            if hasattr(conn, 'ping'):
+            if hasattr(conn, "ping"):
                 if asyncio.iscoroutinefunction(conn.ping):
                     await conn.ping()
                 else:
                     conn.ping()
 
             # 检查是否有execute方法(SQLite/PostgreSQL)
-            elif hasattr(conn, 'execute'):
+            elif hasattr(conn, "execute"):
                 if asyncio.iscoroutinefunction(conn.execute):
                     await conn.execute("SELECT 1")
                 else:
@@ -347,7 +338,7 @@ class ConnectionPool:
                 **self.stats,
                 "total_connections": len(self._connections),
                 "available_connections": self._available_connections.qsize(),
-                "busy_connections": len(self._busy_connections)
+                "busy_connections": len(self._busy_connections),
             }
 
     def clear_stats(self):
@@ -359,7 +350,7 @@ class ConnectionPool:
                 "closed": 0,
                 "health_checks": 0,
                 "failed_checks": 0,
-                "max_concurrent": 0
+                "max_concurrent": 0,
             }
 
 
@@ -373,10 +364,7 @@ class SQLiteConnectionPool(ConnectionPool):
         def create_connection(db_path: str):
             return sqlite3.connect(db_path, check_same_thread=False)
 
-        super().__init__(
-            connection_factory=lambda: create_connection(db_path),
-            config=config
-        )
+        super().__init__(connection_factory=lambda: create_connection(db_path), config=config)
 
 
 # MySQL连接池(使用aiomysql)
@@ -384,13 +372,7 @@ class MySQLConnectionPool(ConnectionPool):
     """MySQL连接池"""
 
     def __init__(
-        self,
-        host: str,
-        port: int,
-        user: str,
-        password: str,
-        database: str,
-        config: Optional[PoolConfig] = None
+        self, host: str, port: int, user: str, password: str, database: str, config: Optional[PoolConfig] = None
     ):
         import aiomysql
 
@@ -404,7 +386,7 @@ class MySQLConnectionPool(ConnectionPool):
             port=port,
             user=user,
             password=password,
-            db=database
+            db=database,
         )
 
 
@@ -413,13 +395,7 @@ class PostgreSQLConnectionPool(ConnectionPool):
     """PostgreSQL连接池"""
 
     def __init__(
-        self,
-        host: str,
-        port: int,
-        user: str,
-        password: str,
-        database: str,
-        config: Optional[PoolConfig] = None
+        self, host: str, port: int, user: str, password: str, database: str, config: Optional[PoolConfig] = None
     ):
         import asyncpg
 
@@ -433,7 +409,7 @@ class PostgreSQLConnectionPool(ConnectionPool):
             port=port,
             user=user,
             password=password,
-            database=database
+            database=database,
         )
 
 
@@ -467,13 +443,11 @@ async def shutdown_all_pools():
 
 # 示例使用
 if __name__ == "__main__":
+
     async def test_sqlite_pool():
 
         # 创建SQLite连接池
-        pool = SQLiteConnectionPool("test.db", PoolConfig(
-            min_connections=2,
-            max_connections=5
-        ))
+        pool = SQLiteConnectionPool("test.db", PoolConfig(min_connections=2, max_connections=5))
 
         # 初始化
         await pool.initialize()

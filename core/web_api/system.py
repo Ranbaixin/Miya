@@ -85,20 +85,11 @@ class SystemRoutes:
                         "last_command": "N/A",
                         "status": "unknown",
                     }
-                    if (
-                        hasattr(self.decision_hub, "terminal_tool")
-                        and self.decision_hub.terminal_tool
-                    ):
+                    if hasattr(self.decision_hub, "terminal_tool") and self.decision_hub.terminal_tool:
                         try:
                             # 检查是否有 get_command_history 方法
-                            if hasattr(
-                                self.decision_hub.terminal_tool, "get_command_history"
-                            ):
-                                history = (
-                                    self.decision_hub.terminal_tool.get_command_history(
-                                        1
-                                    )
-                                )
+                            if hasattr(self.decision_hub.terminal_tool, "get_command_history"):
+                                history = self.decision_hub.terminal_tool.get_command_history(1)
                             else:
                                 history = []
 
@@ -112,12 +103,8 @@ class SystemRoutes:
                                 statistics = {}
 
                             terminal_stats = {
-                                "total_commands": statistics.get("total", 0)
-                                if statistics
-                                else 0,
-                                "last_command": history[0].get("command", "N/A")
-                                if history
-                                else "N/A",
+                                "total_commands": statistics.get("total", 0) if statistics else 0,
+                                "last_command": history[0].get("command", "N/A") if history else "N/A",
                                 "status": "ready",
                             }
                         except Exception as e:  # noqa: BLE001 — 终端统计获取失败，降级默认
@@ -135,9 +122,7 @@ class SystemRoutes:
                                 auto_stats = miya.autonomous_engine.get_statistics()
                                 autonomy_stats = {
                                     "status": "active",
-                                    "total_decisions": auto_stats.get(
-                                        "total_decisions", 0
-                                    ),
+                                    "total_decisions": auto_stats.get("total_decisions", 0),
                                     "total_fixes": auto_stats.get("total_fixes", 0),
                                 }
                         except Exception as e:  # noqa: BLE001 — 自主决策统计获取失败，降级默认
@@ -151,20 +136,10 @@ class SystemRoutes:
                     }
                     if self.web_net and hasattr(self.web_net, "security_manager"):
                         try:
-                            security_events = (
-                                self.web_net.security_manager.get_security_events(
-                                    limit=1000
-                                )
-                            )
+                            security_events = self.web_net.security_manager.get_security_events(limit=1000)
                             security_stats = {
                                 "status": "protected",
-                                "blocked_ips": len(
-                                    [
-                                        e
-                                        for e in security_events
-                                        if e.get("type") == "ip_blocked"
-                                    ]
-                                ),
+                                "blocked_ips": len([e for e in security_events if e.get("type") == "ip_blocked"]),
                                 "total_events": len(security_events),
                             }
                         except Exception as e:  # noqa: BLE001 — 安全统计获取失败，降级默认
@@ -178,9 +153,7 @@ class SystemRoutes:
                         "memory_stats": status.get("memory_stats", {}),
                         "stats": status.get("stats", {}),
                         "platform_info": platform_info,
-                        "system_capabilities": platform_info.get(
-                            "system_capabilities", {}
-                        ),
+                        "system_capabilities": platform_info.get("system_capabilities", {}),
                         "available_tools": platform_info.get("available_tools", []),
                         "capabilities": platform_info.get("capabilities", {}),
                         "autonomy": autonomy_stats,
@@ -211,20 +184,13 @@ class SystemRoutes:
                 monitor_data = {
                     "cpu": {
                         **capabilities["cpu"],
-                        "per_core": [
-                            round(p, 1)
-                            for p in psutil.cpu_percent(interval=0.1, percpu=True)
-                        ],
+                        "per_core": [round(p, 1) for p in psutil.cpu_percent(interval=0.1, percpu=True)],
                     },
                     "memory": {
                         **capabilities["memory"],
                         "used_gb": round(
                             capabilities["memory"]["total_gb"]
-                            * (
-                                1
-                                - capabilities["memory"]["available_gb"]
-                                / capabilities["memory"]["total_gb"]
-                            ),
+                            * (1 - capabilities["memory"]["available_gb"] / capabilities["memory"]["total_gb"]),
                             2,
                         ),
                     },
@@ -236,9 +202,7 @@ class SystemRoutes:
                     },
                     "process": {
                         "total": len(psutil.pids()),
-                        "running": len(
-                            [p for p in psutil.process_iter() if _is_process_running(p)]
-                        ),
+                        "running": len([p for p in psutil.process_iter() if _is_process_running(p)]),
                     },
                 }
 
@@ -260,9 +224,7 @@ class SystemRoutes:
                     return {"success": True, "logs": [], "message": "日志目录不存在"}
 
                 log_files = list(log_dir.glob("*.log"))
-                latest_log = max(
-                    log_files, key=lambda f: f.stat().st_mtime, default=None
-                )
+                latest_log = max(log_files, key=lambda f: f.stat().st_mtime, default=None)
 
                 if not latest_log:
                     return {"success": True, "logs": [], "message": "没有找到日志文件"}
@@ -299,9 +261,7 @@ class SystemRoutes:
                     if log_files:
                         latest_log = max(log_files, key=lambda f: f.stat().st_mtime)
                         try:
-                            with open(
-                                latest_log, "r", encoding="utf-8", errors="ignore"
-                            ) as f:
+                            with open(latest_log, "r", encoding="utf-8", errors="ignore") as f:
                                 lines = f.readlines()[-100:]
 
                             # 解析日志行提取活动

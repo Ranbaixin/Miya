@@ -62,9 +62,7 @@ class MiyaTaskManager:
     _weak_ref = None
 
     @classmethod
-    def get_instance(
-        cls, max_workers: int = 3, max_queue_size: int = 100
-    ) -> "MiyaTaskManager":
+    def get_instance(cls, max_workers: int = 3, max_queue_size: int = 100) -> "MiyaTaskManager":
         """获取单例实例"""
         if cls._instance is None:
             cls._instance = cls(max_workers, max_queue_size)
@@ -101,9 +99,7 @@ class MiyaTaskManager:
         # 任务处理器映射
         self._task_handlers: Dict[str, Callable] = {}
 
-        logger.info(
-            f"[TaskManager] 初始化完成: workers={max_workers}, queue_size={max_queue_size}"
-        )
+        logger.info(f"[TaskManager] 初始化完成: workers={max_workers}, queue_size={max_queue_size}")
 
     def register_handler(self, task_type: str, handler: Callable) -> None:
         """注册任务处理器"""
@@ -254,9 +250,7 @@ class MiyaTaskManager:
             if task.retry_count < task.max_retries:
                 task.retry_count += 1
                 task.status = TaskStatus.PENDING
-                logger.info(
-                    f"[TaskManager] 任务重试 ({task.retry_count}/{task.max_retries}): {task.task_id}"
-                )
+                logger.info(f"[TaskManager] 任务重试 ({task.retry_count}/{task.max_retries}): {task.task_id}")
                 self.task_queue.put_nowait(task)
             else:
                 task.status = TaskStatus.FAILED

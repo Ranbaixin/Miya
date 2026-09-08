@@ -14,8 +14,6 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
-import jieba
-import jieba.analyse
 import yaml
 
 logger = logging.getLogger(__name__)
@@ -133,29 +131,56 @@ class SemanticTagger:
             },
         )
 
-        self._init_jieba()
+        # 2026-09：jieba 惰性加载（首次 import + 词典初始化常驻 +40~80MB；
+        # 关键词表先匹配，无命中才回落分词）
+        self._jieba_module = None
+        self._jieba_ready = False
 
-    def _init_jieba(self):
-        """初始化jieba分词"""
-        for keywords in self.EMOTION_KEYWORDS.values():
-            for kw in keywords:
-                jieba.add_word(kw)
-        for keywords in self.CONTEXT_KEYWORDS.values():
-            for kw in keywords:
-                jieba.add_word(kw)
-        for keywords in self.SCENE_KEYWORDS.values():
-            for kw in keywords:
-                jieba.add_word(kw)
+    def _get_jieba(self):
+        """惰性加载 jieba 并注册自定义词表"""
+        if not self._jieba_ready:
+            import jieba
+            import jieba.analyse  # noqa: F401 — 显式加载子模块，extract_tags 依赖
+
+            for keywords in self.EMOTION_KEYWORDS.values():
+                for kw in keywords:
+                    jieba.add_word(kw)
+            for keywords in self.CONTEXT_KEYWORDS.values():
+                for kw in keywords:
+                    jieba.add_word(kw)
+            for keywords in self.SCENE_KEYWORDS.values():
+                for kw in keywords:
+                    jieba.add_word(kw)
+            self._jieba_module = jieba
+            self._jieba_ready = True
+        return self._jieba_module
+
+    def _keyword_table_hits(self, text: str, top_k: int) -> List[str]:
+        """用配置关键词表直接匹配（零依赖、无内存开销的快路径）"""
+        hits: List[str] = []
+        text_lower = text.lower()
+        for group in (self.EMOTION_KEYWORDS, self.CONTEXT_KEYWORDS, self.SCENE_KEYWORDS):
+            for _label, keywords in group.items():
+                for kw in keywords:
+                    if kw in text_lower and kw not in hits:
+                        hits.append(kw)
+                        if len(hits) >= top_k:
+                            return hits
+        return hits
 
     def extract_keywords(self, text: str, topK: int = 10) -> List[str]:
-        """提取关键词"""
+        """提取关键词（关键词表命中优先，无命中才 jieba 分词）"""
+        table_hits = self._keyword_table_hits(text, topK)
+        if table_hits:
+            return table_hits
+
         try:
+            jieba = self._get_jieba()
             keywords = jieba.analyse.extract_tags(text, topK=topK, withWeight=False)
             return keywords
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — 分词失败降级为空白切
             logger.warning(f"关键词提取失败: {e}")
-            words = jieba.cut(text)
-            return [w for w in words if len(w) >= 2][:topK]
+            return [w for w in text.split() if len(w) >= 2][:topK]
 
     def analyze_sentiment(self, text: str) -> Dict[str, float]:
         """分析情感倾向"""

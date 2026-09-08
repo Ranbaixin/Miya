@@ -26,6 +26,7 @@ try:
     from cryptography.hazmat.primitives import hashes
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM, ChaCha20Poly1305
     from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+
     CRYPTO_AVAILABLE = True
 except ImportError:
     CRYPTO_AVAILABLE = False
@@ -36,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 class EncryptionAlgorithm(Enum):
     """加密算法"""
+
     FERNET = "fernet"  # AES-128-CBC
     AES256_GCM = "aes256_gcm"  # AES-256-GCM
     CHACHA20 = "chacha20"  # ChaCha20-Poly1305
@@ -44,6 +46,7 @@ class EncryptionAlgorithm(Enum):
 @dataclass
 class EncryptionConfig:
     """加密配置"""
+
     algorithm: EncryptionAlgorithm = EncryptionAlgorithm.AES256_GCM
     key_derivation_iterations: int = 100000  # PBKDF2迭代次数
     salt_length: int = 16
@@ -53,6 +56,7 @@ class EncryptionConfig:
 @dataclass
 class EncryptedValue:
     """加密值"""
+
     algorithm: str
     ciphertext: str
     salt: str = ""
@@ -77,14 +81,14 @@ class ConfigEncryption:
         "mongodb_password",
         "mysql_password",
         "postgres_password",
-        "redis_password"
+        "redis_password",
     }
 
     def __init__(
         self,
         master_key: Optional[str] = None,
         key_file: Optional[Path] = None,
-        config: Optional[EncryptionConfig] = None
+        config: Optional[EncryptionConfig] = None,
     ):
         self.config = config or EncryptionConfig()
         self.master_key = master_key
@@ -116,7 +120,7 @@ class ConfigEncryption:
 
         if self.key_file and self.key_file.exists():
             # 从密钥文件加载
-            with open(self.key_file, 'rb') as f:
+            with open(self.key_file, "rb") as f:
                 key_data = f.read()
             self._key_store["master"] = key_data
             logger.debug(f"[配置加密] 从密钥文件加载: {self.key_file}")
@@ -133,6 +137,7 @@ class ConfigEncryption:
 
         # 自动生成主密钥(并保存)
         import secrets
+
         new_key = secrets.token_bytes(32)
         self._key_store["master"] = new_key
         self._save_master_key(new_key)
@@ -142,7 +147,7 @@ class ConfigEncryption:
         """保存主密钥到文件"""
         if self.key_file:
             self.key_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.key_file, 'wb') as f:
+            with open(self.key_file, "wb") as f:
                 f.write(key)
             logger.info(f"[配置加密] 主密钥已保存: {self.key_file}")
 
@@ -171,10 +176,7 @@ class ConfigEncryption:
     def encrypt(self, value: str, key_id: str = "master") -> EncryptedValue:
         """加密值"""
         if not value:
-            return EncryptedValue(
-                algorithm=self.config.algorithm.value,
-                ciphertext=""
-            )
+            return EncryptedValue(algorithm=self.config.algorithm.value, ciphertext="")
 
         key = self._get_encryption_key(key_id)
 
@@ -202,12 +204,13 @@ class ConfigEncryption:
         return EncryptedValue(
             algorithm=EncryptionAlgorithm.FERNET.value,
             ciphertext=base64.b64encode(ciphertext).decode(),
-            key_id="master"
+            key_id="master",
         )
 
     def _encrypt_aes256_gcm(self, value: str, key: bytes) -> EncryptedValue:
         """使用AES-256-GCM加密"""
         import secrets
+
         aesgcm = AESGCM(key)
         nonce = secrets.token_bytes(12)  # GCM推荐96位nonce
         ciphertext = aesgcm.encrypt(nonce, value.encode(), None)
@@ -216,12 +219,13 @@ class ConfigEncryption:
             algorithm=EncryptionAlgorithm.AES256_GCM.value,
             ciphertext=base64.b64encode(ciphertext).decode(),
             nonce=base64.b64encode(nonce).decode(),
-            key_id="master"
+            key_id="master",
         )
 
     def _encrypt_chacha20(self, value: str, key: bytes) -> EncryptedValue:
         """使用ChaCha20-Poly1305加密"""
         import secrets
+
         chacha = ChaCha20Poly1305(key)
         nonce = secrets.token_bytes(12)
         ciphertext = chacha.encrypt(nonce, value.encode(), None)
@@ -230,7 +234,7 @@ class ConfigEncryption:
             algorithm=EncryptionAlgorithm.CHACHA20.value,
             ciphertext=base64.b64encode(ciphertext).decode(),
             nonce=base64.b64encode(nonce).decode(),
-            key_id="master"
+            key_id="master",
         )
 
     def decrypt(self, encrypted: EncryptedValue, key_id: str = "master") -> str:
@@ -314,10 +318,7 @@ class ConfigEncryption:
                     if self._is_encrypted_value(value):
                         # 尝试解密
                         try:
-                            encrypted = EncryptedValue(
-                                algorithm=self.config.algorithm.value,
-                                ciphertext=value
-                            )
+                            encrypted = EncryptedValue(algorithm=self.config.algorithm.value, ciphertext=value)
                             decrypted = self.decrypt(encrypted)
                             decrypted_config[key] = decrypted
                         except Exception:  # noqa: BLE001 — 解密失败回退原值，已记录日志
@@ -357,7 +358,7 @@ class ConfigEncryption:
             f"MIYA_{key.upper()}",
             f"MIYA_{key.upper().replace('_', '.')}",
             key.upper(),
-            f"{key.upper()}_SECRET"
+            f"{key.upper()}_SECRET",
         ]
 
         for env_name in env_var_names:
@@ -385,6 +386,7 @@ class ConfigEncryption:
         if password:
             # 使用密码加密导出
             import secrets
+
             salt = secrets.token_bytes(self.config.salt_length)
             derived_key = self._derive_key(password, salt)
 
@@ -393,9 +395,7 @@ class ConfigEncryption:
             nonce = secrets.token_bytes(12)
             encrypted = aesgcm.encrypt(nonce, key, None)
 
-            return base64.b64encode(
-                salt + nonce + encrypted
-            ).decode()
+            return base64.b64encode(salt + nonce + encrypted).decode()
         else:
             # 直接base64编码(不推荐)
             return base64.b64encode(key).decode()
@@ -405,9 +405,9 @@ class ConfigEncryption:
         if password:
             # 使用密码解密
             raw = base64.b64decode(key_data)
-            salt = raw[:self.config.salt_length]
-            nonce = raw[self.config.salt_length:self.config.salt_length + 12]
-            encrypted = raw[self.config.salt_length + 12:]
+            salt = raw[: self.config.salt_length]
+            nonce = raw[self.config.salt_length : self.config.salt_length + 12]
+            encrypted = raw[self.config.salt_length + 12 :]
 
             derived_key = self._derive_key(password, salt)
             aesgcm = AESGCM(derived_key)
@@ -442,9 +442,7 @@ def set_global_encryption(encryption: ConfigEncryption):
 # 示例使用
 if __name__ == "__main__":
     # 创建加密器
-    encryption = ConfigEncryption(
-        key_file=Path("test_key.bin")
-    )
+    encryption = ConfigEncryption(key_file=Path("test_key.bin"))
 
     # 加密值
     encrypted = encryption.encrypt("my_secret_password")
@@ -455,11 +453,7 @@ if __name__ == "__main__":
     print(f"解密值: {decrypted}")
 
     # 加密配置
-    config = {
-        "username": "admin",
-        "password": "secret123",
-        "api_key": "abc123def456"
-    }
+    config = {"username": "admin", "password": "secret123", "api_key": "abc123def456"}
 
     encrypted_config = encryption.encrypt_config(config)
     print(f"加密配置: {encrypted_config}")

@@ -21,7 +21,9 @@ PLUGIN_MARKET_URLS = [
     "https://api.soulter.top/astrbot/plugins",
 ]
 
-PLUGIN_MARKET_FALLBACK = "https://github.com/AstrBotDevs/AstrBot_Plugins_Collection/raw/refs/heads/main/plugin_cache_original.json"
+PLUGIN_MARKET_FALLBACK = (
+    "https://github.com/AstrBotDevs/AstrBot_Plugins_Collection/raw/refs/heads/main/plugin_cache_original.json"
+)
 
 PLUGIN_MD5_URL = "https://api.soulter.top/astrbot/plugins-md5"
 
@@ -54,9 +56,7 @@ class AstrBotPluginMarket:
         self._cache_file = self.cache_dir / "plugins_market.json"
         self._md5_cache_file = self.cache_dir / "plugins_market_md5.json"
 
-    async def get_plugin_list(
-        self, force_refresh: bool = False, custom_url: Optional[str] = None
-    ) -> List[PluginInfo]:
+    async def get_plugin_list(self, force_refresh: bool = False, custom_url: Optional[str] = None) -> List[PluginInfo]:
         """获取插件市场列表
 
         Args:
@@ -94,11 +94,10 @@ class AstrBotPluginMarket:
 
         for url in urls:
             try:
-                async with aiohttp.ClientSession(
-                    trust_env=True, connector=connector
-                ) as session, session.get(
-                    url, timeout=aiohttp.ClientTimeout(total=30)
-                ) as response:
+                async with (
+                    aiohttp.ClientSession(trust_env=True, connector=connector) as session,
+                    session.get(url, timeout=aiohttp.ClientTimeout(total=30)) as response,
+                ):
                     if response.status == 200:
                         try:
                             data = await response.json()
@@ -124,16 +123,13 @@ class AstrBotPluginMarket:
             ssl_context = ssl.create_default_context(cafile=certifi.where())
             connector = aiohttp.TCPConnector(ssl=ssl_context)
 
-            async with aiohttp.ClientSession(
-                trust_env=True, connector=connector
-            ) as session, session.get(
-                PLUGIN_MD5_URL, timeout=aiohttp.ClientTimeout(total=10)
-            ) as response:
+            async with (
+                aiohttp.ClientSession(trust_env=True, connector=connector) as session,
+                session.get(PLUGIN_MD5_URL, timeout=aiohttp.ClientTimeout(total=10)) as response,
+            ):
                 if response.status == 200:
                     md5_data = await response.json()
-                    self._md5_cache_file.write_text(
-                        json.dumps(md5_data, ensure_ascii=False), encoding="utf-8"
-                    )
+                    self._md5_cache_file.write_text(json.dumps(md5_data, ensure_ascii=False), encoding="utf-8")
 
         except Exception as e:  # noqa: BLE001 — 更新 MD5 失败已记录日志
             logger.warning(f"更新 MD5 失败: {e}")
@@ -148,9 +144,7 @@ class AstrBotPluginMarket:
 
         try:
             current_md5 = self._load_current_md5()
-            cached_md5 = json.loads(
-                self._md5_cache_file.read_text(encoding="utf-8")
-            ).get("md5", "")
+            cached_md5 = json.loads(self._md5_cache_file.read_text(encoding="utf-8")).get("md5", "")
             return current_md5 == cached_md5
         except Exception:  # noqa: BLE001 — 缓存校验失败返回 False
             return False
@@ -175,9 +169,7 @@ class AstrBotPluginMarket:
     def _save_cache(self, data: Dict):
         """保存缓存"""
         try:
-            self._cache_file.write_text(
-                json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
-            )
+            self._cache_file.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         except Exception as e:  # noqa: BLE001 — 保存插件缓存失败已记录日志
             logger.warning(f"保存插件缓存失败: {e}")
 
@@ -224,11 +216,10 @@ class AstrBotPluginMarket:
         connector = aiohttp.TCPConnector(ssl=ssl_context)
 
         try:
-            async with aiohttp.ClientSession(
-                trust_env=True, connector=connector
-            ) as session, session.get(
-                plugin.download_url, timeout=aiohttp.ClientTimeout(total=120)
-            ) as response:
+            async with (
+                aiohttp.ClientSession(trust_env=True, connector=connector) as session,
+                session.get(plugin.download_url, timeout=aiohttp.ClientTimeout(total=120)) as response,
+            ):
                 if response.status == 200:
                     content = await response.read()
 

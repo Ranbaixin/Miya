@@ -13,6 +13,7 @@
 
 保留此文件仅作为兼容性参考，建议迁移到新的统一接口。
 """
+
 import hashlib
 import json
 import logging
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CachedPrompt:
     """缓存的提示词"""
+
     key: str
     prompt: str
     created_at: float = field(default_factory=time.time)
@@ -43,12 +45,7 @@ class CachedPrompt:
 class PromptCache:
     """提示词缓存管理器"""
 
-    def __init__(
-        self,
-        max_size: int = 1000,
-        max_memory_mb: int = 100,
-        ttl_seconds: int = 3600
-    ):
+    def __init__(self, max_size: int = 1000, max_memory_mb: int = 100, ttl_seconds: int = 3600):
         """
         初始化提示词缓存
 
@@ -81,7 +78,7 @@ class PromptCache:
         """
         # 确保字典键的顺序一致
         ordered_context = json.dumps(context, sort_keys=True, ensure_ascii=False)
-        return hashlib.md5(ordered_context.encode('utf-8')).hexdigest()
+        return hashlib.md5(ordered_context.encode("utf-8")).hexdigest()
 
     def get(self, context: Dict[str, Any]) -> Optional[str]:
         """
@@ -126,7 +123,7 @@ class PromptCache:
             prompt: 提示词内容
         """
         key = self._generate_key(context)
-        prompt_size = len(prompt.encode('utf-8'))
+        prompt_size = len(prompt.encode("utf-8"))
 
         # 检查单个条目大小限制
         if prompt_size > 10 * 1024 * 1024:  # 10MB
@@ -142,17 +139,10 @@ class PromptCache:
             self._ensure_space(prompt_size)
 
             # 添加新缓存
-            cached = CachedPrompt(
-                key=key,
-                prompt=prompt,
-                size_bytes=prompt_size
-            )
+            cached = CachedPrompt(key=key, prompt=prompt, size_bytes=prompt_size)
             self._cache[key] = cached
 
-            logger.debug(
-                f"[PromptCache] 缓存添加: {key[:8]} "
-                f"(大小: {prompt_size} bytes, 总数: {len(self._cache)})"
-            )
+            logger.debug(f"[PromptCache] 缓存添加: {key[:8]} " f"(大小: {prompt_size} bytes, 总数: {len(self._cache)})")
 
     def _ensure_space(self, required_bytes: int) -> None:
         """
@@ -183,10 +173,7 @@ class PromptCache:
             count: 要驱逐的条目数
         """
         # 按最后访问时间排序
-        sorted_items = sorted(
-            self._cache.items(),
-            key=lambda x: x[1].last_accessed
-        )
+        sorted_items = sorted(self._cache.items(), key=lambda x: x[1].last_accessed)
 
         # 驱逐最旧的count个条目
         for key, _ in sorted_items[:count]:
@@ -203,10 +190,7 @@ class PromptCache:
             bytes_to_free: 需要释放的字节数
         """
         # 按最后访问时间排序
-        sorted_items = sorted(
-            self._cache.items(),
-            key=lambda x: x[1].last_accessed
-        )
+        sorted_items = sorted(self._cache.items(), key=lambda x: x[1].last_accessed)
 
         freed = 0
         for key, cached in sorted_items:
@@ -247,21 +231,21 @@ class PromptCache:
                 "total_misses": self._misses,
                 "hit_rate": hit_rate * 100,
                 "total_evictions": self._evictions,
-                "ttl_seconds": self.ttl_seconds
+                "ttl_seconds": self.ttl_seconds,
             }
 
 
 class PromptCacheManager:
     """提示词缓存管理器（单例）"""
 
-    _instance: Optional['PromptCacheManager'] = None
+    _instance: Optional["PromptCacheManager"] = None
     _lock = Lock()
 
     def __init__(self):
         self.cache = PromptCache()
 
     @classmethod
-    def get_instance(cls) -> 'PromptCacheManager':
+    def get_instance(cls) -> "PromptCacheManager":
         """获取单例实例"""
         if cls._instance is None:
             with cls._lock:
@@ -286,9 +270,7 @@ class PromptCacheManager:
         return self.cache.get_stats()
 
 
-def cached_prompt(
-    cache_manager: Optional[PromptCacheManager] = None
-) -> Callable:
+def cached_prompt(cache_manager: Optional[PromptCacheManager] = None) -> Callable:
     """
     提示词缓存装饰器
 

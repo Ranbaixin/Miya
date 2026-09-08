@@ -49,38 +49,17 @@ export class CoreApiClient extends ApiClient {
     })
   }
 
-  async chatStream(data: {
-    message: string
-    session_id?: string
-    platform?: string
-    user_id?: string
-  }): Promise<AsyncIterableIterator<StreamChunk>> {
-    return this.instance.post('/api/chat', data, {
-      responseType: 'stream',
-      timeout: 0,
-      headers: { Accept: 'text/event-stream' },
-    }).then(res => {
-      const reader = res.data?.getReader?.()
-      return reader
-        ? aiter(decodeStreamChunk(readerToMessageStream(reader)))
-        : aiter<StreamChunk>([])
-    })
-  }
-
-  async chatStop(): Promise<void> {
-    return this.instance.post('/api/chat/stop')
-  }
-
   async listSessions(): Promise<SessionInfo[]> {
-    return this.instance.get('/api/chat/sessions')
+    const res: any = await this.instance.get('/api/chat/sessions')
+    // 2026-09 修复：后端返回 {success, data:[...]}，调用方期望 res.sessions
+    return { sessions: res?.data ?? res?.sessions ?? [] } as any
   }
 
   async getSession(sessionId: string): Promise<any> {
-    return this.instance.get(`/api/chat/get_session?session_id=${sessionId}`)
-  }
-
-  async newSession(): Promise<{ id: string }> {
-    return this.instance.get('/api/chat/new_session')
+    const res: any = await this.instance.get(`/api/chat/get_session?session_id=${sessionId}`)
+    // 2026-09 修复：后端返回 {data:{history}}，调用方期望 detail.messages
+    const history = res?.data?.history ?? res?.data?.messages ?? res?.messages ?? []
+    return { ...res, messages: history }
   }
 
   async deleteSession(sessionId: string): Promise<void> {
@@ -96,20 +75,29 @@ export class CoreApiClient extends ApiClient {
 
   // ── 记忆 ──
   async getMemoryStats(): Promise<MemoryStats> {
-    return this.instance.get('/api/memory/stats')
+    const res: any = await this.instance.get('/api/memory/stats')
+    // 2026-09 修复：后端无 nodeCount/edgeCount 字段，包装层归一化
+    return {
+      nodeCount: Number(res?.nodeCount ?? res?.total ?? 0),
+      edgeCount: Number(res?.edgeCount ?? 0),
+      memorySize: res?.memorySize ?? res?.memory_size,
+    }
   }
 
   async getMemoryList(limit?: number): Promise<any[]> {
-    return this.instance.get(`/api/memory/list${limit ? `?limit=${limit}` : ''}`)
+    const res: any = await this.instance.get(`/api/memory/list${limit ? `?limit=${limit}` : ''}`)
+    return res?.data?.items ?? res?.items ?? (Array.isArray(res) ? res : [])
   }
 
   async searchMemory(query: string, limit?: number): Promise<any[]> {
-    return this.instance.get(`/api/memory/search?query=${query}${limit ? `&limit=${limit}` : ''}`)
+    const res: any = await this.instance.get(`/api/memory/search?query=${encodeURIComponent(query)}${limit ? `&limit=${limit}` : ''}`)
+    return res?.memories ?? (Array.isArray(res) ? res : [])
   }
 
   // ── 人格 ──
   async getPersonaList(): Promise<any[]> {
-    return this.instance.get('/api/persona/list')
+    const res: any = await this.instance.get('/api/persona/list')
+    return res?.personas ?? (Array.isArray(res) ? res : [])
   }
 
   async getCurrentPersona(): Promise<any> {
@@ -123,11 +111,6 @@ export class CoreApiClient extends ApiClient {
   // ── 知识图谱 (记忆可视化) ──
   async getQuintuples(filter?: string): Promise<any> {
     const res = await this.instance.get('/api/plug/alkaid/ltm/graph')
-    return res?.data || res || { nodes: [], edges: [] }
-  }
-
-  async searchQuintuples(query: string): Promise<any> {
-    const res = await this.instance.get(`/api/plug/alkaid/ltm/graph/search?query=${encodeURIComponent(query)}`)
     return res?.data || res || { nodes: [], edges: [] }
   }
 
@@ -147,11 +130,13 @@ export class CoreApiClient extends ApiClient {
 
   // ── 插件 / 工具 ──
   async getPluginList(): Promise<any[]> {
-    return this.instance.get('/api/plugin/market_list')
+    const res: any = await this.instance.get('/api/plugin/market_list')
+    return res?.data ?? (Array.isArray(res) ? res : [])
   }
 
   async getToolsList(): Promise<any[]> {
-    return this.instance.get('/api/tools/list')
+    const res: any = await this.instance.get('/api/tools/list')
+    return res?.tools ?? (Array.isArray(res) ? res : [])
   }
 
   // ── MCP 工具调用 ──
@@ -214,10 +199,6 @@ export class CoreApiClient extends ApiClient {
   async agentServerFullHealth(): Promise<any> { return this.instance.get('/api/status') }
   async agentServerOpenclawHealth(): Promise<any> { return this.openclawStatus() }
 
-  // ── 遥测 ──
-  async getTelemetryStatus(): Promise<any> { return this.instance.get('/api/telemetry/status') }
-  async flushTelemetry(): Promise<any> { return this.instance.post('/api/telemetry/flush') }
-
   // ── 系统 Prompt ──
   async getSystemPrompt(): Promise<any> { return this.instance.get('/api/config/system_prompt') }
   async setSystemPrompt(content: string): Promise<any> {
@@ -228,4 +209,6 @@ export class CoreApiClient extends ApiClient {
   }
 }
 
-export default new CoreApiClient(9800)
+// 2026-09 修复：业务路由（chat/memory/persona/config 等）在 Web API(8000)，
+// 此前硬编码 9800(管理API) 导致 30+ 调用 404；可用 VITE_CORE_PORT 覆盖
+export default new CoreApiClient(Number(import.meta.env.VITE_CORE_PORT) || 8000)

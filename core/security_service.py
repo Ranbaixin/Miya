@@ -127,9 +127,7 @@ class InjectionDetector:
         for i, pattern in enumerate(self._patterns):
             match = pattern.search(content)
             if match:
-                logger.warning(
-                    f"[InjectionDetector] 检测到注入模式: {self.injection_patterns[i][:50]}..."
-                )
+                logger.warning(f"[InjectionDetector] 检测到注入模式: {self.injection_patterns[i][:50]}...")
                 return SecurityCheckResult(
                     level=SecurityLevel.DANGEROUS,
                     message="检测到可疑注入模式",
@@ -140,9 +138,7 @@ class InjectionDetector:
 
         # 检查可疑关键词
         content_lower = content.lower()
-        suspicious_found = [
-            kw for kw in self.suspicious_keywords if kw in content_lower
-        ]
+        suspicious_found = [kw for kw in self.suspicious_keywords if kw in content_lower]
 
         if len(suspicious_found) >= 3:
             logger.warning(f"[InjectionDetector] 检测到可疑关键词: {suspicious_found}")
@@ -294,9 +290,7 @@ class RateLimiter:
             self._requests[user_id] = []
 
         # 清理过期记录
-        self._requests[user_id] = [
-            t for t in self._requests[user_id] if now - t < self.window_seconds
-        ]
+        self._requests[user_id] = [t for t in self._requests[user_id] if now - t < self.window_seconds]
 
         # 检查是否超限
         if len(self._requests[user_id]) >= self.max_requests:
@@ -399,9 +393,7 @@ class SecurityService:
         return {
             **self.stats,
             "pass_rate": (
-                (self.stats["total_checks"] - self.stats["blocked_count"])
-                / max(self.stats["total_checks"], 1)
-                * 100
+                (self.stats["total_checks"] - self.stats["blocked_count"]) / max(self.stats["total_checks"], 1) * 100
             ),
         }
 

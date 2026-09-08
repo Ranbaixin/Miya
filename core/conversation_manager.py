@@ -58,9 +58,7 @@ class ConversationManager:
         await self._db.initialize()
         logger.info("[ConversationManager] 已就绪")
 
-    async def create_session(
-        self, user_id: str, platform: str, group_id: Optional[str] = None
-    ) -> str:
+    async def create_session(self, user_id: str, platform: str, group_id: Optional[str] = None) -> str:
         """创建会话"""
         session_id = str(uuid.uuid4())
 
@@ -86,17 +84,11 @@ class ConversationManager:
         logger.info(f"[ConversationManager] 创建会话: {session_id}")
         return session_id
 
-    async def get_or_create_session(
-        self, user_id: str, platform: str, group_id: Optional[str] = None
-    ) -> str:
+    async def get_or_create_session(self, user_id: str, platform: str, group_id: Optional[str] = None) -> str:
         """获取或创建会话"""
         async with self._lock:
             for sid, ctx in self._sessions.items():
-                if (
-                    ctx.user_id == user_id
-                    and ctx.platform == platform
-                    and ctx.group_id == group_id
-                ):
+                if ctx.user_id == user_id and ctx.platform == platform and ctx.group_id == group_id:
                     ctx.last_activity = datetime.now()
                     return sid
 
@@ -108,9 +100,7 @@ class ConversationManager:
         async with self._lock:
             return self._sessions.get(session_id)
 
-    async def add_message(
-        self, session_id: str, role: str, content: str, metadata: Optional[Dict] = None
-    ) -> bool:
+    async def add_message(self, session_id: str, role: str, content: str, metadata: Optional[Dict] = None) -> bool:
         """添加消息"""
         message = ConversationMessage(
             session_id=session_id,
@@ -135,9 +125,7 @@ class ConversationManager:
 
         return True
 
-    async def get_history(
-        self, session_id: str, limit: int = 100
-    ) -> List[Dict[str, Any]]:
+    async def get_history(self, session_id: str, limit: int = 100) -> List[Dict[str, Any]]:
         """获取对话历史"""
         messages = await self._db.get_messages(session_id, limit)
 
@@ -156,14 +144,10 @@ class ConversationManager:
         for msg in messages:
             if self._db._use_sqlite3:
                 cursor = self._db._conn.cursor()
-                cursor.execute(
-                    "DELETE FROM conversation_messages WHERE id = ?", (msg.id,)
-                )
+                cursor.execute("DELETE FROM conversation_messages WHERE id = ?", (msg.id,))
                 self._db._conn.commit()
             else:
-                await self._db._db.execute(
-                    "DELETE FROM conversation_messages WHERE id = ?", (msg.id,)
-                )
+                await self._db._db.execute("DELETE FROM conversation_messages WHERE id = ?", (msg.id,))
                 await self._db._db.commit()
 
         async with self._lock:

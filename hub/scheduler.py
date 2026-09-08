@@ -51,6 +51,7 @@ class Scheduler:
 
     def __init__(self, tool_registry=None, onebot_client=None):
         import threading
+
         self.task_queue = []
         self._queue_lock = threading.Lock()  # 跨线程安全锁
         self.running_tasks = {}
@@ -240,9 +241,7 @@ class Scheduler:
                 try:
                     hour, minute = (int(x) for x in task.repeat_daily_time.split(":"))
                     tomorrow = datetime.now() + timedelta(days=1)
-                    next_run = tomorrow.replace(
-                        hour=hour, minute=minute, second=0, microsecond=0
-                    )
+                    next_run = tomorrow.replace(hour=hour, minute=minute, second=0, microsecond=0)
                     repeat_task = Task(
                         task_id=f"{task.task_id}_repeat",
                         task_type=task.task_type,

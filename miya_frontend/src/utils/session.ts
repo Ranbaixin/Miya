@@ -311,22 +311,25 @@ function syncDefaultMessages() {
 }
 
 export async function loadCurrentSession() {
-  if (CURRENT_SESSION_ID.value) {
-    try {
-      const detail = await API.getSession(CURRENT_SESSION_ID.value)
-      const normalized = normalizeMessages(detail.messages)
-      // 只有后端有数据时才替换，否则保留本地消息
-      if (normalized.length > 0) {
-        MESSAGES.value = normalized
-        syncDefaultMessages()
-        // 异步回填灵魂数据（从认知记忆 / soul API）
-        backfillSoulDataForSession()
-        return
-      }
+  // 2026-09 修复：本地无会话 ID 时回退到后端 default 会话（终端/Web/桌面
+  // 共享同一会话），否则首次启动/清缓存后聊天区永远空白
+  if (!CURRENT_SESSION_ID.value)
+    CURRENT_SESSION_ID.value = 'default'
+
+  try {
+    const detail = await API.getSession(CURRENT_SESSION_ID.value)
+    const normalized = normalizeMessages(detail.messages)
+    // 只有后端有数据时才替换，否则保留本地消息
+    if (normalized.length > 0) {
+      MESSAGES.value = normalized
+      syncDefaultMessages()
+      // 异步回填灵魂数据（从认知记忆 / soul API）
+      backfillSoulDataForSession()
+      return
     }
-    catch {
-      CURRENT_SESSION_ID.value = null
-    }
+  }
+  catch {
+    CURRENT_SESSION_ID.value = null
   }
   // 保留现有消息
   syncDefaultMessages()
@@ -340,7 +343,7 @@ async function backfillSoulDataForSession() {
   if (!lastAi || (lastAi as any).soulData?.emotions?.length) return
 
   try {
-    const res = await fetch('http://localhost:9800/api/soul/current')
+    const res = await fetch('http://localhost:8000/api/soul/current')
     const soul = await res.json()
     if (soul && ((soul.emotions && (Array.isArray(soul.emotions) ? soul.emotions.length : Object.keys(soul.emotions).length)) || soul.inner_thought || soul.thinking)) {
       const existing = (lastAi as any).soulData || {}

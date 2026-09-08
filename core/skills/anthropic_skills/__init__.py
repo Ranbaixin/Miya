@@ -110,8 +110,7 @@ class AnthropicSkillRegistry:
             "function": {
                 "name": tool_name,
                 "description": (
-                    f"[Anthropic Skill] {item.description} "
-                    f"调用此工具以获取该 skill 的完整指令和知识内容。"
+                    f"[Anthropic Skill] {item.description} " f"调用此工具以获取该 skill 的完整指令和知识内容。"
                 ),
                 "parameters": {
                     "type": "object",
@@ -137,9 +136,7 @@ class AnthropicSkillRegistry:
         files = item.get_file_listing()
         if files:
             file_list = "\n".join(f"  - {f}" for f in files)
-            parts.append(
-                f"\n\n---\n附带文件（可在后续对话中请求查看详细内容）:\n{file_list}"
-            )
+            parts.append(f"\n\n---\n附带文件（可在后续对话中请求查看详细内容）:\n{file_list}")
 
         logger.debug(
             "[AnthropicSkills] 读取 skill 内容: name=%s body_len=%d files=%d",
@@ -149,16 +146,12 @@ class AnthropicSkillRegistry:
         )
         return "\n".join(parts)
 
-    async def execute_skill_tool(
-        self, tool_name: str, _args: Dict[str, Any], _context: Dict[str, Any]
-    ) -> str:
+    async def execute_skill_tool(self, tool_name: str, _args: Dict[str, Any], _context: Dict[str, Any]) -> str:
         """作为 function tool 的执行入口。"""
         prefix = f"skills{self.dot_delimiter}"
-        skill_name = tool_name[len(prefix):] if tool_name.startswith(prefix) else tool_name
+        skill_name = tool_name[len(prefix) :] if tool_name.startswith(prefix) else tool_name
 
-        logger.info(
-            "[AnthropicSkills] 执行 skill tool: %s -> %s", tool_name, skill_name
-        )
+        logger.info("[AnthropicSkills] 执行 skill tool: %s -> %s", tool_name, skill_name)
         return self.read_skill_content(skill_name)
 
     def build_metadata_xml(self) -> str:
@@ -171,9 +164,7 @@ class AnthropicSkillRegistry:
             tool_name = item.build_tool_name(self.dot_delimiter)
             lines.append("  <skill>")
             lines.append(f"    <name>{_escape_xml(item.name)}</name>")
-            lines.append(
-                f"    <description>{_escape_xml(item.description)}</description>"
-            )
+            lines.append(f"    <description>{_escape_xml(item.description)}</description>")
             lines.append(f"    <tool_name>{_escape_xml(tool_name)}</tool_name>")
             lines.append("  </skill>")
         lines.append("</available_skills>")
@@ -239,9 +230,4 @@ class AnthropicSkillRegistry:
 
 def _escape_xml(text: str) -> str:
     """简单的 XML 转义。"""
-    return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-    )
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")

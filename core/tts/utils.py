@@ -4,13 +4,12 @@ TTS 工具函数
 
 MIYA TTS 系统的工具层
 """
+
 import re
 from typing import List
 
 
-def filter_text(text: str,
-               filter_brackets: bool = True,
-               filter_special_chars: bool = True) -> str:
+def filter_text(text: str, filter_brackets: bool = True, filter_special_chars: bool = True) -> str:
     """
     过滤文本,移除括号和特殊字符
 
@@ -24,18 +23,18 @@ def filter_text(text: str,
     """
     # 过滤括号内容 【xxx】 (xxx) <xxx>
     if filter_brackets:
-        text = re.sub(r'【.*?】', '', text)
-        text = re.sub(r'（.*?）', '', text)
-        text = re.sub(r'\(.*?\)', '', text)
-        text = re.sub(r'<.*?>', '', text)
+        text = re.sub(r"【.*?】", "", text)
+        text = re.sub(r"（.*?）", "", text)
+        text = re.sub(r"\(.*?\)", "", text)
+        text = re.sub(r"<.*?>", "", text)
 
     # 过滤特殊字符
     if filter_special_chars:
         # 保留中文、英文、数字、基本标点
-        text = re.sub(r'[^\u4e00-\u9fa5a-zA-Z0-9，。！？、；：""''（）《》【】\\s,\\.!?;:\'\\-]', '', text)
+        text = re.sub(r'[^\u4e00-\u9fa5a-zA-Z0-9，。！？、；：""' "（）《》【】\\s,\\.!?;:'\\-]", "", text)
 
     # 清理多余空格
-    text = re.sub(r'\s+', '', text)
+    text = re.sub(r"\s+", "", text)
 
     return text.strip()
 
@@ -58,7 +57,7 @@ def split_text_for_qq(text: str, max_length: int = 200) -> List[str]:
     current = ""
 
     # 按句子分割
-    sentences = re.split(r'([。！？\n])', text)
+    sentences = re.split(r"([。！？\n])", text)
 
     for sentence in sentences:
         if not sentence:

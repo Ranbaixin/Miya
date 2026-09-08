@@ -21,9 +21,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_request_context: ContextVar[RequestContext | None] = ContextVar(
-    "request_context", default=None
-)
+_request_context: ContextVar[RequestContext | None] = ContextVar("request_context", default=None)
 
 
 class RequestContext:
@@ -80,10 +78,7 @@ class RequestContext:
     def require(cls) -> RequestContext:
         ctx = cls.current()
         if ctx is None:
-            raise RuntimeError(
-                "当前没有活跃的请求上下文。"
-                "请确保在 'async with RequestContext(...)' 作用域内调用。"
-            )
+            raise RuntimeError("当前没有活跃的请求上下文。" "请确保在 'async with RequestContext(...)' 作用域内调用。")
         return ctx
 
     async def __aenter__(self) -> RequestContext:

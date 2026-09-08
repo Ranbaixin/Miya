@@ -157,9 +157,7 @@ class UnifiedToolRegistry:
             logger.error(f"[UnifiedToolRegistry] 工具执行失败: {e}")
             return {"success": False, "error": str(e)}
 
-    async def _execute_computer(
-        self, tool_name: str, arguments: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _execute_computer(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """执行Computer工具"""
         try:
             from core.computer_astrbot.client import get_computer_client
@@ -173,9 +171,7 @@ class UnifiedToolRegistry:
             elif tool_name == "file_read":
                 return await client.read_file(arguments.get("filepath", ""))
             elif tool_name == "file_write":
-                return await client.write_file(
-                    arguments.get("filepath", ""), arguments.get("content", "")
-                )
+                return await client.write_file(arguments.get("filepath", ""), arguments.get("content", ""))
 
             return {"success": False, "error": f"未知Computer工具: {tool_name}"}
         except Exception as e:  # noqa: BLE001 — Computer执行失败返回错误结果

@@ -220,9 +220,7 @@ def get_greeting(name: str = "弥娅", style: str = "default") -> str:
     """获取问候语"""
     config = _load_config()
 
-    style_responses = config.get("greetings", {}).get(
-        style, config.get("greetings", {}).get("hello", [])
-    )
+    style_responses = config.get("greetings", {}).get(style, config.get("greetings", {}).get("hello", []))
 
     if not style_responses:
         return f"你好！我是{name}，欢迎~"
@@ -301,13 +299,9 @@ def get_status_tag(emotion: str = "default") -> str:
     return tag.replace("{emotion}", emotion)
 
 
-def get_personality_response(
-    response_type: str, personality_trait: str = "warm"
-) -> str:
+def get_personality_response(response_type: str, personality_trait: str = "warm") -> str:
     """获取人设响应"""
-    responses = get_text(
-        f"personality_responses.{personality_trait}.{response_type}", []
-    )
+    responses = get_text(f"personality_responses.{personality_trait}.{response_type}", [])
     if isinstance(responses, list) and responses:
         return random.choice(responses)
     return ""
@@ -390,9 +384,7 @@ def get_emoji_fallback_response(emoji_name: str) -> str:
 def get_schedule_response(success: bool, result: str = "") -> str:
     """获取定时任务响应"""
     if success:
-        return get_text(
-            "schedule_responses.success", "好的，我已经为你设置好了定时任务！"
-        ).format(result=result)
+        return get_text("schedule_responses.success", "好的，我已经为你设置好了定时任务！").format(result=result)
     return get_text("schedule_responses.failed").format(result=result)
 
 
@@ -461,9 +453,7 @@ def get_existential_display(response_type: str, **kwargs) -> str:
     return get_text(f"existential_display.{response_type}", "").format(**kwargs)
 
 
-def get_active_chat_response(
-    response_type: str, sub_type: str = "", default: str = ""
-) -> str:
+def get_active_chat_response(response_type: str, sub_type: str = "", default: str = "") -> str:
     """获取主动聊天响应"""
     if sub_type:
         return get_text(f"active_chat_responses.{response_type}.{sub_type}", default)
@@ -482,9 +472,7 @@ def get_status_check_response(response_key: str) -> str:
 
 def get_followup_response(response_key: str) -> str:
     """获取后续响应"""
-    return get_active_chat_response(
-        "followup_responses", response_key, "事情怎么样了。"
-    )
+    return get_active_chat_response("followup_responses", response_key, "事情怎么样了。")
 
 
 def get_presence_response() -> str:

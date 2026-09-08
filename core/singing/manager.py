@@ -82,9 +82,7 @@ class SingingWorkflow:
                 return f"{font_text}{get_singing_text('learned_and_queued', song_name=song_name)}"
 
             logger.info(f"[唱歌] builtin 全流程: {song_name}")
-            asyncio.create_task(
-                self._builtin_pipeline(song_name, output_dir, font_text)
-            )
+            asyncio.create_task(self._builtin_pipeline(song_name, output_dir, font_text))
             return f"{font_text}{get_singing_text('learning', song_name=song_name)}"
 
         # ACM / RVC 引擎走原有路径
@@ -99,9 +97,7 @@ class SingingWorkflow:
                 with open(speaker_file, "r", encoding="utf-8") as f:
                     cached_speaker = f.read().strip()
             if current_speaker and cached_speaker != current_speaker:
-                logger.info(
-                    f"[唱歌] 缓存 speaker 不匹配 ({cached_speaker or '(空)'} != {current_speaker})，重新学唱"
-                )
+                logger.info(f"[唱歌] 缓存 speaker 不匹配 ({cached_speaker or '(空)'} != {current_speaker})，重新学唱")
                 shutil.rmtree(output_dir, ignore_errors=True)
             else:
                 logger.info(f"[唱歌] 本地已有歌曲: {song_name}")
@@ -141,18 +137,14 @@ class SingingWorkflow:
             return get_singing_text("download_failed", song_name=song_name)
 
         logger.info(f"[唱歌] 需要学唱: {song_name}")
-        asyncio.create_task(
-            self._learn_and_download(song_name, query, output_dir, username)
-        )
+        asyncio.create_task(self._learn_and_download(song_name, query, output_dir, username))
         return f"{font_text}{get_singing_text('learning', song_name=song_name)}"
 
     def _enqueue_play(self, output: SongOutput):
         with self._play_lock:
             self.play_queue.append(output)
 
-    async def _learn_and_download(
-        self, song_name: str, query: str, output_dir: str, username: str
-    ):
+    async def _learn_and_download(self, song_name: str, query: str, output_dir: str, username: str):
         """后台学唱 + 下载 → 入队 → 播放"""
         engine = self.registry.get_engine()
         if engine is None:
@@ -184,9 +176,7 @@ class SingingWorkflow:
                     status = await engine.get_learn_status(song_name)
                     if status == LearnStatus.PROCESSED:
                         vocal_path = await engine.download_vocal(song_name, output_dir)
-                        accompany_path = await engine.download_accompany(
-                            song_name, output_dir
-                        )
+                        accompany_path = await engine.download_accompany(song_name, output_dir)
                         logger.info(f"[唱歌] 学唱完成（第{i}秒）: {song_name}")
                         break
                     elif status == LearnStatus.FAILED:
@@ -308,13 +298,9 @@ class SingingWorkflow:
         vol_chord: int = 50,
     ):
         """播放歌曲：优先混音成品 → pydub 多轨混音 → AudioPlayer 播放"""
-        output_dir = (
-            os.path.dirname(vocal) if vocal else os.path.dirname(accompany or "")
-        )
+        output_dir = os.path.dirname(vocal) if vocal else os.path.dirname(accompany or "")
         song_name = os.path.basename(output_dir) if output_dir else "unknown"
-        mix_file = (
-            os.path.join(output_dir, f"{song_name}_mix.wav") if output_dir else ""
-        )
+        mix_file = os.path.join(output_dir, f"{song_name}_mix.wav") if output_dir else ""
 
         play_file: Optional[str] = ""
 
@@ -335,15 +321,9 @@ class SingingWorkflow:
                 vol_chord=vol_chord,
             )
             track_count = 3 if (chord_path and os.path.exists(chord_path)) else 2
-            logger.info(
-                f"[唱歌] {track_count}轨混音播放: {os.path.basename(play_file or '')}"
-            )
+            logger.info(f"[唱歌] {track_count}轨混音播放: {os.path.basename(play_file or '')}")
         else:
-            play_file = (
-                vocal
-                if os.path.exists(vocal)
-                else (accompany if os.path.exists(accompany) else "")
-            )
+            play_file = vocal if os.path.exists(vocal) else (accompany if os.path.exists(accompany) else "")
             if play_file:
                 logger.info(f"[唱歌] 单轨播放: {os.path.basename(play_file)}")
 
@@ -379,11 +359,7 @@ class SingingWorkflow:
 
                 _ffmpeg_path = find_ffmpeg()
                 if _ffmpeg_path and _os.path.exists(_ffmpeg_path):
-                    _os.environ["PATH"] = (
-                        _os.path.dirname(_ffmpeg_path)
-                        + ";"
-                        + _os.environ.get("PATH", "")
-                    )
+                    _os.environ["PATH"] = _os.path.dirname(_ffmpeg_path) + ";" + _os.environ.get("PATH", "")
 
                 from pydub import AudioSegment
 
@@ -391,11 +367,7 @@ class SingingWorkflow:
                 track_a = AudioSegment.from_file(accompany_path)
 
                 max_len = max(len(track_v), len(track_a))
-                has_chord = (
-                    chord_path
-                    and _os.path.exists(chord_path)
-                    and _os.path.getsize(chord_path) > 0
-                )
+                has_chord = chord_path and _os.path.exists(chord_path) and _os.path.getsize(chord_path) > 0
 
                 if has_chord:
                     track_c = AudioSegment.from_file(chord_path)
@@ -477,13 +449,9 @@ class SingingRegistry:
             engine.cleanup()
             del self.engines[engine_name]
             if self.current_engine == engine_name:
-                self.current_engine = self.default_engine or (
-                    list(self.engines.keys())[0] if self.engines else None
-                )
+                self.current_engine = self.default_engine or (list(self.engines.keys())[0] if self.engines else None)
             if self.default_engine == engine_name:
-                self.default_engine = (
-                    list(self.engines.keys())[0] if self.engines else None
-                )
+                self.default_engine = list(self.engines.keys())[0] if self.engines else None
 
     def get_engine(self, engine_name: Optional[str] = None) -> Optional[SingingEngine]:
         if engine_name is None:

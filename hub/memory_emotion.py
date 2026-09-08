@@ -2,6 +2,7 @@
 记忆-情绪耦合回路
 实现记忆与情绪的双向影响机制
 """
+
 from datetime import datetime
 from typing import Dict, List
 
@@ -26,11 +27,7 @@ class MemoryEmotion:
         if memory_id not in self.emotional_tags:
             self.emotional_tags[memory_id] = []
 
-        self.emotional_tags[memory_id].append({
-            'emotion': emotion,
-            'intensity': intensity,
-            'timestamp': datetime.now()
-        })
+        self.emotional_tags[memory_id].append({"emotion": emotion, "intensity": intensity, "timestamp": datetime.now()})
 
         # 更新耦合矩阵
         key = f"{memory_id}:{emotion}"
@@ -54,10 +51,10 @@ class MemoryEmotion:
         influence = {}
 
         for emo in emotions:
-            emotion_type = emo['emotion']
-            intensity = emo['intensity']
+            emotion_type = emo["emotion"]
+            intensity = emo["intensity"]
             # 考虑时间衰减
-            time_delta = (datetime.now() - emo['timestamp']).total_seconds()
+            time_delta = (datetime.now() - emo["timestamp"]).total_seconds()
             decay = max(0, 1 - time_delta / (30 * 24 * 3600))  # 30天衰减
 
             influence[emotion_type] = influence.get(emotion_type, 0) + intensity * decay
@@ -76,11 +73,9 @@ class MemoryEmotion:
             self.memory_influence[memory_id] = 0.5
 
         if positive:
-            self.memory_influence[memory_id] = min(1.0,
-                self.memory_influence[memory_id] + 0.1)
+            self.memory_influence[memory_id] = min(1.0, self.memory_influence[memory_id] + 0.1)
         else:
-            self.memory_influence[memory_id] = max(0.0,
-                self.memory_influence[memory_id] - 0.1)
+            self.memory_influence[memory_id] = max(0.0, self.memory_influence[memory_id] - 0.1)
 
     def get_coupling_strength(self, memory_id: str, emotion: str) -> float:
         """获取记忆与情绪的耦合强度"""

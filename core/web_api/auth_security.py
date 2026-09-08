@@ -28,7 +28,7 @@ ENV_ADMIN_USERNAME = "MIYA_ADMIN_USERNAME"
 DEFAULT_ADMIN_USERNAME = "admin"
 TOKEN_TTL_HOURS = 2
 
-_SCRYPT_PARAMS = {"n": 2 ** 14, "r": 8, "p": 1}
+_SCRYPT_PARAMS = {"n": 2**14, "r": 8, "p": 1}
 _SCRYPT_KEYLEN = 32
 
 
@@ -80,6 +80,7 @@ def _write_env(updates: dict) -> None:
 
 # ==================== 密码 ====================
 
+
 def hash_password(password: str) -> str:
     """scrypt 哈希，格式: scrypt$n$r$p$salt_hex$hash_hex"""
     salt = secrets.token_bytes(16)
@@ -92,8 +93,16 @@ def hash_password(password: str) -> str:
         dklen=_SCRYPT_KEYLEN,
     )
     return (
-        "scrypt$" + str(_SCRYPT_PARAMS["n"]) + "$" + str(_SCRYPT_PARAMS["r"])
-        + "$" + str(_SCRYPT_PARAMS["p"]) + "$" + salt.hex() + "$" + dk.hex()
+        "scrypt$"
+        + str(_SCRYPT_PARAMS["n"])
+        + "$"
+        + str(_SCRYPT_PARAMS["r"])
+        + "$"
+        + str(_SCRYPT_PARAMS["p"])
+        + "$"
+        + salt.hex()
+        + "$"
+        + dk.hex()
     )
 
 
@@ -124,6 +133,7 @@ def generate_random_password(length: int = 14) -> str:
 
 # ==================== 管理员凭据（.env） ====================
 
+
 def get_admin_username() -> str:
     return _read_env().get(ENV_ADMIN_USERNAME, DEFAULT_ADMIN_USERNAME)
 
@@ -134,13 +144,18 @@ def ensure_admin_credentials() -> Optional[str]:
     if env.get(ENV_ADMIN_PASSWORD_HASH):
         return None
     password = generate_random_password()
-    _write_env({
-        ENV_ADMIN_USERNAME: get_admin_username(),
-        ENV_ADMIN_PASSWORD_HASH: hash_password(password),
-    })
+    _write_env(
+        {
+            ENV_ADMIN_USERNAME: get_admin_username(),
+            ENV_ADMIN_PASSWORD_HASH: hash_password(password),
+        }
+    )
     logger.warning(
         "[auth_security] 已生成管理员凭据 -> config/.env "
-        + "(username=" + get_admin_username() + ")。密码仅在此处显示一次: " + password
+        + "(username="
+        + get_admin_username()
+        + ")。密码仅在此处显示一次: "
+        + password
     )
     return password
 
@@ -153,12 +168,11 @@ def verify_admin_login(username: str, password: str) -> bool:
         # 尚无凭据：生成（并静默丢弃明文，仅日志提示重新登录）
         ensure_admin_credentials()
         return False
-    return hmac.compare_digest(username, get_admin_username()) and verify_password(
-        password, stored
-    )
+    return hmac.compare_digest(username, get_admin_username()) and verify_password(password, stored)
 
 
 # ==================== JWT token ====================
+
 
 def _jwt_secret() -> str:
     env = _read_env()
@@ -194,3 +208,80 @@ def verify_token(token: str) -> Optional[str]:
         return payload.get("sub")
     except Exception:  # noqa: BLE001 — 任何 token 解析失败都视为无效
         return None
+
+
+# ==================== 统一访问网关（2026-09 加固） ====================
+
+
+def is_loopback_host(host: str) -> bool:
+    return host in ("127.0.0.1", "::1", "localhost", "testclient")
+
+
+def request_token_ok(request) -> bool:
+    """校验请求携带的 MIYA_API_TOKEN（Bearer 或 X-Miya-Token，恒时比较）。"""
+    api_token = os.environ.get("MIYA_API_TOKEN", "").strip()
+    if not api_token:
+        return False
+    auth = request.headers.get("Authorization", "")
+    provided = auth[7:].strip() if auth.lower().startswith("bearer ") else request.headers.get("X-Miya-Token", "")
+    return bool(provided) and hmac.compare_digest(provided, api_token)
+
+
+def install_token_gate(
+    app,
+    *,
+    public_paths: tuple = ("/docs", "/openapi.json", "/redoc"),
+    public_health_paths: tuple = (),
+    local_only_paths: tuple = (),
+) -> None:
+    """为 FastAPI app 安装统一访问网关（fail-closed）。
+
+    - public_paths / public_health_paths：本机可直接访问，远程需带 token。
+    - local_only_paths：仅本机可访问（远程即使带 token 也 403）。
+    - 其余路径：未设 MIYA_API_TOKEN 时仅本机(loopback)放行，远程 403；
+      已设置时任意来源需 Bearer <token> 或 X-Miya-Token。
+    注意：必须在 add_middleware(CORSMiddleware) 之后调用，使网关位于最外层。
+    """
+    from fastapi.responses import JSONResponse
+
+    @app.middleware("http")
+    async def token_gate(request, call_next):
+        client_host = request.client.host if request.client else ""
+        loopback = is_loopback_host(client_host)
+        path = request.url.path
+
+        if path in local_only_paths and not loopback:
+            return JSONResponse({"detail": "该端点仅允许本机访问"}, status_code=403)
+
+        if path in public_paths or path in public_health_paths:
+            if loopback or request_token_ok(request):
+                return await call_next(request)
+            return JSONResponse({"detail": "unauthorized"}, status_code=401)
+
+        if loopback or request_token_ok(request):
+            return await call_next(request)
+        if os.environ.get("MIYA_API_TOKEN", "").strip():
+            return JSONResponse({"detail": "invalid or missing token"}, status_code=401)
+        return JSONResponse(
+            {"detail": "访问受限：仅允许本机访问；如需远程请设置 MIYA_API_TOKEN"},
+            status_code=403,
+        )
+
+
+def websocket_gate(ws) -> bool:
+    """WebSocket 握手前的网关校验（HTTP middleware 不拦 WS，需单独调用）。
+
+    通过返回 True；未通过则向对端关闭连接（code 4401/4403）并返回 False。
+    """
+    client_host = ws.client.host if ws.client else ""
+    loopback = is_loopback_host(client_host)
+    if loopback:
+        return True
+    if request_token_ok(ws):
+        return True
+    code = 4401 if os.environ.get("MIYA_API_TOKEN", "").strip() else 4403
+    try:
+        ws.close(code=code)
+    except Exception as e:  # noqa: BLE001 — 对端可能已断开
+        logger.debug(f"[auth_security] WS 关闭异常: {e}")
+    return False

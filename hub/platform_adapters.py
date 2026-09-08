@@ -233,9 +233,7 @@ class QQAdapter(PlatformAdapter):
             "message_id": message.content.get("message_id"),
         }
 
-        logger.debug(
-            f"[QQ适配器] M-Link Message转换为响应: {response_data['response'][:50]}"
-        )
+        logger.debug(f"[QQ适配器] M-Link Message转换为响应: {response_data['response'][:50]}")
         return response_data
 
     def _get_available_tools(self) -> List[str]:
@@ -323,9 +321,7 @@ class PCUIAdapter(PlatformAdapter):
             "state": message.content.get("state"),
         }
 
-        logger.debug(
-            f"[PC UI适配器] M-Link Message转换为响应: {response_data['response'][:50]}"
-        )
+        logger.debug(f"[PC UI适配器] M-Link Message转换为响应: {response_data['response'][:50]}")
         return response_data
 
     def _get_available_tools(self) -> List[str]:
@@ -421,9 +417,7 @@ class WebAdapter(PlatformAdapter):
             "platform_info": self.get_platform_info(),
         }
 
-        logger.debug(
-            f"[Web适配器] M-Link Message转换为响应: {response_data['response'][:50]}"
-        )
+        logger.debug(f"[Web适配器] M-Link Message转换为响应: {response_data['response'][:50]}")
         return response_data
 
     def detect_system_capabilities(self) -> Dict:
@@ -455,15 +449,21 @@ class WebAdapter(PlatformAdapter):
                 "usage_percent": psutil.virtual_memory().percent,
             },
             "disk": {
-                "total_gb": round(psutil.disk_usage("/").total / (1024**3), 2)
-                if sys_platform.system() == "Linux"
-                else round(psutil.disk_usage("C:\\").total / (1024**3), 2),
-                "free_gb": round(psutil.disk_usage("/").free / (1024**3), 2)
-                if sys_platform.system() == "Linux"
-                else round(psutil.disk_usage("C:\\").free / (1024**3), 2),
-                "usage_percent": psutil.disk_usage("/").percent
-                if sys_platform.system() == "Linux"
-                else psutil.disk_usage("C:\\").percent,
+                "total_gb": (
+                    round(psutil.disk_usage("/").total / (1024**3), 2)
+                    if sys_platform.system() == "Linux"
+                    else round(psutil.disk_usage("C:\\").total / (1024**3), 2)
+                ),
+                "free_gb": (
+                    round(psutil.disk_usage("/").free / (1024**3), 2)
+                    if sys_platform.system() == "Linux"
+                    else round(psutil.disk_usage("C:\\").free / (1024**3), 2)
+                ),
+                "usage_percent": (
+                    psutil.disk_usage("/").percent
+                    if sys_platform.system() == "Linux"
+                    else psutil.disk_usage("C:\\").percent
+                ),
             },
             "network": {
                 "connections": len(psutil.net_connections()),
@@ -606,9 +606,7 @@ def get_adapter(platform_name: str) -> PlatformAdapter:
 
     adapter = _adapters_cache.get(platform_name)
     if not adapter:
-        raise ValueError(
-            f"不支持的平台: {platform_name}，支持的平台: {list(_adapters_cache.keys())}"
-        )
+        raise ValueError(f"不支持的平台: {platform_name}，支持的平台: {list(_adapters_cache.keys())}")
 
     return adapter
 

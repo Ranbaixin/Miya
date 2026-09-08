@@ -78,7 +78,7 @@ class MiyaCompanion:
             response = check_in.get("morning", "")
         else:
             response = check_in.get("day", "")
-        
+
         if not response:
             return ""  # 动态生成将处理空响应
         return response

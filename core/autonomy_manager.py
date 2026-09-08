@@ -66,9 +66,7 @@ class AutonomyManager:
 
         def on_fix_start(decision, problem):
             """修复开始回调"""
-            self.logger.info(
-                f"🔧 开始修复: {problem.id} | 文件: {problem.file_path or 'N/A'}"
-            )
+            self.logger.info(f"🔧 开始修复: {problem.id} | 文件: {problem.file_path or 'N/A'}")
 
         def on_fix_complete(decision, problem, result):
             """修复完成回调"""
@@ -79,9 +77,7 @@ class AutonomyManager:
                     f"耗时: {result.execution_time:.2f}s"
                 )
             else:
-                self.logger.warning(
-                    f"❌ 修复失败: {problem.id} | 错误: {result.error_message}"
-                )
+                self.logger.warning(f"❌ 修复失败: {problem.id} | 错误: {result.error_message}")
 
         self.engine.on_decision = on_decision
         self.engine.on_fix_start = on_fix_start
@@ -112,9 +108,7 @@ class AutonomyManager:
 
         self.logger.info("🛑 自动改进已禁用")
 
-    async def manual_improvement(
-        self, max_fixes: int = 10, auto_approve: bool = True
-    ) -> Dict[str, Any]:
+    async def manual_improvement(self, max_fixes: int = 10, auto_approve: bool = True) -> Dict[str, Any]:
         """
         手动触发改进
 
@@ -179,9 +173,7 @@ class AutonomyManager:
             "improvements_made": self.engine.stats["improvements_made"],
             "is_running": self.engine.is_running,
             "last_improvement_time": (
-                self.engine.last_improvement_time.isoformat()
-                if self.engine.last_improvement_time
-                else None
+                self.engine.last_improvement_time.isoformat() if self.engine.last_improvement_time else None
             ),
         }
 
@@ -189,9 +181,7 @@ class AutonomyManager:
         optimizer_status = {
             "strategy": self.optimizer.current_strategy.value,
             "total_patterns": self.optimizer.metrics["total_patterns"],
-            "high_confidence_patterns": self.optimizer.metrics[
-                "high_confidence_patterns"
-            ],
+            "high_confidence_patterns": self.optimizer.metrics["high_confidence_patterns"],
             "optimization_cycles": self.optimizer.metrics["optimization_cycles"],
         }
 

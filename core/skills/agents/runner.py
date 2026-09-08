@@ -23,9 +23,7 @@ class AgentToolRegistry:
     def _discover_tools(self):
         """发现工具目录下的所有工具"""
         if not self.tools_dir.exists():
-            logger.warning(
-                f"[Agent:{self.agent_name}] 工具目录不存在: {self.tools_dir}"
-            )
+            logger.warning(f"[Agent:{self.agent_name}] 工具目录不存在: {self.tools_dir}")
             return
 
         for tool_dir in self.tools_dir.iterdir():
@@ -43,13 +41,9 @@ class AgentToolRegistry:
                     # 从config.json提取工具schema
                     if "type" in config and "function" in config:
                         self._tools_schema.append(config)
-                        logger.info(
-                            f"[Agent:{self.agent_name}] 发现工具: {tool_dir.name}"
-                        )
+                        logger.info(f"[Agent:{self.agent_name}] 发现工具: {tool_dir.name}")
                 except Exception as e:  # noqa: BLE001 — Agent工具执行失败降级
-                    logger.warning(
-                        f"[Agent:{self.agent_name}] 加载工具失败 {tool_dir.name}: {e}"
-                    )
+                    logger.warning(f"[Agent:{self.agent_name}] 加载工具失败 {tool_dir.name}: {e}")
 
     def get_tools_schema(self) -> List[Dict]:
         """获取工具Schema列表"""
@@ -113,9 +107,7 @@ class AgentRunner:
 
         return f"未找到工具: {tool_name}"
 
-    async def _call_tool_handler(
-        self, tool_name: str, args: Dict, context: Dict
-    ) -> str:
+    async def _call_tool_handler(self, tool_name: str, args: Dict, context: Dict) -> str:
         """调用工具handler"""
         tool_dir = self.tools_dir / tool_name
         handler_file = tool_dir / "handler.py"
@@ -129,9 +121,7 @@ class AgentRunner:
 
             sys.path.insert(0, str(self.agent_dir))
 
-            handler_module = __import__(
-                f"tools.{tool_name}.handler", fromlist=["execute"]
-            )
+            handler_module = __import__(f"tools.{tool_name}.handler", fromlist=["execute"])
 
             if hasattr(handler_module, "execute"):
                 return await handler_module.execute(args, context)

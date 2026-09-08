@@ -57,23 +57,19 @@ from .utils import (
 
 __all__ = [
     # 抽象基类
-    'TTSEngine',
-
+    "TTSEngine",
     # 管理器
-    'TTSRegistry',
-    'get_tts_registry',
-
+    "TTSRegistry",
+    "get_tts_registry",
     # 具体实现
-    'APITTSEngine',
-    'SystemTTSEngine',
-    'GPTSoviTSEngine',
-
+    "APITTSEngine",
+    "SystemTTSEngine",
+    "GPTSoviTSEngine",
     # 工具函数
-    'filter_text',
-    'split_text_for_qq',
-
+    "filter_text",
+    "split_text_for_qq",
     # 子网
-    'TTSNet',
+    "TTSNet",
 ]
 
-__version__ = '2.1.0'
+__version__ = "2.1.0"

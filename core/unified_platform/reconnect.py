@@ -19,9 +19,7 @@ class ReconnectPolicy(ABC):
     """重连策略基类"""
 
     @abstractmethod
-    async def should_retry(
-        self, attempt: int, error: Optional[Exception] = None
-    ) -> bool:
+    async def should_retry(self, attempt: int, error: Optional[Exception] = None) -> bool:
         """判断是否应该重试"""
         ...
 
@@ -59,9 +57,7 @@ class ExponentialBackoffPolicy(ReconnectPolicy):
         self.jitter = jitter
         self._attempt = 0
 
-    async def should_retry(
-        self, attempt: int, error: Optional[Exception] = None
-    ) -> bool:
+    async def should_retry(self, attempt: int, error: Optional[Exception] = None) -> bool:
         self._attempt = attempt
         return attempt < self.max_attempts
 
@@ -89,9 +85,7 @@ class FixedDelayPolicy(ReconnectPolicy):
         self.delay = delay
         self._attempt = 0
 
-    async def should_retry(
-        self, attempt: int, error: Optional[Exception] = None
-    ) -> bool:
+    async def should_retry(self, attempt: int, error: Optional[Exception] = None) -> bool:
         self._attempt = attempt
         return attempt < self.max_attempts
 
@@ -105,9 +99,7 @@ class FixedDelayPolicy(ReconnectPolicy):
 class NoReconnectPolicy(ReconnectPolicy):
     """不重连策略"""
 
-    async def should_retry(
-        self, attempt: int, error: Optional[Exception] = None
-    ) -> bool:
+    async def should_retry(self, attempt: int, error: Optional[Exception] = None) -> bool:
         return False
 
     def next_delay(self, attempt: int) -> float:
@@ -143,9 +135,7 @@ async def run_reconnect_loop(
 
     while await policy.should_retry(attempt):
         delay = policy.next_delay(attempt)
-        logger.info(
-            f"重连尝试 {attempt + 1}/{policy.max_attempts}，等待 {delay:.1f}s ..."
-        )
+        logger.info(f"重连尝试 {attempt + 1}/{policy.max_attempts}，等待 {delay:.1f}s ...")
 
         if on_reconnecting:
             with contextlib.suppress(Exception):

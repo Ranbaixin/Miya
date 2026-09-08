@@ -225,11 +225,13 @@ function useMiyaQQData() {
   const fetchMessages = useCallback(async () => {
     try {
       const base = await getApiBase();
-      const res = await fetch(`${base}/api/chat/history`).catch(() => null);
+      // 2026-09 修复：/api/chat/history 端点不存在（404），改用 get_session
+      const res = await fetch(`${base}/api/chat/get_session?session_id=default`).catch(() => null);
       if (res?.ok) {
         const data = await res.json();
-        if (data.messages) {
-          setMessages(data.messages);
+        const history = data?.data?.history || data?.data?.messages || [];
+        if (history.length) {
+          setMessages(history);
         }
       }
     } catch (e) {
@@ -263,10 +265,9 @@ function useMiyaQQData() {
     loadFromBackend();
     
     const interval = setInterval(fetchData, 5000);
-    const toolInterval = setInterval(fetchToolHistory, 10000);
+    // 2026-09 移除：/api/tools/history 端点不存在（后端无工具调用历史），轮询 404 无意义
     return () => {
       clearInterval(interval);
-      clearInterval(toolInterval);
     };
   }, [fetchData, fetchToolHistory]);
 
@@ -280,10 +281,11 @@ function useMiyaQQData() {
   const sendMessage = useCallback(async (content: string): Promise<string> => {
     try {
       const base = await getApiBase();
-      const res = await fetch(`${base}/api/terminal/chat`, {
+      // 2026-09 修复：/api/terminal/chat 已迁移 Open-ClaudeCode（404），改用 /api/chat/send
+      const res = await fetch(`${base}/api/chat/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: content }),
+        body: JSON.stringify({ message: content, platform: 'web' }),
       });
       
       if (res.ok) {

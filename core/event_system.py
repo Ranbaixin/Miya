@@ -142,9 +142,7 @@ class EventBus:
 
     def list_handlers(self) -> Dict[EventType, int]:
         """列出已注册的事件处理器"""
-        return {
-            event_type: len(handlers) for event_type, handlers in self._handlers.items()
-        }
+        return {event_type: len(handlers) for event_type, handlers in self._handlers.items()}
 
 
 # ==================== 消息事件处理器 ====================

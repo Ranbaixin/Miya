@@ -140,9 +140,7 @@ class MCPToolRegistry:
             server.error_message = str(e)
             self.servers[config.name] = server
 
-            logger.error(
-                f"[MCPToolRegistry] MCP 服务器连接失败: {config.name}, 错误: {e}"
-            )
+            logger.error(f"[MCPToolRegistry] MCP 服务器连接失败: {config.name}, 错误: {e}")
             return False
 
     async def disconnect_server(self, server_name: str):
@@ -196,9 +194,7 @@ class MCPToolRegistry:
 
         return tools
 
-    async def execute_tool(
-        self, server_name: str, tool_name: str, arguments: Dict[str, Any]
-    ) -> str:
+    async def execute_tool(self, server_name: str, tool_name: str, arguments: Dict[str, Any]) -> str:
         """
         执行 MCP 工具
 

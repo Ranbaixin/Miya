@@ -658,9 +658,8 @@ class ProactiveChatSystem:
             logger.error(f"[主动聊天] 读取 text_config.json 失败: {e}")
         return default
 
-    def _try_get_ai_message(self, trigger_type: str, context: dict) -> Optional[str]:
-        """同步包装：尝试 AI 生成，失败返回 None —— 用于需要 await 的 async 方法中"""
-        return None  # 覆盖在 async 调用中
+    # 2026-09 清理：移除死存根 _try_get_ai_message（return None 且全仓零调用点，
+    # 实际生成路径为 _generate_and_fallback → _generate_ai_message）
 
     async def _generate_and_fallback(
         self,

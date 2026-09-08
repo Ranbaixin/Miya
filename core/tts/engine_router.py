@@ -169,9 +169,10 @@ async def _synthesize_api_tts(config: dict, text: str) -> str:
         "response_format": fmt,
         "speed": api_conf.get("speed", 1.0),
     }
-    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as s, s.post(
-        api_url, json=payload, headers={"Authorization": f"Bearer {api_key}"}
-    ) as r:
+    async with (
+        aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as s,
+        s.post(api_url, json=payload, headers={"Authorization": f"Bearer {api_key}"}) as r,
+    ):
         if r.status != 200:
             raise RuntimeError(f"API TTS {r.status}")
         data = await r.read()

@@ -87,9 +87,7 @@ class SandboxConfig:
         ]
     )
     allowed_paths: list = field(default_factory=list)
-    blocked_paths: list = field(
-        default_factory=lambda: ["/", "/etc", "/root", "/home", "/proc", "/sys"]
-    )
+    blocked_paths: list = field(default_factory=lambda: ["/", "/etc", "/root", "/home", "/proc", "/sys"])
     enable_resource_limits: bool = True  # 是否启用资源限制（Unix）
     enable_psutil_monitor: bool = True  # 是否启用psutil监控
 
@@ -236,9 +234,7 @@ class SkillSandbox:
 
             # 限制输出大小
             if isinstance(result, str) and len(result) > self.config.max_output_size:
-                result = (
-                    result[: self.config.max_output_size] + "\n... [output truncated]"
-                )
+                result = result[: self.config.max_output_size] + "\n... [output truncated]"
 
             return result
 

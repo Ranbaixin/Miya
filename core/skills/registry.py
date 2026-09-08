@@ -121,9 +121,7 @@ class SkillsRegistry:
                         )
                         logger.info(f"[Skills] 注册 MCP: {data['name']}")
                     except Exception as e:  # noqa: BLE001 — MCP清单加载失败跳过
-                        logger.warning(
-                            f"[Skills] 加载 MCP manifest 失败: {service_dir}: {e}"
-                        )
+                        logger.warning(f"[Skills] 加载 MCP manifest 失败: {service_dir}: {e}")
 
     def get_skill(self, name: str) -> Optional[Skill]:
         """获取技能"""
@@ -212,9 +210,7 @@ async def get_agent_handler(agent_name: str):
     return None
 
 
-async def call_mcp_service(
-    service_name: str, tool_name: str, params: Dict[str, Any]
-) -> str:
+async def call_mcp_service(service_name: str, tool_name: str, params: Dict[str, Any]) -> str:
     """调用 MCP Service (供 ToolNet 调用)
 
     Args:
@@ -235,17 +231,13 @@ async def call_mcp_service(
         module_path = skill.module.replace(".", "/") + ".py"
         import importlib.util
 
-        spec = importlib.util.spec_from_file_location(
-            f"mcp_{service_name}", module_path
-        )
+        spec = importlib.util.spec_from_file_location(f"mcp_{service_name}", module_path)
         if spec and spec.loader:
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
 
             if hasattr(module, "service") or hasattr(module, "service"):
-                result = await module.service.handle_handoff(
-                    {"tool_name": tool_name, **params}
-                )
+                result = await module.service.handle_handoff({"tool_name": tool_name, **params})
                 return result
     except Exception as e:  # noqa: BLE001 — MCP服务调用失败返回错误
         return json.dumps({"error": f"服务调用失败: {str(e)}"})
@@ -261,9 +253,7 @@ async def get_mcp_tools_schema() -> List[Dict[str, Any]]:
     for skill in registry.list_skills(SkillType.MCP):
         metadata = skill.metadata
         # 支持两种格式: capabilities.tools 或直接 tools
-        tool_list = metadata.get("capabilities", {}).get("tools") or metadata.get(
-            "tools", []
-        )
+        tool_list = metadata.get("capabilities", {}).get("tools") or metadata.get("tools", [])
         for tool in tool_list:
             tools.append(
                 {

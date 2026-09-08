@@ -113,16 +113,12 @@ def get_quick_response_keywords(response_type: str) -> List[str]:
 
 def is_greeting_keyword(content: str) -> bool:
     """检查是否是问候关键词"""
-    return content.lower().strip() in [
-        k.lower() for k in get_quick_response_keywords("greeting")
-    ]
+    return content.lower().strip() in [k.lower() for k in get_quick_response_keywords("greeting")]
 
 
 def is_farewell_keyword(content: str) -> bool:
     """检查是否是告别关键词"""
-    return content.lower().strip() in [
-        k.lower() for k in get_quick_response_keywords("farewell")
-    ]
+    return content.lower().strip() in [k.lower() for k in get_quick_response_keywords("farewell")]
 
 
 def get_error_message(error_type: str) -> str:

@@ -82,18 +82,6 @@
 > （MessageMixin.route_to_decision_hub），M-Link 总线尚未接入主链路，
 > 保留作为微服务化 / 跨进程消息路由的演进接口。
 
-### 3. 感知层 (`perceive/`)
-
-- **PerceptualRing** — 全局感知环，接收所有平台输入
-- **AttentionGate** — 注意力门控，过滤噪声、聚焦关键信息
-
-### 4. 检测层 (`detect/`)
-
-- **TimeDetector** — 时间上下文检测
-- **SpaceDetector** — 空间/场景检测
-- **NodeDetector** — 节点状态检测
-- **EntropyDiffusion** — 系统熵值扩散监控
-
 ### 5. 决策中枢 (`hub/`)
 
 采用**门面模式 (Facade Pattern)**，`DecisionHub` 作为协调器：
@@ -207,45 +195,25 @@ DecisionHub (3860 行)
 
 **Web 服务** (`web_main.py`)：FastAPI 服务器，端口 8000，代理 API 调用到守护进程 (9800)。
 
-### 9. 演化层 (`evolve/`)
+## 模块导入关系（2026-09 现状）
 
-自我进化能力：
-
-- **Sandbox** — 安全沙盒执行
-- **ABTest** — AB 测试框架
-- **UserCoPlay** — 用户共同游戏学习
-- **OnlineRLHFLearner** — 在线 RLHF 学习
-- **ModelFinetuner** — 模型微调
-- **PersonalityEvolver** — 人格进化
-- **IncrementalLearner** — 增量学习
-- **KnowledgeGraphUpdater** — 知识图谱更新
-- **SelfSynthesizedReplay** — 自我合成回放
-
-### 10. 信任系统 (`trust/`)
-
-- **TrustScore** — 基于交互的信任评分
-- **TrustPropagation** — 跨网络信任传播
-
----
-
-## 模块导入关系
-
-```python
-# 终端模式 (run/main.py) 的核心初始化链:
-from core    import Personality, Ethics, Identity, Arbitrator, Entropy, PromptManager
-from hub     import MemoryEmotion, MemoryEngine, Emotion, Decision, Scheduler, DecisionHub
-from mlink   import MLinkCore, Message, Router
-from perceive import PerceptualRing, AttentionGate
-from webnet  import NetManager, CrossNetEngine
-from detect  import TimeDetector, SpaceDetector, NodeDetector, EntropyDiffusion
-from trust   import TrustScore, TrustPropagation
-from evolve  import Sandbox, ABTest, UserCoPlay
-from memory  import MiyaMemory, MemoryAdapter
-from storage import RedisAsyncClient
-from config  import Settings
+```
+run/daemon.py / run/main.py
+  └─ Miya (run/main.py)          ← 终端与守护进程共用同一构造链
+       ├─ core/    Personality / Ethics / Identity / Entropy / PromptManager
+       ├─ hub/     MemoryEmotion / MemoryEngine / Emotion / Decision / Scheduler
+       │    └─ DecisionHub ── process_perception_cross_platform（统一消息入口）
+       ├─ mlink/   MLinkCore / Message（跨平台消息信封）
+       ├─ webnet/  ToolNet（工具注册表）/ MemoryNet（ConversationHistoryManager 装配）
+       ├─ core/web_api/   WebAPI（8000 业务面路由，挂载于后台 uvicorn 线程）
+       └─ memory/  统一记忆（get_memory_core / ConversationHistoryManager / 谛听 / 工作记忆）
 ```
 
----
+- 平台消息：`core/unified_platform_impl/*` → `message_mixin.route_to_decision_hub` → DecisionHub。
+- 跨组件实时通知：`core/event_bus.py`（emit_event/on_event）→ ManagementAPI WS。
+- API 鉴权：`core/web_api/auth_security.py install_token_gate`（9800/8000 同源）。
+- 已移除模块（勿再引用）：`perceive/`、`detect/`、`evolve/`、`trust/`、`storage/`、`astrbot/`、
+  `webnet/web_main.py`、`run/main.py` 内的 NetManager/CrossNetEngine/arbitrator（2026-09 清理）。
 
 ## 版本说明
 
@@ -256,3 +224,18 @@ from config  import Settings
 | MiyaDaemon | v8.0.0 | `core/miya_daemon.py` |
 | 记忆核心 | V3.1 | `memory/core.py` |
 | Web 服务 | v2.0.0 | `webnet/web_main.py` |
+
+---
+
+## 2026-09 新增/变更组件（二开发必读）
+
+| 组件 | 位置 | 职责 | 关键约定 |
+|---|---|---|---|
+| **统一访问网关** | `core/web_api/auth_security.py` | `install_token_gate(app)`：本机放行、远程验 `MIYA_API_TOKEN`（恒时比较）；9800/8000 同源 | WS 需单独 `websocket_gate(ws)`；敏感端点勿入 public_paths |
+| **事件总线** | `core/event_bus.py` | `emit_event`/`on_event` 跨组件解耦通知，监听器异常不影响主链路 | 当前消费者：ManagementAPI → WS `new_message` 推送 |
+| **会话 ID 透传** | `hub/memory_manager.py` | 存储层优先读 `perception["api_session_id"]`（API 透传），否则按平台推导 | 保证 `/api/chat/get_session` 写读一致；QQ 按群隔离不变 |
+| **AI 降级标记** | `run/main.py` + `core/miya_daemon.py` | `ai_degraded` → `get_daemon_status()["degraded"]["ai_client"]` → `/api/v1/health` | 子系统降级必须照此模式暴露，禁止静默 |
+| **daemon 优雅关闭** | `core/miya_daemon.py _close_miya_core` | 先落盘会话历史再 `await miya.ashutdown()`（完整关闭链）；`POST /api/v1/daemon/shutdown` 触发 | 新增子系统资源在 `run/main.py ashutdown` 中登记 `_safe_close` |
+| **调度器单实例** | `core/miya_daemon.py _scheduler_lifecycle` | daemon 启动前 `set_global_scheduler(miya.scheduler)`，避免双实例 | 新代码一律用 `get_global_scheduler()` 取实例 |
+| **vite realpath 补丁** | `scripts/patch_vite_realpath.mjs` | 替换 vite 内 `realpathSync.native`（穿透映射导致 `#` 路径截断） | 前端 postinstall 自动执行；配合 start.bat 的 subst 盘符 |
+| **占位工具摘除** | `webnet/ToolNet/registry.py` | knowledge/cognitive/group/auth 占位工具暂停注册 | 接入真实现后在 `_load_*_tools` 恢复；勿让 LLM 调到占位文案 |

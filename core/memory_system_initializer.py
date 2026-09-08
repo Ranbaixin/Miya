@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 # 加载环境变量（相对于项目根目录）
 from pathlib import Path as _Path
+
 _project_root = _Path(__file__).parent.parent
 load_dotenv(_project_root / "config" / ".env")
 
@@ -95,9 +96,7 @@ class MemorySystemInitializer:
             # 打印存储位置
             logger.info("\n数据存储位置:")
             logger.info(f"  • 对话历史: {self.data_dir / 'conversations'}")
-            logger.info(
-                f"  • 手动记忆: {self.data_dir / 'memory' / 'undefined_memory.json'}"
-            )
+            logger.info(f"  • 手动记忆: {self.data_dir / 'memory' / 'undefined_memory.json'}")
             logger.info("  • Redis: 已禁用（SQLite 替代）")
             logger.info("  • Milvus: 已禁用（SQLite 替代）")
             logger.info("  • Neo4j: 由 GRAG 知识图谱系统独立管理")
@@ -196,9 +195,7 @@ class MemorySystemInitializer:
             undefined_file = output_dir / f"undefined_memory_{timestamp}.json"
             memories = await self.undefined_memory.get_all()
             with open(undefined_file, "w", encoding=Encoding.UTF8) as f:
-                json.dump(
-                    [m.__dict__ for m in memories], f, ensure_ascii=False, indent=2
-                )
+                json.dump([m.__dict__ for m in memories], f, ensure_ascii=False, indent=2)
             export_files["undefined_memory"] = str(undefined_file)
         except Exception as e:  # noqa: BLE001 — 导出Undefined记忆失败已记录日志
             logger.error(f"导出 Undefined 记忆失败: {e}")

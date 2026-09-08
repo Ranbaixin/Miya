@@ -2,6 +2,7 @@
 视觉一致性管理器
 基于StoryMaker和IP-Adapter原理，维持角色脸部、发型、服装跨帧一致性
 """
+
 import hashlib
 import json
 import logging
@@ -18,15 +19,17 @@ logger = logging.getLogger(__name__)
 
 class ImageConsistencyLevel(Enum):
     """图像一致性级别"""
-    LOW = 0.3      # 低一致性（仅保持基本特征）
-    MEDIUM = 0.6    # 中等一致性（保持主要特征）
-    HIGH = 0.8       # 高一致性（保持所有特征）
-    ULTRA = 1.0      # 超高一致性（像素级一致）
+
+    LOW = 0.3  # 低一致性（仅保持基本特征）
+    MEDIUM = 0.6  # 中等一致性（保持主要特征）
+    HIGH = 0.8  # 高一致性（保持所有特征）
+    ULTRA = 1.0  # 超高一致性（像素级一致）
 
 
 @dataclass
 class CharacterReference:
     """角色参考"""
+
     character_id: str
     reference_images: List[bytes] = field(default_factory=list)
     embedding: Optional[bytes] = None
@@ -58,10 +61,7 @@ class VisualConsistencyManager:
         self.default_consistency_level = ImageConsistencyLevel.HIGH
 
     def add_character_reference(
-        self,
-        character_id: str,
-        reference_image: bytes,
-        attributes: Optional[Dict[str, Any]] = None
+        self, character_id: str, reference_image: bytes, attributes: Optional[Dict[str, Any]] = None
     ) -> bool:
         """
         添加角色参考图像
@@ -76,9 +76,7 @@ class VisualConsistencyManager:
         """
         try:
             if character_id not in self.character_references:
-                self.character_references[character_id] = CharacterReference(
-                    character_id=character_id
-                )
+                self.character_references[character_id] = CharacterReference(character_id=character_id)
 
             ref = self.character_references[character_id]
             ref.reference_images.append(reference_image)
@@ -98,10 +96,7 @@ class VisualConsistencyManager:
             return False
 
     def add_style_reference(
-        self,
-        style_id: str,
-        reference_image: bytes,
-        attributes: Optional[Dict[str, Any]] = None
+        self, style_id: str, reference_image: bytes, attributes: Optional[Dict[str, Any]] = None
     ) -> bool:
         """
         添加风格参考图像
@@ -116,9 +111,7 @@ class VisualConsistencyManager:
         """
         try:
             if style_id not in self.style_references:
-                self.style_references[style_id] = CharacterReference(
-                    character_id=style_id
-                )
+                self.style_references[style_id] = CharacterReference(character_id=style_id)
 
             ref = self.style_references[style_id]
             ref.reference_images.append(reference_image)
@@ -142,7 +135,7 @@ class VisualConsistencyManager:
         prompt: str,
         consistency_level: Optional[ImageConsistencyLevel] = None,
         style_id: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ) -> Optional[bytes]:
         """
         生成一致的角色图像
@@ -165,9 +158,7 @@ class VisualConsistencyManager:
         level = consistency_level or self.default_consistency_level
 
         # 构建一致性提示词
-        enhanced_prompt = self._build_consistency_prompt(
-            prompt, ref, level, style_id
-        )
+        enhanced_prompt = self._build_consistency_prompt(prompt, ref, level, style_id)
 
         # 注意：这里需要实际的图像生成模型（如SD、IP-Adapter等）
         # 当前返回模拟结果
@@ -179,7 +170,7 @@ class VisualConsistencyManager:
         character_id: str,
         base_prompt: str,
         num_frames: int = 4,
-        consistency_level: Optional[ImageConsistencyLevel] = None
+        consistency_level: Optional[ImageConsistencyLevel] = None,
     ) -> List[Optional[bytes]]:
         """
         生成图像序列（用于视频生成）
@@ -202,19 +193,13 @@ class VisualConsistencyManager:
 
         for i in range(num_frames):
             frame_prompt = f"{base_prompt}, frame {i+1}/{num_frames}"
-            frame = self.generate_consistent_image(
-                character_id, frame_prompt, level
-            )
+            frame = self.generate_consistent_image(character_id, frame_prompt, level)
             frames.append(frame)
 
         logger.info(f"[Visual] 生成序列: {character_id}, {num_frames}帧")
         return frames
 
-    def calculate_consistency_score(
-        self,
-        image1: bytes,
-        image2: bytes
-    ) -> float:
+    def calculate_consistency_score(self, image1: bytes, image2: bytes) -> float:
         """
         计算两幅图像的一致性分数
 
@@ -251,11 +236,7 @@ class VisualConsistencyManager:
             logger.info(f"[Visual] 清理过期角色: {char_id}")
 
     def _build_consistency_prompt(
-        self,
-        prompt: str,
-        ref: CharacterReference,
-        level: ImageConsistencyLevel,
-        style_id: Optional[str] = None
+        self, prompt: str, ref: CharacterReference, level: ImageConsistencyLevel, style_id: Optional[str] = None
     ) -> str:
         """构建一致性提示词"""
         # 添加角色属性
@@ -271,9 +252,7 @@ class VisualConsistencyManager:
         if style_id and style_id in self.style_references:
             style_ref = self.style_references[style_id]
             if style_ref.attributes:
-                style_prompt = ", ".join(
-                    f"{k}: {v}" for k, v in style_ref.attributes.items()
-                )
+                style_prompt = ", ".join(f"{k}: {v}" for k, v in style_ref.attributes.items())
                 prompt = f"{prompt}, style: {style_prompt}"
 
         # 添加一致性指示词
@@ -281,11 +260,7 @@ class VisualConsistencyManager:
             ImageConsistencyLevel.LOW: ["loose consistency"],
             ImageConsistencyLevel.MEDIUM: ["moderate consistency"],
             ImageConsistencyLevel.HIGH: ["high consistency", "maintain features"],
-            ImageConsistencyLevel.ULTRA: [
-                "ultra consistency",
-                "exact match",
-                "pixel-perfect"
-            ]
+            ImageConsistencyLevel.ULTRA: ["ultra consistency", "exact match", "pixel-perfect"],
         }
 
         keywords = consistency_keywords.get(level, [])
@@ -300,12 +275,7 @@ class VisualConsistencyManager:
         mock_data = f"MOCK_IMAGE: {prompt}".encode()
         return mock_data
 
-    def _save_reference(
-        self,
-        ref_id: str,
-        ref: CharacterReference,
-        is_style: bool = False
-    ):
+    def _save_reference(self, ref_id: str, ref: CharacterReference, is_style: bool = False):
         """保存参考到磁盘"""
         directory = self.storage_path / ("styles" if is_style else "characters")
         directory.mkdir(exist_ok=True)
@@ -313,14 +283,14 @@ class VisualConsistencyManager:
         filepath = directory / f"{ref_id}.json"
 
         data = {
-            'character_id': ref.character_id,
-            'image_hashes': [ref.get_image_hash(i) for i in range(len(ref.reference_images))],
-            'attributes': ref.attributes,
-            'created_at': ref.created_at,
-            'updated_at': ref.updated_at
+            "character_id": ref.character_id,
+            "image_hashes": [ref.get_image_hash(i) for i in range(len(ref.reference_images))],
+            "attributes": ref.attributes,
+            "created_at": ref.created_at,
+            "updated_at": ref.updated_at,
         }
 
-        with open(filepath, 'w', encoding=Encoding.UTF8) as f:
+        with open(filepath, "w", encoding=Encoding.UTF8) as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
     def load_reference(self, ref_id: str, is_style: bool = False) -> bool:
@@ -332,14 +302,14 @@ class VisualConsistencyManager:
             return False
 
         try:
-            with open(filepath, 'r', encoding=Encoding.UTF8) as f:
+            with open(filepath, "r", encoding=Encoding.UTF8) as f:
                 data = json.load(f)
 
             ref = CharacterReference(
-                character_id=data['character_id'],
-                attributes=data.get('attributes', {}),
-                created_at=data.get('created_at', time.time()),
-                updated_at=data.get('updated_at', time.time())
+                character_id=data["character_id"],
+                attributes=data.get("attributes", {}),
+                created_at=data.get("created_at", time.time()),
+                updated_at=data.get("updated_at", time.time()),
             )
 
             if is_style:
@@ -356,13 +326,8 @@ class VisualConsistencyManager:
     def get_statistics(self) -> Dict[str, Any]:
         """获取统计信息"""
         return {
-            'total_characters': len(self.character_references),
-            'total_styles': len(self.style_references),
-            'total_references': sum(
-                len(ref.reference_images)
-                for ref in self.character_references.values()
-            ) + sum(
-                len(ref.reference_images)
-                for ref in self.style_references.values()
-            )
+            "total_characters": len(self.character_references),
+            "total_styles": len(self.style_references),
+            "total_references": sum(len(ref.reference_images) for ref in self.character_references.values())
+            + sum(len(ref.reference_images) for ref in self.style_references.values()),
         }

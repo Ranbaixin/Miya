@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>弥娅 v8.1</strong><br>
+  <strong>弥娅 v8.0</strong><br>
   拥有独立人格、记忆与情感的 AI 虚拟化身 · 跨平台 · 自我进化 · 蛛网架构
 </p>
 
@@ -47,9 +47,9 @@
 
 | 模式 | 入口 | 说明 |
 |------|------|------|
-| **终端模式** | `start.bat [1]` | Python 异步命令行交互 (v8.1 重构) |
+| **终端模式** | `start.bat [1]` | Python 异步命令行交互 (v8.0 重构) |
 | **守护进程** | `start.bat [2]` | 后台多平台服务 + 管理 API (端口 9800) |
-| **桌面应用** | `start.bat [3]` | Electron + React 桌面客户端 |
+| **桌面应用** | `start.bat [3]` | Electron + Vue 桌面客户端（路径含 `#` 时自动盘符映射启动） |
 | **Web 界面** | `start.bat [4]` | 浏览器前端 (React HUD) |
 
 ---
@@ -271,7 +271,6 @@ Miya/
 ├── scripts/                # 实用脚本 (24 个)
 ├── tests/                  # 测试套件
 ├── setup/                  # 安装工具
-├── astrbot/                # AstrBot 框架集成
 ├── mcpserver/              # MCP 服务器
 ├── utils/                  # 工具函数
 ├── start.bat / start.sh    # 启动中心
@@ -322,7 +321,8 @@ ZHIPU_API_KEY=YOUR_KEY
 - [配置指南](docs/CONFIG_GUIDE.md) — 模型 / 平台 / 人格 / 提供商配置
 - [开发指南](docs/DEVELOP_GUIDE.md) — 模块详解与扩展开发
 - [API 参考](docs/API_REFERENCE.md) — 守护进程 API 接口
-- [优化报告](MIYA_OPTIMIZATION_REPORT.md) — v8.0 优化记录与待处理清单
+- [验收报告](docs/ACCEPTANCE_REPORT_20260907.md) — 启动模式与核心流程真实验收（2026-09）
+- [审查报告](docs/AUDIT_REPORT_20260906.md) — 全项目审查、修复记录与二次开发须知
 
 ---
 

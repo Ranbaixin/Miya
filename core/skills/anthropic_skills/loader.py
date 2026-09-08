@@ -190,8 +190,7 @@ def discover_skills(skills_dir: Path) -> list[AnthropicSkillItem]:
 
         if item.name != entry.name:
             logger.warning(
-                "SKILL.md name (%r) 与目录名 (%r) 不一致: %s "
-                "(将使用 SKILL.md 中的 name)",
+                "SKILL.md name (%r) 与目录名 (%r) 不一致: %s " "(将使用 SKILL.md 中的 name)",
                 item.name,
                 entry.name,
                 skill_md,

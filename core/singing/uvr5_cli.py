@@ -12,7 +12,6 @@ sys.path.insert(0, os.path.join(base, "tools", "uvr5"))
 os.chdir(base)
 
 
-
 def _rename_vr_output(input_audio, output_vocal, output_inst):
     vocal_dir = os.path.dirname(output_vocal)
     inst_dir = os.path.dirname(output_inst)
@@ -53,9 +52,7 @@ def run_vr(input_audio, output_vocal, output_inst, model_path, device="cuda", ag
 def run_bs_roformer(input_audio, output_vocal, output_inst, model_path, device="cuda"):
     from tools.uvr5.bsroformer import Roformer_Loader
 
-    rl = Roformer_Loader(
-        model_path=model_path, config_path="", device=device, is_half=True
-    )
+    rl = Roformer_Loader(model_path=model_path, config_path="", device=device, is_half=True)
     rl._path_audio_(
         input_audio,
         others_root=os.path.dirname(output_inst),
@@ -71,9 +68,7 @@ if __name__ == "__main__":
     parser.add_argument("input", help="Input audio file")
     parser.add_argument("output_dir", help="Output directory")
     parser.add_argument("--model-type", default="vr", choices=["vr", "bs_roformer"])
-    parser.add_argument(
-        "--model-path", required=True, help="Path to .pth or .ckpt model"
-    )
+    parser.add_argument("--model-path", required=True, help="Path to .pth or .ckpt model")
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--agg", type=int, default=10)
     args = parser.parse_args()
@@ -84,19 +79,13 @@ if __name__ == "__main__":
 
     t0 = time.time()
     if args.model_type == "vr":
-        v_ok, i_ok = run_vr(
-            args.input, vocal_out, inst_out, args.model_path, args.device, args.agg
-        )
+        v_ok, i_ok = run_vr(args.input, vocal_out, inst_out, args.model_path, args.device, args.agg)
     else:
-        v_ok, i_ok = run_bs_roformer(
-            args.input, vocal_out, inst_out, args.model_path, args.device
-        )
+        v_ok, i_ok = run_bs_roformer(args.input, vocal_out, inst_out, args.model_path, args.device)
     elapsed = time.time() - t0
 
     if v_ok:
-        print(
-            f"OK {elapsed:.1f}s vocal={os.path.getsize(vocal_out)}B inst={os.path.getsize(inst_out) if i_ok else 0}B"
-        )
+        print(f"OK {elapsed:.1f}s vocal={os.path.getsize(vocal_out)}B inst={os.path.getsize(inst_out) if i_ok else 0}B")
     else:
         print(f"FAIL {elapsed:.1f}s", file=sys.stderr)
         sys.exit(1)

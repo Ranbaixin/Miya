@@ -27,9 +27,7 @@ class VocalSeparator(ABC):
         pass
 
     @abstractmethod
-    async def separate(
-        self, audio_path: str, output_dir: str
-    ) -> Tuple[Optional[str], Optional[str]]:
+    async def separate(self, audio_path: str, output_dir: str) -> Tuple[Optional[str], Optional[str]]:
         pass
 
     def cleanup(self):
@@ -47,17 +45,13 @@ class DemucsSeparator(VocalSeparator):
 
     def initialize(self, config: dict) -> bool:
         self.python_exe = config.get("demucs_python", "python")
-        self.models = config.get(
-            "demucs_models", ["htdemucs_ft", "htdemucs", "mdx_extra"]
-        )
+        self.models = config.get("demucs_models", ["htdemucs_ft", "htdemucs", "mdx_extra"])
         self.timeout = config.get("demucs_timeout", 300)
         self.is_initialized = True
         logger.info(f"Demucs ready: models={self.models}")
         return True
 
-    async def separate(
-        self, audio_path: str, output_dir: str
-    ) -> Tuple[Optional[str], Optional[str]]:
+    async def separate(self, audio_path: str, output_dir: str) -> Tuple[Optional[str], Optional[str]]:
         import subprocess as _sp
 
         src_abs = os.path.abspath(audio_path)
@@ -136,9 +130,7 @@ class DemucsSeparator(VocalSeparator):
                 logger.info(f"[分离] demucs OK [{model}]")
                 shutil.rmtree(tmp_dir, ignore_errors=True)
                 return vocal_out, inst_out
-            logger.warning(
-                f"[分离] demucs [{model}] 人声薄弱 peak={peak} nonzero={nonzero_pct:.0f}%, 尝试下一模型"
-            )
+            logger.warning(f"[分离] demucs [{model}] 人声薄弱 peak={peak} nonzero={nonzero_pct:.0f}%, 尝试下一模型")
 
         shutil.rmtree(tmp_dir, ignore_errors=True)
         logger.warning("[分离] all models failed, fallback to ffmpeg")
@@ -155,9 +147,7 @@ class FFmpegSeparator(VocalSeparator):
         self.is_initialized = True
         return True
 
-    async def separate(
-        self, audio_path: str, output_dir: str
-    ) -> Tuple[Optional[str], Optional[str]]:
+    async def separate(self, audio_path: str, output_dir: str) -> Tuple[Optional[str], Optional[str]]:
         return await _ffmpeg_fallback(audio_path, output_dir)
 
 
@@ -174,6 +164,7 @@ class UVR5Separator(VocalSeparator):
 
     def initialize(self, config: dict) -> bool:
         from core.singing._paths import find_singing_python
+
         self.python_exe = config.get(
             "uvr5_python",
             find_singing_python() or "",
@@ -183,19 +174,20 @@ class UVR5Separator(VocalSeparator):
             os.path.join(os.path.dirname(os.path.abspath(__file__)), "uvr5_cli.py"),
         )
         from core.singing._paths import find_models_dir
+
         _models_dir = find_models_dir()
         _default_models = []
         if _models_dir:
             _default_models = [
                 {
                     "type": "bs_roformer",
-                    "path": os.path.join(_models_dir, "tools", "uvr5", "uvr5_weights",
-                                         "model_bs_roformer_ep_317_sdr_12.9755.ckpt"),
+                    "path": os.path.join(
+                        _models_dir, "tools", "uvr5", "uvr5_weights", "model_bs_roformer_ep_317_sdr_12.9755.ckpt"
+                    ),
                 },
                 {
                     "type": "vr",
-                    "path": os.path.join(_models_dir, "tools", "uvr5", "uvr5_weights",
-                                         "HP5_only_main_vocal.pth"),
+                    "path": os.path.join(_models_dir, "tools", "uvr5", "uvr5_weights", "HP5_only_main_vocal.pth"),
                 },
             ]
         self.models = config.get("uvr5_models", _default_models)
@@ -205,9 +197,7 @@ class UVR5Separator(VocalSeparator):
         logger.info(f"UVR5 ready: models={[m['type'] for m in self.models]}")
         return True
 
-    async def separate(
-        self, audio_path: str, output_dir: str
-    ) -> Tuple[Optional[str], Optional[str]]:
+    async def separate(self, audio_path: str, output_dir: str) -> Tuple[Optional[str], Optional[str]]:
         import subprocess as _sp
 
         src_abs = os.path.abspath(audio_path)
@@ -274,9 +264,7 @@ class UVR5Separator(VocalSeparator):
                 continue
 
             if result.returncode != 0:
-                logger.warning(
-                    f"[UVR5] {model_type} rc={result.returncode} stderr={result.stderr[-2000:]}"
-                )
+                logger.warning(f"[UVR5] {model_type} rc={result.returncode} stderr={result.stderr[-2000:]}")
                 continue
 
             vocal_out = os.path.join(out_abs, "Vocals.wav")
@@ -285,13 +273,9 @@ class UVR5Separator(VocalSeparator):
             if os.path.exists(vocal_out):
                 usable, peak, nonzero_pct = _check_amplitude(vocal_out, inst_out)
                 if usable:
-                    logger.info(
-                        f"[UVR5] OK [{model_type}] stdout={result.stdout.strip()}"
-                    )
+                    logger.info(f"[UVR5] OK [{model_type}] stdout={result.stdout.strip()}")
                     return vocal_out, inst_out
-                logger.warning(
-                    f"[UVR5] {model_type} 人声薄弱 peak={peak} nonzero={nonzero_pct:.0f}%"
-                )
+                logger.warning(f"[UVR5] {model_type} 人声薄弱 peak={peak} nonzero={nonzero_pct:.0f}%")
             else:
                 logger.warning(f"[UVR5] {model_type} no Vocals.wav output")
 
@@ -312,9 +296,7 @@ async def _build_instrumental(stem_files: dict, output_dir: str) -> Optional[str
         shutil.move(no_vocals, target)
         return target
 
-    inst_parts = [
-        p for k, p in stem_files.items() if k in ("drums.wav", "bass.wav", "other.wav")
-    ]
+    inst_parts = [p for k, p in stem_files.items() if k in ("drums.wav", "bass.wav", "other.wav")]
     if not inst_parts:
         return None
 
@@ -341,9 +323,7 @@ async def _build_instrumental(stem_files: dict, output_dir: str) -> Optional[str
     return None
 
 
-async def _ffmpeg_fallback(
-    src: str, output_dir: str
-) -> Tuple[Optional[str], Optional[str]]:
+async def _ffmpeg_fallback(src: str, output_dir: str) -> Tuple[Optional[str], Optional[str]]:
     import subprocess as _sp
 
     v_out = os.path.join(output_dir, "Vocals.wav")
@@ -375,6 +355,7 @@ def _find_ffmpeg() -> str:
     """查找 ffmpeg: 优先系统 PATH，其次 MIYA_FFMPEG_PATH 环境变量。"""
     import shutil as _su
     import os as _os
+
     known = ["ffmpeg"]
     env_path = _os.getenv("MIYA_FFMPEG_PATH", "")
     if env_path:
@@ -408,9 +389,7 @@ def _check_amplitude(vocal_path: Optional[str], inst_path: Optional[str]):
                 total_frames = info.frames
                 if total_frames > max_read * 3:
                     start_frame = total_frames // 3
-                data, _sr = sf.read(
-                    path, frames=max_read, start=start_frame, dtype="float32"
-                )
+                data, _sr = sf.read(path, frames=max_read, start=start_frame, dtype="float32")
             else:
                 import array as _arr
                 import wave
@@ -436,14 +415,10 @@ def _check_amplitude(vocal_path: Optional[str], inst_path: Optional[str]):
                 data = data.reshape(-1, 1)
 
             peak = float(np.max(np.abs(data)))
-            nonzero = float(
-                np.count_nonzero(np.abs(data) > 0.005) / max(data.size, 1) * 100
-            )
+            nonzero = float(np.count_nonzero(np.abs(data) > 0.005) / max(data.size, 1) * 100)
 
             if peak < 0.01 and nonzero < 1.0:
-                logger.warning(
-                    f"[分离] {label} 振幅极低 peak={peak:.4f} nonzero={nonzero:.1f}%"
-                )
+                logger.warning(f"[分离] {label} 振幅极低 peak={peak:.4f} nonzero={nonzero:.1f}%")
             else:
                 logger.info(f"[分离] {label} peak={peak:.4f} nonzero={nonzero:.1f}%")
 

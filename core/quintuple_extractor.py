@@ -218,8 +218,6 @@ def format_quintuples_for_prompt(quintuples: List[Quintuple]) -> str:
 
     lines = ["【知识图谱记忆】"]
     for q in quintuples[:10]:  # 限制数量
-        lines.append(
-            f"- {q.subject}({q.subject_type}) {q.predicate} {q.object}({q.object_type})"
-        )
+        lines.append(f"- {q.subject}({q.subject_type}) {q.predicate} {q.object}({q.object_type})")
 
     return "\n".join(lines)

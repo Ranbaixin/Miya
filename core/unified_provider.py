@@ -83,9 +83,7 @@ class UnifiedProviderManager:
         else:
             return await self._chat_default(messages, stream, **kwargs)
 
-    async def _chat_miya(
-        self, model: str, messages: List[Dict[str, Any]], stream: bool, **kwargs
-    ) -> Dict[str, Any]:
+    async def _chat_miya(self, model: str, messages: List[Dict[str, Any]], stream: bool, **kwargs) -> Dict[str, Any]:
         """使用Miya模型池"""
         try:
             pool = self._miya_providers.get(model)
@@ -97,9 +95,7 @@ class UnifiedProviderManager:
             logger.error(f"[UnifiedProviderManager] Miya聊天失败: {e}")
             return await self._chat_default(messages, stream, **kwargs)
 
-    async def _chat_default(
-        self, messages: List[Dict[str, Any]], stream: bool, **kwargs
-    ) -> Dict[str, Any]:
+    async def _chat_default(self, messages: List[Dict[str, Any]], stream: bool, **kwargs) -> Dict[str, Any]:
         """默认聊天实现"""
         return {"success": False, "error": "无可用Provider"}
 

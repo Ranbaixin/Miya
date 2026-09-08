@@ -36,12 +36,8 @@ class MessageMixin:
         lines = text.split("\n")
         if lines:
             first_line = lines[0].strip()
-            if (
-                first_line.startswith("[")
-                and not re.search(r"[\u4e00-\u9fff]", first_line)
-            ) or (
-                re.match(r"^[A-Za-z][a-z]+\s", first_line)
-                and not re.search(r"[\u4e00-\u9fff]", first_line)
+            if (first_line.startswith("[") and not re.search(r"[\u4e00-\u9fff]", first_line)) or (
+                re.match(r"^[A-Za-z][a-z]+\s", first_line) and not re.search(r"[\u4e00-\u9fff]", first_line)
             ):
                 lines.pop(0)
                 while lines and not lines[0].strip():
@@ -73,9 +69,7 @@ class MessageMixin:
             import random
             from pathlib import Path
 
-            config_path = (
-                Path(__file__).parent.parent.parent / "config" / "text_config.json"
-            )
+            config_path = Path(__file__).parent.parent.parent / "config" / "text_config.json"
             if not config_path.exists():
                 return text
 
@@ -109,9 +103,7 @@ class MessageMixin:
 
             if is_farewell_keyword(content):
                 logger.info(f"[{self.platform_id}] 检测到离别语")
-                await miya.decision_hub.handle_session_end(
-                    session_id=user_id, platform=self.platform_id
-                )
+                await miya.decision_hub.handle_session_end(session_id=user_id, platform=self.platform_id)
         except Exception as e:  # noqa: BLE001 — Level 1：会话结束处理失败先记日志再上抛
             logger.error(f"[{self.platform_id}] 会话结束处理失败: {e}")
             raise
@@ -259,9 +251,7 @@ class MessageMixin:
                                 canonical_id = str(raw_ids)
                                 break
                         perception_data["canonical_user_id"] = canonical_id
-                        perception_data["sender_name"] = (
-                            info.get("name", "") or user_name or user_id
-                        )
+                        perception_data["sender_name"] = info.get("name", "") or user_name or user_id
                         # 关键：统一 user_id 为规范ID，确保记忆存储在同一桶内
                         perception_data["user_id"] = canonical_id
                         break
@@ -283,20 +273,19 @@ class MessageMixin:
             )
 
             if hasattr(miya, "decision_hub"):
-                response = await miya.decision_hub.process_perception_cross_platform(
-                    mlink_msg
-                )
+                response = await miya.decision_hub.process_perception_cross_platform(mlink_msg)
                 # === 通用后处理 ===
                 if response:
                     response = self._filter_thinking(response)
                     response = self._filter_output(response)
+                # 2026-09 新增：跨平台消息事件 → 事件总线（管理 API WS 推送到桌面端）
+                # 仅覆盖真实平台消息（桌面端自身聊天走 HTTP 响应，不在此处，避免自回显）
+                self._emit_realtime_events(content, response or "", user_name or user_id)
                 # TTS 本地播放 (fire-and-forget, 所有平台)
                 if response and self._tts_should_local():
                     self._spawn(self._tts_play_response(response))
                 # 副作用 (fire-and-forget)
-                self._spawn(
-                    self._after_route(content, response or "", user_id)
-                )
+                self._spawn(self._after_route(content, response or "", user_id))
                 return response  # None → 不回复, 空字符串 → 平台自行兜底
             else:
                 return "决策系统未就绪"
@@ -306,6 +295,40 @@ class MessageMixin:
             return f"处理消息时出错了: {e}"
 
     # ============ TTS 通用处理 ============
+
+    def _emit_realtime_events(self, content: str, reply: str, sender_name: str) -> None:
+        """把平台收发的消息推送到事件总线（fire-and-forget，失败不影响主链路）
+
+        桌面端通过管理 API 的 WebSocket 收到 new_message 事件，
+        实时显示其他平台（QQ/Telegram 等）的收发内容。
+        """
+        try:
+            from core.event_bus import emit_event
+
+            if content:
+                emit_event(
+                    {
+                        "type": "new_message",
+                        "data": {
+                            "content": content,
+                            "sender_name": sender_name or self.platform_id,
+                            "platform": self.platform_id,
+                        },
+                    }
+                )
+            if reply:
+                emit_event(
+                    {
+                        "type": "new_message",
+                        "data": {
+                            "content": reply,
+                            "sender_name": "弥娅",
+                            "platform": self.platform_id,
+                        },
+                    }
+                )
+        except Exception as e:  # noqa: BLE001 — 实时推送失败不影响消息主链路
+            logger.debug(f"[{self.platform_id}] 实时事件推送失败: {e}")
 
     _tts_cache: Dict[str, str] = {}  # text_hash → audio_path, 短 TTL 缓存
 

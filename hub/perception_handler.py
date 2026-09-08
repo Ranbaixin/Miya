@@ -9,6 +9,7 @@
 5. 情感类/选择类工具优先级
 6. 阻塞/选择级工具优先级
 """
+
 import logging
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -19,18 +20,20 @@ logger = logging.getLogger(__name__)
 class PerceptionHandler:
     """
     感知处理器
-    
+
     单一职责：处理现有模块及输入感知相关的复杂处理逻辑
     """
 
-    def __init__(self,
-                 terminal_tool: Optional[Any] = None,
-                 auth_subnet: Optional[Any] = None,
-                 game_mode_adapter: Optional[Any] = None,
-                 onebot_client: Optional[Any] = None):
+    def __init__(
+        self,
+        terminal_tool: Optional[Any] = None,
+        auth_subnet: Optional[Any] = None,
+        game_mode_adapter: Optional[Any] = None,
+        onebot_client: Optional[Any] = None,
+    ):
         """
         初始化感知处理器
-        
+
         Args:
             terminal_tool: 终端工具实例
             auth_subnet: 权限子网
@@ -41,7 +44,7 @@ class PerceptionHandler:
         self.auth_subnet = auth_subnet
         self.game_mode_adapter = game_mode_adapter
         self.onebot_client = onebot_client
-        
+
         logger.info("[感知处理器] 初始化完成")
 
     async def check_permission(self, perception: Dict) -> bool:
@@ -57,20 +60,18 @@ class PerceptionHandler:
         user_id = perception.get("user_id")
         group_id = perception.get("group_id")
         message_type = perception.get("message_type", "group")
-        
+
         # 管理员总是有权限
         if user_id and self.is_admin(user_id, group_id):
             return True
-        
+
         # 权限子网检查
         if self.auth_subnet:
             try:
                 from webnet.ToolNet.base import ToolContext
+
                 context = ToolContext(
-                    user_id=user_id,
-                    group_id=group_id,
-                    message_type=message_type,
-                    onebot_client=self.onebot_client
+                    user_id=user_id, group_id=group_id, message_type=message_type, onebot_client=self.onebot_client
                 )
                 has_perm = await self.auth_subnet.check_permission(context)
                 if not has_perm:
@@ -79,7 +80,7 @@ class PerceptionHandler:
             except Exception as e:
                 logger.error(f"[感知处理器] 权限检查失败: {e}", exc_info=True)
                 return False
-        
+
         # 默认允许
         return True
 
@@ -97,7 +98,7 @@ class PerceptionHandler:
         # 这里可以实现管理员检查逻辑
         # 例如从配置文件或数据库读取管理员列表
         admin_list = self._load_admin_list()
-        
+
         return bool(user_id and user_id in admin_list)
 
     def _load_admin_list(self) -> list:
@@ -112,12 +113,13 @@ class PerceptionHandler:
             config_file = Path("config/admins.json")
             if config_file.exists():
                 import json
+
                 with open(config_file, "r", encoding="utf-8") as f:
                     config = json.load(f)
                     return config.get("admins", [])
         except Exception as e:
             logger.error(f"[感知处理器] 加载管理员列表失败: {e}", exc_info=True)
-        
+
         # 返回默认管理员列表（空）
         return []
 
@@ -132,24 +134,24 @@ class PerceptionHandler:
             优先级 (0=最低, 10=最高)
         """
         priority = 5  # 默认优先级
-        
+
         # 游戏模式优先
         if self.game_mode_adapter and self.game_mode_adapter.is_active():
             if perception.get("content_type") == "game":
                 priority = 9
-        
+
         # 终端工具优先
         if self.terminal_tool and self._is_terminal_command(perception):
             priority = 8
-        
+
         # 情感类/选择类工具优先
         if self._is_emotion_or_choice_tool(perception):
             priority = 7
-        
+
         # 阻塞/选择级工具优先
         if self._is_blocking_or_choice_tool(perception):
             priority = 6
-        
+
         return priority
 
     def _is_terminal_command(self, perception: Dict) -> bool:
@@ -206,27 +208,28 @@ class PerceptionHandler:
         """
         if not self.terminal_tool:
             return None
-        
+
         try:
             content = perception.get("content", "")
             if not content:
                 return None
-            
+
             # 提取命令
             command = content[1:].strip() if content.startswith("/") else content.strip()
-            
+
             # 执行终端命令
             from webnet.ToolNet.base import ToolContext
+
             context = ToolContext(
                 user_id=perception.get("user_id"),
                 group_id=perception.get("group_id"),
                 message_type=perception.get("message_type"),
-                onebot_client=self.onebot_client
+                onebot_client=self.onebot_client,
             )
-            
+
             result = await self.terminal_tool.execute(command, context)
             return result
-            
+
         except Exception as e:
             logger.error(f"[感知处理器] 终端工具处理失败: {e}", exc_info=True)
             return f"❌ 终端工具执行失败: {str(e)}"
@@ -243,7 +246,7 @@ class PerceptionHandler:
         """
         if not self.game_mode_adapter or not self.game_mode_adapter.is_active():
             return None
-        
+
         try:
             result = await self.game_mode_adapter.handle_perception(perception)
             return result
@@ -264,24 +267,25 @@ class PerceptionHandler:
         # 添加权限信息
         has_permission = await self.check_permission(perception)
         perception["has_permission"] = has_permission
-        
+
         # 添加优先级
         priority = await self.prioritize_perception(perception)
         perception["priority"] = priority
-        
+
         # 添加时间戳
         from datetime import datetime
+
         perception["timestamp"] = datetime.now().isoformat()
-        
+
         # 添加来源信息
         user_id = perception.get("user_id")
         group_id = perception.get("group_id")
         perception["source"] = {
             "user_id": user_id,
             "group_id": group_id,
-            "message_type": perception.get("message_type")
+            "message_type": perception.get("message_type"),
         }
-        
+
         return perception
 
     def get_handler_info(self) -> Dict[str, Any]:
@@ -297,5 +301,5 @@ class PerceptionHandler:
             "has_terminal_tool": self.terminal_tool is not None,
             "has_auth_subnet": self.auth_subnet is not None,
             "has_game_mode_adapter": self.game_mode_adapter is not None,
-            "has_onebot_client": self.onebot_client is not None
+            "has_onebot_client": self.onebot_client is not None,
         }

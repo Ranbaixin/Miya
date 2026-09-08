@@ -4,6 +4,7 @@
 弥娅系统的统一缓存层，支持内存缓存、向量缓存、查询缓存、去重缓存。
 提供TTL过期、LRU驱逐、持久化、异步/同步双模式支持。
 """
+
 import asyncio
 import contextlib
 import hashlib
@@ -26,6 +27,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CacheEntry:
     """缓存条目"""
+
     key: str
     value: Any
     created_at: float
@@ -49,6 +51,7 @@ class CacheEntry:
 @dataclass
 class CacheConfig:
     """缓存配置"""
+
     max_size: int = 1000
     default_ttl: float = CacheTTL.MEDIUM
     max_memory_mb: float = 100.0
@@ -62,6 +65,7 @@ class CacheConfig:
 @dataclass
 class CacheStats:
     """缓存统计"""
+
     hits: int = 0
     misses: int = 0
     evictions: int = 0
@@ -126,10 +130,7 @@ class BaseCacheLayer(ABC):
         keys_to_remove = []
 
         # 找出最少使用的条目
-        sorted_entries = sorted(
-            self._cache.items(),
-            key=lambda x: x[1].last_access
-        )
+        sorted_entries = sorted(self._cache.items(), key=lambda x: x[1].last_access)
 
         for key, entry in sorted_entries[:count]:
             if not entry.is_expired():
@@ -151,10 +152,7 @@ class BaseCacheLayer(ABC):
     def _evict_expired(self) -> int:
         """驱逐过期条目"""
         evicted = 0
-        keys_to_remove = [
-            key for key, entry in self._cache.items()
-            if entry.is_expired()
-        ]
+        keys_to_remove = [key for key, entry in self._cache.items() if entry.is_expired()]
 
         for key in keys_to_remove:
             entry = self._cache.pop(key, None)
@@ -236,13 +234,7 @@ class BaseCacheLayer(ABC):
             ttl = self.config.default_ttl
 
         # 创建条目
-        entry = CacheEntry(
-            key=cache_key,
-            value=value,
-            created_at=time.time(),
-            ttl=ttl,
-            size=size
-        )
+        entry = CacheEntry(key=cache_key, value=value, created_at=time.time(), ttl=ttl, size=size)
 
         # 如果已存在，移除旧值的大小
         old_entry = self._cache.get(cache_key)
@@ -376,10 +368,10 @@ class BaseCacheLayer(ABC):
                     "evictions": self._stats.evictions,
                     "sets": self._stats.sets,
                     "deletes": self._stats.deletes,
-                }
+                },
             }
 
-            with open(persist_file, 'w', encoding='utf-8') as f:
+            with open(persist_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
 
             logger.info(f"缓存已持久化: {persist_file}")
@@ -401,7 +393,7 @@ class BaseCacheLayer(ABC):
             if not persist_file.exists():
                 return False
 
-            with open(persist_file, 'r', encoding='utf-8') as f:
+            with open(persist_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
             # 加载缓存
@@ -445,6 +437,7 @@ def cached(cache_type: str = "memory", ttl: Optional[float] = None, key_prefix: 
     Returns:
         装饰器函数
     """
+
     def decorator(func: Callable):
         @wraps(func)
         async def async_wrapper(*args, **kwargs):

@@ -9,6 +9,7 @@
 扫描 core/hub/memory/webnet/mlink/run 下的所有 .py 文件，
 对比 setup/dependencies/*.txt 中声明的包，报告差异。
 """
+
 import ast
 import re
 import sys
@@ -19,17 +20,151 @@ SCAN_DIRS = ["core", "hub", "memory", "webnet", "mlink", "run"]
 
 # 标准库 (Python 3.11+)
 STDLIB = {
-    "abc", "argparse", "ast", "asyncio", "base64", "collections", "concurrent",
-    "contextlib", "copy", "csv", "ctypes", "dataclasses", "datetime", "decimal",
-    "difflib", "enum", "fractions", "functools", "glob", "hashlib", "hmac",
-    "importlib", "inspect", "io", "itertools", "json", "logging", "math",
-    "multiprocessing", "operator", "os", "pathlib", "pickle", "platform",
-    "pprint", "queue", "random", "re", "secrets", "shlex", "shutil", "signal",
-    "socketserver", "sqlite3", "statistics", "string", "struct", "subprocess",
-    "sys", "tempfile", "textwrap", "threading", "time", "traceback", "typing",
-    "unittest", "urllib", "uuid", "warnings", "weakref", "xml", "zipfile",
+    "abc",
+    "argparse",
+    "ast",
+    "asyncio",
+    "base64",
+    "collections",
+    "concurrent",
+    "contextlib",
+    "copy",
+    "csv",
+    "ctypes",
+    "dataclasses",
+    "datetime",
+    "decimal",
+    "difflib",
+    "enum",
+    "fractions",
+    "functools",
+    "glob",
+    "hashlib",
+    "hmac",
+    "importlib",
+    "inspect",
+    "io",
+    "itertools",
+    "json",
+    "logging",
+    "math",
+    "multiprocessing",
+    "operator",
+    "os",
+    "pathlib",
+    "pickle",
+    "platform",
+    "pprint",
+    "queue",
+    "random",
+    "re",
+    "secrets",
+    "shlex",
+    "shutil",
+    "signal",
+    "socketserver",
+    "sqlite3",
+    "statistics",
+    "string",
+    "struct",
+    "subprocess",
+    "sys",
+    "tarfile",
+    "tempfile",
+    "textwrap",
+    "threading",
+    "time",
+    "tracemalloc",
+    "traceback",
+    "types",
+    "typing",
+    "unittest",
+    "urllib",
+    "uuid",
+    "wave",
+    "warnings",
+    "weakref",
+    "xml",
+    "zipfile",
     "zoneinfo",
+    # 补充遗漏的标准库
+    "__future__",
+    "array",
+    "builtins",
+    "calendar",
+    "colorsys",
+    "contextvars",
+    "fnmatch",
+    "email",
+    "fcntl",
+    "gc",
+    "getpass",
+    "gettext",
+    "gzip",
+    "heapq",
+    "html",
+    "http",
+    "imp",
+    "linecache",
+    "locale",
+    "mimetypes",
+    "mmap",
+    "msvcrt",
+    "netrc",
+    "nis",
+    "nntplib",
+    "numbers",
+    "opcode",
+    "pdb",
+    "poplib",
+    "posix",
+    "profile",
+    "pstats",
+    "pty",
+    "pwd",
+    "py_compile",
+    "pyclbr",
+    "readline",
+    "reprlib",
+    "resource",
+    "rlcompleter",
+    "runpy",
+    "sched",
+    "selectors",
+    "site",
+    "sndhdr",
+    "socket",
+    "ssl",
+    "stat",
+    "stringprep",
+    "sunau",
+    "symbol",
+    "symtable",
+    "sysconfig",
+    "syslog",
+    "tabnanny",
+    "telnetlib",
+    "termios",
+    "test",
+    "timeit",
+    "tkinter",
+    "token",
+    "shelve",
+    "smtplib",
+    "tokenize",
+    "trace",
+    "tty",
+    "turtle",
+    "unicodedata",
+    "uu",
+    "venv",
+    "wsgiref",
+    "xdrlib",
+    "xmlrpc",
 }
+
+# 本地包（仓库内顶层目录，不是 PyPI 依赖）
+LOCAL_PACKAGES = {"core", "hub", "memory", "webnet", "mlink", "run", "config", "utils", "mcpserver", "plugins"}
 
 # 已知的 import → PyPI 包名映射
 IMPORT_TO_PYPI = {
@@ -97,6 +232,20 @@ IMPORT_TO_PYPI = {
     "neo4j": "neo4j",
     "redis": "redis",
     "pymilvus": "pymilvus",
+    # 2026-09 补充：import 名与 PyPI 名（连字符）差异映射
+    "edge_tts": "edge-tts",
+    "pydantic_settings": "pydantic-settings",
+    "sentence_transformers": "sentence-transformers",
+    "docx": "python-docx",
+    "botpy": "qq-botpy",
+    "telegram": "python-telegram-bot",
+    "opentelemetry": "opentelemetry-api",
+    # 软依赖（try/except 可选导入，缺失时功能降级，不算缺声明）：
+    "pedalboard": None,
+    "pydub": None,
+    "soundfile": None,
+    # 外部工具仓库的顶层包（UVR5 等，非 PyPI 依赖）
+    "tools": None,
 }
 
 
@@ -124,7 +273,12 @@ def collect_imports() -> dict:
 
 
 def load_declared() -> set:
-    """返回 setup/dependencies/*.txt 中声明的 PyPI 包名。"""
+    """返回 setup/dependencies/*.txt 与 pyproject.toml 中声明的 PyPI 包名。
+
+    2026-09 修复：此前只读 setup/dependencies/*.txt，漏掉 pyproject.toml
+    （uv 管理的实际依赖真源），导致 apscheduler/pyjwt/edge-tts 等已声明
+    依赖被误报为缺失。
+    """
     deps_dir = ROOT / "setup" / "dependencies"
     declared = set()
     for req_file in deps_dir.glob("*.txt"):
@@ -135,6 +289,27 @@ def load_declared() -> set:
             m = re.match(r"^([a-zA-Z0-9_-]+)", line)
             if m:
                 declared.add(m.group(1))
+
+    pyproject = ROOT / "pyproject.toml"
+    if pyproject.exists():
+        # 解析 pyproject 中所有 `key = [` 数组（主依赖 + 可选依赖组）
+        lines = pyproject.read_text("utf-8").splitlines()
+        in_deps = False
+        for line in lines:
+            s = line.strip()
+            if not in_deps and re.match(r"^[A-Za-z0-9_\-]+\s*=\s*\[", s):
+                in_deps = True
+                s_after = s[s.index("[") + 1 :]
+                if s_after.strip().endswith("]"):
+                    in_deps = False  # 单行数组
+                continue
+            if in_deps:
+                if s.startswith("]"):
+                    in_deps = False
+                    continue
+                for m in re.finditer(r'"([a-zA-Z0-9_.\-]+)', s):
+                    name = m.group(1).lower().split("[")[0]
+                    declared.add(name)
     return declared
 
 
@@ -147,7 +322,7 @@ def main():
         pkg = IMPORT_TO_PYPI.get(mod, mod)
         if pkg is None:
             continue  # known-nonexistent package
-        if mod in STDLIB or f"F:\\PY" in str(files):
+        if mod in STDLIB or mod in LOCAL_PACKAGES or f"F:\\PY" in str(files):
             continue
         if pkg not in declared:
             # check if directly in declared

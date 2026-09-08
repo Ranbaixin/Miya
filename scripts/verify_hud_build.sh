@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -e
+trap 'rm -rf "$TMP"' EXIT
 SRC="F:/#Ranxin/Miya/frontend/ui"
 TMP="/f/tmp_hud"
 rm -rf "$TMP"

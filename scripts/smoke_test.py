@@ -57,12 +57,14 @@ DEFAULT_LOG_WHITELIST = [
     r"Live2D.*缺",
     r"Neo4j.*password",
     r"neo4j.*auth",
+    r"Neo4j 连接失败",  # Neo4j 未运行时 S7 差分（可选依赖，已知无害）
+    r"Failed to establish connection to ResolvedIP",  # neo4j driver 连接拒绝细节行
     r"pygame.*not.*available",
     r"pymilvus.*not.*available",
     r"No module named.*milvus",
     r"faiss.*not.*available",
     r"chromadb.*not.*available",
-    r"jieba.*not.*found",       # 已知 jieba 未安装
+    r"jieba.*not.*found",  # 已知 jieba 未安装
     r"tts.*unavailable",
     r"TTS.*不可用",
     r"表情包.*失败",
@@ -102,8 +104,10 @@ def run_py(code: str, timeout: int = 120, env_extra: Dict = None) -> subprocess.
     return subprocess.run(
         [sys.executable, "-c", code],
         cwd=str(ROOT),
-        capture_output=True, text=True,
-        timeout=timeout, env=env,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        env=env,
     )
 
 
@@ -121,15 +125,32 @@ def load_log_blacklist() -> List[str]:
 
 # ── stages ────────────────────────────────────────────────────────────
 
+
 def s0_compileall() -> bool:
     """S0: 编译期语法检查。"""
     print("=== S0 compileall ===")
     cp = subprocess.run(
-        [sys.executable, "-m", "compileall", "-q",
-         "-x", "EntertainmentNet",
-         "core", "hub", "run", "memory", "webnet", "mlink",
-         "config", "utils", "mcpserver"],
-        cwd=str(ROOT), capture_output=True, text=True, timeout=60,
+        [
+            sys.executable,
+            "-m",
+            "compileall",
+            "-q",
+            "-x",
+            "EntertainmentNet",
+            "core",
+            "hub",
+            "run",
+            "memory",
+            "webnet",
+            "mlink",
+            "config",
+            "utils",
+            "mcpserver",
+        ],
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+        timeout=60,
     )
     if cp.returncode != 0:
         # compileall 对语法错误的文件返回非零，但一些旧文件有已知的编码问题
@@ -153,7 +174,10 @@ def s1_import_graph() -> bool:
     print("=== S1 import_graph ===")
     cp = subprocess.run(
         [sys.executable, "scripts/import_graph.py", "--check"],
-        cwd=str(ROOT), capture_output=True, text=True, timeout=30,
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+        timeout=30,
     )
     print(cp.stdout.strip())
     if cp.returncode != 0:
@@ -248,6 +272,7 @@ def s5_core_build() -> Dict[str, Any]:
     """S5: 核心构造 (最耗时)。返回采集数据供 S7/S8 使用。"""
     print("=== S5 核心构造 (约 90-150s) ===")
     import random
+
     port = random.randint(19800, 19900)
     code = (
         "import os; os.environ['MIYA_SMOKE']='1';"
@@ -260,7 +285,6 @@ def s5_core_build() -> Dict[str, Any]:
         "('personality',m.personality),"
         "('ethics',m.ethics),"
         "('identity',m.identity),"
-        "('arbitrator',m.arbitrator),"
         "('entropy',m.entropy),"
         "('prompt_manager',m.prompt_manager),"
         "('memory_engine',m.memory_engine),"
@@ -269,8 +293,6 @@ def s5_core_build() -> Dict[str, Any]:
         "('decision',m.decision),"
         "('scheduler',m.scheduler),"
         "('mlink',m.mlink),"
-        "('net_manager',m.net_manager),"
-        "('cross_net_engine',m.cross_net_engine),"
         "('decision_hub',m.decision_hub),"
         "('ai_client',m.ai_client),"
         "('tool_subnet',m.tool_subnet),"
@@ -305,35 +327,53 @@ def s5_core_build() -> Dict[str, Any]:
 
 
 def s6_link_probes() -> bool:
-    """S6: 链路探针。"""
+    """S6: 链路探针。
+
+    2026-09 修复：原实现用分号拼接出 `import asyncio;async def probe():`
+    —— Python 语法不允许复合语句跟在分号后（SyntaxError），该阶段在任何
+    环境都不可能通过。现改为三引号多行脚本（python -c 原生支持多行）。
+    """
     print("=== S6 链路探针 ===")
     port = 19901
-    code = (
-        "import os; os.environ['MIYA_SMOKE']='1';"
-        f"os.environ['MIYA_API_PORT']='{port}';"
-        "import sys; sys.path.insert(0,'.');"
-        "import run.main;"
-        "m=run.main.Miya();"
-        "import asyncio;"
-        "async def probe():"
-        "  from core.gestalt_controller import get_gestalt_controller;"
-        "  gc=get_gestalt_controller();"
-        "  print(f'  gestalt: {type(gc).__name__}');"
-        "  from core.personality_config_loader import PersonalityConfigLoader;"
-        "  pcl=PersonalityConfigLoader();"
-        "  names=pcl.list_available();"
-        "  print(f'  personalities: {len(names)} ({names[:5]}...)');"
-        "  if m.memory_net:"
-        "    await m.memory_net.initialize();"
-        "    print(f'  memory_net: initialized');"
-        "  if hasattr(m,'tool_subnet') and m.tool_subnet:"
-        "    r=m.tool_subnet.registry;"
-        "    print(f'  tools: {len(r.tools) if hasattr(r,\"tools\") else len(r._tools) if hasattr(r,\"_tools\") else \"?\"}');"
-        "loop=asyncio.new_event_loop();"
-        "loop.run_until_complete(probe());"
-        "loop.close();"
-        "os._exit(0)"
-    )
+    code = f"""
+import os
+os.environ['MIYA_SMOKE'] = '1'
+os.environ['MIYA_API_PORT'] = '{port}'
+import sys
+sys.path.insert(0, '.')
+import run.main
+
+m = run.main.Miya()
+import asyncio
+from core.gestalt_controller import get_gestalt_controller
+
+gc = get_gestalt_controller()
+print(f'  gestalt: {{type(gc).__name__}}')
+
+from core.personality_config_loader import get_trait_weights, reload_config
+
+reload_config()
+weights = get_trait_weights('casual_chat')
+print(f'  personality_config: {{len(weights)}} trait weights loaded')
+
+
+async def probe():
+    if m.memory_net:
+        await m.memory_net.initialize()
+        print('  memory_net: initialized')
+    if getattr(m, 'tool_subnet', None):
+        r = m.tool_subnet.registry
+        n = len(r.tools) if hasattr(r, 'tools') else (
+            len(r._tools) if hasattr(r, '_tools') else -1
+        )
+        print(f'  tools: {{n}}')
+
+
+loop = asyncio.new_event_loop()
+loop.run_until_complete(probe())
+loop.close()
+os._exit(0)
+"""
     cp = run_py(code, timeout=180, env_extra={"MIYA_SMOKE": "1", "MIYA_API_PORT": str(port)})
     for line in cp.stdout.strip().splitlines():
         print(f"  {line}")
@@ -359,8 +399,11 @@ def s7_log_diff(stderr_text: str) -> bool:
         if not line_s:
             continue
         # 过滤: ModuleNotFoundError / ImportError / 初始化失败 / 加载失败 / 不可用
-        if not re.search(r"ModuleNotFoundError|ImportError|初始化失败|加载失败|不可用|ERROR|WARNING|failed|unavailable|not found",
-                         line_s, re.IGNORECASE):
+        if not re.search(
+            r"ModuleNotFoundError|ImportError|初始化失败|加载失败|不可用|ERROR|WARNING|failed|unavailable|not found",
+            line_s,
+            re.IGNORECASE,
+        ):
             continue
         # 匹配白名单
         matched = False
@@ -404,13 +447,16 @@ def s8_baseline_compare(data: Dict[str, Any]) -> bool:
 
 # ── main ─────────────────────────────────────────────────────────────
 
+
 def write_baseline():
     """运行 S3/S4/S5/S6 并采集基线数据。"""
     print("写入冒烟基线...")
     data = {}
     # S3
+    # 2026-09 修复：探针代码此前缺 `import json`，json.dumps 直接 NameError，
+    # 基线静默写成 {}；S4 还传了不存在的 MiyaDaemon(auto_register=True)。
     code = (
-        "import sys; sys.path.insert(0,'.');"
+        "import sys, json; sys.path.insert(0,'.');"
         "import config.platforms_config as pc;"
         "cfg=pc.get_enabled_platforms();"
         "print(f'PLATFORMS: {json.dumps(sorted(cfg.keys()))}');"
@@ -428,9 +474,9 @@ def write_baseline():
 
     # S4
     code = (
-        "import sys; sys.path.insert(0,'.');"
+        "import sys, json; sys.path.insert(0,'.');"
         "from core.miya_daemon import MiyaDaemon;"
-        "d=MiyaDaemon(auto_register=True);"
+        "d=MiyaDaemon();"
         "regs=d._registry.list_registered();"
         "print(f'REGISTERED: {json.dumps([r[\"id\"] for r in regs])}')"
     )
@@ -445,6 +491,7 @@ def write_baseline():
 
 def main():
     import argparse
+
     parser = argparse.ArgumentParser(description="Miya 冒烟测试")
     parser.add_argument("--fast", action="store_true", help="跳过 S5/S6")
     parser.add_argument("--write-baseline", action="store_true")

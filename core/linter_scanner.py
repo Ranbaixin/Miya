@@ -2,6 +2,7 @@
 Linter 扫描器
 扫描代码的 lint 错误和警告
 """
+
 import logging
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -31,7 +32,7 @@ class LinterScanner(BaseScanner):
         self._tool_executor = executor
         self.logger.debug("工具执行器已设置")
 
-    async def scan(self, path: str = '.', **kwargs) -> List[Problem]:
+    async def scan(self, path: str = ".", **kwargs) -> List[Problem]:
         """
         扫描 lint 错误
 
@@ -80,7 +81,7 @@ class LinterScanner(BaseScanner):
 
         try:
             # 使用工具执行器调用 read_lints
-            result = await self._tool_executor('read_lints', {'paths': path})
+            result = await self._tool_executor("read_lints", {"paths": path})
             return self._parse_lints_response(result)
         except Exception as e:  # noqa: BLE001 — 通过工具执行器调用 read_lints 失败
             self.logger.error(f"通过工具执行器调用 read_lints 失败: {e}")
@@ -118,22 +119,25 @@ class LinterScanner(BaseScanner):
         # 示例解析逻辑（需要根据实际响应调整）
         try:
             import json
-            if response.startswith('{'):
+
+            if response.startswith("{"):
                 data = json.loads(response)
-                linter_errors = data.get('errors', [])
+                linter_errors = data.get("errors", [])
             else:
                 # 文本格式解析
-                for line in response.split('\n'):
-                    if ':' in line and 'error' in line.lower():
+                for line in response.split("\n"):
+                    if ":" in line and "error" in line.lower():
                         # 解析类似 "file.py:10: error: message" 的格式
-                        parts = line.split(':', 3)
+                        parts = line.split(":", 3)
                         if len(parts) >= 4:
-                            linter_errors.append({
-                                'file': parts[0].strip(),
-                                'line': int(parts[1]),
-                                'column': int(parts[2]),
-                                'message': parts[3].strip()
-                            })
+                            linter_errors.append(
+                                {
+                                    "file": parts[0].strip(),
+                                    "line": int(parts[1]),
+                                    "column": int(parts[2]),
+                                    "message": parts[3].strip(),
+                                }
+                            )
         except Exception as e:  # noqa: BLE001 — 解析 lints 响应失败
             self.logger.warning(f"解析 lints 响应失败: {e}")
 
@@ -150,16 +154,16 @@ class LinterScanner(BaseScanner):
             Problem 对象，如果解析失败则返回 None
         """
         try:
-            file_path = result.get('file', '')
-            line_number = result.get('line')
-            message = result.get('message', '')
-            severity = result.get('severity', 'error')
+            file_path = result.get("file", "")
+            line_number = result.get("line")
+            message = result.get("message", "")
+            severity = result.get("severity", "error")
 
             # 转换严重程度
             severity_map = {
-                'error': ProblemSeverity.HIGH,
-                'warning': ProblemSeverity.MEDIUM,
-                'info': ProblemSeverity.LOW,
+                "error": ProblemSeverity.HIGH,
+                "warning": ProblemSeverity.MEDIUM,
+                "info": ProblemSeverity.LOW,
             }
             problem_severity = severity_map.get(severity.lower(), ProblemSeverity.MEDIUM)
 
@@ -181,9 +185,9 @@ class LinterScanner(BaseScanner):
                 auto_fixable=auto_fixable,
                 confidence=0.9,
                 metadata={
-                    'linter_type': result.get('linter', 'unknown'),
-                    'rule_id': result.get('rule', 'unknown'),
-                }
+                    "linter_type": result.get("linter", "unknown"),
+                    "rule_id": result.get("rule", "unknown"),
+                },
             )
 
             return problem
@@ -208,15 +212,15 @@ class LinterScanner(BaseScanner):
         # 基于常见错误模式生成建议
         lower_message = message.lower()
 
-        if 'unused import' in lower_message:
+        if "unused import" in lower_message:
             suggestions.append("删除未使用的 import 语句")
-        elif 'undefined variable' in lower_message:
+        elif "undefined variable" in lower_message:
             suggestions.append("检查变量是否已定义或导入")
-        elif 'missing module' in lower_message:
+        elif "missing module" in lower_message:
             suggestions.append("安装缺失的模块或检查导入路径")
-        elif 'syntax error' in lower_message:
+        elif "syntax error" in lower_message:
             suggestions.append("检查代码语法，确保括号、引号等匹配")
-        elif 'indentation' in lower_message:
+        elif "indentation" in lower_message:
             suggestions.append("检查代码缩进，使用一致的缩进风格")
         else:
             suggestions.append("根据错误提示修改代码")
@@ -236,11 +240,11 @@ class LinterScanner(BaseScanner):
         """
         # 某些错误类型可以自动修复
         auto_fixable_patterns = [
-            'unused import',
-            'unused variable',
-            'trailing whitespace',
-            'missing newline',
-            'missing whitespace',
+            "unused import",
+            "unused variable",
+            "trailing whitespace",
+            "missing newline",
+            "missing whitespace",
         ]
 
         lower_message = message.lower()
@@ -258,18 +262,18 @@ class LinterScanner(BaseScanner):
         """
         # 支持的文件扩展名
         supported_extensions = [
-            '.py',   # Python
-            '.js',   # JavaScript
-            '.ts',   # TypeScript
-            '.jsx',  # React JSX
-            '.tsx',  # React TSX
-            '.go',   # Go
-            '.java', # Java
-            '.c',    # C
-            '.cpp',  # C++
-            '.rs',   # Rust
-            '.rb',   # Ruby
-            '.php',  # PHP
+            ".py",  # Python
+            ".js",  # JavaScript
+            ".ts",  # TypeScript
+            ".jsx",  # React JSX
+            ".tsx",  # React TSX
+            ".go",  # Go
+            ".java",  # Java
+            ".c",  # C
+            ".cpp",  # C++
+            ".rs",  # Rust
+            ".rb",  # Ruby
+            ".php",  # PHP
         ]
 
         path_obj = Path(path)
@@ -293,13 +297,13 @@ class LinterScanner(BaseScanner):
         """
         # 常见的 linter 类型
         return [
-            'pylint',     # Python
-            'flake8',     # Python
-            'mypy',       # Python (类型检查)
-            'eslint',     # JavaScript/TypeScript
-            'tslint',     # TypeScript
-            'golangci-lint',  # Go
-            'checkstyle', # Java
-            'clang-tidy', # C/C++
-            'clippy',     # Rust
+            "pylint",  # Python
+            "flake8",  # Python
+            "mypy",  # Python (类型检查)
+            "eslint",  # JavaScript/TypeScript
+            "tslint",  # TypeScript
+            "golangci-lint",  # Go
+            "checkstyle",  # Java
+            "clang-tidy",  # C/C++
+            "clippy",  # Rust
         ]

@@ -2,6 +2,7 @@
 博客相关 API
 处理博客的 CRUD 操作
 """
+
 import logging
 from typing import Optional
 
@@ -14,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from fastapi import APIRouter
+
     FASTAPI_AVAILABLE = True
 except ImportError:
     FASTAPI_AVAILABLE = False
@@ -47,18 +49,11 @@ class BlogRoutes:
 
         @self.router.get("/posts")
         async def get_blog_posts(
-            page: int = 1,
-            per_page: int = 10,
-            category: Optional[str] = None,
-            tag: Optional[str] = None
+            page: int = 1, per_page: int = 10, category: Optional[str] = None, tag: Optional[str] = None
         ):
             """获取博客列表"""
             try:
-                result = await self.web_net.get_blog_posts(
-                    page=page,
-                    category=category,
-                    tag=tag
-                )
+                result = await self.web_net.get_blog_posts(page=page, category=category, tag=tag)
                 return result
             except Exception as e:  # noqa: BLE001 — 博客列表获取失败，上抛 500
                 logger.error(f"[WebAPI] 获取博客列表失败: {e}")
@@ -80,8 +75,7 @@ class BlogRoutes:
 
         @self.router.post("/posts")
         async def create_blog_post(
-            post_data: BlogPostCreate,
-            token: Optional[HTTPAuthorizationCredentials] = Depends(lambda: None)
+            post_data: BlogPostCreate, token: Optional[HTTPAuthorizationCredentials] = Depends(lambda: None)
         ):
             """创建博客（需要认证）"""
             try:
@@ -92,7 +86,7 @@ class BlogRoutes:
                     author="unknown",
                     category=post_data.category,
                     tags=post_data.tags,
-                    published=post_data.published
+                    published=post_data.published,
                 )
                 return result
             except Exception as e:  # noqa: BLE001 — 创建博客失败，上抛 500
@@ -101,9 +95,7 @@ class BlogRoutes:
 
         @self.router.put("/posts/{slug}")
         async def update_blog_post(
-            slug: str,
-            post_data: BlogPostUpdate,
-            token: Optional[HTTPAuthorizationCredentials] = Depends(lambda: None)
+            slug: str, post_data: BlogPostUpdate, token: Optional[HTTPAuthorizationCredentials] = Depends(lambda: None)
         ):
             """更新博客（需要认证）"""
             try:
@@ -114,7 +106,7 @@ class BlogRoutes:
                     content=post_data.content,
                     category=post_data.category,
                     tags=post_data.tags,
-                    published=post_data.published
+                    published=post_data.published,
                 )
                 return result
             except ValueError as e:
@@ -124,10 +116,7 @@ class BlogRoutes:
                 raise HTTPException(status_code=500, detail=str(e))
 
         @self.router.delete("/posts/{slug}")
-        async def delete_blog_post(
-            slug: str,
-            token: Optional[HTTPAuthorizationCredentials] = Depends(lambda: None)
-        ):
+        async def delete_blog_post(slug: str, token: Optional[HTTPAuthorizationCredentials] = Depends(lambda: None)):
             """删除博客（需要认证）"""
             try:
                 # 简化实现

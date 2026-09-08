@@ -53,9 +53,7 @@ class TelegramPlatform(MessageMixin, BasePlatform):
 
                 user_id = str(user.id)
                 user_name = user.full_name or user.username or str(user.id)
-                msg_type = (
-                    "group" if chat.type in ["group", "supergroup"] else "private"
-                )
+                msg_type = "group" if chat.type in ["group", "supergroup"] else "private"
                 group_id = str(chat.id) if chat.type in ["group", "supergroup"] else ""
                 group_name = chat.title if chat.type in ["group", "supergroup"] else ""
 
@@ -78,9 +76,7 @@ class TelegramPlatform(MessageMixin, BasePlatform):
 
             self._app = Application.builder().token(self._token).build()
             self._app.add_handler(CommandHandler("start", start_command))
-            self._app.add_handler(
-                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)
-            )
+            self._app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
             logger.info(f"[{self.platform_id}] Bot 已初始化，开始轮询...")
 

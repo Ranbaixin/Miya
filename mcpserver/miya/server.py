@@ -119,8 +119,8 @@ class MiyaMemory:
             try:
                 with open(self.session_file, "r", encoding="utf-8") as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"读取会话摘要失败（文件可能损坏）: {e}")
         return {"session_id": None, "message_count": 0, "last_active": None}
 
     def get_recent_memories(self, limit: int = 5) -> list:
@@ -144,14 +144,28 @@ class MiyaMemory:
         return memories
 
     def save_memory(self, key: str, value: str) -> dict:
-        """保存记忆"""
+        """保存记忆
+
+        2026-09 安全加固：读档失败（如 JSON 损坏）时先备份原文件再写入，
+        避免以空 data 覆盖写盘导致历史记忆不可逆丢失。
+        """
         data = {}
         if self.session_file.exists():
             try:
                 with open(self.session_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
-            except Exception:
-                pass
+            except Exception as e:
+                backup = self.session_file.with_suffix(
+                    ".json.corrupt-" + datetime.now().strftime("%Y%m%d%H%M%S")
+                )
+                try:
+                    backup.write_bytes(self.session_file.read_bytes())
+                    logger.error(
+                        f"记忆文件损坏（{e}），已备份到 {backup.name} 后重建"
+                    )
+                except OSError as be:
+                    logger.error(f"记忆文件损坏（{e}）且备份失败（{be}），中止写入")
+                    return {"success": False, "error": "记忆文件损坏且备份失败，已中止写入保护历史数据"}
 
         if "memories" not in data:
             data["memories"] = {}

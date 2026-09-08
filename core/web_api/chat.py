@@ -88,35 +88,19 @@ class ChatRoutes:
                 )
 
                 # 获取处理前的状态
-                (
-                    self.decision_hub.emotion.get_emotion_state()
-                    if self.decision_hub.emotion
-                    else None
-                )
-                (
-                    self.decision_hub.personality.get_profile()
-                    if self.decision_hub.personality
-                    else None
-                )
+                (self.decision_hub.emotion.get_emotion_state() if self.decision_hub.emotion else None)
+                (self.decision_hub.personality.get_profile() if self.decision_hub.personality else None)
 
                 # 调用 DecisionHub 处理消息
-                response = await self.decision_hub.process_perception_cross_platform(
-                    message
-                )
+                response = await self.decision_hub.process_perception_cross_platform(message)
 
                 if not response:
                     response = "抱歉，我无法处理您的请求。"
 
                 # 获取处理后的状态
-                emotion_after = (
-                    self.decision_hub.emotion.get_emotion_state()
-                    if self.decision_hub.emotion
-                    else None
-                )
+                emotion_after = self.decision_hub.emotion.get_emotion_state() if self.decision_hub.emotion else None
                 personality_after = (
-                    self.decision_hub.personality.get_profile()
-                    if self.decision_hub.personality
-                    else None
+                    self.decision_hub.personality.get_profile() if self.decision_hub.personality else None
                 )
 
                 # 确保返回正确格式
@@ -131,9 +115,7 @@ class ChatRoutes:
                 if personality_after:
                     # 正确的人格数据格式
                     personality_result = {
-                        "state": personality_after.get(
-                            "dominant", "empathy"
-                        ),  # 使用主导特质
+                        "state": personality_after.get("dominant", "empathy"),  # 使用主导特质
                         "vectors": personality_after.get(
                             "vectors",
                             {
@@ -155,9 +137,7 @@ class ChatRoutes:
                     # 工具调用信息（如果有）
                     "tools_used": getattr(self.decision_hub, "_last_tools_used", []),
                     # 记忆检索信息
-                    "memory_retrieved": getattr(
-                        self.decision_hub, "_last_memory_retrieved", False
-                    ),
+                    "memory_retrieved": getattr(self.decision_hub, "_last_memory_retrieved", False),
                 }
             except Exception as e:
                 logger.error(f"[WebAPI] 聊天处理失败: {e}", exc_info=True)
@@ -167,9 +147,7 @@ class ChatRoutes:
         """获取路由器（返回None，因为使用setup_routes方式）"""
         return None
 
-    async def _sse_chat_stream(
-        self, request: ChatRequest, session_id: str
-    ) -> AsyncGenerator[str, None]:
+    async def _sse_chat_stream(self, request: ChatRequest, session_id: str) -> AsyncGenerator[str, None]:
         """SSE 流式聊天生成器 - 核心灵魂处理逻辑
 
         与 QQ 端 / Napcat 完全一致的处理流程：
@@ -201,9 +179,7 @@ class ChatRoutes:
             message_accumulator = BotMessageAccumulator()
 
             async with asyncio.timeout(120):
-                response = await self.decision_hub.process_perception_cross_platform(
-                    message
-                )
+                response = await self.decision_hub.process_perception_cross_platform(message)
 
             if not response:
                 response = "抱歉，弥娅无法处理这个请求呢。"
@@ -218,9 +194,7 @@ class ChatRoutes:
 
             personality_state = (
                 self.decision_hub.personality.get_profile()
-                if self.decision_hub
-                and hasattr(self.decision_hub, "personality")
-                and self.decision_hub.personality
+                if self.decision_hub and hasattr(self.decision_hub, "personality") and self.decision_hub.personality
                 else None
             )
             if personality_state:

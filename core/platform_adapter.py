@@ -369,9 +369,7 @@ class PlatformAdapterManager:
         """注册适配器类"""
         logger.info(f"[PlatformAdapterManager] 注册适配器: {platform}")
 
-    async def create_adapter(
-        self, platform: PlatformType, config: Dict[str, Any]
-    ) -> Optional[PlatformAdapter]:
+    async def create_adapter(self, platform: PlatformType, config: Dict[str, Any]) -> Optional[PlatformAdapter]:
         """创建适配器实例"""
         adapters = {
             PlatformType.QQ: QQAdapter,
@@ -412,9 +410,7 @@ class PlatformAdapterManager:
         """获取当前活跃平台"""
         return self._active_platform
 
-    async def send_message(
-        self, platform: PlatformType, target: str, message: str
-    ) -> bool:
+    async def send_message(self, platform: PlatformType, target: str, message: str) -> bool:
         """发送消息"""
         adapter = self.get_adapter(platform)
         if adapter and adapter.is_connected():
@@ -448,6 +444,4 @@ def get_adapter(platform: PlatformType) -> Optional[PlatformAdapter]:
 
 
 async def send_message(platform: PlatformType, target: str, message: str) -> bool:
-    return await PlatformAdapterManager.get_instance().send_message(
-        platform, target, message
-    )
+    return await PlatformAdapterManager.get_instance().send_message(platform, target, message)

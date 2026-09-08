@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ConfigEvent:
     """配置更新事件"""
+
     event_type: str  # config_update, config_reload, error
     timestamp: float
     changes: Dict[str, Any]
@@ -23,7 +24,7 @@ class ConfigEvent:
 
 class ConfigEventPublisher:
     """配置事件发布器
-    
+
     职责：
     - 管理事件订阅者
     - 发布配置更新事件
@@ -41,11 +42,7 @@ class ConfigEventPublisher:
         self._event_subscribers: Dict[str, List[Callable[[ConfigEvent], None]]] = {}
         self._all_subscribers: List[Callable[[ConfigEvent], None]] = []
 
-    def subscribe_event(
-        self,
-        event_type: str,
-        callback: Callable[[ConfigEvent], None]
-    ) -> None:
+    def subscribe_event(self, event_type: str, callback: Callable[[ConfigEvent], None]) -> None:
         """订阅特定类型的事件
 
         Args:
@@ -57,10 +54,7 @@ class ConfigEventPublisher:
         self._event_subscribers[event_type].append(callback)
         logger.debug(f"[配置事件] 新增订阅者: event_type={event_type}")
 
-    def subscribe_all_events(
-        self,
-        callback: Callable[[ConfigEvent], None]
-    ) -> None:
+    def subscribe_all_events(self, callback: Callable[[ConfigEvent], None]) -> None:
         """订阅所有事件
 
         Args:
@@ -69,20 +63,13 @@ class ConfigEventPublisher:
         self._all_subscribers.append(callback)
         logger.debug("[配置事件] 新增全局订阅者")
 
-    def unsubscribe_event(
-        self,
-        event_type: str,
-        callback: Callable[[ConfigEvent], None]
-    ) -> None:
+    def unsubscribe_event(self, event_type: str, callback: Callable[[ConfigEvent], None]) -> None:
         """取消订阅特定类型的事件"""
         if event_type in self._event_subscribers and callback in self._event_subscribers[event_type]:
             self._event_subscribers[event_type].remove(callback)
             logger.debug(f"[配置事件] 移除订阅者: event_type={event_type}")
 
-    def unsubscribe_all_events(
-        self,
-        callback: Callable[[ConfigEvent], None]
-    ) -> None:
+    def unsubscribe_all_events(self, callback: Callable[[ConfigEvent], None]) -> None:
         """取消订阅所有事件"""
         if callback in self._all_subscribers:
             self._all_subscribers.remove(callback)
@@ -132,12 +119,14 @@ class ConfigEventPublisher:
             event: 配置更新事件
         """
         try:
-            if hasattr(self.runtime_api, 'notify_config_change'):
-                await self.runtime_api.notify_config_change({
-                    'event_type': event.event_type,
-                    'timestamp': event.timestamp,
-                    'changes': event.changes,
-                    'source': event.source
-                })
+            if hasattr(self.runtime_api, "notify_config_change"):
+                await self.runtime_api.notify_config_change(
+                    {
+                        "event_type": event.event_type,
+                        "timestamp": event.timestamp,
+                        "changes": event.changes,
+                        "source": event.source,
+                    }
+                )
         except Exception as e:  # noqa: BLE001 — WebSocket通知失败已记录日志
             logger.debug(f"[配置事件] WebSocket通知失败: {e}")

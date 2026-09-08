@@ -78,9 +78,7 @@ class MiyaAgentV3:
 
         return self._format_task_result(task_result)
 
-    async def _run_autonomous_task(
-        self, task: str, model_client, max_steps: int = None
-    ) -> TaskResult:
+    async def _run_autonomous_task(self, task: str, model_client, max_steps: int = None) -> TaskResult:
         """自主执行多步骤任务 - 类似 Claude Code"""
         max_steps = max_steps or self.max_steps
         result = TaskResult(task=task, state=TaskState.RUNNING)
@@ -101,14 +99,10 @@ class MiyaAgentV3:
             try:
                 from core.ai_client import AIMessage
 
-                ai_messages = [
-                    AIMessage(role=m["role"], content=m["content"]) for m in messages
-                ]
+                ai_messages = [AIMessage(role=m["role"], content=m["content"]) for m in messages]
                 response = await model_client.chat(ai_messages)
 
-                content = (
-                    response.content if hasattr(response, "content") else str(response)
-                )
+                content = response.content if hasattr(response, "content") else str(response)
 
                 # 检查完成标志
                 if "[完成]" in content:
@@ -153,9 +147,7 @@ class MiyaAgentV3:
 
                 # 如果命令执行失败，尝试恢复
                 if not exec_result.success:
-                    recovery_command = await self._suggest_recovery(
-                        task, command, exec_result, model_client
-                    )
+                    recovery_command = await self._suggest_recovery(task, command, exec_result, model_client)
                     if recovery_command:
                         messages.append(
                             {
@@ -237,12 +229,7 @@ class MiyaAgentV3:
         for line in lines:
             line = line.strip()
             # 跳过注释和标记
-            if (
-                not line
-                or line.startswith("#")
-                or line.startswith("[")
-                or line.startswith(">")
-            ):
+            if not line or line.startswith("#") or line.startswith("[") or line.startswith(">"):
                 continue
             # 跳过完整句子（以句号结尾的中文或英文句子）
             if len(line) > 50 and ("。" in line or "." in line):
@@ -264,11 +251,7 @@ class MiyaAgentV3:
         lines = response.strip().split("\n")
         output_lines = []
         for line in lines:
-            if (
-                line.strip()
-                and not line.strip().startswith("[")
-                and not self._is_command_line(line)
-            ):
+            if line.strip() and not line.strip().startswith("[") and not self._is_command_line(line):
                 output_lines.append(line)
         return "\n".join(output_lines)
 
@@ -298,9 +281,7 @@ class MiyaAgentV3:
             ]
         )
 
-    async def _suggest_recovery(
-        self, task: str, failed_command: str, result, model_client
-    ) -> Optional[str]:
+    async def _suggest_recovery(self, task: str, failed_command: str, result, model_client) -> Optional[str]:
         """建议恢复命令"""
         prompt = f"""命令执行失败。
 
@@ -315,9 +296,7 @@ class MiyaAgentV3:
 
             messages = [AIMessage(role="user", content=prompt)]
             response = await model_client.chat(messages)
-            content = (
-                response.content if hasattr(response, "content") else str(response)
-            )
+            content = response.content if hasattr(response, "content") else str(response)
             return self._extract_command(content)
         except Exception:  # noqa: BLE001 — AI命令提取失败返回 None
             return None
@@ -363,28 +342,18 @@ class MiyaAgentV3:
             return "❌ 需要AI模型才能使用V3代理"
 
         intent_analysis = await self._ai_analyze(user_request, model_client)
-        command_plan = await self._ai_plan_command(
-            intent_analysis, user_request, model_client
-        )
+        command_plan = await self._ai_plan_command(intent_analysis, user_request, model_client)
         execution_result = await self._execute_command(command_plan)
-        verification = await self._ai_verify(
-            user_request, execution_result, model_client
-        )
+        verification = await self._ai_verify(user_request, execution_result, model_client)
 
         if not verification.get("success") and verification.get("alternative"):
             for _retry in range(self.max_retries):
-                execution_result = await self._execute_command(
-                    verification["alternative"]
-                )
-                verification = await self._ai_verify(
-                    user_request, execution_result, model_client
-                )
+                execution_result = await self._execute_command(verification["alternative"])
+                verification = await self._ai_verify(user_request, execution_result, model_client)
                 if verification.get("success"):
                     break
 
-        return self._format_response(
-            user_request, intent_analysis, command_plan, execution_result
-        )
+        return self._format_response(user_request, intent_analysis, command_plan, execution_result)
 
     async def _ai_analyze(self, request: str, model_client) -> Dict:
         """AI分析用户意图"""
@@ -566,9 +535,7 @@ class MiyaAgentV3:
 
             messages = [AIMessage(role="user", content=prompt)]
             response = await model_client.chat(messages)
-            content = (
-                response.content if hasattr(response, "content") else str(response)
-            )
+            content = response.content if hasattr(response, "content") else str(response)
 
             json_match = re.search(r"\{.+?\}", content, re.DOTALL)
             if json_match:
@@ -582,9 +549,7 @@ class MiyaAgentV3:
             "alternative": None,
         }
 
-    def _format_response(
-        self, request: str, intent: Dict, plan: Dict, result: Dict
-    ) -> str:
+    def _format_response(self, request: str, intent: Dict, plan: Dict, result: Dict) -> str:
         """格式化响应"""
         output = []
         output.append("=" * 60)
@@ -597,9 +562,7 @@ class MiyaAgentV3:
         output.append(f"  推理命令: {plan.get('command', '')}")
         output.append(f"  推理理由: {plan.get('reasoning', '')}")
         output.append("\n⚡ 【执行结果】")
-        output.append(
-            f"  {'✓ 命令执行成功' if result.get('success') else '✗ 命令执行失败'}"
-        )
+        output.append(f"  {'✓ 命令执行成功' if result.get('success') else '✗ 命令执行失败'}")
 
         output_text = result.get("output", "") or result.get("error", "")
         if output_text:

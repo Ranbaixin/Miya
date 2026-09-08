@@ -70,23 +70,23 @@ function resetLive2dSize() {
 
 async function loadConfigFiles() {
   try {
-    const res = await fetch('http://localhost:9800/api/desktop/files/list?path=config').then(r => r.json())
+    const res = await fetch('http://localhost:8000/api/desktop/files/list?path=config').then(r => r.json())
     configFiles.value = (res.files || []).filter((f: any) => !f.is_dir && (f.name.endsWith('.json') || f.name.endsWith('.yaml') || f.name.endsWith('.yml')))
   } catch {}
 }
 
 async function openConfigFile(filePath: string) {
   try {
-    const res = await fetch(`http://localhost:9800/api/desktop/files/read?path=${encodeURIComponent(filePath)}`).then(r => r.json())
+    const res = await fetch(`http://localhost:8000/api/desktop/files/read?path=${encodeURIComponent(filePath)}`).then(r => r.json())
     editingFile.value = filePath
-    editingContent.value = res.content || JSON.stringify(res.data || res, null, 2)
+    editingContent.value = (res.lines || []).join("") || JSON.stringify(res.data || res, null, 2)
     editingSaved.value = false
   } catch { editingContent.value = '读取失败' }
 }
 
 async function saveConfigFile() {
   try {
-    await fetch('http://localhost:9800/api/desktop/files/write', {
+    await fetch('http://localhost:8000/api/desktop/files/write', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path: editingFile.value, content: editingContent.value }),

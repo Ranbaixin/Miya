@@ -141,10 +141,7 @@ class SkillMarketplace:
 
         # 保存评论
         try:
-            data = {
-                sid: [review.__dict__ for review in reviews]
-                for sid, reviews in self._reviews.items()
-            }
+            data = {sid: [review.__dict__ for review in reviews] for sid, reviews in self._reviews.items()}
             with open(self._reviews_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
         except Exception:
@@ -336,11 +333,7 @@ class SkillMarketplace:
 
     def get_stats(self) -> Dict:
         """获取市场统计"""
-        published = sum(
-            1
-            for l in self._listings.values()
-            if l.status == SkillPublishStatus.PUBLISHED
-        )
+        published = sum(1 for l in self._listings.values() if l.status == SkillPublishStatus.PUBLISHED)
 
         total_reviews = sum(len(r) for r in self._reviews.values())
 
@@ -350,9 +343,7 @@ class SkillMarketplace:
             "total_reviews": total_reviews,
             "categories": {
                 cat.value: sum(
-                    1
-                    for l in self._listings.values()
-                    if l.category == cat and l.status == SkillPublishStatus.PUBLISHED
+                    1 for l in self._listings.values() if l.category == cat and l.status == SkillPublishStatus.PUBLISHED
                 )
                 for cat in SkillCategory
             },

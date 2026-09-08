@@ -61,9 +61,7 @@ class PlatformHealth:
         return {
             "status": self.status.value,
             "last_online": self.last_online.isoformat() if self.last_online else None,
-            "last_offline": self.last_offline.isoformat()
-            if self.last_offline
-            else None,
+            "last_offline": self.last_offline.isoformat() if self.last_offline else None,
             "last_error": self.last_error,
             "error_count": self.error_count,
             "reconnect_count": self.reconnect_count,

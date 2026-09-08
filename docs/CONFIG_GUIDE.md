@@ -291,3 +291,41 @@ personality.set("kafka")
 | `config/api_endpoints.json` | API 端点配置 |
 | `config/agent_routing_config.json` | Agent 路由配置 |
 | `config/diteng_strategy_config.json` | 谛听监听策略 |
+
+---
+
+## 安全与访问控制（2026-09 新增，必读）
+
+以下键在 `config/.env.example` 的「安全与访问控制」分节有声明（仅键名与用途，不含值）：
+
+| 键 | 用途 | 默认行为 |
+|---|---|---|
+| `MIYA_API_TOKEN` | 管理 API(9800) 与 Web API(8000) 的远程访问令牌 | 未设置：仅本机(loopback)可访问，远程 403 |
+| `MIYA_JWT_SECRET` | 登录态 JWT 密钥 | 首次登录自动生成并写回 config/.env |
+| `MIYA_ADMIN_USERNAME` / `MIYA_ADMIN_PASSWORD_HASH` | 管理员凭据（scrypt） | 首次启动自动生成 |
+| `MIYA_API_HOST` / `MIYA_API_PORT` | 管理 API 监听地址/端口 | `0.0.0.0:9800`（本机使用建议改 127.0.0.1） |
+| `MIYA_CORS_ORIGINS` | Web API CORS 白名单（逗号分隔） | localhost 系列白名单，非 `*` |
+
+鉴权实现：`core/web_api/auth_security.py`（`install_token_gate`/`websocket_gate`，两端口同源）。
+
+## 谛听消息策略（`config/diteng_strategy_config.json`）
+
+谛听是 QQ 类平台的消息防打扰策略层（**私聊/群聊是否回复、怎么回复**由它判断），由
+`memory/diteng_listener.py: analyze_message_strategy` 消费。⚠️ 该文件被**路径拼接**方式引用，
+此前被误判死配置删除，导致策略选项全空、消息被静默丢弃（2026-09 实际事故，已恢复）。
+
+关键配置项：
+- `enabled`：总开关（false 时所有消息直接回复）
+- `model` / `timeout`：策略分析用模型与超时
+- `max_responses_per_turn`：单轮最多回复条数（防刷屏）
+- `response_strategies`：8 种回复策略（full_reply/brief_reply/multi_turn/emoji_only/ignore/like_only/question_back/tease_reply）
+- `intent_types` / `reply_styles` / `judge_rules`：意图与风格选项、判断规则
+
+注意：`terminal`/`web` 平台在 `hub/decision_hub.py: fetch_diting_strategy` 中跳过谛听（用户主动界面不拦截）。
+
+## .env.example 重整说明（2026-09）
+
+- 删除 43 个代码零引用的死键（GITHUB_*/WECOM_*/SLACK_*、旧模型名键、`API_ENABLED` 等——
+  对应功能用 `MIYA_API_*` 或 `config/*.json` 管理）。
+- 错名键已纠正：`ONEBOT_WS_URL`→`QQ_ONEBOT_WS_URL`、`WEB_API_CORS_ORIGINS`→`MIYA_CORS_ORIGINS`。
+- 新增键请同时更新 `config/.env.example`（键名+注释，不含真实值）并在 CONFIG_GUIDE 登记。

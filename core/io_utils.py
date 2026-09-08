@@ -45,9 +45,7 @@ async def write_json(file_path: Path | str, data: Any, use_lock: bool = True) ->
         def atomic_write() -> None:
             tmp_path: Path | None = None
             try:
-                fd, tmp_name = tempfile.mkstemp(
-                    prefix=f".{p.name}.", suffix=".tmp", dir=str(p.parent)
-                )
+                fd, tmp_name = tempfile.mkstemp(prefix=f".{p.name}.", suffix=".tmp", dir=str(p.parent))
                 tmp_path = Path(tmp_name)
                 with os.fdopen(fd, "w", encoding="utf-8") as f:
                     json.dump(data, f, ensure_ascii=False, indent=2)
@@ -105,9 +103,7 @@ async def read_json(file_path: Path | str, use_lock: bool = False) -> Any | None
         raise
 
 
-async def write_text(
-    file_path: Path | str, content: str, use_lock: bool = True
-) -> None:
+async def write_text(file_path: Path | str, content: str, use_lock: bool = True) -> None:
     """原子写入文本文件"""
     target = Path(file_path)
 
@@ -117,9 +113,7 @@ async def write_text(
         def atomic_write() -> None:
             tmp_path: Path | None = None
             try:
-                fd, tmp_name = tempfile.mkstemp(
-                    prefix=f".{target.name}.", suffix=".tmp", dir=str(target.parent)
-                )
+                fd, tmp_name = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".tmp", dir=str(target.parent))
                 tmp_path = Path(tmp_name)
                 with os.fdopen(fd, "w", encoding="utf-8") as f:
                     f.write(content)

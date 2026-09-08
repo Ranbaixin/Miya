@@ -16,7 +16,7 @@ quality:
 	@echo "[1/3] ruff check..."
 	ruff check .
 	@echo "[2/3] black --check..."
-	black --check core/ hub/ run/ 2>&1 | head -30 || true
+	black --check core/ hub/ run/
 
 # 安全审计
 security:

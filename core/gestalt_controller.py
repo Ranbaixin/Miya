@@ -30,9 +30,7 @@ class GestaltController:
         """初始化格式塔控制器"""
         if tool_subnet:
             self.tool_subnet = tool_subnet
-            self._tool_registry = (
-                tool_subnet.registry if hasattr(tool_subnet, "registry") else None
-            )
+            self._tool_registry = tool_subnet.registry if hasattr(tool_subnet, "registry") else None
 
         logger.info("[格式塔] 初始化格式塔意识控制器...")
         await self._load_agent_tools()
@@ -116,35 +114,20 @@ class GestaltController:
 
         return ToolContext(**filtered)
 
-    async def execute_tool(
-        self, tool_name: str, args: Dict[str, Any], context: Dict[str, Any]
-    ) -> str:
+    async def execute_tool(self, tool_name: str, args: Dict[str, Any], context: Dict[str, Any]) -> str:
         """直接执行工具（格式塔核心模式）- 统一转换为 ToolContext"""
         safe_args = {
-            k: (
-                "[图片数据]"
-                if isinstance(v, str) and ("[CQ:" in v or "base64," in v)
-                else v
-            )
-            for k, v in args.items()
+            k: ("[图片数据]" if isinstance(v, str) and ("[CQ:" in v or "base64," in v) else v) for k, v in args.items()
         }
         logger.info(f"[格式塔] 执行工具: {tool_name}, 参数: {safe_args}")
 
         # 统一转换为 ToolContext 对象
         tool_context = self._build_tool_context(context)
 
-        if (
-            self.tool_subnet
-            and hasattr(self.tool_subnet, "registry")
-            and self.tool_subnet.registry
-        ):
+        if self.tool_subnet and hasattr(self.tool_subnet, "registry") and self.tool_subnet.registry:
             try:
-                result = await self.tool_subnet.registry.execute_tool(
-                    tool_name, tool_context, **args
-                )
-                logger.info(
-                    f"[格式塔] 工具执行完成: {tool_name}, 结果: {result[:100] if result else '(无)'}..."
-                )
+                result = await self.tool_subnet.registry.execute_tool(tool_name, tool_context, **args)
+                logger.info(f"[格式塔] 工具执行完成: {tool_name}, 结果: {result[:100] if result else '(无)'}...")
                 return result
             except Exception as e:
                 logger.error(f"[格式塔] 工具执行失败 {tool_name}: {e}", exc_info=True)
@@ -177,9 +160,7 @@ class GestaltController:
                     tool_name = func.get("name", "")
                     if tool_name:
                         self._tool_sources[tool_name] = agent_name
-                        logger.info(
-                            f"[格式塔] 注册工具: {tool_name} (来自 {agent_name})"
-                        )
+                        logger.info(f"[格式塔] 注册工具: {tool_name} (来自 {agent_name})")
 
             self._agent_tools_loaded = True
 
@@ -198,9 +179,7 @@ class GestaltController:
         """获取所有工具来源映射"""
         return self._tool_sources.copy()
 
-    async def classify_task_complexity(
-        self, user_input: str, tools_to_use: List[str]
-    ) -> str:
+    async def classify_task_complexity(self, user_input: str, tools_to_use: List[str]) -> str:
         """
         任务复杂度分类
 
@@ -271,9 +250,7 @@ class GestaltController:
             },
         }
 
-        return display_templates.get(
-            step, {"icon": "•", "title": step, "detail": detail, "color": "cyan"}
-        )
+        return display_templates.get(step, {"icon": "•", "title": step, "detail": detail, "color": "cyan"})
 
 
 # 全局单例

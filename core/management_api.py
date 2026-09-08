@@ -34,6 +34,8 @@ import uvicorn
 from fastapi import APIRouter, FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+from core.version import VERSION
+
 logger = logging.getLogger("Miya.ManagementAPI")
 
 
@@ -44,7 +46,7 @@ class ManagementAPI:
         self.daemon = daemon
         self.host = host
         self.port = port
-        self.app = FastAPI(title="Miya Management API", version="8.0.0")
+        self.app = FastAPI(title="Miya Management API", version=VERSION)  # 2026-09 统一版本源
         self._ws_clients: Set[WebSocket] = set()
         self._server: Optional[uvicorn.Server] = None
         self._serve_task: Optional[asyncio.Task] = None
@@ -82,9 +84,12 @@ class ManagementAPI:
         self.app.add_middleware(
             CORSMiddleware,
             allow_origins=[
-                "http://localhost:5173", "http://127.0.0.1:5173",
-                "http://localhost:3000", "http://127.0.0.1:3000",
-                "http://localhost:9800", "http://127.0.0.1:9800",
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
+                "http://localhost:9800",
+                "http://127.0.0.1:9800",
             ],
             allow_credentials=True,
             allow_methods=["*"],
@@ -92,46 +97,16 @@ class ManagementAPI:
         )
 
         # 2026-08 安全加固：管理 API 访问网关
+        # 2026-09 重构：网关逻辑提取为 core/web_api/auth_security.install_token_gate 复用
         # - 未设置 MIYA_API_TOKEN：仅允许本机(loopback)访问，远程一律 403
         # - 已设置 MIYA_API_TOKEN：任意来源需 Bearer token（恒时比较）
-        import hmac
-        import os
+        from core.web_api.auth_security import install_token_gate
 
-        import json as _json
-        from fastapi.responses import JSONResponse
-
-        def _token_ok(request: Request, api_token: str) -> bool:
-            auth = request.headers.get("Authorization", "")
-            if auth.lower().startswith("bearer "):
-                provided = auth[7:].strip()
-            else:
-                provided = request.headers.get("X-Miya-Token", "")
-            return bool(provided) and hmac.compare_digest(provided, api_token)
-
-        @self.app.middleware("http")
-        async def auth_gate(request: Request, call_next):
-            client_host = request.client.host if request.client else ""
-            is_loopback = client_host in ("127.0.0.1", "::1", "localhost")
-            api_token = os.environ.get("MIYA_API_TOKEN", "").strip()
-            path = request.url.path
-
-            # 文档与健康探活：本机或带 token 可访问
-            if path in ("/docs", "/openapi.json", "/redoc") or path == "/api/v1/health":
-                if is_loopback or (api_token and _token_ok(request, api_token)):
-                    return await call_next(request)
-                return JSONResponse({"detail": "unauthorized"}, status_code=401)
-
-            if not api_token:
-                if is_loopback:
-                    return await call_next(request)
-                return JSONResponse(
-                    {"detail": "管理 API 仅允许本机访问；如需远程请设置 MIYA_API_TOKEN"},
-                    status_code=403,
-                )
-
-            if _token_ok(request, api_token):
-                return await call_next(request)
-            return JSONResponse({"detail": "invalid or missing token"}, status_code=401)
+        install_token_gate(
+            self.app,
+            public_paths=("/docs", "/openapi.json", "/redoc"),
+            public_health_paths=("/api/v1/health",),
+        )
 
     def _setup_routes(self):
         """注册所有路由"""
@@ -192,6 +167,12 @@ class ManagementAPI:
         @app.get("/api/v1/daemon/status")
         async def daemon_status():
             return self.daemon.get_daemon_status()
+
+        @app.post("/api/v1/daemon/shutdown")
+        async def daemon_shutdown():
+            """优雅关闭守护进程（2026-09 新增，受访问网关 token 保护）"""
+            await self.daemon.stop()
+            return {"success": True, "message": "已请求优雅关闭"}
 
         # ======== 权限管理 (v7.0) ========
 
@@ -262,6 +243,12 @@ class ManagementAPI:
 
         @app.websocket("/api/v1/ws")
         async def websocket_endpoint(ws: WebSocket):
+            # 2026-09 安全加固：HTTP 中间件不拦 WebSocket 握手，必须单独校验
+            from core.web_api.auth_security import websocket_gate
+
+            if not websocket_gate(ws):
+                logger.warning("WS 握手被拒绝（非本机且无有效 token）")
+                return
             await ws.accept()
             self._ws_clients.add(ws)
             logger.info(f"WS 客户端连接 (总数: {len(self._ws_clients)})")
@@ -332,6 +319,11 @@ class ManagementAPI:
 
     async def serve(self, block: bool = True):
         """启动 API 服务器"""
+        # 2026-09 新增：接入事件总线，核心链路事件 → WS 实时推送
+        from core.event_bus import on_event
+
+        on_event(self.broadcast_event)
+
         config = uvicorn.Config(
             self.app,
             host=self.host,

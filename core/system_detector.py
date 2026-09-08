@@ -2,6 +2,7 @@
 系统环境检测器
 自动检测操作系统、Linux 发行版、Shell、包管理器等信息
 """
+
 import logging
 import os
 import platform
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SystemInfo:
     """系统信息"""
+
     os_name: str = "unknown"
     os_version: str = "unknown"
     distro: str = "unknown"  # Linux 发行版
@@ -31,17 +33,17 @@ class SystemInfo:
     def to_dict(self) -> Dict:
         """转换为字典"""
         return {
-            'os': self.os_name,
-            'version': self.os_version,
-            'distro': self.distro,
-            'distro_version': self.distro_version,
-            'arch': self.arch,
-            'shell': self.shell,
-            'python': self.python_version,
-            'node': self.node_version,
-            'package_managers': self.package_managers,
-            'current_path': self.current_path,
-            'home_dir': self.home_dir,
+            "os": self.os_name,
+            "version": self.os_version,
+            "distro": self.distro,
+            "distro_version": self.distro_version,
+            "arch": self.arch,
+            "shell": self.shell,
+            "python": self.python_version,
+            "node": self.node_version,
+            "package_managers": self.package_managers,
+            "current_path": self.current_path,
+            "home_dir": self.home_dir,
         }
 
     def is_windows(self) -> bool:
@@ -59,11 +61,11 @@ class SystemInfo:
     def get_best_package_manager(self) -> Optional[str]:
         """获取最佳包管理器"""
         if self.is_windows():
-            return next((pm for pm in self.package_managers if pm in ['winget', 'choco', 'scoop']), None)
+            return next((pm for pm in self.package_managers if pm in ["winget", "choco", "scoop"]), None)
         elif self.is_linux():
-            return next((pm for pm in self.package_managers if pm in ['apt', 'yum', 'dnf', 'pacman', 'apk']), None)
+            return next((pm for pm in self.package_managers if pm in ["apt", "yum", "dnf", "pacman", "apk"]), None)
         elif self.is_macos():
-            return next((pm for pm in self.package_managers if pm in ['brew']), None)
+            return next((pm for pm in self.package_managers if pm in ["brew"]), None)
         return None
 
 
@@ -71,6 +73,7 @@ class SystemDetector:
     """
     系统环境检测器
     """
+
     def __init__(self):
         self._cached_info: Optional[SystemInfo] = None
 
@@ -86,7 +89,7 @@ class SystemDetector:
         info.os_version = platform.version()
         info.arch = platform.machine()
         info.current_path = os.getcwd()
-        info.home_dir = os.path.expanduser('~')
+        info.home_dir = os.path.expanduser("~")
 
         # 检测 Linux 发行版
         if info.is_linux():
@@ -114,11 +117,12 @@ class SystemDetector:
         """检测 Linux 发行版"""
         try:
             # 读取 /etc/os-release
-            if os.path.exists('/etc/os-release'):
-                with open('/etc/os-release', 'r') as f:
+            if os.path.exists("/etc/os-release"):
+                with open("/etc/os-release", "r") as f:
                     content = f.read()
 
                 import re
+
                 name_match = re.search(r'^ID="?([^"\n]+)"?', content, re.MULTILINE)
                 version_match = re.search(r'^VERSION_ID="?([^"\n]+)"?', content, re.MULTILINE)
 
@@ -128,18 +132,13 @@ class SystemDetector:
                 return name, version
 
             # 使用 lsb_release 命令
-            result = subprocess.run(
-                ['lsb_release', '-a'],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
+            result = subprocess.run(["lsb_release", "-a"], capture_output=True, text=True, timeout=5)
             if result.returncode == 0:
-                for line in result.stdout.split('\n'):
-                    if line.startswith('Distributor ID:'):
-                        distro = line.split(':')[1].strip().lower()
-                    elif line.startswith('Release:'):
-                        version = line.split(':')[1].strip()
+                for line in result.stdout.split("\n"):
+                    if line.startswith("Distributor ID:"):
+                        distro = line.split(":")[1].strip().lower()
+                    elif line.startswith("Release:"):
+                        version = line.split(":")[1].strip()
                 return distro, version
 
         except Exception as e:  # noqa: BLE001 — 发行版检测失败已记录日志
@@ -149,30 +148,27 @@ class SystemDetector:
 
     def _detect_shell(self) -> str:
         """检测 Shell 类型"""
-        shell_path = os.environ.get('SHELL', '')
+        shell_path = os.environ.get("SHELL", "")
 
         if shell_path:
             shell_name = os.path.basename(shell_path)
             return shell_name
 
         # 检查 PowerShell (Windows)
-        if sys.platform == 'win32':
+        if sys.platform == "win32":
             try:
                 result = subprocess.run(
-                    ['powershell', '-Command', '$PSVersionTable.PSVersion'],
-                    capture_output=True,
-                    text=True,
-                    timeout=5
+                    ["powershell", "-Command", "$PSVersionTable.PSVersion"], capture_output=True, text=True, timeout=5
                 )
                 if result.returncode == 0:
-                    return 'pwsh' if 'PowerShell Core' in result.stdout else 'powershell'
+                    return "pwsh" if "PowerShell Core" in result.stdout else "powershell"
             except (OSError, subprocess.SubprocessError):  # noqa: S110 — 探测命令不存在时静默跳过
                 pass
 
         # 默认返回系统默认 Shell
-        if sys.platform == 'win32':
-            return 'cmd'
-        return 'bash'
+        if sys.platform == "win32":
+            return "cmd"
+        return "bash"
 
     def _detect_python_version(self) -> str:
         """检测 Python 版本"""
@@ -181,16 +177,11 @@ class SystemDetector:
     def _detect_node_version(self) -> str:
         """检测 Node.js 版本"""
         try:
-            result = subprocess.run(
-                ['node', '--version'],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
+            result = subprocess.run(["node", "--version"], capture_output=True, text=True, timeout=5)
             if result.returncode == 0:
                 version = result.stdout.strip()
                 # 移除 'v' 前缀
-                return version.lstrip('v')
+                return version.lstrip("v")
         except Exception as e:  # noqa: BLE001 — 未安装时探测失败已记录日志
             logger.debug(f"未检测到 Node.js: {e}")
 
@@ -201,35 +192,25 @@ class SystemDetector:
         managers = []
 
         # Python 包管理器（所有平台都有）
-        managers.append('pip')
+        managers.append("pip")
 
         # Node.js 包管理器
         if info.node_version != "not_installed":
-            managers.append('npm')
+            managers.append("npm")
 
             # 检测 yarn
             try:
-                result = subprocess.run(
-                    ['yarn', '--version'],
-                    capture_output=True,
-                    text=True,
-                    timeout=5
-                )
+                result = subprocess.run(["yarn", "--version"], capture_output=True, text=True, timeout=5)
                 if result.returncode == 0:
-                    managers.append('yarn')
+                    managers.append("yarn")
             except (OSError, subprocess.SubprocessError):  # noqa: S110 — 探测命令不存在时静默跳过
                 pass
 
             # 检测 pnpm
             try:
-                result = subprocess.run(
-                    ['pnpm', '--version'],
-                    capture_output=True,
-                    text=True,
-                    timeout=5
-                )
+                result = subprocess.run(["pnpm", "--version"], capture_output=True, text=True, timeout=5)
                 if result.returncode == 0:
-                    managers.append('pnpm')
+                    managers.append("pnpm")
             except (OSError, subprocess.SubprocessError):  # noqa: S110 — 探测命令不存在时静默跳过
                 pass
 
@@ -237,40 +218,25 @@ class SystemDetector:
         if info.is_windows():
             # winget
             try:
-                result = subprocess.run(
-                    ['winget', '--version'],
-                    capture_output=True,
-                    text=True,
-                    timeout=5
-                )
+                result = subprocess.run(["winget", "--version"], capture_output=True, text=True, timeout=5)
                 if result.returncode == 0:
-                    managers.append('winget')
+                    managers.append("winget")
             except (OSError, subprocess.SubprocessError):  # noqa: S110 — 探测命令不存在时静默跳过
                 pass
 
             # Chocolatey
             try:
-                result = subprocess.run(
-                    ['choco', '--version'],
-                    capture_output=True,
-                    text=True,
-                    timeout=5
-                )
+                result = subprocess.run(["choco", "--version"], capture_output=True, text=True, timeout=5)
                 if result.returncode == 0:
-                    managers.append('choco')
+                    managers.append("choco")
             except (OSError, subprocess.SubprocessError):  # noqa: S110 — 探测命令不存在时静默跳过
                 pass
 
             # Scoop
             try:
-                result = subprocess.run(
-                    ['scoop', '--version'],
-                    capture_output=True,
-                    text=True,
-                    timeout=5
-                )
+                result = subprocess.run(["scoop", "--version"], capture_output=True, text=True, timeout=5)
                 if result.returncode == 0:
-                    managers.append('scoop')
+                    managers.append("scoop")
             except (OSError, subprocess.SubprocessError):  # noqa: S110 — 探测命令不存在时静默跳过
                 pass
 
@@ -279,34 +245,29 @@ class SystemDetector:
             distro = info.distro
 
             # Debian/Ubuntu 系列
-            if distro in ['ubuntu', 'debian', 'linuxmint', 'pop']:
-                managers.append('apt')
+            if distro in ["ubuntu", "debian", "linuxmint", "pop"]:
+                managers.append("apt")
 
             # RedHat/CentOS/Fedora 系列
-            elif distro in ['fedora', 'rhel', 'centos', 'rocky']:
-                managers.append('dnf')
-                managers.append('yum')
+            elif distro in ["fedora", "rhel", "centos", "rocky"]:
+                managers.append("dnf")
+                managers.append("yum")
 
             # Arch Linux
-            elif distro in ['arch', 'manjaro', 'endeavouros']:
-                managers.append('pacman')
+            elif distro in ["arch", "manjaro", "endeavouros"]:
+                managers.append("pacman")
 
             # Alpine Linux
-            elif distro in ['alpine']:
-                managers.append('apk')
+            elif distro in ["alpine"]:
+                managers.append("apk")
 
         # macOS 包管理器
         elif info.is_macos():
             # Homebrew
             try:
-                result = subprocess.run(
-                    ['brew', '--version'],
-                    capture_output=True,
-                    text=True,
-                    timeout=5
-                )
+                result = subprocess.run(["brew", "--version"], capture_output=True, text=True, timeout=5)
                 if result.returncode == 0:
-                    managers.append('brew')
+                    managers.append("brew")
             except (OSError, subprocess.SubprocessError):  # noqa: S110 — 探测命令不存在时静默跳过
                 pass
 
