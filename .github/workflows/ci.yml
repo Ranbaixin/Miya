@@ -113,7 +113,8 @@ jobs:
 
     - name: Run unit tests
       # P8/P9 可信回归基线：仅跑 tests/unit/（根目录遗留测试引用已删模块，待独立清理）
-      run: uv run pytest tests/unit/ -q -p no:cacheprovider
+      # 2026-09：default-groups 收敛为 runtime 后，pytest 在 dev 组，显式带上
+      run: uv run --group dev pytest tests/unit/ -q -p no:cacheprovider
 
     - name: Upload coverage
       if: hashFiles('coverage.xml') != ''

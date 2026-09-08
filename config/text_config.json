@@ -1155,7 +1155,7 @@
             "journal_mode": "WAL",
             "foreign_keys": true,
             "synchronous": "NORMAL",
-            "cache_size": -64000,
+            "cache_size": -16000,
             "temp_store": "MEMORY"
         },
         "table": {
@@ -1211,6 +1211,13 @@
             "like_pattern_prefix": "%",
             "like_pattern_suffix": "%"
         }
+    },
+    "memory_capacity": {
+        "short_term_max_items": 1000
+    },
+    "graph_store": {
+        "enabled": true,
+        "db_path": "data/memory/miya_memory.db"
     },
     "working_memory": {
         "max_recent_messages": 5,
@@ -1892,6 +1899,15 @@
         }
     },
     "cognitive_engine": {
+        "recall_weights": {
+            "emotional_tone_bonus": 0.10,
+            "high_significance_bonus": 0.15,
+            "significance_threshold": 0.7,
+            "decay_rate_per_day": 0.05,
+            "time_weight": 0.15,
+            "association_per_source": 2,
+            "association_top_n": 3
+        },
         "topic_keywords": {
             "学习": [
                 "上课",

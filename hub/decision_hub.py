@@ -443,7 +443,34 @@ class DecisionHub:
         return None, None
 
     def _init_knowledge_graph(self):
-        """初始化知识图谱管理器"""
+        """初始化知识图谱管理器
+
+        2026-09：默认 SQLite graph_store —— 修复原 Neo4j 路径"写得起、
+        查不出"（同步 Session 被 async with 调用，每次查询抛异常返回空），
+        图谱知识自此真正进入回复上下文。grag 未初始化时独立建 store
+        （同一 miya_memory.db，建表幂等）。
+        """
+        try:
+            from core.knowledge_graph import KnowledgeGraphManager
+            from memory.graph_store import SQLiteGraphStore
+
+            store = None
+            grag = getattr(self.memory_net, "grag_memory", None)
+            if grag is not None:
+                store = getattr(grag, "_graph_store", None)
+                if store is not None and not store.enabled:
+                    store = None
+            if store is None:
+                store = SQLiteGraphStore()
+
+            if store is not None and store.enabled:
+                self.knowledge_graph = KnowledgeGraphManager(graph_store=store)
+                logger.info("[决策层] 知识图谱管理器已初始化（SQLite graph_store）")
+                return
+        except Exception as e:  # noqa: BLE001 — graph_store 为可选增强，失败降级 Neo4j 路径
+            logger.warning(f"[决策层] graph_store 初始化失败: {e}")
+
+        # 兼容路径：grag 显式启用 Neo4j 时沿用 driver
         try:
             from core.knowledge_graph import KnowledgeGraphManager
 
@@ -451,7 +478,7 @@ class DecisionHub:
                 driver = self.memory_net.grag_memory.neo4j_driver
                 if driver:
                     self.knowledge_graph = KnowledgeGraphManager(neo4j_driver=driver)
-                    logger.info("[决策层] 知识图谱管理器已初始化")
+                    logger.info("[决策层] 知识图谱管理器已初始化（Neo4j）")
         except Exception as e:  # noqa: BLE001 — 知识图谱为可选增强，失败降级
             logger.warning(f"[决策层] 知识图谱初始化失败: {e}")
 
@@ -1510,6 +1537,12 @@ class DecisionHub:
 
             async def fetch_diting_strategy():
                 """谛听消息策略分析 — 与上下文检索并行"""
+                # 2026-09 修复：终端/Web 是用户主动对话界面，不受谛听防打扰策略
+                # 管辖（该策略为 QQ 群聊设计）。此前策略配置缺失或 LLM 分析异常时
+                # MessageStrategy 默认 should_respond=False，终端/Web 消息被静默
+                # 丢弃（用户表现为"发消息没有任何回复"）。
+                if platform in ("terminal", "web"):
+                    return None
                 try:
                     from memory.diteng_listener import get_diting
 
@@ -1699,9 +1732,7 @@ class DecisionHub:
             cognitive_memory_context = await cog_task
 
             # Step 6：稳定画像在认知记忆之后构建，双轨按结构化条目去重后注入
-            sp_task = asyncio.create_task(
-                fetch_stable_persona(exclude_items=cognitive_items), name="stable_persona"
-            )
+            sp_task = asyncio.create_task(fetch_stable_persona(exclude_items=cognitive_items), name="stable_persona")
             stable_persona_context = await sp_task
 
             soul_result = await run_soul_generator(cognitive_memory=cognitive_memory_context)
@@ -1913,9 +1944,9 @@ class DecisionHub:
                     "personality": self.personality,
                     "scheduler": self.scheduler,
                     "onebot_client": self.onebot_client,
-                    "send_like_callback": getattr(self.onebot_client, "send_like", None)
-                    if self.onebot_client
-                    else None,
+                    "send_like_callback": (
+                        getattr(self.onebot_client, "send_like", None) if self.onebot_client else None
+                    ),
                     "game_mode_adapter": self.game_mode_adapter,
                     # 【关键】传递图片分析结果
                     "image_analysis": perception.get("image_analysis"),
@@ -1935,14 +1966,8 @@ class DecisionHub:
 
             # Step 3：调用前按消息场景分类，只选 qq_core + 0-2 扩展包
             # （分类在工具选择之前；失败降级 qq_core，绝不回退全量 68 工具）
-            platform_tools = self.platform_tools_manager.select_tools_for_message(
-                platform, user_input=content
-            )
-            tools_schema = (
-                platform_tools
-                if platform_tools
-                else self.platform_tools_manager.get_qq_core_schemas()
-            )
+            platform_tools = self.platform_tools_manager.select_tools_for_message(platform, user_input=content)
+            tools_schema = platform_tools if platform_tools else self.platform_tools_manager.get_qq_core_schemas()
 
             logger.info(f"[决策层-跨平台] 使用平台工具: {platform}, 工具数量: {len(tools_schema)}")
 
@@ -1959,9 +1984,7 @@ class DecisionHub:
 
                 _seg = {
                     "system": prompt_info["system"],
-                    "tools.schema": _json.dumps(
-                        tools_schema, ensure_ascii=False, separators=(",", ":")
-                    ),
+                    "tools.schema": _json.dumps(tools_schema, ensure_ascii=False, separators=(",", ":")),
                     "user": prompt_info["user"],
                 }
                 _counted = count_segments(_seg)
@@ -1970,9 +1993,7 @@ class DecisionHub:
                 # 这里单独估算便于观察各段占比；total_input 仍以实际发送的 3 段为准）
                 from utils.token_budget import estimate_tokens
 
-                _hist_text = "\n".join(
-                    str(m.get("content", "")) for m in (conversation_context or [])
-                )
+                _hist_text = "\n".join(str(m.get("content", "")) for m in (conversation_context or []))
                 for _name, _text in (
                     ("history", _hist_text),
                     ("stable_memory", stable_persona_context),
@@ -1984,9 +2005,7 @@ class DecisionHub:
                 _counted["total_input"] = _total_in
                 _limit = context_limit()
                 if _total_in > _limit:
-                    logger.warning(
-                        f"[预算] 首请求超限 {_total_in} > {_limit} | {budget_log(_counted)}"
-                    )
+                    logger.warning(f"[预算] 首请求超限 {_total_in} > {_limit} | {budget_log(_counted)}")
                 else:
                     logger.info(f"[预算] 首请求 {budget_log(_counted)}")
             except Exception as _e:  # noqa: BLE001 — 预算日志为观测功能，失败不影响主流程
@@ -2442,9 +2461,11 @@ class DecisionHub:
 
                     # 存储最后灵魂数据供 SSE 输出
                     self._last_soul_data = {
-                        "emotions": {item["name"]: item["intensity"] for item in _emotions_raw}
-                        if isinstance(_emotions_raw, list)
-                        else _emotions,
+                        "emotions": (
+                            {item["name"]: item["intensity"] for item in _emotions_raw}
+                            if isinstance(_emotions_raw, list)
+                            else _emotions
+                        ),
                         "inner_thought": _inner_thought,
                         "attribution": _attribution,
                         "reflection": _reflection,
@@ -3085,9 +3106,11 @@ class DecisionHub:
                 task_args = {
                     "task_type": task_type,
                     "target_type": "private" if platform in ("qq", "aiocqhttp", "qqofficial") else "group",
-                    "target_id": int(user_id)
-                    if isinstance(user_id, str) and user_id.isdigit()
-                    else (user_id if isinstance(user_id, int) else 0),
+                    "target_id": (
+                        int(user_id)
+                        if isinstance(user_id, str) and user_id.isdigit()
+                        else (user_id if isinstance(user_id, int) else 0)
+                    ),
                     "schedule_time": scheduled_time,
                     "repeat": "once",
                     "priority": 5,
@@ -3309,9 +3332,11 @@ class DecisionHub:
             result = await self.tool_subnet.execute_tool(
                 tool_name="send_emoji",
                 args=tool_args,
-                user_id=int(user_id)
-                if isinstance(user_id, str) and user_id.isdigit()
-                else (user_id if isinstance(user_id, int) else 0),
+                user_id=(
+                    int(user_id)
+                    if isinstance(user_id, str) and user_id.isdigit()
+                    else (user_id if isinstance(user_id, int) else 0)
+                ),
                 group_id=perception.get("group_id", 0),
                 message_type=perception.get("message_type", "private"),
                 sender_name=sender_name,

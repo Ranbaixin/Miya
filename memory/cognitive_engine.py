@@ -10,6 +10,8 @@
 import hashlib
 import json
 import logging
+import math
+import random
 import re
 from datetime import datetime
 from pathlib import Path
@@ -47,6 +49,16 @@ PERSONAL_PATTERNS = MEMORY_ANCHOR_CONFIG.get("personal_patterns", [])
 PERSONAL_QUERY_KEYWORDS = MEMORY_ANCHOR_CONFIG.get("personal_query_keywords", [])
 KEYWORD_EXTRACTION_PATTERNS = MEMORY_ANCHOR_CONFIG.get("keyword_extraction_patterns", {})
 
+# 回忆打分权重（2026-09：情绪显著性加权 + 艾宾浩斯衰减参数）
+RECALL_WEIGHTS = _config.get("recall_weights", {})
+EMOTIONAL_TONE_BONUS = float(RECALL_WEIGHTS.get("emotional_tone_bonus", 0.10))
+HIGH_SIGNIFICANCE_BONUS = float(RECALL_WEIGHTS.get("high_significance_bonus", 0.15))
+SIGNIFICANCE_THRESHOLD = float(RECALL_WEIGHTS.get("significance_threshold", 0.7))
+DECAY_RATE_PER_DAY = float(RECALL_WEIGHTS.get("decay_rate_per_day", 0.05))
+TIME_WEIGHT = float(RECALL_WEIGHTS.get("time_weight", 0.15))
+ASSOCIATION_PER_SOURCE = int(RECALL_WEIGHTS.get("association_per_source", 2))
+ASSOCIATION_TOP_N = int(RECALL_WEIGHTS.get("association_top_n", 3))
+
 
 class CognitiveEngine:
     """认知检索引擎
@@ -70,6 +82,10 @@ class CognitiveEngine:
         self.memory_core = memory_core
         self._memory_core_initialized = False
         self.embedding_client = embedding_client
+
+        # MemoryEnhancer（记忆关联/衰减权重；惰性获取，失败降级）
+        self._enhancer = None
+        self._enhancer_unavailable = False
 
         # 记忆关联度学习
         self._co_occurrence: Dict[str, Dict[str, int]] = {}  # memory_id -> {related_id: count}
@@ -123,6 +139,92 @@ class CognitiveEngine:
                 self.memory_core = await get_memory_core()
             await self.memory_core.initialize()
             self._memory_core_initialized = True
+
+    async def _ensure_enhancer(self):
+        """惰性获取 MemoryEnhancer（记忆关联/衰减权重）
+
+        优先复用 memory core 已初始化的实例（同一进程同一份
+        memory_links.json / memory_weights.json，避免双实例互相覆盖）。
+        """
+        if self._enhancer is not None or self._enhancer_unavailable:
+            return self._enhancer
+        try:
+            core_enhancer = getattr(self.memory_core, "_enhancer", None)
+            if core_enhancer is not None:
+                self._enhancer = core_enhancer
+            else:
+                from memory.memory_enhancer import get_memory_enhancer
+
+                self._enhancer = await get_memory_enhancer()
+        except Exception as e:  # noqa: BLE001 — 增强器不可用时打分走回退公式
+            logger.debug(f"[认知引擎] MemoryEnhancer 不可用: {e}")
+            self._enhancer_unavailable = True
+        return self._enhancer
+
+    async def _reinforce_access(self, memories: List[MemoryItem]) -> None:
+        """回忆强化：检索命中的记忆更新访问计数与衰减权重（间隔重复效应）"""
+        if self._enhancer is None or not memories:
+            return
+        try:
+            await self._enhancer.on_memories_accessed([m.id for m in memories])
+        except Exception as e:  # noqa: BLE001 — 强化失败不影响检索结果
+            logger.debug(f"[认知引擎] 回忆强化失败: {e}")
+
+    def _is_fuzzy_candidate(self, memory: MemoryItem) -> bool:
+        """模糊片段候选：30~50 天前的旧记忆才可能以碎片形式浮现"""
+        try:
+            days = (datetime.now() - datetime.fromisoformat(memory.created_at)).days
+        except (ValueError, TypeError):
+            return False
+        return 30 <= days <= 50
+
+    async def _fetch_associations(
+        self,
+        sources: List[MemoryItem],
+        current_topics: List[str],
+        keywords: List[str],
+        exclude_ids: set,
+    ) -> List[tuple]:
+        """联想式召回：对来源记忆查一跳关联（memory_links.json）
+
+        每条来源记忆最多带 ASSOCIATION_PER_SOURCE 条关联；
+        无链接数据时返回空列表，对检索结果零影响。
+        """
+        if not sources or self._enhancer is None or self.memory_core is None:
+            return []
+
+        seen = set(exclude_ids)
+        associated: List[tuple] = []
+        for src in sources:
+            try:
+                links = self._enhancer.get_related_memories(src.id)
+            except Exception as e:  # noqa: BLE001 — 单条关联查询失败跳过
+                logger.debug(f"[认知引擎] 关联查询失败 {src.id}: {e}")
+                continue
+
+            for link in links[:ASSOCIATION_PER_SOURCE]:
+                target_id = link.get("memory_id")
+                if not target_id or target_id in seen:
+                    continue
+                seen.add(target_id)
+
+                try:
+                    mem = await self.memory_core.get_by_id(target_id)
+                except Exception:  # noqa: S112, BLE001 — 关联目标加载失败跳过该条
+                    continue
+                if mem is None or not mem.is_valid():
+                    continue
+
+                # 标注联想来源，build_context 渲染"（由……想起）"
+                mem.metadata["recalled_via"] = (src.content or "").replace("\n", " ")[:30]
+                strength = float(link.get("strength", 0.5))
+                relevance = await self._calculate_relevance(mem, current_topics, keywords, "")
+                # 间联想记忆按链接强度折价
+                associated.append((mem, relevance * (0.6 + 0.4 * min(1.0, strength))))
+
+        if associated:
+            logger.info(f"[认知引擎] 联想召回带出 {len(associated)} 条关联记忆")
+        return associated
 
     def _extract_topics(self, text: str) -> List[str]:
         """提取对话主题
@@ -303,12 +405,19 @@ class CognitiveEngine:
                 score += 0.3
                 break
 
-        # 4. 时间衰减（新记忆权重更高）
+        # 4. 时间衰减（2026-09：艾宾浩斯指数衰减 + 访问强化，替换原 30 天线性衰减）
         try:
             memory_time = datetime.fromisoformat(memory.created_at)
-            hours_ago = (datetime.now() - memory_time).total_seconds() / 3600
-            time_weight = max(0.1, 1 - hours_ago / (24 * 30))  # 30天内衰减
-            score += time_weight * 0.15
+            enhancer = self._enhancer
+            if enhancer is not None:
+                time_weight = enhancer.calculate_decay_weight(
+                    memory.id, memory.created_at, access_count=memory.access_count
+                )
+            else:
+                days_old = (datetime.now() - memory_time).total_seconds() / 86400
+                access_relief = 1.0 + min(2.0, memory.access_count * 0.25)
+                time_weight = math.exp(-DECAY_RATE_PER_DAY * days_old / access_relief)
+            score += time_weight * TIME_WEIGHT
         except (ValueError, TypeError):
             score += 0.1
 
@@ -316,6 +425,12 @@ class CognitiveEngine:
         if current_input and self.embedding_client:
             semantic_score = await self._get_embedding_similarity(current_input, memory.content)
             score += semantic_score * 0.35  # 35%权重给语义相似度
+
+        # 6. 情绪显著性（2026-09：带情绪/高重要性的记忆更容易被想起）
+        if memory.emotional_tone:
+            score += EMOTIONAL_TONE_BONUS
+        if memory.significance >= SIGNIFICANCE_THRESHOLD:
+            score += HIGH_SIGNIFICANCE_BONUS
 
         return min(1.0, score)
 
@@ -344,6 +459,9 @@ class CognitiveEngine:
 
         # 确保内存核心已初始化
         await self._ensure_memory_core_initialized()
+
+        # 惰性获取记忆增强器（艾宾浩斯衰减权重 + 联想链接）
+        await self._ensure_enhancer()
 
         # 1. 提取当前话题和关键词
         current_topics = self._extract_topics(user_input)
@@ -435,6 +553,7 @@ class CognitiveEngine:
                     if anchor_results:
                         # 记忆锚点优先级最高，直接返回
                         logger.info(f"[认知引擎] 找到 {len(anchor_results)} 条记忆锚点 (标签: {tag})")
+                        await self._reinforce_access(anchor_results[:limit])
                         return anchor_results[:limit]
 
             # 如果标签搜索没有找到，尝试内容搜索
@@ -451,6 +570,7 @@ class CognitiveEngine:
                         filtered_results = [m for m in content_results if keyword in m.content]
                         if filtered_results:
                             logger.info(f"[认知引擎] 找到 {len(filtered_results)} 条记忆 (内容匹配: {keyword})")
+                            await self._reinforce_access(filtered_results[:limit])
                             return filtered_results[:limit]
 
         # 3. 如果标签搜索无结果，尝试内容搜索（关键词直接匹配记忆内容）
@@ -462,14 +582,16 @@ class CognitiveEngine:
                     user_id=user_id,
                     group_id=group_id,
                     limit=limit * 2,
-                    levels=[
-                        MemoryLevel.DIALOGUE,
-                        MemoryLevel.SHORT_TERM,
-                        MemoryLevel.LONG_TERM,
-                        MemoryLevel.SEMANTIC,
-                    ]
-                    if temporal_range
-                    else None,
+                    levels=(
+                        [
+                            MemoryLevel.DIALOGUE,
+                            MemoryLevel.SHORT_TERM,
+                            MemoryLevel.LONG_TERM,
+                            MemoryLevel.SEMANTIC,
+                        ]
+                        if temporal_range
+                        else None
+                    ),
                     start_time=temporal_range.start if temporal_range else None,
                     end_time=temporal_range.end if temporal_range else None,
                 )
@@ -483,6 +605,7 @@ class CognitiveEngine:
 
         # 3. 计算相关度并排序（加入关联度学习）
         scored_memories = []
+        fuzzy_candidates = []  # 2026-09：低相关的 30~50 天旧记忆（模糊片段候选）
         for memory in all_memories:
             relevance = await self._calculate_relevance(memory, current_topics, keywords, user_input)
             # 关联度提升
@@ -490,6 +613,8 @@ class CognitiveEngine:
             relevance += boost
             if relevance > 0.1:  # 过滤低相关度
                 scored_memories.append((memory, relevance))
+            elif self._is_fuzzy_candidate(memory):
+                fuzzy_candidates.append(memory)
 
         # 按相关度排序
         scored_memories.sort(key=lambda x: x[1], reverse=True)
@@ -497,14 +622,34 @@ class CognitiveEngine:
         # 4. MMR去重（最大边际相关性）- 减少相似记忆的重复
         results = self._mmr_deduplicate(scored_memories, limit)
 
+        # 4.2 联想式召回（2026-09）：对 MMR 后 top-N 逐条带出一跳关联记忆，二次 MMR
+        associated = await self._fetch_associations(
+            results[:ASSOCIATION_TOP_N],
+            current_topics,
+            keywords,
+            exclude_ids={m.id for m in results},
+        )
+        if associated:
+            score_by_id = {m.id: s for m, s in scored_memories}
+            merged = [(m, score_by_id.get(m.id, 0.3)) for m in results] + associated
+            merged.sort(key=lambda x: x[1], reverse=True)
+            results = self._mmr_deduplicate(merged, limit)
+
+        # 4.3 模糊片段（2026-09）：被阈值滤掉的 30~50 天旧记忆，≤10% 概率浮现 1 条
+        if fuzzy_candidates and results and random.random() <= 0.10:
+            fragment = random.choice(fuzzy_candidates)
+            fragment.metadata["fuzzy_fragment"] = True
+            results.append(fragment)
+
         # 4.5 按创建时间倒序排列（统一群聊与私聊记忆的时间线）
         results.sort(key=lambda m: m.created_at if m.created_at else "", reverse=True)
 
-        # 5. 记录共现关系（用于关联度学习）
+        # 5. 记录共现关系（用于关联度学习）+ 回忆强化（间隔重复）
         retrieved_ids = [m.id for m in results]
         if retrieved_ids:
             self._record_co_occurrence(retrieved_ids)
             self._last_retrieved_ids = retrieved_ids
+        await self._reinforce_access(results)
 
         logger.info(f"[认知引擎] 检索到 {len(results)} 条相关记忆（MMR去重后）")
         if not results:
@@ -658,18 +803,78 @@ class CognitiveEngine:
                     lines.append(entry)
                 lines.append("")
         else:
-            # 普通查询 → 按时序展示（已按 created_at 降序排列）
+            # 普通查询 → 2026-09 回忆模糊化：按相关度分档措辞
+            current_topics = self._extract_topics(user_input)
+            keywords = self._extract_keywords(user_input)
             for memory in memories:
-                time_str = memory.created_at[11:16] if len(memory.created_at) > 10 else ""
-                date_str = memory.created_at[:10] if len(memory.created_at) >= 10 else ""
-                ts = f"[{date_str} {time_str}]" if date_str else ""
                 content_preview = memory.content.replace("\n", " ")[:150]
-                lines.append(f"- {ts} {content_preview}")
+                when = self._humanize_time(memory.created_at)
+
+                relevance = 0.0
+                try:
+                    relevance = await self._calculate_relevance(memory, current_topics, keywords, "")
+                except Exception:  # noqa: BLE001 — 打分失败按最低确定度措辞
+                    relevance = 0.0
+
+                via = ""
+                if memory.metadata and memory.metadata.get("recalled_via"):
+                    via = f"（由「{memory.metadata['recalled_via']}」想起）"
+
+                if memory.metadata and memory.metadata.get("fuzzy_fragment"):
+                    lines.append(f"- （很模糊的记忆碎片）好像{when}……{content_preview}，记不太清了{via}")
+                elif relevance >= 0.75:
+                    lines.append(f"- {when}：{content_preview}{via}")
+                elif relevance >= 0.5:
+                    lines.append(f"- 印象里{when}的事：{content_preview}{via}")
+                else:
+                    lines.append(f"- 好像{when}……{content_preview}（不太确定）{via}")
 
         lines.append("")
         lines.append("（这些都是之前对话中记住的重要事情，与当前对话可能相关）")
 
         return "\n".join(lines)
+
+    @staticmethod
+    def _humanize_time(created_at: str) -> str:
+        """时间戳 → 人类口吻的时间措辞（今天/昨天/上周/去年夏天左右……）"""
+        try:
+            t = datetime.fromisoformat(created_at)
+        except (ValueError, TypeError):
+            return created_at[:10] if len(created_at) >= 10 else "以前"
+
+        now = datetime.now()
+        days = (now - t).days
+        if days <= 0:
+            return "今天"
+        if days == 1:
+            return "昨天"
+        if days <= 3:
+            return "前几天"
+        if days <= 10:
+            return "上周"
+        if days <= 40:
+            return "上个月"
+
+        seasons = {
+            12: "冬",
+            1: "冬",
+            2: "冬",
+            3: "春",
+            4: "春",
+            5: "春",
+            6: "夏",
+            7: "夏",
+            8: "夏",
+            9: "秋",
+            10: "秋",
+            11: "秋",
+        }
+        season = seasons.get(t.month, "")
+        if t.year == now.year:
+            return f"今年{season}天左右"
+        if t.year == now.year - 1:
+            return f"去年{season}天左右"
+        return f"{t.year}年左右"
 
     async def should_remember(self, user_input: str, ai_response: str) -> tuple[bool, str, float]:
         """判断是否应该记忆这段对话

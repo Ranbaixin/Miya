@@ -27,12 +27,8 @@ class MessageStrategy:
     """消息策略分析结果"""
 
     should_respond: bool = True  # 是否应该回复
-    response_strategy: str = (
-        "full_reply"  # 响应策略: full_reply/brief_reply/emoji_only/ignore/like_only
-    )
-    message_intent: str = (
-        "chat"  # 意图分类: greeting/chat/question/confession/complaint/share/casual
-    )
+    response_strategy: str = "full_reply"  # 响应策略: full_reply/brief_reply/emoji_only/ignore/like_only
+    message_intent: str = "chat"  # 意图分类: greeting/chat/question/confession/complaint/share/casual
     confidence: float = 0.5  # 判断置信度
     reason: str = ""  # 判断理由
     suggested_reply_style: str = "normal"  # 建议回复风格: normal/casual/serious/playful
@@ -119,9 +115,7 @@ class DiTingListener:
         self._active_conversations: Dict[str, Dict[str, float]] = defaultdict(dict)
 
         # 用户连续发言计数
-        self._user_streaks: Dict[str, Dict[str, int]] = defaultdict(
-            lambda: defaultdict(int)
-        )
+        self._user_streaks: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
 
         self._persist_file = Path("data/diting_state.json")
         self._persist_file.parent.mkdir(parents=True, exist_ok=True)
@@ -155,18 +149,12 @@ class DiTingListener:
                 phase = get_phase(elapsed)
 
                 if phase == SessionPhase.HOT:
-                    snippets = [
-                        MessageSnippet(**s)
-                        for s in snippets_raw
-                        if now - s.get("timestamp", 0) < hot_seconds
-                    ]
+                    snippets = [MessageSnippet(**s) for s in snippets_raw if now - s.get("timestamp", 0) < hot_seconds]
                     if snippets:
                         self._group_snippets[gid] = snippets
                 elif phase == SessionPhase.WARM:
                     snippets = [
-                        MessageSnippet(**s)
-                        for s in snippets_raw[-5:]
-                        if now - s.get("timestamp", 0) < warm_seconds
+                        MessageSnippet(**s) for s in snippets_raw[-5:] if now - s.get("timestamp", 0) < warm_seconds
                     ]
                     if snippets:
                         self._group_snippets[gid] = snippets
@@ -212,10 +200,7 @@ class DiTingListener:
             loaded_groups = len(self._group_snippets)
             loaded_active = sum(len(u) for u in self._active_conversations.values())
             if loaded_groups > 0 or loaded_active > 0:
-                logger.info(
-                    f"[谛听] 从磁盘恢复状态: {loaded_groups} 群, "
-                    f"{loaded_active} 活跃用户"
-                )
+                logger.info(f"[谛听] 从磁盘恢复状态: {loaded_groups} 群, " f"{loaded_active} 活跃用户")
         except Exception as e:  # noqa: BLE001 — 恢复失败以空状态启动，不阻塞监听
             logger.warning(f"[谛听] 恢复状态失败: {e}")
 
@@ -230,15 +215,9 @@ class DiTingListener:
                     if snippets
                 },
                 "_active_conversations": {
-                    gid: dict(users)
-                    for gid, users in self._active_conversations.items()
-                    if users
+                    gid: dict(users) for gid, users in self._active_conversations.items() if users
                 },
-                "_user_streaks": {
-                    gid: dict(streaks)
-                    for gid, streaks in self._user_streaks.items()
-                    if streaks
-                },
+                "_user_streaks": {gid: dict(streaks) for gid, streaks in self._user_streaks.items() if streaks},
                 "_topic_threads": {
                     gid: [
                         {
@@ -306,6 +285,7 @@ class DiTingListener:
         self._save_counter = getattr(self, "_save_counter", 0) + 1
         if self._save_counter % 5 == 0:
             import asyncio as _asyncio
+
             try:
                 loop = _asyncio.get_event_loop()
                 if loop.is_running():
@@ -324,10 +304,7 @@ class DiTingListener:
             if not thread.is_active:
                 continue
             # 5分钟内、有相同参与者、内容相关 → 加入同一线程
-            if (
-                time.time() - thread.last_active < 300
-                and snippet.sender_name in thread.participants
-            ):
+            if time.time() - thread.last_active < 300 and snippet.sender_name in thread.participants:
                 thread.add_message(snippet)
                 return
 
@@ -412,15 +389,9 @@ class DiTingListener:
     def get_active_users(self, group_id: str) -> List[str]:
         """获取当前活跃用户列表"""
         cutoff = time.time() - self.active_window
-        return [
-            uid
-            for uid, last_time in self._active_conversations.get(group_id, {}).items()
-            if last_time > cutoff
-        ]
+        return [uid for uid, last_time in self._active_conversations.get(group_id, {}).items() if last_time > cutoff]
 
-    def get_related_threads(
-        self, group_id: str, query: str, max_threads: int = 3
-    ) -> str:
+    def get_related_threads(self, group_id: str, query: str, max_threads: int = 3) -> str:
         """获取与查询相关的话题线程"""
         threads = self._topic_threads.get(group_id, [])
         query_lower = query.lower()
@@ -467,10 +438,7 @@ class DiTingListener:
         keywords = set()
         for s in snippets:
             for word in s.content:
-                if (
-                    len(word) >= 2
-                    and word not in "的了是在我你他她它有和或但而就也都这不"
-                ):
+                if len(word) >= 2 and word not in "的了是在我你他她它有和或但而就也都这不":
                     keywords.add(word)
 
         # 生成摘要
@@ -508,9 +476,7 @@ class DiTingListener:
 
         # 清理过期群消息
         expired_groups = [
-            gid
-            for gid, snippets in self._group_snippets.items()
-            if snippets and snippets[-1].timestamp < cutoff
+            gid for gid, snippets in self._group_snippets.items() if snippets and snippets[-1].timestamp < cutoff
         ]
         for gid in expired_groups:
             del self._group_snippets[gid]
@@ -519,9 +485,7 @@ class DiTingListener:
         # 清理过期活跃对话
         for group_id in list(self._active_conversations.keys()):
             expired_users = [
-                uid
-                for uid, last_time in self._active_conversations[group_id].items()
-                if last_time < cutoff
+                uid for uid, last_time in self._active_conversations[group_id].items() if last_time < cutoff
             ]
             for uid in expired_users:
                 del self._active_conversations[group_id][uid]
@@ -666,9 +630,7 @@ class DiTingListener:
         try:
             from memory.memory_config import get_memory_section
 
-            config_path = (
-                Path(__file__).parent.parent / "config" / "diteng_strategy_config.json"
-            )
+            config_path = Path(__file__).parent.parent / "config" / "diteng_strategy_config.json"
             config = {}
             if config_path.exists():
                 with open(config_path, "r", encoding="utf-8") as f:
@@ -677,13 +639,9 @@ class DiTingListener:
             strategy_defaults = get_memory_section("strategy_defaults")
 
             if "max_responses_per_turn" not in config:
-                config["max_responses_per_turn"] = strategy_defaults.get(
-                    "max_responses_per_turn", 3
-                )
+                config["max_responses_per_turn"] = strategy_defaults.get("max_responses_per_turn", 3)
             if "default_max_messages" not in config:
-                config["default_max_messages"] = strategy_defaults.get(
-                    "default_max_messages", 1
-                )
+                config["default_max_messages"] = strategy_defaults.get("default_max_messages", 1)
 
             return config
         except Exception:  # noqa: BLE001 — 策略配置加载失败时回退到内置默认值

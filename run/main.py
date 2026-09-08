@@ -92,7 +92,7 @@ sys.path.insert(0, str(project_root))
 
 # 使用统一的端口检测工具
 from config import Settings
-from core import Arbitrator, Entropy, Ethics, Identity, Personality, PromptManager
+from core import Entropy, Ethics, Identity, Personality, PromptManager
 from core.autonomy_with_personality import get_autonomy_with_personality
 from core.constants import Encoding
 from core.version import VERSION
@@ -101,7 +101,6 @@ from hub import Decision, DecisionHub, Emotion, MemoryEmotion, MemoryEngine, Sch
 from hub.platform_adapters import get_adapter
 from mlink import Message, MLinkCore
 from utils.port_utils import check_and_get_port
-from webnet import CrossNetEngine, NetManager
 
 
 class Miya:
@@ -136,7 +135,8 @@ class Miya:
         self.personality = Personality()
         self.ethics = Ethics()
         self.identity = Identity()
-        self.arbitrator = Arbitrator(self.personality, self.ethics)
+        # 2026-09 清理：移除构造后从未被引用的死对象 arbitrator
+        # （原 Arbitrator(self.personality, self.ethics) 全仓零消费者）
         self.entropy = Entropy()
         self.prompt_manager = PromptManager(personality=self.personality)
 
@@ -150,9 +150,8 @@ class Miya:
         # 初始化M-Link
         self.mlink = MLinkCore()
 
-        # 初始化子网
-        self.net_manager = NetManager()
-        self.cross_net_engine = CrossNetEngine(self.net_manager)
+        # 2026-09 清理：移除构造后从未被引用的死对象 net_manager/cross_net_engine
+        # （"蛛网式分布式架构"组件，除构造行外全仓零消费者）
 
         # 数据库初始化（默认关闭，需要时通过 ENABLE_DATABASES 环境变量启用）
         self._init_databases()
@@ -183,7 +182,8 @@ class Miya:
         # 【跨端】初始化跨端子网
         self._init_cross_terminal()
 
-        # 初始化 AI 客户端
+        # 初始化 AI 客户端（ai_degraded: AI 不可用时置 True，供健康状态暴露）
+        self.ai_degraded = False
         self.ai_client = self._init_ai_client()
 
         # 初始化向量系统
@@ -271,12 +271,20 @@ class Miya:
         return logger
 
     def _init_neo4j(self):
-        """初始化 Neo4j 连接（健康检查）"""
+        """初始化 Neo4j 连接（健康检查）
+
+        2026-09：图谱默认 SQLite graph_store；仅显式 MIYA_USE_NEO4J=1 时
+        才做 Neo4j 连接健康检查（避免默认启动时的无谓连接告警）。
+        """
         import os
 
         from dotenv import load_dotenv
 
         load_dotenv(Path(__file__).parent.parent / "config" / ".env")
+
+        if os.getenv("MIYA_USE_NEO4J", "").lower() not in ("1", "true", "yes"):
+            self.logger.info("  [数据库] Neo4j 未启用（默认 SQLite graph_store；如需启用设 MIYA_USE_NEO4J=1）")
+            return None
 
         neo4j_uri = os.getenv("NEO4J_URI", "bolt://127.0.0.1:17687")
         neo4j_user = os.getenv("NEO4J_USER", "neo4j")
@@ -498,8 +506,15 @@ class Miya:
                         self.logger.info(f"默认模型: {default_client.model}")
                         return default_client
 
+                # 2026-09 加固：标记降级，供 daemon status / health 暴露，
+                # 避免 AI 不可用时系统"假活"（所有对话静默降级为罐头回复）
+                self.logger.warning("多模型池初始化完成但无任何可用模型，AI 功能将降级")
+                self.ai_degraded = True
+                return None
+
         except Exception as e:
             self.logger.warning(f"多模型管理器初始化失败: {e}")
+            self.ai_degraded = True
             return None
 
     def _init_vector_system(self):
@@ -571,7 +586,6 @@ class Miya:
 
             # 使用统一的端口检测工具
             api_port, port_changed = check_and_get_port(8000, port_name="Web API")
-            Path(__file__).parent.parent
 
             # 如果端口改变了，更新前端 .env 配置（已移除旧的前端配置更新逻辑）
             # 新架构中，前端通过共享包自动检测端口，无需手动更新配置文件
@@ -602,6 +616,23 @@ class Miya:
                                 allow_credentials=True,
                                 allow_methods=["*"],
                                 allow_headers=["*"],
+                            )
+                            # 2026-09 安全加固：统一访问网关（fail-closed）
+                            # - 本机(loopback)放行（桌面端/HUD 无感使用）
+                            # - 远程需 Bearer MIYA_API_TOKEN，未设置则 403
+                            # - 登录与文档路径公开；必须在 CORS 之后安装（位于最外层）
+                            from core.web_api.auth_security import install_token_gate
+
+                            install_token_gate(
+                                app,
+                                public_paths=(
+                                    "/docs",
+                                    "/openapi.json",
+                                    "/redoc",
+                                    "/api/auth/login",
+                                    "/api/auth/status",
+                                ),
+                                public_health_paths=("/health", "/api/health", "/api/status"),
                             )
                             app.include_router(self.web_api.router)
 
@@ -673,35 +704,41 @@ class Miya:
             self.logger.warning(f"API 服务器启动失败: {e}")
 
     def _init_neo4j_system(self):
-        """初始化Neo4j知识图谱系统 — 将 GRAG 记忆管理器注入 MemoryNet"""
+        """初始化知识图谱系统 — 将 GRAG 记忆管理器注入 MemoryNet
+
+        2026-09：默认 SQLite graph_store（Neo4j 读取链路断裂且部署负担大，
+        517MB 数据 514MB 是事务日志）。仅显式设置 MIYA_USE_NEO4J=1 时启用
+        Neo4j 双写（config/.env 里的 NEO4J_PASSWORD 单独存在不再隐式启用）。
+        """
         try:
             from core.grag_memory import DEFAULT_CONFIG, GRAGMemoryManager
 
-            neo4j_uri = os.getenv("NEO4J_URI", DEFAULT_CONFIG["neo4j_uri"])
-            neo4j_user = os.getenv("NEO4J_USER", DEFAULT_CONFIG["neo4j_user"])
-            neo4j_password = os.getenv("NEO4J_PASSWORD", DEFAULT_CONFIG["neo4j_password"])
-
-            if not neo4j_password:
-                self.logger.warning("[Neo4j] 未配置密码，跳过知识图谱初始化")
-                self.grag_memory = None
-                return
+            use_neo4j = os.getenv("MIYA_USE_NEO4J", "").lower() in ("1", "true", "yes")
 
             config = {
                 "enabled": True,
-                "neo4j_uri": neo4j_uri,
-                "neo4j_user": neo4j_user,
-                "neo4j_password": neo4j_password,
+                "use_neo4j": use_neo4j,
             }
+            if use_neo4j:
+                config.update(
+                    {
+                        "neo4j_uri": os.getenv("NEO4J_URI", DEFAULT_CONFIG["neo4j_uri"]),
+                        "neo4j_user": os.getenv("NEO4J_USER", DEFAULT_CONFIG["neo4j_user"]),
+                        "neo4j_password": os.getenv("NEO4J_PASSWORD", ""),
+                    }
+                )
+
             self.grag_memory = GRAGMemoryManager.get_instance(config)
-            self.logger.info(f"[Neo4j] GRAG 知识图谱已连接: {neo4j_uri}")
+            backend = "Neo4j" if use_neo4j else "SQLite graph_store"
+            self.logger.info(f"[GRAG] 知识图谱已初始化（后端: {backend}）")
 
             # 注入到 MemoryNet，使决策中枢能访问
             if self.memory_net:
                 self.memory_net.grag_memory = self.grag_memory
-                self.logger.info("[Neo4j] GRAG 已注入 MemoryNet")
+                self.logger.info(f"[GRAG] 已注入 MemoryNet（后端: {backend}）")
 
         except Exception as e:
-            self.logger.warning(f"[Neo4j] 知识图谱初始化失败: {e}")
+            self.logger.warning(f"[GRAG] 知识图谱初始化失败: {e}")
             self.grag_memory = None
 
     async def process_input_async(self, user_input: str, user_id: str = "default") -> str:
@@ -856,45 +893,55 @@ class Miya:
                 self.logger.debug(f"{name} 关闭失败: {e}")
 
         # 1. 调度器（async）
-        if getattr(self, 'scheduler', None):
+        if getattr(self, "scheduler", None):
             await _safe_close("调度器", self.scheduler.stop)
 
         # 2. 决策中枢（当前无 shutdown 方法，hasattr 保护）
-        if getattr(self, 'decision_hub', None) and hasattr(self.decision_hub, 'shutdown'):
+        if getattr(self, "decision_hub", None) and hasattr(self.decision_hub, "shutdown"):
             await _safe_close("DecisionHub", self.decision_hub.shutdown)
 
         # 3. M-Link（MLinkCore 当前无 close，hasattr 保护）
-        if getattr(self, 'mlink', None) and hasattr(self.mlink, 'close'):
+        if getattr(self, "mlink", None) and hasattr(self.mlink, "close"):
             await _safe_close("M-Link", self.mlink.close)
 
         # 4. MemoryNet（自身无 close，改关闭 memory 层后端，P7.1 补齐）
-        if getattr(self, 'memory_net', None):
+        if getattr(self, "memory_net", None):
             await _safe_close("MemoryNet后端", self._close_memory_backends)
 
         # 5. AI 客户端
-        if getattr(self, 'ai_client', None) and hasattr(self.ai_client, 'close'):
+        if getattr(self, "ai_client", None) and hasattr(self.ai_client, "close"):
             await _safe_close("AI客户端", self.ai_client.close)
 
         # 6. Redis（sync）
-        if getattr(self, 'redis', None):
+        if getattr(self, "redis", None):
             await _safe_close("Redis", self.redis.close)
 
         # 7. 多模态分析器（模块级 _global_analyzer 单例，P7.1 新增）
         try:
             from core.multi_vision_analyzer import _global_analyzer
+
             if _global_analyzer is not None:
                 await _safe_close("多模态分析器", _global_analyzer.close)
         except Exception as e:
             self.logger.debug(f"多模态分析器关闭失败: {e}")
 
         # 8. Neo4j（async，P7.1 新增）
-        if getattr(self, 'grag_memory', None):
+        if getattr(self, "grag_memory", None):
             await _safe_close("Neo4j", self.grag_memory.close)
+        # 2026-09 补充：关闭健康检查用的独立 Neo4j 驱动（此前构造后泄漏不关）
+        _neo4j_driver = getattr(self, "neo4j", None)
+        if _neo4j_driver is not None:
+
+            def _close_driver():
+                _neo4j_driver.close()
+
+            await _safe_close("Neo4j健康检查驱动", _close_driver)
+            self.neo4j = None
 
         # 9. Uvicorn（改造后保存的 server/thread，P7.1 新增）
-        if getattr(self, '_uvicorn_server', None):
+        if getattr(self, "_uvicorn_server", None):
             self._uvicorn_server.should_exit = True
-        if getattr(self, '_server_thread', None) and self._server_thread.is_alive():
+        if getattr(self, "_server_thread", None) and self._server_thread.is_alive():
             self._server_thread.join(timeout=5)
 
         self.logger.info("弥娅系统已关闭")
@@ -903,8 +950,9 @@ class Miya:
         """关闭 memory 层后端（MemoryNet 自身无 close，P7.1 补齐真实关闭链）"""
         try:
             from memory import get_memory_core
+
             core = await get_memory_core()
-            if core is not None and hasattr(core, 'close'):
+            if core is not None and hasattr(core, "close"):
                 await core.close()
                 self.logger.debug("memory core 已关闭")
         except Exception as e:
@@ -915,10 +963,11 @@ class Miya:
         self.logger.info("弥娅系统正在关闭...")
 
         # 1. 调度器（停止定时任务）
-        if hasattr(self, 'scheduler') and self.scheduler:
+        if hasattr(self, "scheduler") and self.scheduler:
             try:
                 # Scheduler.stop() 是 async 方法，需要在事件循环中运行
                 import asyncio
+
                 try:
                     loop = asyncio.get_event_loop()
                     if loop.is_running():
@@ -933,9 +982,9 @@ class Miya:
                 self.logger.debug(f"调度器关闭失败: {e}")
 
         # 2. 决策中枢
-        if hasattr(self, 'decision_hub') and self.decision_hub:
+        if hasattr(self, "decision_hub") and self.decision_hub:
             try:
-                if hasattr(self.decision_hub, 'shutdown'):
+                if hasattr(self.decision_hub, "shutdown"):
                     self.decision_hub.shutdown()
             except Exception as e:
                 self.logger.debug(f"DecisionHub 关闭失败: {e}")
@@ -943,9 +992,9 @@ class Miya:
         # 3. M-Link 消息总线
         if self.mlink:
             try:
-                if hasattr(self.mlink, 'close'):
+                if hasattr(self.mlink, "close"):
                     self.mlink.close()
-                elif hasattr(self.mlink, 'shutdown'):
+                elif hasattr(self.mlink, "shutdown"):
                     self.mlink.shutdown()
             except Exception as e:
                 self.logger.debug(f"M-Link 关闭失败: {e}")
@@ -953,9 +1002,9 @@ class Miya:
         # 4. MemoryNet
         if self.memory_net:
             try:
-                if hasattr(self.memory_net, 'close'):
+                if hasattr(self.memory_net, "close"):
                     self.memory_net.close()
-                elif hasattr(self.memory_net, 'shutdown'):
+                elif hasattr(self.memory_net, "shutdown"):
                     self.memory_net.shutdown()
             except Exception as e:
                 self.logger.debug(f"MemoryNet 关闭失败: {e}")
@@ -963,7 +1012,7 @@ class Miya:
         # 5. AI 客户端（关闭 HTTP 会话）
         if self.ai_client:
             try:
-                if hasattr(self.ai_client, 'close'):
+                if hasattr(self.ai_client, "close"):
                     self.ai_client.close()
             except Exception as e:
                 self.logger.debug(f"AI 客户端关闭失败: {e}")
@@ -976,7 +1025,6 @@ class Miya:
                 self.logger.debug(f"Redis 关闭失败: {e}")
 
         self.logger.info("弥娅系统已关闭")
-
 
 
 def main():
@@ -1017,8 +1065,10 @@ async def amain():
         # 启动定时任务调度器
         if miya.scheduler:
             try:
+
                 async def terminal_callback(message: str):
                     print(f"\n【定时提醒】 {message}\n> ")
+
                 miya.scheduler.terminal_callback = terminal_callback
                 miya.scheduler.start_background()
             except Exception:
@@ -1026,9 +1076,7 @@ async def amain():
 
         # 启动主动聊天后台轮询
         if miya.decision_hub and miya.decision_hub.proactive_chat:
-            miya._proactive_task = asyncio.create_task(
-                miya.decision_hub.start_proactive_background()
-            )
+            miya._proactive_task = asyncio.create_task(miya.decision_hub.start_proactive_background())
 
         # 交互主循环
         await _interactive_loop(miya)
@@ -1049,7 +1097,7 @@ async def amain():
 
             # 取消主动聊天任务
             try:
-                if hasattr(miya, '_proactive_task'):
+                if hasattr(miya, "_proactive_task"):
                     miya._proactive_task.cancel()
                     with contextlib.suppress(asyncio.CancelledError):
                         await miya._proactive_task
@@ -1112,8 +1160,7 @@ async def _interactive_loop(miya) -> None:
                 continue
 
             # 占位命令 (Claude Code Engine 已移除)
-            if user_input.lower() in ["yes", "y", "是", "确认",
-                                       "取消", "cancel", "no", "n"]:
+            if user_input.lower() in ["yes", "y", "是", "确认", "取消", "cancel", "no", "n"]:
                 print(f"{miya.identity.name}: 此功能当前不通过终端提供\n")
                 continue
             if user_input.lower().startswith("switch ") or user_input.lower() == "list terminals":
@@ -1141,14 +1188,14 @@ def _print_status(miya) -> None:
     print("\n【人格状态】")
     print(f"  形态: {status['personality'].get('state', 'N/A')}")
     print(f"  主导特质: {status['personality'].get('dominant_trait', 'N/A')}")
-    vectors = status['personality'].get('vectors', {})
+    vectors = status["personality"].get("vectors", {})
     print("  人格向量:")
     for trait, value in vectors.items():
         print(f"    {trait}: {value:.2f}")
     print("\n【情绪状态】")
     print(f"  主导情绪: {status['emotion'].get('dominant', 'N/A')}")
     print(f"  情绪强度: {status['emotion'].get('intensity', 0):.2f}")
-    current = status['emotion'].get('current', {})
+    current = status["emotion"].get("current", {})
     print("  当前情绪:")
     for emotion, intensity in current.items():
         print(f"    {emotion}: {intensity:.2f}")
@@ -1156,15 +1203,15 @@ def _print_status(miya) -> None:
     print(f"  潮汐记忆: {status['memory_stats'].get('tide_count', 0)}条")
     print(f"  长期记忆: {status['memory_stats'].get('longterm_count', 0)}条")
     print("\n【感知状态】")
-    perception = status.get('perception', {})
+    perception = status.get("perception", {})
     print(f"  全局激活: {perception.get('global_active', 'N/A')}")
     print(f"  外部感知: {perception.get('external_active', 'N/A')}")
     print("\n【信任统计】")
-    trust = status.get('trust_stats', {})
+    trust = status.get("trust_stats", {})
     print(f"  平均信任: {trust.get('avg_score', 'N/A')}")
     print(f"  总交互: {trust.get('total_interactions', 'N/A')}")
     print("\n【系统健康】")
-    entropy = status.get('entropy_health', {})
+    entropy = status.get("entropy_health", {})
     print(f"  熵值: {entropy.get('current_entropy', 'N/A')}")
     print(f"  健康状态: {entropy.get('status', 'N/A')}")
     print()

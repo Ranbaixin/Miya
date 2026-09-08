@@ -96,9 +96,7 @@ def _make_day_fn(offset: int):
 
 def _make_week_fn(offset: int):
     def fn(now: datetime):
-        monday = (now - timedelta(days=now.weekday())).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
+        monday = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
         start = monday + timedelta(weeks=offset)
         end = start + timedelta(weeks=1)
         if offset == 0:
@@ -178,8 +176,7 @@ def _parse_dynamic(text: str, now: datetime) -> Optional[TemporalRange]:
         if not raw_days.isdigit() and m.group(1) in _CONFIG.get("fuzzy_days", {}):
             days = _CONFIG["fuzzy_days"][m.group(1)]
         return TemporalRange(
-            now.replace(hour=0, minute=0, second=0, microsecond=0)
-            - timedelta(days=days),
+            now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days),
             now,
             f"最近{days}天",
         )
@@ -189,9 +186,7 @@ def _parse_dynamic(text: str, now: datetime) -> Optional[TemporalRange]:
     m = re.search(regex_str, text)
     if m:
         days = int(m.group(1))
-        start = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(
-            days=days
-        )
+        start = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days)
         return TemporalRange(start, start + timedelta(days=1), f"{days}天前")
 
     # "N小时前"
@@ -218,9 +213,7 @@ def reload_config():
     _PATTERNS = _build_patterns()
 
 
-def parse_temporal(
-    text: str, now: Optional[datetime] = None
-) -> Optional[TemporalRange]:
+def parse_temporal(text: str, now: Optional[datetime] = None) -> Optional[TemporalRange]:
     """解析文本中的时间表达式
 
     Args:

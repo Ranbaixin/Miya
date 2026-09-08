@@ -71,16 +71,22 @@ async def test_delete_batch_writes_both(core):
 
 
 async def test_archive_old_syncs_sqlite(core):
-    """归档路径（archive_old）也同步 SQLite。"""
+    """归档路径（archive_old）也同步 SQLite。
+
+    2026-09：archive_old 改为磁盘索引预筛，伪造时间需同时更新
+    索引条目与记忆本体（真实数据流中两者一致）。
+    """
     mid = await core.store(
         "old dialogue", user_id="u1", level=MemoryLevel.DIALOGUE
     )
     m = await core.get_by_id(mid)
     assert m is not None
-    # 伪造 100 天前的创建时间
+    # 伪造 100 天前的创建时间（索引 + 记忆本体）
     from datetime import datetime, timedelta
 
-    m.created_at = (datetime.now() - timedelta(days=100)).isoformat()
+    old_ts = (datetime.now() - timedelta(days=100)).isoformat()
+    m.created_at = old_ts
+    core.backend._index[mid]["created_at"] = old_ts
     core.sqlite_backend.saved_ids.clear()
     n = await core.archive_old(days=90)
     assert n >= 1

@@ -4,12 +4,8 @@
 """
 
 import logging
-import subprocess
 from datetime import datetime
 from typing import Any, Dict
-
-import numpy as np
-import pandas as pd
 
 from core.text_loader import get_permission
 
@@ -24,6 +20,7 @@ except ImportError:
     FASTAPI_AVAILABLE = False
     APIRouter = object
     HTTPException = Exception
+
     def Depends(x):
         return x
 
@@ -83,30 +80,21 @@ class ToolRoutes:
 
                 # 从 user_info 获取用户ID
                 web_user_id = user_info.get("web_user_id", "web_default")
-                has_permission = perm_core.check_permission(
-                    web_user_id, required_permission
-                )
+                has_permission = perm_core.check_permission(web_user_id, required_permission)
 
                 if not has_permission:
                     # 检查是否是系统管理员
-                    has_permission = perm_core.check_permission(
-                        "system_admin", required_permission
-                    )
+                    has_permission = perm_core.check_permission("system_admin", required_permission)
 
                 if not has_permission:
                     return {
                         "success": False,
-                        "error": get_permission(
-                            "tool_permissions.denied_message", "权限不足"
-                        ).format(
+                        "error": get_permission("tool_permissions.denied_message", "权限不足").format(
                             tool_name=request.tool_name, permission=required_permission
                         ),
                     }
 
-                if (
-                    hasattr(self.decision_hub, "tool_subnet")
-                    and self.decision_hub.tool_subnet
-                ):
+                if hasattr(self.decision_hub, "tool_subnet") and self.decision_hub.tool_subnet:
                     result = await self.decision_hub.tool_subnet.execute_tool(
                         tool_name=request.tool_name,
                         args=request.parameters,
@@ -124,10 +112,7 @@ class ToolRoutes:
         async def web_research(request: Dict[str, Any]):
             """网络调研工具"""
             try:
-                if (
-                    hasattr(self.decision_hub, "tool_subnet")
-                    and self.decision_hub.tool_subnet
-                ):
+                if hasattr(self.decision_hub, "tool_subnet") and self.decision_hub.tool_subnet:
                     result = await self.decision_hub.tool_subnet.execute_tool(
                         tool_name="web_research",
                         args=request,
@@ -145,6 +130,9 @@ class ToolRoutes:
         async def data_analyze(request: Dict[str, Any]):
             """数据分析工具"""
             try:
+                # 2026-09：pandas 按需加载（原顶层 import 使空载 RSS +60~100MB）
+                import pandas as pd
+
                 from tools.visualization.data_analyzer import DataAnalyzer
 
                 analyzer = DataAnalyzer()
@@ -176,6 +164,9 @@ class ToolRoutes:
         async def generate_chart(request: Dict[str, Any]):
             """图表生成工具"""
             try:
+                # 2026-09：pandas/numpy 按需加载（图表工具本就依赖 sklearn，未装时不可用）
+                import pandas as pd
+
                 from tools.visualization.chart_generator import ChartGenerator
 
                 generator = ChartGenerator()
@@ -193,9 +184,7 @@ class ToolRoutes:
                 if file_path:
                     try:
                         df = pd.read_csv(file_path)
-                        numeric_cols = df.select_dtypes(
-                            include=[np.number]
-                        ).columns.tolist()
+                        numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
                         str_cols = df.select_dtypes(include=["object"]).columns.tolist()
                         if str_cols:
                             x_column = str_cols[0]
@@ -241,9 +230,7 @@ class ToolRoutes:
                                 output_path=output_path,
                             )
                         else:
-                            result = chart_method(
-                                data=df, title=title, output_path=output_path
-                            )
+                            result = chart_method(data=df, title=title, output_path=output_path)
                     except Exception as e:  # noqa: BLE001 — 图表生成失败，降级返回错误串
                         result = f"生成图表失败: {str(e)}"
                 else:
@@ -258,10 +245,7 @@ class ToolRoutes:
         async def web_search(request: Dict[str, Any]):
             """网络搜索工具"""
             try:
-                if (
-                    hasattr(self.decision_hub, "tool_subnet")
-                    and self.decision_hub.tool_subnet
-                ):
+                if hasattr(self.decision_hub, "tool_subnet") and self.decision_hub.tool_subnet:
                     result = await self.decision_hub.tool_subnet.execute_tool(
                         tool_name="web_search",
                         args=request,
@@ -294,39 +278,19 @@ class ToolRoutes:
 
         @self.router.post("/task_execute")
         async def task_execute(request: Dict[str, Any]):
-            """执行任务"""
+            """执行任务（2026-09 安全加固：已移除 shell=True 命令执行分支，
+            仅允许通过工具子网调用注册工具）"""
             try:
                 task_type = request.get("type")
                 parameters = request.get("parameters", {})
-                command = request.get("command", "")
 
-                # 如果有 command，尝试作为 shell 命令执行
-                if command:
-                    try:
-                        result = subprocess.run(
-                            command,
-                            shell=True,
-                            capture_output=True,
-                            text=True,
-                            timeout=60,
-                            encoding="utf-8",
-                            errors="replace",
-                        )
-                        output = result.stdout or result.stderr or "命令执行完成"
-                        return {
-                            "success": True,
-                            "result": output,
-                            "exit_code": result.returncode,
-                        }
-                    except subprocess.TimeoutExpired:
-                        return {"success": False, "error": "命令执行超时"}
-                    except (OSError, ValueError) as e:
-                        return {"success": False, "error": str(e)}
+                if request.get("command"):
+                    return {
+                        "success": False,
+                        "error": "已禁用直接命令执行：请通过工具子网调用注册工具",
+                    }
 
-                if (
-                    hasattr(self.decision_hub, "tool_subnet")
-                    and self.decision_hub.tool_subnet
-                ):
+                if hasattr(self.decision_hub, "tool_subnet") and self.decision_hub.tool_subnet:
                     # 根据任务类型调用对应工具
                     tool_mapping = {
                         "data_analyze": "data_analyzer",

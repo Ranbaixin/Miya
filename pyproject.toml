@@ -147,17 +147,18 @@ win32 = [
 [dependency-groups]
 # 轻量可用组：真实运行所需的最小集合（不含 torch/transformers 等重依赖）
 # uv sync 默认安装本组（见 [tool.uv] default-groups）
+# 2026-09 内存优化：移除 pandas/matplotlib/loguru/neo4j——
+#   - pandas/matplotlib：仅图表/Excel 工具按需使用（web_api/tools.py 已改函数内懒加载，
+#     且该工具链依赖 sklearn 本就不可用）；启动即 import 曾使空载 RSS +60~100MB
+#   - loguru：全仓库无运行时引用
+#   - neo4j：图谱默认走 SQLite graph_store（memory/graph_store.py），驱动仅显式启用时需要
 runtime = [
     "openai>=1.3.0,<2.0.0",
     "tiktoken>=0.5.0",
     "tenacity>=8.2.0",
     "jieba>=0.42.1",
-    "loguru>=0.7.0",
     "chardet>=5.1.0",
     "apscheduler>=3.10.0",
-    "pandas>=2.0.0,<3.0.0",
-    "matplotlib>=3.7.0,<4.0.0",
-    "neo4j>=5.0.0,<6.0.0",
     "redis>=4.5.0,<6.0.0",
 ]
 dev = [
@@ -195,9 +196,10 @@ url = "https://download.pytorch.org/whl/cu124"
 explicit = true
 
 [tool.uv]
-# 2026-08 修复：默认安装 runtime+dev 组，否则 uv sync 后 openai 等关键依赖缺失
-# （AI 调用与 web_api 子路由不可用），且 pytest/ruff 等开发工具被移除
-default-groups = ["runtime", "dev"]
+# 2026-09 内存/磁盘优化：默认仅装 runtime 组（dev 组约 200~400MB 磁盘）
+# 开发机需要测试/静态检查时：uv sync --group dev
+# 注意：pytest 等测试工具在 dev 组，CI 需显式 --group dev
+default-groups = ["runtime"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -172,6 +172,17 @@ class MiyaDaemon:
             except Exception as e:  # noqa: BLE001 — GRAG 初始化失败不影响核心，同步兜底仍可用
                 logger.warning(f"⚠️ GRAG 任务管理器初始化失败（将走同步提取）: {e}")
 
+        # 2026-09：接线定时遗忘循环（start_cleanup_task 此前零调用方，
+        # 过期删除/90天归档/低优先级衰减从未执行，短期记忆积压无人清理）
+        try:
+            from memory.core import get_memory_core
+
+            mem_core = await get_memory_core()
+            await mem_core.start_cleanup_task()
+            logger.info("✅ 记忆清理循环已启动（过期删除 + 90天归档 + 低优先级衰减）")
+        except Exception as e:  # noqa: BLE001 — 清理循环失败不影响核心服务
+            logger.warning(f"⚠️ 记忆清理循环启动失败: {e}")
+
         # 主动聊天后台轮询（可选，失败不影响核心服务）
         try:
             dh = getattr(self._miya, "decision_hub", None)
@@ -181,57 +192,63 @@ class MiyaDaemon:
         except Exception as e:  # noqa: BLE001 — 主动聊天失败不影响核心，已记录日志
             logger.warning(f"⚠️ 主动聊天启动失败（不影响核心服务）: {e}")
 
-        # 2026-08：记忆健康检查（后台线程执行，不阻塞启动）
+        # 2026-09：启动辅助子进程（健康检查 + 可选 Neo4j 迁移补课）延后 60s 执行，
+        # 削峰启动内存/IO；Neo4j 迁移默认关闭（图谱已改用 SQLite graph_store），
+        # 显式设置 MIYA_ENABLE_NEO4J_MIGRATE=1 才会执行。
         try:
+            import os
             import subprocess
             import sys
 
             from pathlib import Path as _Path
 
             health_script = _Path(__file__).parent.parent / "scripts" / "memory_health_check.py"
-            if health_script.exists():
-                task = asyncio.create_task(
-                    asyncio.to_thread(
+            migrate_script = _Path(__file__).parent.parent / "scripts" / "migrate_memory_to_neo4j.py"
+            enable_migrate = os.getenv("MIYA_ENABLE_NEO4J_MIGRATE", "").lower() in ("1", "true", "yes")
+
+            async def _delayed_startup_checks():
+                await asyncio.sleep(60)
+                if health_script.exists():
+                    await asyncio.to_thread(
                         subprocess.run,
                         [sys.executable, str(health_script)],
                         capture_output=True,
                         text=True,
                         timeout=120,
                     )
-                )
-                self._background_tasks.append(task)
-                logger.info("记忆健康检查已启动（后台）")
-        except Exception as e:  # noqa: BLE001 — 健康检查失败不影响核心
-            logger.warning(f"⚠️ 记忆健康检查启动失败（不影响核心服务）: {e}")
-
-        # 2026-08：存量记忆转存 Neo4j 增量补课（后台线程，幂等；本地记忆只读）
-        try:
-            import subprocess
-            import sys
-
-            from pathlib import Path as _Path
-
-            migrate_script = _Path(__file__).parent.parent / "scripts" / "migrate_memory_to_neo4j.py"
-            if migrate_script.exists():
-                task = asyncio.create_task(
-                    asyncio.to_thread(
+                    logger.info("记忆健康检查已完成（延后启动）")
+                if enable_migrate and migrate_script.exists():
+                    await asyncio.to_thread(
                         subprocess.run,
                         [sys.executable, str(migrate_script)],
                         capture_output=True,
                         text=True,
                         timeout=600,
                     )
-                )
-                self._background_tasks.append(task)
-                logger.info("记忆图迁移增量补课已启动（后台）")
-        except Exception as e:  # noqa: BLE001 — 迁移补课失败不影响核心
-            logger.warning(f"⚠️ 记忆图迁移启动失败（不影响核心服务）: {e}")
+                    logger.info("记忆图迁移增量补课已完成（延后启动）")
+
+            self._background_tasks.append(asyncio.create_task(_delayed_startup_checks()))
+            extra = " + Neo4j 迁移补课" if enable_migrate else ""
+            logger.info(f"启动辅助检查已排期（60s 后执行健康检查{extra}）")
+        except Exception as e:  # noqa: BLE001 — 辅助检查失败不影响核心
+            logger.warning(f"⚠️ 启动辅助检查排期失败（不影响核心服务）: {e}")
 
     async def _init_platforms(self, platform_ids: Optional[List[str]] = None):
-        """初始化并连接所有平台"""
+        """初始化并连接所有平台
+
+        2026-09 修复：显式校验 platform_ids，未知 id 立即报错并列出可用值，
+        不再静默"平台连接: 0/1 在线"（此前 --platforms webchat 报未知平台）。
+        """
         self._registry.on_broadcast(self._on_platform_broadcast)
 
         if platform_ids:
+            registered = {p["id"] for p in self._registry.list_registered()}
+            unknown = [pid for pid in platform_ids if pid not in registered]
+            if unknown:
+                raise ValueError(
+                    f"未知平台: {', '.join(unknown)}；可用平台: {', '.join(sorted(registered))}"
+                    "（注意：仅已启用的平台可指定，可在 config/platforms_config.py 中启用）"
+                )
             results = {}
             for pid in platform_ids:
                 results[pid] = await self._registry.start(pid, miya_core=self._miya)
@@ -302,21 +319,43 @@ class MiyaDaemon:
             logger.warning(f"状态保存失败: {e}")
 
     async def _close_miya_core(self):
-        """关闭 Miya 核心"""
+        """关闭 Miya 核心
+
+        2026-09 修复（P1 关闭链）：此前 daemon 退出从不调用 Miya.ashutdown()，
+        导致 8000 Web API 的非 daemon uvicorn 线程永不停止（进程悬挂），
+        且 ai_client/记忆后端/GRAG/Neo4j 等均绕过关闭链。ashutdown 内部
+        每步有 _safe_close 超时保护，可安全幂等调用。
+        """
         try:
             if self._miya:
+                # 与终端模式(run/main.py amain finally)相同的关闭顺序：
+                # 先落盘会话历史，再走 ashutdown 完整关闭链
                 conv_hist = getattr(self._miya, "conversation_history", None)
                 if conv_hist and hasattr(conv_hist, "flush"):
                     await conv_hist.flush()
                 if conv_hist and hasattr(conv_hist, "close"):
                     await conv_hist.close()
+
+                ashutdown = getattr(self._miya, "ashutdown", None)
+                if ashutdown:
+                    await ashutdown()
         except Exception as e:  # noqa: BLE001 — 核心关闭异常已记录日志
             logger.warning(f"Miya 核心关闭异常: {e}")
 
     async def _scheduler_lifecycle(self, action: str) -> None:
-        """启动或停止定时任务调度器（统一生命周期入口）"""
+        """启动或停止定时任务调度器（统一生命周期入口）
+
+        2026-09 修复（P2 调度器双实例）：daemon 启动前先把 Miya.scheduler
+        （DecisionHub/ToolNet 经 tool_context 持有的实例）登记为全局单例，
+        避免 tool_context 注册的定时任务落在从未 start 的孤立实例上。
+        """
         try:
-            from hub.scheduler import get_global_scheduler
+            from hub.scheduler import get_global_scheduler, set_global_scheduler
+
+            if self._miya:
+                miya_scheduler = getattr(self._miya, "scheduler", None)
+                if miya_scheduler is not None:
+                    set_global_scheduler(miya_scheduler)
 
             scheduler = get_global_scheduler()
             if action == "start":
@@ -374,11 +413,16 @@ class MiyaDaemon:
     def get_daemon_status(self) -> Dict[str, Any]:
         """获取守护进程状态"""
         uptime = (datetime.now() - self.start_time).total_seconds() if self.start_time else 0
+        # 2026-09 加固：暴露 AI 降级状态，避免 AI 不可用时健康检查显示"假活"
+        ai_degraded = not (self._miya and getattr(self._miya, "ai_client", None))
         return {
             "version": self.VERSION,
             "started": self._started,
             "start_time": self.start_time.isoformat() if self.start_time else None,
             "uptime_seconds": uptime,
+            "degraded": {
+                "ai_client": ai_degraded,
+            },
             "platforms": {
                 "total": len(self._registry._platform_classes),
                 "online": len(self._registry.get_online_platforms()),

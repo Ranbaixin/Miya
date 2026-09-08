@@ -147,11 +147,7 @@ class TopicDriftDetector:
             for length in range(4, 1, -1):
                 if i + length <= len(text):
                     word = text[i : i + length]
-                    if (
-                        word not in self._stopwords
-                        and not word.isdigit()
-                        and len(word.strip()) > 0
-                    ):
+                    if word not in self._stopwords and not word.isdigit() and len(word.strip()) > 0:
                         words.append(word)
                         i += length - 1
                         break
@@ -193,8 +189,7 @@ class TopicDriftDetector:
         is_drift = avg_similarity < self.drift_threshold
         if is_drift:
             logger.info(
-                f"[话题漂移] group={group_id}, 相似度={avg_similarity:.2f} < {self.drift_threshold}, "
-                f"判定为话题切换"
+                f"[话题漂移] group={group_id}, 相似度={avg_similarity:.2f} < {self.drift_threshold}, " f"判定为话题切换"
             )
 
         return is_drift, avg_similarity
@@ -244,13 +239,17 @@ class WorkingMemoryManager:
 
     def __init__(
         self,
-        max_recent_messages: int = 15,
+        max_recent_messages: Optional[int] = None,
         max_background_topics: int = 5,
         topic_decay_rate: float = 0.3,
         topic_switch_threshold: int = 3,
         drift_threshold: float = 0.2,
         min_messages_before_fold: int = 5,
     ):
+        # 2026-09 修复：max_recent_messages 真正从 text_config 读取
+        # （原写死 15，配置项 working_memory.max_recent_messages=5 从未生效）
+        if max_recent_messages is None:
+            max_recent_messages = int(_load_working_memory_config().get("max_recent_messages", 15))
         self.max_recent = max_recent_messages
         self.max_background = max_background_topics
         self.decay_rate = topic_decay_rate
@@ -322,11 +321,7 @@ class WorkingMemoryManager:
             state.recent_messages = state.recent_messages[-self.max_recent :]
 
         # 4. 如果话题漂移且消息数足够，折叠旧话题
-        if (
-            is_drift
-            and state.current_topic
-            and self._message_counts[group_id] >= self.min_messages_before_fold
-        ):
+        if is_drift and state.current_topic and self._message_counts[group_id] >= self.min_messages_before_fold:
             self._fold_current_topic(state)
             state.topic_switch_count += 1
 
@@ -334,17 +329,13 @@ class WorkingMemoryManager:
         # 【修复】话题消息也加入发送者ID
         topic_msg = f"{sender}[{sender_id}]: {content}" if sender_id else f"{sender}: {content}"
         if is_drift or state.current_topic is None:
-            state.current_topic = self._create_new_topic(
-                group_id, sender, content, sender_id
-            )
+            state.current_topic = self._create_new_topic(group_id, sender, content, sender_id)
         else:
             state.current_topic.messages.append(topic_msg)
             state.current_topic.last_active = time.time()
             state.current_topic.message_count += 1
             # 更新关键词
-            state.current_topic.keywords = list(
-                self.drift_detector.get_current_topic_keywords(group_id)
-            )
+            state.current_topic.keywords = list(self.drift_detector.get_current_topic_keywords(group_id))
 
         state.last_update = time.time()
 
@@ -358,10 +349,7 @@ class WorkingMemoryManager:
             "is_low_info": is_low_info,
             "current_topic": state.current_topic.summary if state.current_topic else "",
             "recent_messages": state.recent_messages.copy(),
-            "background_topics": [
-                {"summary": t.summary, "weight": t.weight}
-                for t in state.background_topics[-3:]
-            ],
+            "background_topics": [{"summary": t.summary, "weight": t.weight} for t in state.background_topics[-3:]],
             "media_analysis": state.media_analysis.copy(),
         }
 
@@ -397,9 +385,7 @@ class WorkingMemoryManager:
             return True
         return content in self._low_info_words
 
-    def _create_new_topic(
-        self, group_id: str, sender: str, content: str, sender_id: int = 0
-    ) -> TopicSegment:
+    def _create_new_topic(self, group_id: str, sender: str, content: str, sender_id: int = 0) -> TopicSegment:
         """创建新话题"""
         topic_id = hashlib.md5(f"{group_id}_{time.time()}".encode()).hexdigest()[:8]
         keywords = list(self.drift_detector.get_current_topic_keywords(group_id))
@@ -430,9 +416,7 @@ class WorkingMemoryManager:
         if old_topic.message_count > 2:
             first_msg = old_topic.messages[0] if old_topic.messages else ""
             last_msg = old_topic.messages[-1] if old_topic.messages else ""
-            old_topic.summary = (
-                f"[背景] 之前聊到：{first_msg[:30]}... 最后提到：{last_msg[:30]}..."
-            )
+            old_topic.summary = f"[背景] 之前聊到：{first_msg[:30]}... 最后提到：{last_msg[:30]}..."
         else:
             old_topic.summary = f"[背景] {' | '.join(old_topic.messages[:2])}"
 
@@ -446,10 +430,7 @@ class WorkingMemoryManager:
         if len(state.background_topics) > self.max_background:
             state.background_topics = state.background_topics[-self.max_background :]
 
-        logger.info(
-            f"[话题折叠] 旧话题已折叠: {old_topic.summary[:50]}..., "
-            f"权重={old_topic.weight:.2f}"
-        )
+        logger.info(f"[话题折叠] 旧话题已折叠: {old_topic.summary[:50]}..., " f"权重={old_topic.weight:.2f}")
 
     def build_prompt_context(self, group_id: str) -> str:
         """
@@ -471,11 +452,7 @@ class WorkingMemoryManager:
         # === 时间衰减恢复上下文 ===
         recovery_context = self._build_recovery_context(group_id, state)
 
-        if (
-            not state.recent_messages
-            and not state.background_topics
-            and not recovery_context
-        ):
+        if not state.recent_messages and not state.background_topics and not recovery_context:
             return ""
 
         lines = []
@@ -588,30 +565,17 @@ class WorkingMemoryManager:
 
         elif phase == SessionPhase.WARM:
             topic_history = self._get_topic_history_for(group_id)
-            messages_for_summary = (
-                state.recent_messages[-10:]
-                if state.recent_messages
-                else extra_messages[-10:]
-            )
-            summary = (
-                generate_topic_summary(messages_for_summary)
-                if messages_for_summary
-                else ""
-            )
+            messages_for_summary = state.recent_messages[-10:] if state.recent_messages else extra_messages[-10:]
+            summary = generate_topic_summary(messages_for_summary) if messages_for_summary else ""
             topic_tags = ""
             if topic_history:
                 unique = list(dict.fromkeys(topic_history))[:3]
                 topic_tags = f"【{'、'.join(unique)}】"
-            return (
-                f"【{phase_desc}】{topic_tags}{summary}\n"
-                f"[提示] 以上为上次对话摘要，请自然接续"
-            )
+            return f"【{phase_desc}】{topic_tags}{summary}\n" f"[提示] 以上为上次对话摘要，请自然接续"
 
         elif phase == SessionPhase.COLD:
             topic_history = self._get_topic_history_for(group_id)
-            messages_for_summary = (
-                state.recent_messages if state.recent_messages else extra_messages[-5:]
-            )
+            messages_for_summary = state.recent_messages if state.recent_messages else extra_messages[-5:]
             summary = generate_cold_summary(messages_for_summary, topic_history)
             if summary:
                 return f"【{phase_desc}】{summary}"
@@ -744,9 +708,7 @@ class WorkingMemoryManager:
                         continue
 
                     sid = messages[0].get("session_id", "")
-                    is_private = sid.endswith(f"_{user_id}") or sid.endswith(
-                        f"_用户-{user_id}"
-                    )
+                    is_private = sid.endswith(f"_{user_id}") or sid.endswith(f"_用户-{user_id}")
                     if not is_private:
                         continue
 
@@ -793,15 +755,15 @@ class WorkingMemoryManager:
         state = self._get_state(group_id)
         return {
             "recent_messages": state.recent_messages.copy(),
-            "current_topic": {
-                "summary": state.current_topic.summary if state.current_topic else "",
-                "keywords": state.current_topic.keywords if state.current_topic else [],
-                "message_count": state.current_topic.message_count
+            "current_topic": (
+                {
+                    "summary": state.current_topic.summary if state.current_topic else "",
+                    "keywords": state.current_topic.keywords if state.current_topic else [],
+                    "message_count": state.current_topic.message_count if state.current_topic else 0,
+                }
                 if state.current_topic
-                else 0,
-            }
-            if state.current_topic
-            else None,
+                else None
+            ),
             "background_topics": [
                 {
                     "summary": t.summary,
@@ -816,9 +778,7 @@ class WorkingMemoryManager:
     def cleanup_expired(self, max_age_seconds: int = 3600):
         """清理过期的工作记忆"""
         cutoff = time.time() - max_age_seconds
-        expired_groups = [
-            gid for gid, state in self._states.items() if state.last_update < cutoff
-        ]
+        expired_groups = [gid for gid, state in self._states.items() if state.last_update < cutoff]
         for gid in expired_groups:
             del self._states[gid]
             self.drift_detector.reset(gid)
@@ -839,7 +799,6 @@ class WorkingMemoryManager:
             with open(self._persist_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
-
             now = time.time()
             loaded = 0
 
@@ -857,14 +816,8 @@ class WorkingMemoryManager:
 
                 state = WorkingMemoryState()
                 state.media_analysis = media
-                state.recent_messages = (
-                    recent_msgs[-self.max_recent :] if recent_msgs else []
-                )
-                state.recent_senders = (
-                    {int(k): v for k, v in recent_senders_raw.items()}
-                    if recent_senders_raw
-                    else {}
-                )
+                state.recent_messages = recent_msgs[-self.max_recent :] if recent_msgs else []
+                state.recent_senders = {int(k): v for k, v in recent_senders_raw.items()} if recent_senders_raw else {}
                 state.last_update = last_active
                 state.last_persisted_active = last_active
                 self._states[gid] = state
@@ -913,9 +866,7 @@ class WorkingMemoryManager:
                     gid: {
                         "media_analysis": state.media_analysis,
                         "recent_messages": state.recent_messages,
-                        "recent_senders": {
-                            str(k): v for k, v in state.recent_senders.items()
-                        },
+                        "recent_senders": {str(k): v for k, v in state.recent_senders.items()},
                         "last_active_time": state.last_update,
                     }
                     for gid, state in self._states.items()

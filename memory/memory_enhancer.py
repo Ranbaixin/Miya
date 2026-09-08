@@ -14,6 +14,8 @@
 
 import json
 import logging
+import math
+import os
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -150,8 +152,6 @@ class MemoryEnhancer:
 
     async def initialize(self):
         """初始化"""
-        import os
-
         os.makedirs(self.data_dir, exist_ok=True)
 
         await self._load_links()
@@ -175,9 +175,7 @@ class MemoryEnhancer:
                                 target_id=l["target_id"],
                                 link_type=l["link_type"],
                                 strength=l.get("strength", 0.5),
-                                created_at=l.get(
-                                    "created_at", datetime.now().isoformat()
-                                ),
+                                created_at=l.get("created_at", datetime.now().isoformat()),
                             )
                             for l in links
                         ]
@@ -217,9 +215,7 @@ class MemoryEnhancer:
                 continue
 
             # 1. 语义关联 - 检查内容相似度
-            semantic_score = self._calc_semantic_similarity(
-                memory_item.content, existing.content
-            )
+            semantic_score = self._calc_semantic_similarity(memory_item.content, existing.content)
             if semantic_score > 0.6:
                 link = MemoryLink(
                     source_id=memory_item.id,
@@ -245,8 +241,7 @@ class MemoryEnhancer:
             # 3. 时间关联 - 检查时间邻近
             if memory_item.source == "dialogue" and existing.source == "dialogue":
                 time_diff = abs(
-                    self._parse_time(memory_item.created_at)
-                    - self._parse_time(existing.created_at)
+                    self._parse_time(memory_item.created_at) - self._parse_time(existing.created_at)
                 ).total_seconds()
                 if time_diff < 3600:  # 1小时内
                     link = MemoryLink(
@@ -384,15 +379,11 @@ class MemoryEnhancer:
             self._weights[memory_item.id] = weight
             await self._save_weights()
 
-            logger.info(
-                f"[MemoryEnhancer] 情感强化: {memory_item.id} - {emotion.primary.value}"
-            )
+            logger.info(f"[MemoryEnhancer] 情感强化: {memory_item.id} - {emotion.primary.value}")
 
         return memory_item
 
-    def get_emotion_memories(
-        self, user_id: str, emotion_type: Optional[EmotionType] = None
-    ) -> List[Dict]:
+    def get_emotion_memories(self, user_id: str, emotion_type: Optional[EmotionType] = None) -> List[Dict]:
         """获取情感记忆"""
         result = []
         # 遍历所有记忆查找情感记忆
@@ -411,9 +402,7 @@ class MemoryEnhancer:
                         self._weights[mem_id] = MemoryWeight(
                             base_weight=w.get("base_weight", 0.5),
                             decay_factor=w.get("decay_factor", 1.0),
-                            last_accessed=w.get(
-                                "last_accessed", datetime.now().isoformat()
-                            ),
+                            last_accessed=w.get("last_accessed", datetime.now().isoformat()),
                             emotional_boost=w.get("emotional_boost", 0.0),
                         )
                 logger.info(f"[MemoryEnhancer] 加载了 {len(self._weights)} 个记忆权重")
@@ -437,15 +426,22 @@ class MemoryEnhancer:
         except Exception as e:  # noqa: BLE001 — 权重为增强元数据，保存失败不中断增强流水线
             logger.error(f"[MemoryEnhancer] 保存权重失败: {e}")
 
-    def calculate_decay_weight(self, memory_id: str, created_at: str) -> float:
-        """计算衰减后的记忆权重"""
+    def calculate_decay_weight(self, memory_id: str, created_at: str, access_count: int = 0) -> float:
+        """计算衰减后的记忆权重（艾宾浩斯遗忘曲线）
+
+        2026-09：线性衰减改为指数衰减 exp(-0.05/天)；
+        间隔重复效应——被频繁回忆（access_count 高）的记忆衰减更慢，
+        每次回忆等效缩短记忆的"有效年龄"。
+        """
         weight = self._weights.get(memory_id, MemoryWeight())
 
         created_time = self._parse_time(created_at)
         days_since = (datetime.now() - created_time).total_seconds() / 86400
 
-        # 艾宾浩斯遗忘曲线模拟
-        decay = weight.decay_factor * (1 - self.decay_rate * days_since)
+        # 访问强化：access_count 每次 +25% 衰减减缓，最多 3 倍
+        access_relief = 1.0 + min(2.0, access_count * 0.25)
+
+        decay = weight.decay_factor * math.exp(-self.decay_rate * max(0.0, days_since) / access_relief)
 
         # 应用情感boost
         effective_weight = decay + weight.emotional_boost
@@ -453,13 +449,29 @@ class MemoryEnhancer:
         return max(0.1, min(1.0, effective_weight))
 
     async def on_memory_accessed(self, memory_id: str):
-        """记忆被访问时的处理"""
-        if memory_id in self._weights:
-            self._weights[memory_id].last_accessed = datetime.now().isoformat()
-            # 访问强化 - 稍微增加权重
-            self._weights[memory_id].decay_factor = min(
-                1.5, self._weights[memory_id].decay_factor + 0.05
-            )
+        """记忆被访问时的处理（回忆强化：重置衰减、提升衰减因子）"""
+        await self.on_memories_accessed([memory_id])
+
+    async def on_memories_accessed(self, memory_ids: List[str]):
+        """批量回忆强化（一次落盘，检索命中路径使用）"""
+        changed = False
+        for memory_id in memory_ids:
+            weight = self._weights.get(memory_id)
+            if weight is None:
+                weight = MemoryWeight()
+                self._weights[memory_id] = weight
+            weight.last_accessed = datetime.now().isoformat()
+            # 访问强化 - 稍微增加权重（下次衰减更慢）
+            weight.decay_factor = min(1.5, weight.decay_factor + 0.05)
+            changed = True
+
+        # 权重表容量保护：超限时淘汰最久未访问的，防止权重文件无限增长
+        if len(self._weights) > 2000:
+            oldest = sorted(self._weights, key=lambda k: self._weights[k].last_accessed)
+            for mid in oldest[: len(self._weights) - 2000]:
+                del self._weights[mid]
+
+        if changed:
             await self._save_weights()
 
     def get_fading_memories(self, threshold: float = 0.3) -> List[str]:
@@ -472,9 +484,7 @@ class MemoryEnhancer:
 
     # ==================== 长期记忆精炼 ====================
 
-    async def refine_long_term_memories(
-        self, memories: List["MemoryItem"]
-    ) -> List[str]:
+    async def refine_long_term_memories(self, memories: List["MemoryItem"]) -> List[str]:
         """精炼长期记忆 - 合并相似记忆"""
         if len(memories) < 2:
             return []
@@ -498,9 +508,7 @@ class MemoryEnhancer:
                     if mem2.id in to_remove:
                         continue
 
-                    similarity = self._calc_semantic_similarity(
-                        mem1.content, mem2.content
-                    )
+                    similarity = self._calc_semantic_similarity(mem1.content, mem2.content)
 
                     if similarity >= self.similarity_threshold:
                         # 合并 - 保留较新的
@@ -604,6 +612,3 @@ async def get_memory_enhancer(data_dir: str = "data/memory") -> MemoryEnhancer:
         _enhancer = MemoryEnhancer(data_dir)
         await _enhancer.initialize()
     return _enhancer
-
-
-import os

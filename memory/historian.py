@@ -129,7 +129,6 @@ def _load_assistant_self_patterns() -> Dict[str, Any]:
     cfg_patterns = _assistant_self_config.get("patterns", {})
     cfg_importance = _assistant_self_config.get("base_importance", {})
 
-
     for category, pattern_list in cfg_patterns.items():
         patterns[category] = []
         for item in pattern_list:
@@ -220,9 +219,7 @@ class Historian:
 
         return results
 
-    def _extract_assistant_self_memory(
-        self, ai_response: str
-    ) -> List[Tuple[str, str, float, List[str]]]:
+    def _extract_assistant_self_memory(self, ai_response: str) -> List[Tuple[str, str, float, List[str]]]:
         """从弥娅的回复中提取自记忆
 
         模式从 text_config.json 的 assistant_self.patterns 加载
@@ -253,9 +250,7 @@ class Historian:
 
         return results
 
-    def _extract_group_discussion(
-        self, text: str
-    ) -> Optional[Tuple[str, float, List[str]]]:
+    def _extract_group_discussion(self, text: str) -> Optional[Tuple[str, float, List[str]]]:
         """提取群聊中有价值的讨论内容
 
         Returns:
@@ -367,8 +362,7 @@ class Historian:
 
             if memory_uuid:
                 logger.info(
-                    f"[星璇·自记忆] {info_type}: {content[:30]}... "
-                    f"(importance={importance}, level={level.value})"
+                    f"[星璇·自记忆] {info_type}: {content[:30]}... " f"(importance={importance}, level={level.value})"
                 )
                 return True
         except Exception as e:  # noqa: BLE001 — 以 False 返回值向调用方传递失败信号
@@ -426,9 +420,7 @@ class Historian:
             )
 
             if memory_uuid:
-                logger.info(
-                    f"[Historian] 已记忆: {content[:30]}... (importance={importance}, group={group_id})"
-                )
+                logger.info(f"[Historian] 已记忆: {content[:30]}... (importance={importance}, group={group_id})")
                 return True
         except Exception as e:  # noqa: BLE001 — 以 False 返回值向调用方传递失败信号
             logger.error(f"[Historian] 保存记忆失败: {e}")
@@ -541,13 +533,7 @@ class Historian:
                 # 升级条件：高优先级(>=0.7) 或 手动标记的记忆
                 priority = getattr(mem, "priority", 0)
                 source = getattr(mem, "source", None)
-                source_val = (
-                    source.value
-                    if hasattr(source, "value")
-                    else str(source)
-                    if source
-                    else ""
-                )
+                source_val = source.value if hasattr(source, "value") else str(source) if source else ""
 
                 if priority >= 0.7 or source_val == "manual":
                     # 升级为长期记忆
@@ -566,9 +552,7 @@ class Historian:
                     upgraded_count += 1
 
             if upgraded_count > 0:
-                logger.info(
-                    f"[Historian] 自动归档: 升级了 {upgraded_count} 条短期记忆为长期记忆"
-                )
+                logger.info(f"[Historian] 自动归档: 升级了 {upgraded_count} 条短期记忆为长期记忆")
 
         except Exception as e:  # noqa: BLE001 — 归档为可选维护，失败下次再试
             logger.debug(f"[Historian] 自动归档执行失败: {e}")

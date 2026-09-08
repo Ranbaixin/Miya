@@ -90,6 +90,7 @@ def get_phase_description(
     is_today = True
     if last_active_time is not None and 0 < last_active_time < 9e18:  # 排除 NaN/Inf
         import math
+
         if math.isfinite(last_active_time):
             last_date = datetime.fromtimestamp(last_active_time)
             is_today = last_date.date() == now.date()
@@ -100,17 +101,15 @@ def get_phase_description(
         if phase == SessionPhase.WARM:
             hours = int(elapsed_minutes / 60)
             if hours > 0:
-                desc = labels.get(
-                    "warm_with_elapsed", "之前聊过（已过{hours}小时）"
-                ).format(hours=hours)
+                desc = labels.get("warm_with_elapsed", "之前聊过（已过{hours}小时）").format(hours=hours)
             else:
                 desc = labels.get("warm_with_elapsed_zero", "之前聊过")
         elif phase == SessionPhase.COLD:
             hours = int(elapsed_minutes / 60)
             day_label = "今日" if is_today else "昨日"
-            desc = labels.get(
-                "cold_with_elapsed", "{day_label}有过对话（已过{hours}小时）"
-            ).format(day_label=day_label, hours=hours)
+            desc = labels.get("cold_with_elapsed", "{day_label}有过对话（已过{hours}小时）").format(
+                day_label=day_label, hours=hours
+            )
         else:
             desc = default_desc
     else:
@@ -146,9 +145,7 @@ def generate_topic_summary(messages: list, max_preview: int = 2) -> str:
         return ""
 
     if len(messages) == 1:
-        return (
-            f"最后一条: {_extract_sender(messages[0])}: {_extract_content(messages[0])}"
-        )
+        return f"最后一条: {_extract_sender(messages[0])}: {_extract_content(messages[0])}"
 
     first_content = _extract_content(messages[0])
     last_content = _extract_content(messages[-1])
@@ -160,9 +157,7 @@ def generate_topic_summary(messages: list, max_preview: int = 2) -> str:
     return f"{first_sender} 从「{first_content}」聊到「{last_content}」"
 
 
-def generate_cold_summary(
-    recent_messages: list, last_topics: Optional[list] = None
-) -> str:
+def generate_cold_summary(recent_messages: list, last_topics: Optional[list] = None) -> str:
     """冷层摘要：话题标签 + 最后 1-2 条原文"""
 
     parts = []
@@ -201,10 +196,7 @@ def get_warm_summary(messages: list, topic_history: Optional[list] = None) -> st
             f"[提示] 以上为上次对话摘要，请自然接续（不要生硬地问'我们聊到哪了'）"
         )
     else:
-        return (
-            f"[之前的对话] {topic_str}{rule_summary}\n"
-            f"[提示] 以上为上次对话摘要，请自然接续"
-        )
+        return f"[之前的对话] {topic_str}{rule_summary}\n" f"[提示] 以上为上次对话摘要，请自然接续"
 
 
 def format_elapsed_time(seconds: float) -> str:

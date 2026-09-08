@@ -45,17 +45,13 @@ class SessionManager:
             "session_id": session_id,
             "user_id": user_id,
             "platform": platform,
-            "category": category.value
-            if isinstance(category, SessionCategory)
-            else category,
+            "category": category.value if isinstance(category, SessionCategory) else category,
             "created_at": datetime.now().isoformat(),
             "message_count": 0,
         }
         return session_key
 
-    async def get_session(
-        self, session_id: str, platform: str = "unknown"
-    ) -> Optional[Dict]:
+    async def get_session(self, session_id: str, platform: str = "unknown") -> Optional[Dict]:
         """获取会话信息"""
         session_key = f"{platform}_{session_id}"
         return self._active_sessions.get(session_key)
@@ -65,9 +61,7 @@ class SessionManager:
     ) -> List[Dict]:
         """获取会话消息"""
         try:
-            mems = await get_dialogue_history(
-                session_id, platform=platform, limit=limit
-            )
+            mems = await get_dialogue_history(session_id, platform=platform, limit=limit)
             return [{"role": m.role, "content": m.content} for m in mems]
         except Exception:  # noqa: BLE001 — 对话历史读取失败返回空列表，调用方可降级
             return []
@@ -121,6 +115,7 @@ class SessionManager:
 
 
 _sessions_singleton: Optional[SessionManager] = None
+
 
 def get_session_manager() -> SessionManager:
     global _sessions_singleton

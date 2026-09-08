@@ -54,9 +54,7 @@ class CognitionCache:
                 self._cache[user_id] = deque(maxlen=self.max_per_user)
 
             self._cache[user_id].append(record)
-            logger.info(
-                f"[认知缓存] 新增记录: user={user_id}, thoughts={record.inner_thought[:30]}"
-            )
+            logger.info(f"[认知缓存] 新增记录: user={user_id}, thoughts={record.inner_thought[:30]}")
 
     async def get_recent(self, user_id: str, limit: int = 3) -> List[CognitionRecord]:
         """获取用户最近的认知记录"""

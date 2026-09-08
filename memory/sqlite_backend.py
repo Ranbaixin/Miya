@@ -107,20 +107,12 @@ class SQLiteBackend(MemoryBackend):
         self._table_name = self._config.get("table", {}).get("name", "memories")
         self._fts_enabled = self._config.get("table", {}).get("fts_enabled", True)
         self._fts_name = self._config.get("table", {}).get("fts_name", "memories_fts")
-        self._fts_columns = self._config.get("table", {}).get(
-            "fts_columns", ["content", "tags"]
-        )
+        self._fts_columns = self._config.get("table", {}).get("fts_columns", ["content", "tags"])
         self._indexes = self._config.get("indexes", [])
         self._defaults = self._config.get("defaults", {})
-        self._order_clause = self._config.get("query", {}).get(
-            "default_order", "priority DESC, created_at DESC"
-        )
-        self._like_prefix = self._config.get("query", {}).get(
-            "like_pattern_prefix", "%"
-        )
-        self._like_suffix = self._config.get("query", {}).get(
-            "like_pattern_suffix", "%"
-        )
+        self._order_clause = self._config.get("query", {}).get("default_order", "priority DESC, created_at DESC")
+        self._like_prefix = self._config.get("query", {}).get("like_pattern_prefix", "%")
+        self._like_suffix = self._config.get("query", {}).get("like_pattern_suffix", "%")
 
         self._init_db()
 
@@ -161,21 +153,15 @@ class SQLiteBackend(MemoryBackend):
             else:
                 col_defs.append(f"{col} {col_type}")
 
-        create_sql = (
-            f"CREATE TABLE IF NOT EXISTS {self._table_name} ({', '.join(col_defs)})"
-        )
+        create_sql = f"CREATE TABLE IF NOT EXISTS {self._table_name} ({', '.join(col_defs)})"
         conn.execute(create_sql)
 
         # 创建索引
         for idx in self._indexes:
-            idx_name = idx.get(
-                "name", f"idx_{self._table_name}_{idx.get('column', '')}"
-            )
+            idx_name = idx.get("name", f"idx_{self._table_name}_{idx.get('column', '')}")
             idx_col = idx.get("column", "")
             if idx_col:
-                conn.execute(
-                    f"CREATE INDEX IF NOT EXISTS {idx_name} ON {self._table_name}({idx_col})"
-                )
+                conn.execute(f"CREATE INDEX IF NOT EXISTS {idx_name} ON {self._table_name}({idx_col})")
 
         # FTS 虚拟表
         if self._fts_enabled and self._fts_columns:
@@ -212,9 +198,7 @@ class SQLiteBackend(MemoryBackend):
             "tags": json.dumps(memory.tags, ensure_ascii=False),
             "created_at": memory.created_at,
             "expires_at": memory.expires_at,
-            "source": memory.source.value
-            if memory.source
-            else self._defaults.get("source", ""),
+            "source": memory.source.value if memory.source else self._defaults.get("source", ""),
             "platform": memory.platform,
             "role": memory.role,
             "event_type": memory.event_type or "",
@@ -256,9 +240,7 @@ class SQLiteBackend(MemoryBackend):
             return None
         try:
             conn = self._get_conn()
-            row = conn.execute(
-                f"SELECT * FROM {self._table_name} WHERE id = ?", (memory_id,)
-            ).fetchone()
+            row = conn.execute(f"SELECT * FROM {self._table_name} WHERE id = ?", (memory_id,)).fetchone()
             if not row:
                 return None
             return self._row_to_memory(row)
@@ -295,11 +277,7 @@ class SQLiteBackend(MemoryBackend):
             if query.level:
                 conditions.append("level = ?")
                 # 2026-08 修复：level 可能为字符串（retrieve 直传）或枚举，统一转字符串
-                level_val = (
-                    query.level.value
-                    if hasattr(query.level, "value")
-                    else str(query.level)
-                )
+                level_val = query.level.value if hasattr(query.level, "value") else str(query.level)
                 params.append(level_val)
             if query.session_id:
                 conditions.append("session_id = ?")
@@ -345,9 +323,7 @@ class SQLiteBackend(MemoryBackend):
             logger.error(f"[SQLiteBackend] 查询失败: {e}")
             return []
 
-    async def count(
-        self, user_id: Optional[str] = None, level: Optional[str] = None
-    ) -> int:
+    async def count(self, user_id: Optional[str] = None, level: Optional[str] = None) -> int:
         if not self.enabled:
             return 0
         try:
@@ -361,9 +337,7 @@ class SQLiteBackend(MemoryBackend):
                 conditions.append("level = ?")
                 params.append(level)
             where = " AND ".join(conditions) if conditions else "1=1"
-            row = conn.execute(
-                f"SELECT COUNT(*) FROM {self._table_name} WHERE {where}", params
-            ).fetchone()
+            row = conn.execute(f"SELECT COUNT(*) FROM {self._table_name} WHERE {where}", params).fetchone()
             return row[0]
         except Exception as e:  # noqa: BLE001 — 计数失败返回 0，不影响调用方
             logger.error(f"[SQLiteBackend] 计数失败: {e}")
@@ -375,9 +349,7 @@ class SQLiteBackend(MemoryBackend):
             return {}
         try:
             conn = self._get_conn()
-            rows = conn.execute(
-                f"SELECT level, COUNT(*) FROM {self._table_name} GROUP BY level"
-            ).fetchall()
+            rows = conn.execute(f"SELECT level, COUNT(*) FROM {self._table_name} GROUP BY level").fetchall()
             return {row[0]: row[1] for row in rows}
         except Exception as e:  # noqa: BLE001 — 统计失败返回空字典，调用方可降级
             logger.error(f"[SQLiteBackend] 按层级统计失败: {e}")

@@ -72,24 +72,43 @@ class GRAGMemoryManager:
         self.context_length = self.config.get("context_length", 20)
         self.similarity_threshold = self.config.get("similarity_threshold", 0.7)
 
+        # 2026-09：默认 SQLite graph_store；Neo4j 仅在显式配置密码时启用
+        # （原 Neo4j 读取链路断裂：同步 Session 被 async with 调用，查询全抛异常）
+        self.use_neo4j = bool(self.config.get("use_neo4j", False)) and bool(self.config.get("neo4j_password", ""))
+        self._graph_store = None
+
         # 最近对话上下文
         self.recent_context: List[str] = []
 
         # 提取缓存（避免重复提取）
         self._extraction_cache: set = set()
 
-        # Neo4j 连接（惰性初始化）
+        # Neo4j 连接（惰性初始化；仅 use_neo4j 时尝试）
         self._neo4j_driver = None
         self._neo4j_initialized = False
 
         # 任务管理器集成
         self._task_manager = None
 
-        logger.info("[GRAG] 记忆系统初始化完成")
+        backend = "Neo4j" if self.use_neo4j else "SQLite graph_store"
+        logger.info(f"[GRAG] 记忆系统初始化完成（后端: {backend}）")
+
+    def _get_graph_store(self):
+        """惰性获取 SQLite 图存储"""
+        if self._graph_store is None:
+            try:
+                from memory.graph_store import get_graph_store
+
+                self._graph_store = get_graph_store()
+            except Exception as e:  # noqa: BLE001 — graph_store 不可用时降级
+                logger.warning(f"[GRAG] graph_store 初始化失败: {e}")
+        return self._graph_store if self._graph_store and self._graph_store.enabled else None
 
     @property
     def neo4j_driver(self):
-        """惰性初始化 Neo4j 连接"""
+        """惰性初始化 Neo4j 连接（仅 use_neo4j=True 时尝试，否则直接返回 None）"""
+        if not self.use_neo4j:
+            return None
         if not self._neo4j_initialized:
             try:
                 from neo4j import GraphDatabase
@@ -124,9 +143,7 @@ class GRAGMemoryManager:
                 text = payload.get("text", "")
                 return await self._extract_quintuples_sync(text)
 
-            self._task_manager.register_handler(
-                "quintuple_extract", handle_quintuple_extract
-            )
+            self._task_manager.register_handler("quintuple_extract", handle_quintuple_extract)
 
             # 启动任务管理器
             await start_task_manager()
@@ -227,9 +244,7 @@ class GRAGMemoryManager:
 
             response = await client.chat([AIMessage(role="user", content=prompt)])
 
-            content = (
-                response.content if hasattr(response, "content") else str(response)
-            )
+            content = response.content if hasattr(response, "content") else str(response)
 
             # 解析JSON（兼容中英文key名）
             try:
@@ -277,11 +292,7 @@ class GRAGMemoryManager:
                 if len(groups) >= 2:
                     q = Quintuple(
                         subject=groups[0].strip(),
-                        relation="是"
-                        if "是" in pattern
-                        else "叫"
-                        if "叫" in pattern
-                        else "喜欢",
+                        relation="是" if "是" in pattern else "叫" if "叫" in pattern else "喜欢",
                         object=groups[1].strip(),
                         attributes={},
                         context=text[:100],
@@ -293,51 +304,73 @@ class GRAGMemoryManager:
         return quintuples
 
     async def store_quintuple(self, quintuple: Quintuple) -> bool:
-        """存储五元组到图数据库"""
+        """存储五元组到图数据库
+
+        2026-09：默认写 SQLite graph_store；仅 use_neo4j=True 时双写 Neo4j。
+        """
         if not self.enabled:
             return False
 
-        driver = self.neo4j_driver
-        if not driver:
-            logger.warning("[GRAG] Neo4j 不可用，跳过存储")
+        stored = False
+
+        # 1. SQLite graph_store（默认主路径）
+        store = self._get_graph_store()
+        if store is not None:
+            try:
+                stored = await store.store_quintuple(
+                    subject=quintuple.subject,
+                    relation=quintuple.relation,
+                    object_=quintuple.object,
+                    context=quintuple.context,
+                    attributes=quintuple.attributes,
+                    timestamp=quintuple.timestamp,
+                )
+            except Exception as e:  # noqa: BLE001 — 单后端失败继续尝试 Neo4j
+                logger.error(f"[GRAG] graph_store 存储五元组失败: {e}")
+
+        # 2. Neo4j（可选双写；同步 driver 放线程池执行避免阻塞事件循环）
+        if self.use_neo4j:
+            driver = self.neo4j_driver
+            if driver:
+                try:
+
+                    def _run():
+                        with driver.session() as session:
+                            session.run(
+                                """
+                                MERGE (s:Entity {name: $subject})
+                                MERGE (o:Entity {name: $object})
+                                MERGE (s)-[r:RELATION {type: $relation}]->(o)
+                                SET r.timestamp = $timestamp,
+                                    r.context = $context,
+                                    r.attributes = $attributes
+                                """,
+                                subject=quintuple.subject,
+                                relation=quintuple.relation,
+                                object=quintuple.object,
+                                timestamp=quintuple.timestamp,
+                                context=quintuple.context,
+                                attributes=json.dumps(quintuple.attributes),
+                            )
+
+                    await asyncio.to_thread(_run)
+                    stored = True
+                except Exception as e:  # noqa: BLE001 — 存储五元组失败
+                    logger.error(f"[GRAG] Neo4j 存储五元组失败: {e}")
+
+        if not stored:
+            logger.warning("[GRAG] 五元组存储失败（graph_store/Neo4j 均未写入）")
             return False
 
-        try:
-            # FIX: GraphDatabase.driver 创建的是同步 driver；不能使用 async with/await session.run。
-            # 为避免阻塞事件循环，这里把同步的 Neo4j I/O 放入线程池执行。
-            def _run():
-                with driver.session() as session:
-                    session.run(
-                        """
-                        MERGE (s:Entity {name: $subject})
-                        MERGE (o:Entity {name: $object})
-                        MERGE (s)-[r:RELATION {type: $relation}]->(o)
-                        SET r.timestamp = $timestamp,
-                            r.context = $context,
-                            r.attributes = $attributes
-                        """,
-                        subject=quintuple.subject,
-                        relation=quintuple.relation,
-                        object=quintuple.object,
-                        timestamp=quintuple.timestamp,
-                        context=quintuple.context,
-                        attributes=json.dumps(quintuple.attributes),
-                    )
+        logger.debug(f"[GRAG] 已存储五元组: {quintuple.subject} - {quintuple.relation} -> {quintuple.object}")
+        return True
 
-            await asyncio.to_thread(_run)
+    async def query_by_keywords(self, keywords: List[str], limit: int = 10) -> List[Dict]:
+        """通过关键词查询知识图谱（graph_store 优先，Neo4j 兜底）"""
+        store = self._get_graph_store()
+        if store is not None:
+            return await store.query_by_keywords(keywords, limit)
 
-            logger.debug(
-                f"[GRAG] 已存储五元组: {quintuple.subject} - {quintuple.relation} -> {quintuple.object}"
-            )
-            return True
-        except Exception as e:  # noqa: BLE001 — 存储五元组失败
-            logger.error(f"[GRAG] 存储五元组失败: {e}")
-            return False
-
-    async def query_by_keywords(
-        self, keywords: List[str], limit: int = 10
-    ) -> List[Dict]:
-        """通过关键词查询知识图谱"""
         driver = self.neo4j_driver
         if not driver:
             return []
@@ -365,10 +398,12 @@ class GRAGMemoryManager:
             logger.error(f"[GRAG] 查询失败: {e}")
             return []
 
-    async def query_by_entity(
-        self, entity: str, relation: Optional[str] = None
-    ) -> List[Dict]:
-        """通过实体查询"""
+    async def query_by_entity(self, entity: str, relation: Optional[str] = None) -> List[Dict]:
+        """通过实体查询（graph_store 优先，Neo4j 兜底）"""
+        store = self._get_graph_store()
+        if store is not None:
+            return await store.query_by_entity(entity, relation)
+
         driver = self.neo4j_driver
         if not driver:
             return []
@@ -421,23 +456,27 @@ class GRAGMemoryManager:
 
     async def get_stats(self) -> Dict[str, Any]:
         """获取统计信息"""
+        store = self._get_graph_store()
+        if store is not None:
+            stats = await store.get_stats()
+            stats["context_length"] = len(self.recent_context)
+            return stats
+
         driver = self.neo4j_driver
         if not driver:
-            return {"enabled": self.enabled, "neo4j": "disconnected"}
+            return {"enabled": self.enabled, "backend": "none"}
 
         try:
             # FIX: 同步 Neo4j driver + 异步调用混用会报错；在线程中执行同步查询。
             def _run() -> Dict[str, Any]:
                 with driver.session() as session:
-                    result = session.run(
-                        """
+                    result = session.run("""
                         MATCH (n:Entity)
                         OPTIONAL MATCH ()-[r:RELATION]->()
                         // 2026-08 修复：MATCH(n) x OPTIONAL MATCH(r) 是笛卡尔积，
                         // count(r) 会变成 entities*relations；改用 DISTINCT 去重
                         RETURN count(DISTINCT n) as entities, count(DISTINCT r) as relations
-                        """
-                    )
+                        """)
                     record = result.single()
                     return {
                         "enabled": self.enabled,
@@ -453,6 +492,9 @@ class GRAGMemoryManager:
 
     async def close(self) -> None:
         """关闭连接"""
+        if self._graph_store is not None:
+            await self._graph_store.close()
+            self._graph_store = None
         if self._neo4j_driver:
             # FIX: GraphDatabase.driver 返回同步 driver；close() 不是 awaitable。
             await asyncio.to_thread(self._neo4j_driver.close)
