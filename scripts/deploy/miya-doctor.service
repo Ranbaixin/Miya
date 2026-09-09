@@ -1,0 +1,11 @@
+[Unit]
+Description=Miya Doctor - daily runtime self-check
+After=network-online.target miya-daemon.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/miya
+ExecStart=/opt/miya/.venv/bin/python /opt/miya/scripts/doctor.py --runtime --since "26 hours ago"
+# 结果追加到日志文件；doctor 退出码非 0（存在 FAIL）时 systemd 标记 failed，可 systemctl list-units 发现
+StandardOutput=append:/opt/miya/logs/doctor.log
+StandardError=append:/opt/miya/logs/doctor.log

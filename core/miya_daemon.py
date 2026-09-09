@@ -128,6 +128,10 @@ class MiyaDaemon:
 
         self.start_time = datetime.now()
 
+        # 0. 启动预检（告警不阻断）：配置语法/模型配置语义/环境变量，
+        #    防"带病不自知"上线（依赖缺失、视觉模型配错、API key 缺失等静默降级）
+        self._run_startup_preflight()
+
         # 1. 初始化 Miya 核心
         await self._init_miya_core()
 
@@ -191,6 +195,30 @@ class MiyaDaemon:
                 logger.info("✅ 主动聊天后台轮询已启动")
         except Exception as e:  # noqa: BLE001 — 主动聊天失败不影响核心，已记录日志
             logger.warning(f"⚠️ 主动聊天启动失败（不影响核心服务）: {e}")
+
+    def _run_startup_preflight(self):
+        """启动预检（core/doctor.run_preflight）：只告警不阻断，防止带病不自知上线"""
+        try:
+            from core.doctor import WARN, has_failures, run_preflight, summarize
+
+            findings = run_preflight()
+            counts = summarize(findings)
+            if not findings or (not has_failures(findings) and counts.get(WARN, 0) == 0):
+                logger.info("✅ 启动预检通过（配置/模型/环境变量）")
+                return
+            logger.warning("=" * 60)
+            logger.warning("⚠️ 启动预检发现问题（不阻断启动，建议尽快修复）：")
+            for f in findings:
+                for detail in f.details:
+                    if detail.startswith("["):
+                        logger.warning(f"  [{f.check_id}] {detail}")
+                for hint in f.fix_hints:
+                    logger.warning(f"      ↳ 修复: {hint}")
+            logger.warning("=" * 60)
+            if has_failures(findings):
+                logger.error(f"⚠️ 启动预检存在 FAIL 级问题 {counts}，完整诊断请运行: python scripts/doctor.py")
+        except Exception as e:  # noqa: BLE001 — 预检失败不影响核心启动
+            logger.warning(f"启动预检执行失败（不影响核心服务）: {e}")
 
         # 2026-09：启动辅助子进程（健康检查 + 可选 Neo4j 迁移补课）延后 60s 执行，
         # 削峰启动内存/IO；Neo4j 迁移默认关闭（图谱已改用 SQLite graph_store），

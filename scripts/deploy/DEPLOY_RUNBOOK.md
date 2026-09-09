@@ -41,6 +41,21 @@
 2. `MSYS_NO_PATHCONV=1 workbench upload <包> /tmp/b.tgz --instance-id <ID> --region cn-beijing --force`
 3. 服务器：`systemctl stop miya-daemon && tar -xzf /tmp/b.tgz -C /opt/miya && cd /opt/miya && uv sync --no-group dev && systemctl start miya-daemon`
 4. 数据目录 `data/` 会被覆盖——**只更新代码时打包要排除 data/**（加 `--exclude='./data'`）
+5. **部署后必跑冒烟**（服务状态/健康端点/NapCat/错误签名扫描/记忆一致性）：
+   `bash scripts/deploy/post_deploy_check.sh` —— 退出码非 0 = 存在 FAIL，修复后重试
+6. 部署涉及依赖变更时（pyproject.toml 改动），必须确认 `uv sync --no-group dev` 真正装上
+   （教训：pillow 在可选组导致服务器 PIL 缺失、QQ 多媒体工具整包静默加载失败）
+
+## 三.5、每日自动自检（systemd timer）
+
+```bash
+cp scripts/deploy/miya-doctor.service scripts/deploy/miya-doctor.timer /etc/systemd/system/
+systemctl daemon-reload && systemctl enable --now miya-doctor.timer
+```
+
+每天 04:00 自动跑 `doctor --runtime`（26h 窗口错误签名 / crash-loop / 健康端点 / 记忆一致性），
+结果追加到 `/opt/miya/logs/doctor.log`；有 FAIL 时 systemd 标记 failed，用
+`systemctl list-units --failed` 发现。本地手动跑：`make doctor`（全量 `python scripts/doctor.py --runtime`）
 
 ## 四、已知注意事项（部署实测发现）
 
