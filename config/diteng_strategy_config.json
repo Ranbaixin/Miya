@@ -62,13 +62,6 @@
     "用户在活跃对话中发消息，即使内容相同，也要回复"
   ],
   "comment6": "默认策略",
-  "default_strategy": {
-    "should_respond": true,
-    "response_strategy": "full_reply",
-    "message_intent": "chat",
-    "confidence": 0.5,
-    "reason": "默认策略",
-    "suggested_reply_style": "normal",
-    "max_messages": 1
-  }
+  "default_max_messages": 1,
+  "comment7": "default_max_messages: 默认每轮回复条数上限（diteng_listener 顶层读取；原 default_strategy 块因键路径漂移从未被消费，已删除）"
 }

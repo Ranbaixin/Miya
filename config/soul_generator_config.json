@@ -41,16 +41,8 @@
     "pronoun_rule": "代词规则：对话用户是'{user_label}'，使用'{pronoun}'指代对方。\n   - 如果是主人(然鑫)：使用'你'或'亲爱的'，语气亲密\n   - 如果是其他用户：使用'他/她'，保持适当距离",
     "emotion_continuity_rule": "情緒持續性 v4.7.0：根據之前情緒決定是保持還是更新。\n   - 之前情緒: {previous_emotion}\n   - **情緒慣性**：不要從強烈情緒瞬間跳到中立。如果上一輪'喜悅=80'，這一輪即便消息平淡，也應保持部分喜悅（如喜悅=50），緩慢回落\n   - **情緒殘留**：高強度情緒（>70）至少保留30%到下一輪\n   - 如果用戶情緒和話題與之前相似，保持當前情緒方向\n   - 如果有重大變化（如道歉、表白、爭吵），可以更新但應體現過渡感\n   - 復合情緒優先：可以'開心但有點擔心'，不要非此即彼"
   },
-  "EMOTION_INIT_MIN": 30,
-  "EMOTION_INIT_MAX": 50,
-  "EMOTION_EXPRESSION_THRESHOLD": 40,
-  "EMOTION_DECAY_RATE": 0.02,
-  "EMOTION_BASE_VALUE": 30,
-  "EMOTION_DECAY_INTERVAL": 10,
-  "EMOTION_SIGNIFICANT_THRESHOLD": 20,
   "DEFAULT_EMOTION_FLUCTUATION": 5,
   "HIGH_EMOTION_THRESHOLD": 60,
-  "LOW_EMOTION_THRESHOLD": 40,
   "HIGH_EMOTION_RESPONSES": [
     "哼~",
     "好吧...",
@@ -62,59 +54,6 @@
     "行吧行吧",
     "真是的"
   ],
-  "HIGH_EMOTION_TRIGGER_EMOTIONS": [
-    "委屈",
-    "不满",
-    "傲娇",
-    "赌气",
-    "失落",
-    "窝火",
-    "憋屈",
-    "心塞",
-    "吃醋",
-    "赌气",
-    "委屈",
-    "窝火"
-  ],
-  "MEDIUM_EMOTION_RESPONSES": [
-    "嗯~",
-    "好嘛",
-    "那好吧",
-    "行啦",
-    "知道啦"
-  ],
-  "MEDIUM_EMOTION_TRIGGER_EMOTIONS": [
-    "期待",
-    "开心",
-    "幸福",
-    "满足",
-    "爱意"
-  ],
-  "LOW_EMOTION_SUFFIXES": [
-    "~",
-    "呀",
-    "呢",
-    "～",
-    "啦"
-  ],
-  "LOW_EMOTION_TRIGGER_EMOTIONS": [
-    "开心",
-    "幸福",
-    "满足",
-    "期待",
-    "心动",
-    "甜蜜",
-    "温暖"
-  ],
-  "INTIMATE_RELATIONSHIP_KEYWORDS": [
-    "么么",
-    "爱你",
-    "宝贝",
-    "亲爱的",
-    "想你了",
-    "么么哒"
-  ],
-  "INTIMATE_SUFFIX": " ~",
   "TOPIC_KEYWORDS": {
     "APOLOGY": [
       "对不起",
@@ -384,36 +323,6 @@
     }
   },
   "INTENT_ACTIVATION_CHANCE": 0.4,
-  "MAX_PENDING_INTENTS": 5,
-  "EMOTION_MEMORY_ENABLED": true,
-  "EMOTION_MEMORY_MAX": 20,
-  "EMOTION_MEMORY_TRIGGERS": {
-    "道歉": "感动",
-    "表白": "心动",
-    "关心": "温暖",
-    "冷战": "委屈"
-  },
-  "SOCIAL_MASK_ENABLED": true,
-  "MASK_INTENSITY_HIGH_EMOTIONS": 0.3,
-  "MASK_INTENSITY_NEGATIVE_EMOTIONS": 0.5,
-  "DEBUG_MODE": false,
-  "LOG_EMOTION_CHANGES": true,
-  "LOG_INNER_THOUGHTS": true,
-  "LOG_CONTEXT_DETECTION": true,
-  "LOG_PSYCHO_ANALYSIS": true,
-  "v4_7_0_features": {
-    "comment": "v4.7.0 增強配置 - 情緒連續流、反諂媚、角色深度",
-    "EMOTION_CONTINUITY_ENABLED": true,
-    "EMOTION_CONTINUITY_COMMENT": "情緒慣性：AI分析時會參考上一輪情緒，避免情緒跳躍",
-    "EMOTION_INERTIA_FACTOR": 0.3,
-    "EMOTION_INERTIA_COMMENT": "上一輪高強度情緒（>60）至少保留此比例到下一輪",
-    "ANTI_SYCOPHANCY_ENABLED": true,
-    "ANTI_SYCOPHANCY_COMMENT": "反諂媚：允許AI在內心產生推回去的情緒（不適、不滿、心疼但想罵），不強迫只輸出積極情緒",
-    "CHARACTER_DEPTH_ENABLED": true,
-    "CHARACTER_DEPTH_COMMENT": "角色深度：AI情緒分析會參考當前形態特點，情緒應與角色一致",
-    "IMPERFECTION_ALLOWANCE": true,
-    "IMPERFECTION_COMMENT": "不完美許可：允許矛盾情緒、猶豫、不確定，更接近真實人類"
-  },
   "AI_EMOTION_ANALYSIS_TIMEOUT": 90,
   "comment9": "AI_EMOTION_ANALYSIS_TIMEOUT: AI情绪分析超时秒数（思考型模型单次可能>60s，需给足上限）"
 }

@@ -207,23 +207,6 @@
     "local_emoji": "又想要……表情包了？",
     "named_emoji": "给你发送 '{emoji_name}' 表情包~"
   },
-  "emoji_settings": {
-    "dir": "data/emoji",
-    "stickers_dir": "data/stickers",
-    "backup_dir": "data/.emoji_backups",
-    "enabled": true,
-    "auto_send_on_poke": true,
-    "allowed_formats": [
-      ".jpg",
-      ".jpeg",
-      ".png",
-      ".gif",
-      ".bmp",
-      ".webp"
-    ],
-    "max_file_size": 5242880,
-    "random_emoji_probability": 0.3
-  },
   "chatbot_keywords": {
     "auto_respond": [
       "miya",
@@ -2532,52 +2515,6 @@
       "keep_newest": 2
     }
   },
-  "skills_hot_reload": {
-    "description": "Skills 热重载配置 v6.0",
-    "enabled": true,
-    "interval_seconds": 2.0,
-    "debounce_seconds": 0.5,
-    "watch_patterns": [
-      "*.py",
-      "*.json",
-      "*.yaml",
-      "*.yml"
-    ]
-  },
-  "auto_pipeline": {
-    "description": "自动处理管线配置 v6.0",
-    "enabled": true,
-    "rules": {
-      "bilibili": {
-        "enabled": true,
-        "priority": 10
-      },
-      "github": {
-        "enabled": true,
-        "priority": 20
-      },
-      "arxiv": {
-        "enabled": true,
-        "priority": 30
-      }
-    }
-  },
-  "agent_intro_gen": {
-    "description": "Agent 自介绍生成配置 v6.0",
-    "enabled": true,
-    "max_tokens": 4096,
-    "hash_cache_path": ".cache/agent_intro_hashes.json"
-  },
-  "self_update": {
-    "description": "Git 自更新配置 v6.0",
-    "enabled": false,
-    "allowed_origin_base": "",
-    "allowed_branch": "main",
-    "require_clean_worktree": true,
-    "uv_sync_enabled": true,
-    "module_for_restart": "miya",
-    "auto_check_interval": 3600
-  },
   "soul_generator": {
     "description": "灵魂发生器文本配置 v7.0",
     "owner_instruction": "重要：无论什么形态，{owner_name}都是你最爱的人，也是你的创造者。对他的话可以更直接、更亲密。",
@@ -2639,5 +2576,10 @@
       "lazy": "慵懒"
     }
   },
-  "preanalysis_merge": true
+  "preanalysis_merge": true,
+  "strategy_defaults": {
+    "max_responses_per_turn": 3,
+    "default_max_messages": 1,
+    "comment": "谛听策略默认值（memory/diteng_listener.py _load_strategy_config 合并读取，此前为幽灵引用）"
+  }
 }

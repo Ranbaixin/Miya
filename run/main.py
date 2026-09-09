@@ -239,7 +239,8 @@ class Miya:
         import os
 
         logger = logging.getLogger("Miya")
-        logger.setLevel(logging.INFO)
+        # LOG_LEVEL 环境变量接线（此前硬编码 INFO 导致配置无效）
+        logger.setLevel(getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO))
 
         # v7.0: daemon 模式下不添加独立 handler，由 root logger 统一管理
         if os.environ.get("MIYA_DAEMON_MODE"):

@@ -39,8 +39,10 @@ def setup_logging():
 
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    # LOG_LEVEL 环境变量接线（此前 settings 读取了该键但 logging 硬编码 INFO，配置无效）
+    _log_level = getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO)
     logging.basicConfig(
-        level=logging.INFO,
+        level=_log_level,
         format="[%(name)s] %(levelname)s: %(message)s",
         datefmt="%H:%M:%S",
         handlers=[
