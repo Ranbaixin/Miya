@@ -104,7 +104,6 @@ viz = [
 ]
 
 qq-extras = [
-    "pillow>=10.0.0",
     "chardet>=5.1.0",
     "python-magic>=0.4.27",
     "tenacity>=8.2.0",
@@ -162,6 +161,9 @@ runtime = [
     "chardet>=5.1.0",
     "apscheduler>=3.10.0",
     "redis>=4.5.0,<6.0.0",
+    # QQ 多媒体工具链（qq_emoji/qq_file/qq_file_reader 顶层 import PIL），
+    # QQ 服务器部署仅装 runtime 组，pillow 必须随组安装（此前在 qq-extras 导致服务器工具加载失败）
+    "pillow>=10.0.0",
 ]
 dev = [
     "black>=23.12.0",
