@@ -84,7 +84,8 @@ class EnhancedWebSearch:
                 "json_body": True,
             },
         }
-        self._free_engines = ["baidu", "bing_cn", "duckduckgo_html", "duckduckgo_api"]
+        # 默认引擎只用国内可达的（DDG 在国内不可达，纯浪费等待时间）；tavily 有 key 时最前
+        self._free_engines = ["baidu", "bing_cn"]
 
         # 如果配置了 TAVILY_API_KEY，优先使用 Tavily
         if self._has_tavily_key():
@@ -93,20 +94,22 @@ class EnhancedWebSearch:
     def search(
         self, query: str, engines: List[str] = None, num_results: int = 10
     ) -> List[Dict[str, Any]]:
+        # 首个成功引擎即返回（拿到非空结果就停止），失败/空结果继续尝试下一个
         if engines is None:
             engines = self._free_engines
-        all_results = []
         for engine in engines:
             try:
                 engine_results = self._search_engine(query, engine, num_results)
-                all_results.extend(engine_results)
-                logger.info(f"{engine}引擎返回 {len(engine_results)} 个结果")
+                if engine_results:
+                    logger.info(f"{engine}引擎返回 {len(engine_results)} 个结果，采用")
+                    return self._rank_results(
+                        self._deduplicate_results(engine_results), query
+                    )
+                logger.warning(f"{engine}引擎返回空结果，尝试下一个引擎")
             except Exception as e:  # noqa: BLE001 - 已有日志兜底
                 logger.error(f"{engine}引擎搜索失败: {e}")
-        deduplicated = self._deduplicate_results(all_results)
-        ranked = self._rank_results(deduplicated, query)
-        logger.info(f"搜索完成，去重后 {len(ranked)} 个结果")
-        return ranked
+        logger.warning(f"所有引擎均未返回结果: {engines}")
+        return []
 
     def _has_tavily_key(self) -> bool:
         try:

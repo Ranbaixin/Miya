@@ -625,6 +625,68 @@ class DiTingListener:
             logger.warning(f"[谛听-策略] 分析失败: {e}，使用默认策略")
             return MessageStrategy()
 
+    def build_strategy_request_text(
+        self,
+        content: str,
+        user_id: str,
+        group_id: Optional[str] = None,
+        is_at_bot: bool = False,
+        message_type: str = "group",
+        recent_context: str = "",
+    ) -> str:
+        """构建合并预分析的策略请求段（供灵魂发生器的同一次 LLM 调用附带执行）。
+
+        返回追加到灵魂 prompt 末尾的指令文本，要求模型在同一 JSON 中
+        额外输出 message_strategy 字段，从而省掉独立的谛听策略调用。
+        """
+        config = self._load_strategy_config()
+        if not config.get("enabled", True):
+            return ""
+        strategy_options = config.get("response_strategies", {})
+        intent_options = config.get("intent_types", {})
+        style_options = config.get("reply_styles", {})
+        judge_rules = config.get("judge_rules", [])
+        max_responses = config.get("max_responses_per_turn", 3)
+        rules_text = "\n".join(f"{i + 1}. {rule}" for i, rule in enumerate(judge_rules))
+        group_line = f"- 群ID：{group_id}\n" if group_id else ""
+        return (
+            "\n## 附加任务：消息响应策略分析\n"
+            "除上述内容外，请同时以消息策略分析助手的身份，判断如何响应这条用户消息：\n"
+            f"- 消息内容：{content}\n"
+            f"- 发送者：{user_id} | 消息类型：{message_type} | @机器人：{is_at_bot}\n"
+            f"{group_line}"
+            f"- 最近上下文：{recent_context or '（无）'}\n"
+            f"- response_strategy 可选值：{json.dumps(strategy_options, ensure_ascii=False)}\n"
+            f"- message_intent 可选值：{json.dumps(intent_options, ensure_ascii=False)}\n"
+            f"- suggested_reply_style 可选值：{json.dumps(style_options, ensure_ascii=False)}\n"
+            f"- 判断规则：\n{rules_text}\n"
+            f"- 每轮回复条数上限：{max_responses}\n"
+            '请在输出 JSON 中增加 "message_strategy" 字段，其值为：{"should_respond": true/false, '
+            '"response_strategy": "...", "message_intent": "...", "suggested_reply_style": "...", '
+            '"confidence": 0-1小数, "reason": "简述", "max_messages": 1-3整数}。'
+        )
+
+    def strategy_from_dict(self, d: Dict, config: Optional[Dict] = None) -> Optional[MessageStrategy]:
+        """把合并预分析输出中的 message_strategy 字段转换为 MessageStrategy。"""
+        if not isinstance(d, dict) or not d:
+            return None
+        config = config or self._load_strategy_config()
+        max_responses = config.get("max_responses_per_turn", 3)
+        default_max_messages = config.get("default_max_messages", 1)
+        max_messages = d.get("max_messages", default_max_messages)
+        if not isinstance(max_messages, int) or max_messages < 1:
+            max_messages = default_max_messages
+        max_messages = min(max_messages, max_responses)
+        return MessageStrategy(
+            should_respond=bool(d.get("should_respond", True)),
+            response_strategy=d.get("response_strategy", "full_reply"),
+            message_intent=d.get("message_intent", "chat"),
+            confidence=d.get("confidence", 0.5) if isinstance(d.get("confidence"), (int, float)) else 0.5,
+            reason=d.get("reason", ""),
+            suggested_reply_style=d.get("suggested_reply_style", "normal"),
+            max_messages=max_messages,
+        )
+
     def _load_strategy_config(self) -> Dict:
         """加载策略配置 - 合并diteng_strategy_config和text_config的默认值（统一缓存）"""
         try:

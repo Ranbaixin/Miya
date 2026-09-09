@@ -1492,7 +1492,13 @@ class DecisionHub:
                                     web_search_mod = importlib.import_module("webnet.ToolNet.tools.network.web_search")
                                     if hasattr(web_search_mod, "EnhancedWebSearch"):
                                         searcher = web_search_mod.EnhancedWebSearch()
-                                        search_results = await searcher.search(content)
+                                        # search() 是同步阻塞函数（内含网络请求），必须 to_thread：
+                                        # 直接 await 会先同步执行完再对返回的 list 求值，TypeError 被吞且阻塞事件循环
+                                        search_results = await asyncio.to_thread(
+                                            searcher.search,
+                                            content,
+                                            engines=["tavily", "bing_cn", "baidu"],
+                                        )
                                         if search_results:
                                             sc = f"\n\n【联网搜索结果】\n{str(search_results)[:800]}"
                                 except Exception:  # noqa: BLE001 — 联网搜索为增强功能，失败静默降级
@@ -1593,7 +1599,27 @@ class DecisionHub:
             search_task = asyncio.create_task(fetch_search_context(), name="search")
             # 稳定画像任务在认知记忆之后启动（双轨结构化去重需要认知条目，见 Phase 2）
             wm_task = asyncio.create_task(fetch_group_chat_context(), name="wm")
-            diting_task = asyncio.create_task(fetch_diting_strategy(), name="diting")
+
+            # 【预分析合并】谛听策略并入灵魂调用（省一次 LLM 往返）；text_config 可关
+            preanalysis_merge = False
+            diteng = None
+            try:
+                from core.config_loader import load_text_config
+
+                preanalysis_merge = bool(load_text_config().get("preanalysis_merge", True))
+            except Exception:  # noqa: BLE001 — 开关读取失败按旧路径执行
+                preanalysis_merge = False
+            if preanalysis_merge:
+                try:
+                    from memory.diteng_listener import get_diting
+
+                    diteng = get_diting()
+                except Exception:  # noqa: BLE001 — 合并依赖缺失回退旧路径
+                    preanalysis_merge = False
+
+            diting_task = (
+                asyncio.create_task(fetch_diting_strategy(), name="diting") if not preanalysis_merge else None
+            )
 
             # 等待 conversation_context (cognitive 和 soul 都需要它)
             conversation_context = await conv_task
@@ -1634,7 +1660,7 @@ class DecisionHub:
                     logger.warning(f"[决策层] 智能记忆检索失败: {e}")
                 return cmc
 
-            async def run_soul_generator(cognitive_memory=""):
+            async def run_soul_generator(cognitive_memory="", strategy_request=None):
                 sr = None
                 try:
                     if self._soul_generator:
@@ -1675,6 +1701,7 @@ class DecisionHub:
                             },
                             personality_info=personality_info,
                             cognitive_memory=cognitive_memory,
+                            extra_request=strategy_request,
                         )
                 except Exception as e:  # noqa: BLE001 — 灵魂生成器为增强功能，失败降级
                     logger.warning(f"[灵魂] 提前分析失败: {e}")
@@ -1689,45 +1716,13 @@ class DecisionHub:
             search_context = await search_task
             group_chat_context = await wm_task
 
-            # 等待谛听策略结果并注入 perception
-            try:
-                diting_strategy = await diting_task
-                if diting_strategy:
-                    if not diting_strategy.should_respond:
-                        logger.info(f"[谛听-并行] 策略决定不回复: {diting_strategy.reason}")
-                        if getattr(diting_strategy, "response_strategy", "") == "like_only":
-                            try:
-                                if hasattr(self, "onebot_client") and self.onebot_client:
-                                    user_id_str = str(context.get("user_id", ""))
-                                    await self.onebot_client.send_like(user_id_str)
-                            except Exception:  # noqa: BLE001 — 点赞为最佳努力通知，失败静默忽略
-                                logger.debug("[决策层] 发送点赞失败", exc_info=True)
-                        return None
-                    context["_message_strategy"] = {
-                        "strategy": diting_strategy.response_strategy,
-                        "intent": getattr(diting_strategy, "message_intent", "chat"),
-                        "style": getattr(diting_strategy, "suggested_reply_style", "casual"),
-                        "confidence": getattr(diting_strategy, "confidence", 0.8),
-                    }
-                    # 【谛听传递】将策略分析结果转化为自然语言指引，注入下游
-                    sdesc = _load_strategy_descriptions()
-                    strategy_desc_map = sdesc.get("response_strategies", {})
-                    style_desc_map = sdesc.get("reply_styles", {})
-                    _strat = diting_strategy.response_strategy
-                    _style = getattr(diting_strategy, "suggested_reply_style", "normal")
-                    _intent = getattr(diting_strategy, "message_intent", "chat")
-                    _strat_desc = strategy_desc_map.get(_strat, "自然回复")
-                    _style_desc = style_desc_map.get(_style, "正常风格")
-                    context["_strategy_guidance"] = (
-                        f"\n\n【回复策略指引 · 谛听分析】\n"
-                        f"- 用户意图：{_intent}\n"
-                        f"- 回复方式：{_strat_desc}\n"
-                        f"- 回复语气：{_style_desc}\n"
-                        f"（请根据以上指引调整你的回复风格，但不要生硬地复述这些指令）"
-                    )
-            except Exception as e:  # noqa: BLE001 — 谛听结果处理为增强功能，失败降级
-                logger.warning(f"[谛听-并行] 结果处理失败: {e}")
-
+            # 等待谛听策略结果并注入 perception（合并模式下从灵魂调用结果提取，见下方）
+            diting_strategy = None
+            if not preanalysis_merge:
+                try:
+                    diting_strategy = await diting_task
+                except Exception as e:  # noqa: BLE001 — 谛听结果处理为增强功能，失败降级
+                    logger.warning(f"[谛听-并行] 结果处理失败: {e}")
             # 等待 Phase 2 任务
             cognitive_memory_context = await cog_task
 
@@ -1735,7 +1730,96 @@ class DecisionHub:
             sp_task = asyncio.create_task(fetch_stable_persona(exclude_items=cognitive_items), name="stable_persona")
             stable_persona_context = await sp_task
 
-            soul_result = await run_soul_generator(cognitive_memory=cognitive_memory_context)
+            # 【预分析合并】构建谛听策略请求段，随灵魂调用一并执行（省一次 LLM 往返）
+            strategy_request = None
+            if preanalysis_merge and diteng is not None:
+                try:
+                    m_msg_type = context.get("message_type", "")
+                    m_ctx_uid = context.get("user_id")
+                    m_uid_str = str(m_ctx_uid) if m_ctx_uid else ""
+                    m_group_id = str(context.get("group_id")) if context.get("group_id") else None
+                    m_is_at_bot = context.get("is_at_bot", False)
+                    m_recent = ""
+                    try:
+                        from memory.working_memory import get_working_memory
+
+                        wm = get_working_memory()
+                        if m_msg_type == "group" and m_group_id:
+                            m_recent = wm.build_prompt_context(m_group_id)[:500]
+                        elif m_msg_type == "private" and m_ctx_uid:
+                            m_recent = wm.build_prompt_context(f"private_{m_uid_str}")[:500]
+                    except Exception:  # noqa: BLE001 — 工作记忆上下文为增强，失败静默降级
+                        m_recent = ""
+                    _suffix = diteng.build_strategy_request_text(
+                        content=content,
+                        user_id=m_uid_str,
+                        group_id=m_group_id,
+                        is_at_bot=m_is_at_bot,
+                        message_type=m_msg_type,
+                        recent_context=m_recent,
+                    )
+                    if _suffix:
+                        strategy_request = {"prompt_suffix": _suffix}
+                except Exception as e:  # noqa: BLE001 — 合并构建失败回退独立谛听
+                    logger.warning(f"[预分析-合并] 策略请求构建失败: {e}")
+                    strategy_request = None
+
+            soul_result = await run_soul_generator(
+                cognitive_memory=cognitive_memory_context, strategy_request=strategy_request
+            )
+
+            # 【预分析合并】从灵魂结果提取谛听策略；缺失则回退独立谛听调用
+            if preanalysis_merge and diting_strategy is None:
+                try:
+                    if isinstance(soul_result, dict) and soul_result.get("message_strategy"):
+                        diting_strategy = diteng.strategy_from_dict(soul_result["message_strategy"])
+                        logger.warning(
+                            f"[预分析-合并] should_respond={diting_strategy.should_respond}, "
+                            f"strategy={diting_strategy.response_strategy}"
+                        )
+                except Exception as e:  # noqa: BLE001 — 提取失败回退独立谛听
+                    logger.warning(f"[预分析-合并] 策略提取失败: {e}")
+                if diting_strategy is None:
+                    logger.warning("[预分析-合并] 合并结果无策略，回退独立谛听调用")
+                    try:
+                        diting_strategy = await fetch_diting_strategy()
+                    except Exception:  # noqa: BLE001 — 回退失败按默认策略放行
+                        diting_strategy = None
+
+            # 谛听门控与策略指引（diting_strategy 来源已统一：独立调用或合并提取）
+            if diting_strategy:
+                if not diting_strategy.should_respond:
+                    logger.info(f"[谛听-并行] 策略决定不回复: {diting_strategy.reason}")
+                    if getattr(diting_strategy, "response_strategy", "") == "like_only":
+                        try:
+                            if hasattr(self, "onebot_client") and self.onebot_client:
+                                user_id_str = str(context.get("user_id", ""))
+                                await self.onebot_client.send_like(user_id_str)
+                        except Exception:  # noqa: BLE001 — 点赞为最佳努力通知，失败静默忽略
+                            logger.debug("[决策层] 发送点赞失败", exc_info=True)
+                    return None
+                context["_message_strategy"] = {
+                    "strategy": diting_strategy.response_strategy,
+                    "intent": getattr(diting_strategy, "message_intent", "chat"),
+                    "style": getattr(diting_strategy, "suggested_reply_style", "casual"),
+                    "confidence": getattr(diting_strategy, "confidence", 0.8),
+                }
+                # 【谛听传递】将策略分析结果转化为自然语言指引，注入下游
+                sdesc = _load_strategy_descriptions()
+                strategy_desc_map = sdesc.get("response_strategies", {})
+                style_desc_map = sdesc.get("reply_styles", {})
+                _strat = diting_strategy.response_strategy
+                _style = getattr(diting_strategy, "suggested_reply_style", "normal")
+                _intent = getattr(diting_strategy, "message_intent", "chat")
+                _strat_desc = strategy_desc_map.get(_strat, "自然回复")
+                _style_desc = style_desc_map.get(_style, "正常风格")
+                context["_strategy_guidance"] = (
+                    f"\n\n【回复策略指引 · 谛听分析】\n"
+                    f"- 用户意图：{_intent}\n"
+                    f"- 回复方式：{_strat_desc}\n"
+                    f"- 回复语气：{_style_desc}\n"
+                    f"（请根据以上指引调整你的回复风格，但不要生硬地复述这些指令）"
+                )
 
             # 处理 Soul Generator 结果 (共用于两条路径)
             emotion_context_for_collab = ""
@@ -1907,6 +1991,7 @@ class DecisionHub:
             logger.debug(f"[决策层-跨平台] 系统提示词前200字符: {prompt_info['system'][:200]}")
 
             # 【弥娅综合感知】谛听策略 + 灵魂情绪 融合为统一画像
+            # 追加到 system 末尾而非前缀：人格主体保持为稳定前缀，可命中 prompt 缓存
             strategy_guidance = context.get("_strategy_guidance", "")
             msg_strategy = context.get("_message_strategy", {})
             if strategy_guidance or emotion_context_for_collab:
@@ -1917,8 +2002,8 @@ class DecisionHub:
                     msg_strategy.get("style", "normal"),
                     msg_strategy.get("intent", "chat"),
                 )
-                prompt_info["system"] = integrated + "\n" + prompt_info["system"]
-                logger.info(f"[弥娅-感知] 综合状态指引已注入 system prompt ({len(integrated)} 字符)")
+                prompt_info["system"] = prompt_info["system"] + "\n" + integrated
+                logger.info(f"[弥娅-感知] 综合状态指引已注入 system prompt 末尾 ({len(integrated)} 字符)")
 
             # 设置工具上下文和 ToolNet（符合 MIYA 框架）
             if self.tool_subnet:

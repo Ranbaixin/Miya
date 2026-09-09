@@ -1127,6 +1127,7 @@ class SoulGenerator:
         user_info: Dict = None,
         personality_info: Dict = None,
         cognitive_memory: str = "",
+        extra_request: Dict = None,
     ) -> Dict:
         """
         处理消息 → 生成回复
@@ -1139,6 +1140,8 @@ class SoulGenerator:
             user_info: 用户信息 dict，包含 user_id, group_id, is_group 等
             personality_info: 人格信息 dict，包含 form_name, form_description 等
             cognitive_memory: 认知记忆上下文字符串（用于连贯内心独白）
+            extra_request: 合并预分析的附加请求（{"prompt_suffix": str}），
+                由 decision_hub 注入谛听策略分析段，省一次独立 LLM 调用
         """
         # 解析用户信息
         user_id = None
@@ -1190,6 +1193,7 @@ class SoulGenerator:
                 },
                 personality_info=personality_info,
                 cognitive_memory=cognitive_memory,
+                extra_request=extra_request,
             )
             if ai_full_result:
                 # 应用AI分析的情绪
@@ -1288,6 +1292,8 @@ class SoulGenerator:
             "inner_thought": inner_thought,
             "attribution": final_attribution,
             "reflection": final_reflection,
+            # 预分析合并：透传同一 JSON 中模型输出的 message_strategy，供 decision_hub 使用
+            "message_strategy": ai_full_result.get("message_strategy") if ai_full_result else None,
             "analysis": {
                 "attribution": final_attribution,
                 "reflection": final_reflection,
@@ -1304,8 +1310,13 @@ class SoulGenerator:
         user_info: Dict = None,
         personality_info: Dict = None,
         cognitive_memory: str = "",
+        extra_request: Dict = None,
     ) -> Optional[Dict]:
-        """使用AI分析情绪 + 生成内心独白（合并版本，v7.0+ 支持对话上下文和记忆注入）"""
+        """使用AI分析情绪 + 生成内心独白（合并版本，v7.0+ 支持对话上下文和记忆注入）
+
+        extra_request: 可选 {"prompt_suffix": str}，附加谛听策略分析段，
+        要求模型在同一 JSON 中输出 message_strategy 字段（预分析合并）。
+        """
         try:
             if not ai_client:
                 logger.warning("[灵魂] AI分析跳过: 无AI客户端")
@@ -1446,6 +1457,9 @@ class SoulGenerator:
                     logger.debug(f"[灵魂] 形态提示加载失败: {e}", exc_info=True)
             if form_hint:
                 prompt += f"\n\n{form_hint}"
+            # 预分析合并：附加谛听策略请求段（在 JSON 约束之前，保证约束仍是最后指令）
+            if extra_request and extra_request.get("prompt_suffix"):
+                prompt += f"\n{extra_request['prompt_suffix']}"
             # JSON格式约束从配置文件读取
             json_constraint = ""
             try:

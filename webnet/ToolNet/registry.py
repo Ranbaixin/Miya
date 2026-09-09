@@ -232,12 +232,16 @@ class ToolRegistry:
 
             perm_core = PermissionCore()
             has_permission = perm_core.check_permission(
-                unified_user_id, required_permission
+                unified_user_id,
+                required_permission,
+                context={"platform": platform},
             )
 
             if not has_permission:
                 has_permission = perm_core.check_permission(
-                    "system_admin", required_permission
+                    "system_admin",
+                    required_permission,
+                    context={"platform": platform},
                 )
 
             return {

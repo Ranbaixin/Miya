@@ -256,6 +256,26 @@ class UnifiedPermissionEngine:
         permissions = self._get_user_permissions(user_id, context)
         return self._match_permission(permissions, permission)
 
+    def check_permission(
+        self,
+        user_id: str,
+        permission: str,
+        context: Optional[Dict] = None,
+        list_mode: bool = False,
+        log_audit: bool = True,
+        use_cache: bool = True,
+    ) -> Any:
+        """兼容别名：AuthNet.PermissionCore 等旧调用方使用 check_permission 接口委托到本引擎
+
+        list_mode=True 时返回权限详情串（对齐 PermissionCore 传统模式的返回约定）；
+        否则委托 check() 返回 bool。log_audit/use_cache 在统一引擎下无此概念，忽略。
+        """
+        if list_mode:
+            perms = self.get_user_permissions_list(user_id, context)
+            groups = self.get_user_groups(user_id) or ["Default"]
+            return f"权限组: {set(groups)}, 拥有权限: {set(perms)}"
+        return self.check(user_id, permission, context)
+
     def check_command(self, user_id: str, command: str, platform: str = "") -> bool:
         """检查用户是否有执行某命令的权限"""
         if not user_id or not command:

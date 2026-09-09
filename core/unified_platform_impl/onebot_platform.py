@@ -566,6 +566,34 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             pass
         return None
 
+    @staticmethod
+    def _parse_cq_face_text(attrs: str) -> str:
+        """从 CQ:face 码属性串提取表情文本。
+
+        NapCat 商城表情会带 raw={"faceText":"大怨种",...}，其中逗号/中括号
+        按 CQ 码规范转义为 &#44;/&#91;/&#93;，& 转义为 &amp;，须先还原再解析。
+        解析失败时兜底返回 face id（#id），保证表情消息不变成纯空内容。
+        """
+        import re as _re
+
+        raw_m = _re.search(r"raw=(\{.*\})", attrs)
+        if raw_m:
+            raw = raw_m.group(1)
+            # CQ 实体还原：&#44;/&#91;/&#93; 必须先于 &amp;，避免二次解码
+            for ent, ch in (("&#44;", ","), ("&#91;", "["), ("&#93;", "]")):
+                raw = raw.replace(ent, ch)
+            raw = raw.replace("&amp;", "&")
+            try:
+                data = json.loads(raw)
+                if isinstance(data, dict):
+                    text = data.get("faceText") or ""
+                    if text:
+                        return str(text)
+            except Exception:  # noqa: BLE001 — raw 非标准 JSON 时走 id 兜底
+                pass
+        id_m = _re.search(r"(?:^|,)id=([^,\]]+)", attrs)
+        return f"#{id_m.group(1)}" if id_m else ""
+
     async def _handle_chat_message(self, data: Dict):
         """处理聊天消息 (v2 — 完整功能迁移自 qq_main.py)"""
         import re as _re
@@ -610,6 +638,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         file_segments = []
         face_only = False
         content = ""
+        face_texts: list = []  # face 表情文本（商城表情的 raw.faceText），群聊纯表情预过滤之后再注入 content
 
         if isinstance(raw_message, list):
             face_seg_count = 0
@@ -633,6 +662,21 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                     )
                 elif seg_type == "face":
                     face_seg_count += 1
+                    # 防御性取文本：text / faceText / raw(dict 或 JSON 字符串).faceText，最终兜底 #id
+                    ft = seg_data.get("text") or seg_data.get("faceText") or ""
+                    if not ft:
+                        raw_field = seg_data.get("raw")
+                        if isinstance(raw_field, dict):
+                            ft = raw_field.get("faceText") or ""
+                        elif isinstance(raw_field, str) and raw_field:
+                            try:
+                                ft = json.loads(raw_field).get("faceText") or ""
+                            except Exception:  # noqa: BLE001 — raw 非标准 JSON 忽略
+                                ft = ""
+                    if not ft:
+                        ft = f"#{seg_data.get('id', '')}"
+                    if ft != "#":
+                        face_texts.append(str(ft))
                 elif seg_type == "video":
                     image_segments.append(p)  # 视频同图片处理
             # 是否纯表情消息
@@ -643,11 +687,23 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             reply_match = _re.search(r"\[CQ:reply,id=(\d+)\]", content)
             if reply_match:
                 reply_id = reply_match.group(1)
-            # 从 CQ 字符串提取图片
+            # 从 CQ 字符串提取图片（含 url 直链；CQ 码中 & 被转义为 &amp;，须还原）
             if "[CQ:image" in content:
-                cq_images = _re.findall(r"\[CQ:image,file=([^,\]]+)", content)
-                for fid in cq_images:
-                    image_segments.append({"type": "image", "data": {"file": fid}})
+                for attrs in _re.findall(r"\[CQ:image,([^\]]+)\]", content):
+                    file_m = _re.search(r"file=([^,\]]+)", attrs)
+                    if not file_m:
+                        continue
+                    url_m = _re.search(r"url=([^,\]]+)", attrs)
+                    url = url_m.group(1).replace("&amp;", "&") if url_m else ""
+                    image_segments.append(
+                        {"type": "image", "data": {"file": file_m.group(1), "url": url}}
+                    )
+            # face 文本须在通用 CQ 删除之前提取（否则 [CQ:face,...] 整体被删、faceText 丢失）
+            if "[CQ:face" in content:
+                for attrs in _re.findall(r"\[CQ:face,([^\]]+)\]", content):
+                    ft = self._parse_cq_face_text(attrs)
+                    if ft:
+                        face_texts.append(ft)
             content = _re.sub(r"\[CQ:[^\]]+\]", "", content).strip()
 
         content = content.strip()
@@ -730,6 +786,13 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         if file_segments:
             extra["files"] = file_segments
             has_media = True
+
+        # === 11.5 face 表情文本注入 ===
+        # 位于群聊纯表情预过滤之后（非主人未@的纯表情照旧预过滤）、空内容丢弃之前
+        # （私聊/主人的纯表情消息由此获得 [表情:xxx] 文本，能进决策层而不是被丢弃）
+        if face_texts:
+            face_text = " ".join(face_texts)
+            content = f"{content} [表情:{face_text}]".strip() if content else f"[表情:{face_text}]"
 
         if not content and not has_media and not reply_id:
             return
@@ -1607,35 +1670,10 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         import base64 as _base64
 
         file_id = image_data.get("file", "")
-        url = image_data.get("url", "")
+        # CQ 码中的 url 携带 &amp; 转义，须还原为 & 才能直接下载
+        url = (image_data.get("url") or "").replace("&amp;", "&")
 
-        # 方案1: 通过 OneBot API get_image（最可靠，返回 base64 编码的文件）
-        if file_id:
-            result = await self._call_onebot_api("get_image", {"file": file_id})
-            if isinstance(result, dict):
-                b64 = result.get("file") or result.get("data")
-                # 尝试 base64 数据
-                if b64:
-                    try:
-                        raw = _base64.b64decode(b64)
-                        if len(raw) > 1024:
-                            logger.debug(f"[{self.platform_id}] OneBot get_image(base64) 成功: {len(raw)/1024:.1f}KB")
-                            return raw
-                    except (TypeError, ValueError):
-                        # noqa: S110 — base64 解码失败，回退到文件路径方案
-                        pass
-                # 尝试作为文件路径读取（部分 OneBot 实现返回本地路径）
-                if isinstance(result, dict):
-                    file_path = result.get("file") or result.get("path") or result.get("data") or ""
-                    if file_path and not file_path.startswith("/9j/"):  # 排除 base64 数据被误判
-                        from pathlib import Path as _Path
-
-                        p = _Path(file_path)
-                        if p.exists() and p.stat().st_size > 1024:
-                            logger.debug(f"[{self.platform_id}] OneBot get_image(file) 成功: {file_path}")
-                            return p.read_bytes()
-
-        # 方案2: 直接 HTTP 下载 url（QQ 内部 url 可能过期或需要特定 header）
+        # 方案1: 直接 HTTP 下载 url（事件自带带 rkey 的直链，最可靠）
         if url:
             try:
                 import aiohttp
@@ -1662,7 +1700,33 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             except Exception as e:  # noqa: BLE001 — 图片下载为附加功能，失败回退到下一方案
                 logger.debug(f"[{self.platform_id}] 直接下载图片失败(url): {e}")
 
-        logger.debug(f"[{self.platform_id}] 图片下载失败: file={file_id[:30] if file_id else '-'}")
+        # 方案2: 通过 OneBot API get_image（无直链时回退；部分实现不支持该 API）
+        if file_id:
+            result = await self._call_onebot_api("get_image", {"file": file_id})
+            if isinstance(result, dict):
+                b64 = result.get("file") or result.get("data")
+                # 尝试 base64 数据
+                if b64:
+                    try:
+                        raw = _base64.b64decode(b64)
+                        if len(raw) > 1024:
+                            logger.debug(f"[{self.platform_id}] OneBot get_image(base64) 成功: {len(raw)/1024:.1f}KB")
+                            return raw
+                    except (TypeError, ValueError):
+                        # noqa: S110 — base64 解码失败，回退到文件路径方案
+                        pass
+                # 尝试作为文件路径读取（部分 OneBot 实现返回本地路径）
+                if isinstance(result, dict):
+                    file_path = result.get("file") or result.get("path") or result.get("data") or ""
+                    if file_path and not file_path.startswith("/9j/"):  # 排除 base64 数据被误判
+                        from pathlib import Path as _Path
+
+                        p = _Path(file_path)
+                        if p.exists() and p.stat().st_size > 1024:
+                            logger.debug(f"[{self.platform_id}] OneBot get_image(file) 成功: {file_path}")
+                            return p.read_bytes()
+
+        logger.debug(f"[{self.platform_id}] 图片下载失败: file={file_id[:30] if file_id else '-'} url={'有' if url else '无'}")
         return None
 
     async def _auto_save_images(self, image_segments: list, user_id: str):

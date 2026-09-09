@@ -609,11 +609,11 @@ class ProactiveChatSystem:
                 )
                 final_prompt = final_prompt + reply_awareness
 
-            use_tools = trigger_type == "ai"
+            # 主动聊天的判断与生成均不需要工具；显式 tools=[] 防止回退到全量注册表（87 个工具）
             response = await self.ai_client.chat(
                 messages=[AIMessage(role="user", content=final_prompt)],
-                tools=[] if not use_tools else None,
-                tool_choice="none" if not use_tools else "auto",
+                tools=[],
+                tool_choice="none",
             )
             message = response.strip() if isinstance(response, str) else str(response).strip()
             if message.upper() == "SKIP" or not message:
@@ -1424,50 +1424,14 @@ class ProactiveChatSystem:
                 messages.append(AIMessage(role="system", content=system_prompt))
             messages.append(AIMessage(role="user", content=user_prompt))
 
+            # 触发判断只需要输出一句话或 SKIP，显式禁用工具，防止全量注册表回退
             response = await self.ai_client.chat(
                 messages=messages,
-                tool_choice="auto",
+                tools=[],
+                tool_choice="none",
             )
 
-            persona = self._build_persona_context()
-            memory_context = self._build_memory_context(target_id)
-            rich_context = await self._build_rich_context(target_id)
-            scene_context = self._build_deep_context(context) if self._scene_enabled else ""
-
-            memory_empty = self._load_text_config("scene.memory_empty", "（无近期对话记录）")
-            scene_private = self._load_text_config("scene.scene_private", "私聊场景")
-            group_warning = (
-                self._load_text_config("scene.group_warning", "")
-                if context.chat_type == "group" and self._scene_enabled
-                else ""
-            )
-            scene_info = f"{scene_context}" if scene_context else scene_private
-
-            prompt = f"""判断是否应该主动和用户聊天。
-【{persona}】
-记忆检索：
-{rich_context or "（无相关记忆）"}
-
-对话上下文：
-{memory_context or memory_empty}
-
-场景信息：
-{scene_info}
-
-聊天信息：
-- 类型: {chat_type}
-- 群名称: {group_name}
-- 成员数: {member_count}
-- 用户最后活跃: {last_active}
-- 最近话题: {recent_topics}
-
-{group_warning}如果需要回复，请以符合上述人设质感生成一句简短温暖的话（不超过20字）。
-如果不需要回复，请回复"SKIP"。"""
-
-            response = await self.ai_client.chat(
-                messages=[AIMessage(role="user", content=prompt)],
-                tool_choice="auto",
-            )
+            # 修复：此处原先重复构建 prompt 并二次调用 LLM，第一次响应被直接丢弃（双倍消耗），已移除
 
             # response 直接是字符串，不需要 .get() 解析
             message = response.strip() if isinstance(response, str) else str(response).strip()

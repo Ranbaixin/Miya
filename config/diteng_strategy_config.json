@@ -1,12 +1,9 @@
 {
   "comment": "谛听消息策略配置 - 集中管理所有策略相关配置",
-  
   "enabled": true,
-  
   "model": "deepseek-v4-flash",
-  "timeout": 10,
+  "timeout": 30,
   "max_responses_per_turn": 3,
-  
   "comment2": "回复策略选项 - 决定弥娅如何响应",
   "response_strategies": {
     "full_reply": "完整回复 - 正常长度的对话回复",
@@ -18,7 +15,6 @@
     "question_back": "反问 - 用问题回应问题",
     "tease_reply": "调侃回复 - 逗弄对方的回复"
   },
-  
   "comment3": "意图类型 - 识别消息的目的",
   "intent_types": {
     "greeting": "打招呼 - 你好、嗨、早上好等",
@@ -34,7 +30,6 @@
     "love": "告白 - 表达爱意",
     "comfort": "安慰 - 需要安抚支持"
   },
-  
   "comment4": "回复风格 - 弥娅的语气特点",
   "reply_styles": {
     "normal": "正常 - 正常的对话风格",
@@ -46,8 +41,7 @@
     "cold": "冷淡 - 冷漠敷衍的回复",
     "lazy": "慵懒 - 懒洋洋的语气"
   },
-  
-"comment5": "判断规则 - AI决策时的指导原则",
+  "comment5": "判断规则 - AI决策时的指导原则",
   "judge_rules": [
     "如果只是简单表情包(如嗯、哦，好)且未@机器人，可以仅点赞或忽略",
     "如果用户在短时间内(5秒内)连续发完全相同的3条以上内容，才算刷屏",
@@ -67,7 +61,6 @@
     "如果上下文中出现连续的重复消息，更可能是用户的催促行为(想让你快点回复)，不是刷屏，应该正常回复",
     "用户在活跃对话中发消息，即使内容相同，也要回复"
   ],
-  
   "comment6": "默认策略",
   "default_strategy": {
     "should_respond": true,
