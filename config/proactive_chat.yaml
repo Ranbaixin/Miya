@@ -4,9 +4,10 @@
 proactive_chat:
   # 基本配置
   enabled: true
-  check_interval: 45  # 检查间隔（秒），更频繁
-  max_daily_messages: 15  # 每日最大消息数，增加
-  quiet_hours: [23, 0, 1, 2, 3, 4, 5, 6, 7]  # 静默时段，稍微缩短
+  check_interval: 45  # 轮询间隔（秒）：仅做确定性检查，不产生 AI 调用
+  max_daily_messages: 5  # 每日每会话主动消息硬上限（15 → 5 降频）
+  quiet_hours: [23, 0, 1, 2, 3, 4, 5, 6, 7]  # 静默时段
+  target_ttl_hours: 168  # 无互动会话上下文保留时长（小时），超时移出轮询（0 = 不清理）
 
   # 支持的终端类型
   platforms:
@@ -182,7 +183,7 @@ proactive_chat:
       用户已经有【{idle_duration}】没有互动了。
       请用符合人设的语气，发送一句简短温暖的关怀（20字以内），自然而不唐突。
       如果此时不适合说话，回复 SKIP。
-    check_interval: 3600
+    check_interval: 10800  # 闲置 3 小时才算"久未互动"（降频：3600 → 10800）
     messages:
       - "在干嘛呢？"
       - "最近怎么样？"
@@ -195,8 +196,7 @@ proactive_chat:
   # AI触发 - AI自主判断
   ai_trigger:
     enabled: true
-    check_interval: 60
-    max_per_hour: 3
+    eval_interval_seconds: 7200  # AI 自主判断评估间隔（秒）：2 小时评估一次（原 check_interval/max_per_hour 为死配置已移除）
     cooldown: 300
     system_prompt: |
       【{persona}】
@@ -413,8 +413,8 @@ proactive_chat:
     emotion: 120    # 情绪触发后120秒内不再触发
     keyword: 5     # 关键词触发后5秒内不再触发
     time: 300       # 时间触发后5分钟内不再触发（时段内只发一次）
-    check_in: 1800  # 主动关怀后30分钟内不再触发
-    ai: 180         # AI触发后3分钟内不再触发
+    check_in: 14400  # 主动关怀后4小时内不再触发（降频：1800 → 14400）
+    ai: 7200         # AI 自主发言后2小时内不再触发（与评估间隔对齐：180 → 7200）
 
   # 用户刚发送消息后的冷却（秒）
   # 避免在用户刚说话后立即主动发言

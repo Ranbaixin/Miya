@@ -124,8 +124,8 @@ def _normalize_config(raw: dict) -> dict:
     ai_cfg = {
         "enabled": ai_trigger.get("enabled", default["triggers"]["ai"]["enabled"]),
         "cooldown": ai_trigger.get("cooldown", 300),
-        "check_interval": ai_trigger.get("check_interval", 60),
-        "max_per_hour": ai_trigger.get("max_per_hour", 3),
+        # AI 自主判断的评估间隔（秒）：距上次评估不足该时长不再调 AI（token 优化核心参数）
+        "eval_interval_seconds": ai_trigger.get("eval_interval_seconds", 7200),
         "system_prompt": ai_trigger.get("system_prompt", ""),
     }
 
@@ -147,6 +147,9 @@ def _normalize_config(raw: dict) -> dict:
 
     return {
         "enabled": enabled,
+        "check_interval": raw.get("check_interval", 45),
+        "target_ttl_hours": raw.get("target_ttl_hours", 168),
+        "global_cooldown": raw.get("global_cooldown", 300),
         "triggers": {
             "keyword": keyword_cfg,
             "time": time_cfg,
@@ -156,7 +159,7 @@ def _normalize_config(raw: dict) -> dict:
             "ai": ai_cfg,
         },
         "limits": {
-            "global_cooldown": 300,
+            "global_cooldown": raw.get("global_cooldown", 300),
             "max_daily_per_target": max_daily,
             "max_hourly_per_target": raw.get("max_hourly_messages", default["limits"]["max_hourly_per_target"]),
             "duplicate_window": 60,
@@ -324,6 +327,8 @@ class ProactiveChatSystem:
 
         # 运行状态
         self._last_trigger_time: dict[int, datetime] = {}
+        # AI 自主判断的评估时间（与发送冷却分离：评估节流省 token，发送冷却防骚扰）
+        self._last_ai_eval: dict[int, datetime] = {}
         self._context_cache: dict[int, ChatContext] = {}
         self._user_last_interaction: dict[int, datetime] = {}
         self._message_cache: dict[str, datetime] = {}
@@ -364,6 +369,10 @@ class ProactiveChatSystem:
         self._bg_task: Optional[asyncio.Task] = None
         self._poll_interval: int = self._config.get("check_interval", 45)
         self._send_callback: Optional[callable] = None
+
+        # AI 自主判断评估间隔（秒）与无互动会话的 TTL 清理（秒，0 = 不清理）
+        self._ai_eval_interval: int = self._ai_config.get("eval_interval_seconds", 7200)
+        self._target_ttl_seconds: int = self._config.get("target_ttl_hours", 168) * 3600
 
         # 记忆上下文提供者
         self._memory_context_provider: Optional[callable] = None
@@ -698,6 +707,38 @@ class ProactiveChatSystem:
         """获取所有活跃的聊天目标 ID 列表"""
         return list(self._context_cache.keys())
 
+    def _prune_stale_targets(self):
+        """清理超过 TTL 无互动的会话上下文（防轮询列表与内存无限增长）"""
+        ttl = self._target_ttl_seconds
+        if ttl <= 0:
+            return
+        now = datetime.now()
+        stale: list[int] = []
+        for target_id, ctx in self._context_cache.items():
+            last_ts: Optional[datetime] = None
+            if ctx.last_active:
+                try:
+                    last_ts = datetime.fromisoformat(ctx.last_active)
+                except (ValueError, TypeError):
+                    last_ts = None
+            if last_ts is None:
+                last_ts = self._user_last_interaction.get(target_id)
+            if last_ts and (now - last_ts).total_seconds() > ttl:
+                stale.append(target_id)
+        for target_id in stale:
+            self._context_cache.pop(target_id, None)
+            self._user_last_interaction.pop(target_id, None)
+            self._last_trigger_time.pop(target_id, None)
+            self._last_ai_eval.pop(target_id, None)
+            self._last_trigger_by_type.pop(target_id, None)
+            self._last_expectation.pop(target_id, None)
+            self._sent_messages_history.pop(target_id, None)
+            self._group_msg_timestamps.pop(target_id, None)
+            self._daily_count.pop(target_id, None)
+            self._hourly_count.pop(target_id, None)
+        if stale:
+            logger.info(f"[主动聊天] 已清理 {len(stale)} 个超过 TTL({ttl // 3600}h) 无互动的会话上下文")
+
     async def start_background_loop(self):
         """启动后台轮询循环，定期检查所有活跃上下文的触发条件"""
         if self._bg_task and not self._bg_task.done():
@@ -724,6 +765,8 @@ class ProactiveChatSystem:
 
                 if not self._enabled or self._is_in_quiet_hours():
                     continue
+
+                self._prune_stale_targets()
 
                 active_targets = self.get_active_targets()
                 if not active_targets:
@@ -1358,14 +1401,17 @@ class ProactiveChatSystem:
         if not self.ai_client:
             return None
 
-        ai_config = self._ai_config
-        cooldown = ai_config.get("cooldown", 300)
-
-        last_time = self._last_trigger_time.get(target_id)
-        if last_time:
-            elapsed = (datetime.now() - last_time).total_seconds()
-            if elapsed < cooldown:
+        # 评估节流（token 优化核心门控）：距上次 AI 判断不足 eval_interval_seconds 不再评估。
+        # 此前实际行为是受 300s 全局冷却驱动的"每 5 分钟一次判断调用"
+        last_eval = self._last_ai_eval.get(target_id)
+        if last_eval:
+            elapsed = (datetime.now() - last_eval).total_seconds()
+            if elapsed < self._ai_eval_interval:
                 return None
+
+        # 同类型发送冷却前置：冷却期内不生成（避免先生成再丢弃）
+        if not self._check_trigger_type_cooldown(target_id, "ai"):
+            return None
 
         try:
             chat_type = "群聊" if context.chat_type == "group" else "私聊"
@@ -1375,8 +1421,9 @@ class ProactiveChatSystem:
             recent_topics = ", ".join(context.recent_topics) if context.recent_topics else "无"
 
             persona = self._build_persona_context()
-            memory_context = self._build_memory_context(target_id)
-            rich_context = await self._build_rich_context(target_id)
+            # 上下文截断：判断调用无需全量记忆，限制注入长度控制单次 token 成本
+            memory_context = (self._build_memory_context(target_id) or "")[:600]
+            rich_context = (await self._build_rich_context(target_id) or "")[:600]
             scene_context = self._build_deep_context(context) if self._scene_enabled else ""
 
             memory_empty = self._load_text_config("scene.memory_empty", "（无近期对话记录）")
@@ -1424,11 +1471,16 @@ class ProactiveChatSystem:
                 messages.append(AIMessage(role="system", content=system_prompt))
             messages.append(AIMessage(role="user", content=user_prompt))
 
-            # 触发判断只需要输出一句话或 SKIP，显式禁用工具，防止全量注册表回退
+            # 记录评估时间（置于调用前：SKIP/异常也计一次评估，防止失败路径反复烧 token）
+            self._last_ai_eval[target_id] = datetime.now()
+
+            # 触发判断只需要输出一句话或 SKIP，显式禁用工具，防止全量注册表回退；
+            # use_miya_prompt=False 保留上面构建的 system prompt（否则会被全量人设 prompt 覆盖）
             response = await self.ai_client.chat(
                 messages=messages,
                 tools=[],
                 tool_choice="none",
+                use_miya_prompt=False,
             )
 
             # 修复：此处原先重复构建 prompt 并二次调用 LLM，第一次响应被直接丢弃（双倍消耗），已移除
@@ -1437,10 +1489,6 @@ class ProactiveChatSystem:
             message = response.strip() if isinstance(response, str) else str(response).strip()
 
             if message.upper() == "SKIP" or not message:
-                return None
-
-            # 检查同类型触发冷却
-            if not self._check_trigger_type_cooldown(target_id, "ai"):
                 return None
 
             # 检查消息内容是否重复
