@@ -20,10 +20,10 @@ from utils import token_budget as tb
 # ==================== 保守估算 / 未知模型 ====================
 
 def test_conservative_estimate_cjk_and_ascii():
-    # 中文：2 token/字 + 1 余量
-    assert tb.conservative_estimate("你好世界") == 4 * 2 + 1
-    # 纯 ASCII：1 token/3 字符（向上取整余量 1）
-    assert tb.conservative_estimate("hello") == int(5 / 3.0) + 1
+    # 中文：1.1 token/字（2026-09 校准：GLM/DeepSeek 中文实际 0.5-0.7 token/字）+ 1 余量
+    assert tb.conservative_estimate("你好世界") == int(4 * 1.1) + 1
+    # 纯 ASCII：1 token/4 字符（向上取整余量 1）
+    assert tb.conservative_estimate("hello") == int(5 / 4.0) + 1
     # 空串
     assert tb.conservative_estimate("") == 0
 
@@ -141,22 +141,22 @@ def test_context_limit_formula():
 # ==================== 裁剪优先级 ====================
 
 def test_crop_priority_tool_results_first():
-    text = "中" * 30  # 61 tokens（保守）
+    text = "中" * 30  # 34 tokens（校准后系数）
     segments = {"tool_results": text, "knowledge": text, "history": text}
-    cropped = tb.crop_segments(segments, limit=130, provider="deepseek", model="deepseek-chat")
-    # tool_results 被裁短，knowledge/history 保持不变
+    cropped = tb.crop_segments(segments, limit=80, provider="deepseek", model="deepseek-chat")
+    # 总量 102 > 80：tool_results 被裁短，knowledge/history 保持不变
     assert len(cropped["tool_results"]) < 30
     assert cropped["knowledge"] == text
     assert cropped["history"] == text
     total = sum(tb.estimate_tokens(v, "deepseek", "deepseek-chat") for v in cropped.values())
-    assert total <= 130
+    assert total <= 80
 
 
 def test_crop_drops_history_last():
     """预算只能容纳一个段时：tool_results 先被丢弃，history 最后裁"""
-    text = "中" * 30  # 61 tokens
+    text = "中" * 30  # 34 tokens
     segments = {"tool_results": text, "knowledge": text, "history": text}
-    cropped = tb.crop_segments(segments, limit=61, provider="deepseek", model="deepseek-chat")
+    cropped = tb.crop_segments(segments, limit=34, provider="deepseek", model="deepseek-chat")
     assert "tool_results" not in cropped
     assert "knowledge" not in cropped
     assert "history" in cropped

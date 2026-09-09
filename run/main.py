@@ -665,7 +665,7 @@ class Miya:
                             # P7.1: 改用 uvicorn.Server 以便 ashutdown 时通过 should_exit 优雅停止
                             config = uvicorn.Config(
                                 app,
-                                host="0.0.0.0",
+                                host=os.getenv("API_HOST", "127.0.0.1"),  # 默认仅本机，公网部署必须防裸暴露（审计 SEC-1）
                                 port=current_api_port,
                                 log_level="warning",
                             )
@@ -681,7 +681,7 @@ class Miya:
                             # 更新端口并重新检查
                             from utils.port_utils import find_available_port
 
-                            current_api_port = find_available_port(current_api_port + 1, host="0.0.0.0")
+                            current_api_port = find_available_port(current_api_port + 1, host=os.getenv("API_HOST", "127.0.0.1"))
                             self.logger.info(f"端口切换到 {current_api_port}，前端将自动检测该端口")
                         else:
                             self.logger.error(f"无法启动服务器: {e}")

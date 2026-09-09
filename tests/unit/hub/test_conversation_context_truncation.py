@@ -52,9 +52,9 @@ def _make_manager(messages, max_count=30, max_tokens=6000):
 
 @pytest.mark.asyncio
 async def test_newest_first_truncation_keeps_newest():
-    # 每条约 67 tokens（含全角冒号）；max_tokens=210 → 只能装下最新 3 条
+    # 每条约 37 tokens（2026-09 校准系数 1.1/字）；max_tokens=120 → 只能装下最新 3 条
     messages = [_msg(i) for i in range(10)]
-    mgr = _make_manager(messages, max_tokens=210)
+    mgr = _make_manager(messages, max_tokens=120)
     ctx = await mgr.get_conversation_context("s1", current_input="你好")
     contents = [m["content"] for m in ctx]
     assert len(contents) == 3
@@ -65,7 +65,7 @@ async def test_newest_first_truncation_keeps_newest():
 @pytest.mark.asyncio
 async def test_truncated_context_is_ascending():
     messages = [_msg(i) for i in range(10)]
-    mgr = _make_manager(messages, max_tokens=210)
+    mgr = _make_manager(messages, max_tokens=120)
     ctx = await mgr.get_conversation_context("s1", current_input="你好")
     times = [m["timestamp"] for m in ctx]
     assert times == sorted(times)  # 恢复时间正序

@@ -213,3 +213,6 @@ AGENTS.md
 .codex/
 data/neo4j/
 .codegraph/
+
+# ZCode 会话产物
+.zcode/

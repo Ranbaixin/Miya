@@ -53,16 +53,16 @@ _CJK_PUNCT_RE = re.compile(r"[\u3000-\u303f\uff00-\uffef]")
 
 
 def conservative_estimate(text: str) -> int:
-    """保守 token 估算：中文按 2 token/字，英文按 1 token/3 字符，标点另计。
-    取偏大值，宁可高估不可低估。
+    """token 估算：中文按 1.1 token/字（实测校准：GLM/DeepSeek 中文约 0.5-0.7 token/字，
+    旧系数 2 会高估 2 倍以上导致预算误判与过度裁剪），英文按 1 token/4 字符。
+    保留少量上浮余量，宁可略高不可低估。
     """
     if not text:
         return 0
     text = str(text)
     cjk_chars = len(_CJK_RE.findall(text)) + len(_CJK_PUNCT_RE.findall(text))
     non_cjk = len(text) - cjk_chars
-    # 中文：2 token/字（保守）；英文/符号：1 token/3 字符（偏保守）
-    est = cjk_chars * 2 + non_cjk / 3.0
+    est = cjk_chars * 1.1 + non_cjk / 4.0
     return int(est) + 1  # 留 1 token 余量
 
 

@@ -25,11 +25,11 @@
   },
   "models": {
     "deepseek_v4_flash_official": {
-      "name": "deepseek-v4-flash",
+      "name": "glm-5.3-flash",
       "provider": "openai",
-      "base_url": "https://api.deepseek.com/v1",
-      "env_key": "DEEPSEEK_API_KEY",
-      "description": "DeepSeek V3 官方 - 快速响应的通用模型",
+      "base_url": "https://open.bigmodel.cn/api/paas/v4",
+      "env_key": "ZHIPU_API_KEY",
+      "description": "GLM-5.3-Flash 官方（智谱通用端点）- 原生多模态快速模型",
       "capabilities": [
         "simple_chat",
         "chinese_understanding",
@@ -41,19 +41,19 @@
         "task_planning"
       ],
       "cost_per_1k_tokens": {
-        "input": 0.00028,
-        "output": 0.00056
+        "input": 0.0008,
+        "output": 0.0028
       },
       "latency": "medium",
       "quality": "excellent"
     },
     "deepseek_vision": {
-      "name": "deepseek-v4-flash",
+      "name": "glm-5.3-flash",
       "provider": "openai",
       "type": "vision",
-      "base_url": "https://api.deepseek.com/v1",
-      "env_key": "DEEPSEEK_API_KEY",
-      "description": "DeepSeek 视觉模型 (多模态图片分析)",
+      "base_url": "https://open.bigmodel.cn/api/paas/v4",
+      "env_key": "ZHIPU_API_KEY",
+      "description": "GLM-5.3-Flash 视觉分析（原生多模态）",
       "capabilities": [
         "image_description",
         "vision_understanding",
@@ -64,14 +64,14 @@
         "tool_calling",
         "agent_mode"
       ],
-      "type": "vision",
       "cost_per_1k_tokens": {
         "input": 0.003,
         "output": 0.006
       },
       "latency": "medium",
       "quality": "excellent",
-      "_origin": "zhipu_glm_46v_flash"
+      "_origin": "zhipu_glm_46v_flash",
+      "max_tokens": 1500
     },
     "deepseek_embedding": {
       "name": "deepseek-embedding",
