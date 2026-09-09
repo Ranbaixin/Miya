@@ -186,8 +186,9 @@ REQUIRED_ENV_KEYS = {
 }
 
 # C8：journalctl 错误签名（pattern, 阈值, 级别, 说明）
+# 注：matplotlib 为内存优化决策的已知缺失（viz 可选组），负向断言排除，由"加载\S*工具失败"WARN 承接
 RUNTIME_ERROR_SIGNATURES = (
-    (r"No module named", 1, FAIL, "依赖缺失（工具包加载失败/启动崩溃根源）"),
+    (r"No module named '(?!matplotlib')", 1, FAIL, "依赖缺失（工具包加载失败/启动崩溃根源）"),
     (r"ModuleNotFoundError", 1, FAIL, "模块缺失"),
     (r"加载\S*工具失败", 1, WARN, "工具包加载失败（可选依赖缺失降级）"),
     (r"权限检查异常", 1, FAIL, "权限引擎异常（fail-closed 全拒）"),

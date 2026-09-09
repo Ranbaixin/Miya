@@ -288,6 +288,23 @@ class TestPermissions:
         assert finding.status == PASS
 
 
+class TestRuntimeSignatures:
+    def test_matplotlib_accepted_state_not_failed(self):
+        """已知接受状态：matplotlib 缺失（viz 可选组内存优化）不得触发 No module named FAIL。"""
+        sample = "加载可视化工具失败: No module named 'matplotlib'"
+        pattern = doctor.RUNTIME_ERROR_SIGNATURES[0][0]
+        assert not re.search(pattern, sample)
+
+    def test_real_missing_dependency_still_fails(self):
+        """真实依赖缺失（PIL 等）仍必须命中 FAIL 签名。"""
+        pattern = doctor.RUNTIME_ERROR_SIGNATURES[0][0]
+        assert re.search(pattern, "加载QQ多媒体工具失败: No module named 'PIL'")
+        assert re.search(pattern, "No module named 'chardet'")
+
+    def test_signature_table_non_empty(self):
+        assert len(doctor.RUNTIME_ERROR_SIGNATURES) >= 8
+
+
 # ==================== 聚合 ====================
 
 class TestAggregate:
