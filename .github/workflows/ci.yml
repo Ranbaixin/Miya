@@ -123,6 +123,31 @@ jobs:
         file: ./coverage.xml
         flags: unit
 
+  config-guard:
+    name: Config Guard (doctor 静态检查)
+    runs-on: ubuntu-latest
+    needs: quality-checks
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install minimal deps for probes
+      # doctor C5 依赖探针需要的最小集合（CI 只验证静态契约，不装全量依赖）
+      run: pip install pyyaml httpx requests beautifulsoup4 python-dotenv openai tiktoken tenacity jieba apscheduler aiohttp pillow chardet
+
+    - name: Run doctor static checks
+      # C1 死配置 / C2 配置解析 / C3 模型配置（视觉能力契约）/ C4 prompt 占位符 /
+      # C5 依赖探针 / C6 环境变量（CI 无 .env → 仅报缺文件级 WARN）/ C7 权限配置
+      run: |
+        python scripts/doctor.py --json > doctor_report.json || DOCTOR_FAILED=1
+        cat doctor_report.json
+        exit ${DOCTOR_FAILED:-0}
+
   secret-scan:
     name: Secret Scan
     runs-on: ubuntu-latest
@@ -143,7 +168,7 @@ jobs:
   notify:
     name: Notify Status
     runs-on: ubuntu-latest
-    needs: [quality-checks, unit-tests, secret-scan]
+    needs: [quality-checks, unit-tests, secret-scan, config-guard]
     if: always()
     env:
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}

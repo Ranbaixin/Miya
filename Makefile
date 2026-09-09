@@ -4,7 +4,7 @@
 #  用法: make ci
 # ========================================
 
-.PHONY: ci quality test security format help smoke smoke-fast graph memory-check
+.PHONY: ci quality test security format help smoke smoke-fast graph memory-check doctor
 
 # 默认：运行所有 CI 检查
 ci: quality test security
@@ -34,6 +34,10 @@ graph:
 # 记忆健康检查（索引覆盖度 + 双库一致性）
 memory-check:
 	python scripts/memory_health_check.py
+
+# 统一自检（配置契约/模型校验/依赖探针；--runtime 加运行时诊断）
+doctor:
+	python scripts/doctor.py
 
 # 冒烟测试 (全量, ~3-5 分钟)
 smoke:
