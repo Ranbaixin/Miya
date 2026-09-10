@@ -673,6 +673,21 @@ def check_runtime(
             "检查启动期日志的守护进程异常",
         )
 
+    # 4) NapCat 反向 WS 桥接：服务运行中但连接断开 = 消息黑洞（NapCat 客户端弃连后
+    #    弥娅侧仅监听仍显示 online，此断裂曾 11 小时无人发现）。
+    #    判定依据是最后一个事件：断开在最后 = 当前断裂（FAIL）；连接在最后 = 正常
+    disconnect_positions = [m.start() for m in re.finditer(r"NapCat 断开", text)]
+    connect_positions = [m.start() for m in re.finditer(r"NapCat 已连接", text)]
+    if disconnect_positions and (not connect_positions or disconnect_positions[-1] > connect_positions[-1]):
+        finding.add(
+            FAIL,
+            f"NapCat 反向 WS 断开（最后事件为断开，窗口 '{since}'）——当前消息无法到达，尝试 docker restart napcat",
+            "重启 NapCat 容器恢复反向 WS 桥接",
+        )
+    elif connect_positions:
+        finding.details.append(f"NapCat 桥接正常（窗口内最近一次连接位于断开之后或无断开记录）")
+    # 无任何连接/断开记录：可能是纯空闲窗口，不判定
+
     if not [d for d in finding.details if d.startswith("[")]:
         finding.add(PASS, f"运行时正常（{len(log_lines)} 行日志扫描无超阈值错误签名）")
     return finding

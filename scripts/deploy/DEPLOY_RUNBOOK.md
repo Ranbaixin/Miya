@@ -62,7 +62,14 @@ systemctl daemon-reload && systemctl enable --now miya-doctor.timer
 - **run/main.py 曾硬编码 8000 端口绑 0.0.0.0**——已改为读 `API_HOST`（默认 127.0.0.1），别改回去
 - **jinja2 / email-validator 是必需运行时依赖**（已进 pyproject；服务器上靠 `uv add` 补过）
 - NapCat 反向 WS 必须配在 `onebot11_<QQ>.json` 的 `network.websocketClients`（messagePostFormat=array）；URL 用 `ws://127.0.0.1:8095/onebot/v11/ws`
-- NapCat 容器重启后自动快速登录（凭据在 /opt/napcat 卷），无需重扫
+- NapCat 容器重启后自动快速登录（凭据在 /opt/napcat 卷），无需重扫——**但凭据可能过期**
+  （2026-09-10 事故：快速登录失效 + QQ 风控 168，桥接断裂 11 小时无人察觉）。处理顺序：
+  `docker restart napcat` → 二维码扫码（约 2 分钟一刷，及时取用）→ 风控拦截时先在手机 QQ
+  解除限制再扫。**建议给 NapCat 配置 `NAPCAT_QUICK_PASSWORD`/`NAPCAT_QUICK_PASSWORD_MD5`
+  环境变量作密码回退**，摆脱对扫码的依赖
+- **桥接断裂 = 消息黑洞**：弥娅侧"平台在线"只代表自己在监听，NapCat 客户端弃连后两侧状态
+  脱节。doctor C8 已加桥接检测（窗口内最后事件为断开 → FAIL）；发消息无回复时第一时间看
+  `docker logs napcat` 与弥娅日志的 "NapCat 已连接/断开"
 - 服务器内存 1.6Gi：勿启用 Neo4j / 本地 embedding；swap 2G 已配
 - Git Bash 下 workbench 的远端路径参数要加 `MSYS_NO_PATHCONV=1`，否则 `/tmp` 会被改写成本机路径
 
