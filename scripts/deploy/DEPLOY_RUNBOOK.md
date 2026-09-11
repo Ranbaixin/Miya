@@ -67,9 +67,15 @@ systemctl daemon-reload && systemctl enable --now miya-doctor.timer
   `docker restart napcat` → 二维码扫码（约 2 分钟一刷，及时取用）→ 风控拦截时先在手机 QQ
   解除限制再扫。**建议给 NapCat 配置 `NAPCAT_QUICK_PASSWORD`/`NAPCAT_QUICK_PASSWORD_MD5`
   环境变量作密码回退**，摆脱对扫码的依赖
-- **桥接断裂 = 消息黑洞**：弥娅侧"平台在线"只代表自己在监听，NapCat 客户端弃连后两侧状态
-  脱节。doctor C8 已加桥接检测（窗口内最后事件为断开 → FAIL）；发消息无回复时第一时间看
-  `docker logs napcat` 与弥娅日志的 "NapCat 已连接/断开"
+- **桥接/会话双断裂场景对照**（自愈 v2 分而治之，每 5 分钟自动检测）：
+
+  | 场景 | 特征 | 自愈动作 |
+  |---|---|---|
+  | A. WS 桥接断裂 | miya 日志最后事件为"NapCat 断开"，凭据多半仍有效 | 自动 `docker restart napcat`（每日上限 4 次） |
+  | B. QQ 会话被踢 | napcat 日志出现 `KickedOffLine`/`登录已失效`，**WS 未必断开**（僵尸连接，消息已死） | 密码回退启用 → 重启走密码登录；停用 → 写 `NEED_MANUAL_SCAN` 标记（/var/lib/napcat_manual_scan_flag，次日自动清），doctor 报 FAIL 提示人工扫码 |
+
+  ⚠️ **密码回退的实测限制**：被风控盯上的账号走密码登录会**强制短信验证**，且 NapCat 在验证流程中会卡死不落二维码（2026-09-11 实测）——因此当前密码回退处于停用状态（原配置备份在 `/opt/napcat/.env.password-backup`）。恢复方法：`mv /opt/napcat/.env.password-backup /opt/napcat/.env && docker compose -f scripts/deploy/docker-compose.napcat.yml up -d --force-recreate`，且需先打通 WebUI(5099) SSH 隧道完成短信验证
+  - B 场景的最终恢复手段就是人工扫码：`docker cp napcat:/app/napcat/cache/qrcode.png /tmp/qr.png` 取最新码（约 2 分钟一刷，过期重启容器刷新）
 - **桥接自愈**：miya-napcat-selfheal.timer 每 5 分钟检测断裂并自动 `docker restart napcat`
   （每日上限 2 次，状态在 /var/lib/napcat_selfheal_state；日志 logs/napcat_selfheal.log）。
   注意：仅对"WS 断开但凭据有效"的断裂有效；凭据被服务端作废（"登录态已失效"）时重启无效，

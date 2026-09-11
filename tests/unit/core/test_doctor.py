@@ -320,6 +320,34 @@ class TestRuntimeSignatures:
 
 # ==================== 聚合 ====================
 
+class TestNapcatSessionAnalysis:
+    """napcat 会话日志分析（僵尸连接盲区：QQ 踢会话时 WS 未必断开）。"""
+
+    def test_kicked_after_login_fails(self):
+        """登录后被踢（最后事件为被踢）→ FAIL 需人工扫码。"""
+        text = "12:00 快速登录成功\n16:20 [KickedOffLine] [下线通知] 你的账号当前登录已失效"
+        status, msg = doctor._analyze_napcat_session(text)
+        assert status == FAIL
+        assert "KickedOffLine" in msg or "踢" in msg
+
+    def test_kicked_then_relogin_passes(self):
+        """被踢后重新登录成功（最后事件为登录）→ PASS。"""
+        text = "12:00 登录成功\n14:00 KickedOffLine 登录已失效\n15:00 快速登录成功"
+        status, _ = doctor._analyze_napcat_session(text)
+        assert status == PASS
+
+    def test_quick_login_fail_without_success_warns(self):
+        """快速登录错误且无成功登录 → WARN（密码回退未生效/需扫码）。"""
+        text = "10:00 快速登录错误： 登录态已失效\n10:00 二维码已保存"
+        status, msg = doctor._analyze_napcat_session(text)
+        assert status == WARN
+        assert "密码回退" in msg
+
+    def test_idle_window_passes(self):
+        status, _ = doctor._analyze_napcat_session("")
+        assert status == PASS
+
+
 class TestAggregate:
     def test_summarize_and_has_failures(self):
         f1 = doctor.Finding("C1", "t1", PASS)

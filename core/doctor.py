@@ -245,6 +245,31 @@ def _extract_placeholders(text: str) -> set:
     return set(re.findall(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}", text))
 
 
+def _analyze_napcat_session(napcat_text: str) -> tuple:
+    """分析 napcat 容器日志的会话状态（逐行分类、最后事件胜出，供 doctor C8 与单测复用）。
+
+    返回 (status, message)：FAIL=会话被踢需人工扫码；WARN=密码回退未生效；PASS=在线/正常。
+    注意「登录已失效」同时出现在真被踢（KickedOffLine）与快速登录失败文案中，
+    必须按行区分——KickedOffLine 优先级高于快速登录错误。
+    """
+    events = []  # (position, kind)
+    for pos, line in enumerate(napcat_text.splitlines()):
+        if "KickedOffLine" in line:
+            events.append((pos, "KICK"))
+        elif "快速登录错误" in line:
+            events.append((pos, "LOGIN_FAIL"))
+        elif "登录成功" in line or "接收 <-" in line:
+            events.append((pos, "OK"))
+    if not events:
+        return PASS, "NapCat 窗口内无登录事件（纯空闲）"
+    last_kind = events[-1][1]
+    if last_kind == "KICK":
+        return FAIL, "NapCat 会话被 QQ 踢下线（KickedOffLine，最后事件为被踢）——消息当前无法收发"
+    if last_kind == "LOGIN_FAIL":
+        return WARN, "NapCat 快速登录失败且未见成功登录（密码回退未配置或也被风控拦截）"
+    return PASS, "NapCat 会话正常（窗口内最后事件为登录/收信成功）"
+
+
 # ==================== C1 死配置检测 ====================
 
 def check_dead_config(repo_root: Path = REPO_ROOT) -> Finding:
@@ -688,6 +713,42 @@ def check_runtime(
     elif connect_positions:
         finding.details.append(f"NapCat 桥接正常（窗口内最近一次连接位于断开之后或无断开记录）")
     # 无任何连接/断开记录：可能是纯空闲窗口，不判定
+
+    # 5) NapCat 会话状态（僵尸连接盲区）：QQ 踢会话时 WS 常还连着（2026-09-11 16:20 事故，
+    #    消息死 6 小时无人察觉）。从 napcat 容器日志判定最后一个登录事件
+    if shutil.which("docker"):
+        try:
+            container_exists = subprocess.run(
+                ["docker", "ps", "-a", "--filter", "name=napcat", "--format", "{{.Names}}"],
+                capture_output=True, text=True, timeout=30,
+            ).stdout.strip()
+        except (subprocess.TimeoutExpired, OSError):
+            container_exists = ""
+        if "napcat" in container_exists:
+            try:
+                napcat_log = subprocess.run(
+                    ["docker", "logs", "--since", since, "napcat"],
+                    capture_output=True, text=True, timeout=60,
+                )
+                napcat_text = napcat_log.stdout + napcat_log.stderr
+                status, message = _analyze_napcat_session(napcat_text)
+                if status == FAIL:
+                    finding.add(FAIL, message, "人工扫码恢复（QQ 扫码后自动回连）；密码回退路径见 runbook")
+                elif status == WARN:
+                    finding.add(WARN, message, "检查 /opt/napcat/.env 密码回退配置")
+                else:
+                    finding.details.append(message)
+            except (subprocess.TimeoutExpired, OSError) as e:
+                finding.add(WARN, f"napcat 容器日志读取失败: {e}")
+
+    # 6) 人工扫码标记（自愈脚本写入：会话被踢且无法自动恢复）
+    scan_flag = Path("/var/lib/napcat_manual_scan_flag")
+    if scan_flag.exists():
+        finding.add(
+            FAIL,
+            "自愈系统已标记 NEED_MANUAL_SCAN：会话被踢且无法自动恢复——需人工扫码",
+            "手机 QQ 扫码恢复（取码见 runbook）；扫码成功后标记次日自动清除",
+        )
 
     if not [d for d in finding.details if d.startswith("[")]:
         finding.add(PASS, f"运行时正常（{len(log_lines)} 行日志扫描无超阈值错误签名）")
