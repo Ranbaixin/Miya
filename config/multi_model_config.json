@@ -28,11 +28,11 @@
   },
   "models": {
     "deepseek_v4_flash_official": {
-      "name": "glm-5.3-flash",
+      "name": "deepseek-flash",
       "provider": "openai",
-      "base_url": "https://open.bigmodel.cn/api/paas/v4",
-      "env_key": "ZHIPU_API_KEY",
-      "description": "GLM-5.3-Flash 官方（智谱通用端点）- 原生多模态快速模型",
+      "base_url": "https://api.deepseek.com/v1",
+      "env_key": "DEEPSEEK_API_KEY",
+      "description": "DeepSeek V4.1 Flash（deepseek-flash，原生多模态 1M 上下文）- 通用主力",
       "capabilities": [
         "simple_chat",
         "chinese_understanding",
@@ -51,12 +51,12 @@
       "quality": "excellent"
     },
     "deepseek_vision": {
-      "name": "glm-5.3-flash",
+      "name": "deepseek-flash",
       "provider": "openai",
       "type": "vision",
-      "base_url": "https://open.bigmodel.cn/api/paas/v4",
-      "env_key": "ZHIPU_API_KEY",
-      "description": "GLM-5.3-Flash 视觉分析（原生多模态）",
+      "base_url": "https://api.deepseek.com/v1",
+      "env_key": "DEEPSEEK_API_KEY",
+      "description": "DeepSeek V4.1 Flash 视觉理解（原生多模态）",
       "capabilities": [
         "image_description",
         "vision_understanding",

@@ -38,7 +38,7 @@ def _statuses(finding) -> list:
 
 def _write_model_config(tmp_path: Path, models: dict, active: str = "m1", env: dict = None):
     cfg_dir = tmp_path / "config"
-    cfg_dir.mkdir(exist_ok=True)
+    cfg_dir.mkdir(parents=True, exist_ok=True)
     (cfg_dir / "multi_model_config.json").write_text(
         json.dumps({"active": active, "models": models}, ensure_ascii=False), encoding="utf-8"
     )
@@ -49,15 +49,28 @@ def _write_model_config(tmp_path: Path, models: dict, active: str = "m1", env: d
 
 class TestModelConfig:
     def test_text_only_model_as_vision_fails(self, tmp_path):
-        """历史事故回归：纯文本模型配成 vision → 必须 FAIL（防'识图变瞎'复发）。"""
+        """无视觉关键字的名字配成 vision → 必须 FAIL（防'识图变瞎'复发）。
+
+        注：deepseek 系名字已加入关键字表（V4.1 起其 API 全系原生多模态），
+        历史事故模型名 deepseek-v4-flash 如今反而会被放行——这是有意的语义更新。
+        """
         repo = _write_model_config(
             tmp_path,
             {"m1": {"name": "deepseek-v4-flash", "type": "vision", "base_url": "https://x/v1", "env_key": "ZHIPU_API_KEY"}},
             env={"ZHIPU_API_KEY": "sk-xxx"},
         )
         finding = check_model_config(repo)
-        assert finding.status == FAIL
-        assert any("SIMPLE_ANALYSIS" in d for d in finding.details)
+        assert finding.status == PASS  # deepseek 全系已原生多模态
+
+        # 真正无视觉能力的名字必须拦下
+        repo2 = _write_model_config(
+            tmp_path / "r2",
+            {"m1": {"name": "some-text-only-model", "type": "vision", "base_url": "https://x/v1", "env_key": "ZHIPU_API_KEY"}},
+            env={"ZHIPU_API_KEY": "sk-xxx"},
+        )
+        finding2 = check_model_config(repo2)
+        assert finding2.status == FAIL
+        assert any("SIMPLE_ANALYSIS" in d for d in finding2.details)
 
     def test_glm_vision_model_passes(self, tmp_path):
         repo = _write_model_config(

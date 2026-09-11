@@ -188,7 +188,8 @@ class MultiVisionAnalyzer:
 
                 # 选择模型类型
                 model_name = model_cfg.get("name", "").lower()
-                if any(kw in model_name for kw in ["qwen", "glm", "internvl", "llava", "kimi", "moonshot"]):
+                # deepseek：V4.1 Flash 起主模型原生多模态（vision-exp 已下线并路由至 V4.1），API 全系支持图片
+                if any(kw in model_name for kw in ["qwen", "glm", "internvl", "llava", "kimi", "moonshot", "deepseek"]):
                     v_model_type = VisionModelType.ZHIPU_VL if "glm" in model_name else VisionModelType.SILICONFLOW_VL
                 else:
                     v_model_type = VisionModelType.SIMPLE_ANALYSIS
@@ -242,7 +243,7 @@ class MultiVisionAnalyzer:
                 model_name = model_config.name.lower()
                 if "glm" in model_name:
                     v_model_type = VisionModelType.ZHIPU_VL
-                elif any(kw in model_name for kw in ["qwen", "internvl", "llava", "kimi", "moonshot"]):
+                elif any(kw in model_name for kw in ["qwen", "internvl", "llava", "kimi", "moonshot", "deepseek"]):
                     v_model_type = VisionModelType.SILICONFLOW_VL
                 else:
                     v_model_type = VisionModelType.SIMPLE_ANALYSIS

@@ -68,7 +68,8 @@ class Finding:
 
 # C3：视觉模型能力关键字 —— 必须与 core/multi_vision_analyzer.py 的分类集合一致
 # （不一致时模型会被误判为 SIMPLE_ANALYSIS 落入本地降级，即"识图变瞎"事故的根源）
-VISION_MODEL_KEYWORDS = ("glm", "qwen", "internvl", "llava", "kimi", "moonshot")
+# deepseek：V4.1 Flash 起主模型原生多模态，API 全系支持图片
+VISION_MODEL_KEYWORDS = ("glm", "qwen", "internvl", "llava", "kimi", "moonshot", "deepseek")
 
 # C3：multi_model_config.models[].type 合法值（ModelType 枚举 + 实际使用的默认 "chat"）
 ALLOWED_MODEL_TYPES = {"chat", "text", "vision", "ocr", "embedding", "multimodal", "safety"}
