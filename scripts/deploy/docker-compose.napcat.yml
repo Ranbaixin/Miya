@@ -1,0 +1,34 @@
+# NapCat 容器标准配置（docker-compose 管理，替代裸 docker run）
+# 用法：cd /opt/napcat && docker compose up -d
+#
+# 与原 docker run 参数等价（2026-09-11 收编），新增：
+#   - env_file .env：可放 NAPCAT_QUICK_PASSWORD / NAPCAT_QUICK_PASSWORD_MD5 作密码回退，
+#     凭据被服务端作废（风控踢会话）时重启可自动密码登录，摆脱对扫码的依赖
+#   - 容器名固定 napcat，mac-address 预留注释（host 网络下无独立 MAC，无需固定）
+#
+# 密码回退设置（可选，强烈建议）：
+#   1. echo "NAPCAT_QUICK_PASSWORD_MD5=<小号密码的MD5>" >> /opt/napcat/.env
+#      （MD5 可用 echo -n "你的密码" | md5sum 生成；或用 NAPCAT_QUICK_PASSWORD 明文）
+#   2. docker compose up -d
+#   密码只存在于服务器本地 .env（chmod 600），不要提交到 git 或发给任何人
+services:
+  napcat:
+    image: mlikiowa/napcat-docker:latest
+    container_name: napcat
+    restart: always
+    network_mode: host
+    env_file:
+      - /opt/napcat/.env
+    environment:
+      - ACCOUNT=1153409562
+      - NAPCAT_UID=0
+      - NAPCAT_GID=0
+      - TZ=Asia/Shanghai
+    volumes:
+      - /opt/napcat/config:/app/napcat/config
+      - /opt/napcat/app:/app/napcat
+      - qq_data:/app/.config/QQ
+volumes:
+  qq_data:
+    external: true
+    name: a04056d8c4a6067b30743d11a58a77aae0df3edfe86d0c8cb7e716922589588b

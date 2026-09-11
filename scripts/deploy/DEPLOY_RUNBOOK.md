@@ -70,6 +70,31 @@ systemctl daemon-reload && systemctl enable --now miya-doctor.timer
 - **桥接断裂 = 消息黑洞**：弥娅侧"平台在线"只代表自己在监听，NapCat 客户端弃连后两侧状态
   脱节。doctor C8 已加桥接检测（窗口内最后事件为断开 → FAIL）；发消息无回复时第一时间看
   `docker logs napcat` 与弥娅日志的 "NapCat 已连接/断开"
+- **桥接自愈**：miya-napcat-selfheal.timer 每 5 分钟检测断裂并自动 `docker restart napcat`
+  （每日上限 2 次，状态在 /var/lib/napcat_selfheal_state；日志 logs/napcat_selfheal.log）。
+  注意：仅对"WS 断开但凭据有效"的断裂有效；凭据被服务端作废（"登录态已失效"）时重启无效，
+  必须重新扫码
+- **容器标准配置改用 compose**：`scripts/deploy/docker-compose.napcat.yml`（cd /opt/napcat &&
+  docker compose up -d）。QQ 凭据在 docker volume（external，已复用原卷），重建容器不丢登录态。
+  密码回退：在 /opt/napcat/.env 配 `NAPCAT_QUICK_PASSWORD_MD5`（echo -n "密码" | md5sum），
+  凭据被风控作废时可自动密码登录，摆脱扫码依赖；.env chmod 600 不进 git
+
+## 四.5、QQ 小号风控应对（2026-09 实战沉淀）
+
+现象谱系：serverErrorCode 168（"部分功能使用受限"）、"登录态已失效"、会话数小时后 sendMsg
+超时/进消息停止——均为 QQ 服务端风控踢会话，数据中心 IP + 低权重小号是主要诱因。
+
+**账号养号清单（用户执行，最有效）**：
+1. 手机 QQ 每天登录小号，保持真实使用
+2. 完成实名认证；开启设备锁并信任常用设备
+3. QQ 安全中心（aq.qq.com）检查并清除异常记录
+4. 腾讯系产品（QQ音乐等）适度活跃；与几个好友日常互动
+5. 坚持 1-2 周，权重上来后风控频率显著下降
+
+**升级路线（若养号后仍频繁被控）**：
+- NapCat 迁家宽：反向 WS 客户端可跑在任何能上网的设备，出站连接云上 miya 的 8095
+  （tailscale/frp 隧道 + token 鉴权），IP 信誉从数据中心变家庭宽带
+- 替代通道：QQ 官方机器人 API（bot.qq.com，零风控，但主动私聊/群能力受限，交互缩水）
 - 服务器内存 1.6Gi：勿启用 Neo4j / 本地 embedding；swap 2G 已配
 - Git Bash 下 workbench 的远端路径参数要加 `MSYS_NO_PATHCONV=1`，否则 `/tmp` 会被改写成本机路径
 

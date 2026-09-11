@@ -1,0 +1,6 @@
+[Unit]
+Description=Miya NapCat bridge self-heal check
+
+[Service]
+Type=oneshot
+ExecStart=/opt/miya/scripts/deploy/napcat_selfheal.sh
