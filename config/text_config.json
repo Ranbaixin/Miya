@@ -2581,5 +2581,33 @@
     "max_responses_per_turn": 3,
     "default_max_messages": 1,
     "comment": "谛听策略默认值（memory/diteng_listener.py _load_strategy_config 合并读取，此前为幽灵引用）"
+  },
+  "relationship_wiki": {
+    "comment": "关系维基层——对话摄入时LLM编译主题页面、检索时确定性注入（LLM Wiki思想的关系记忆实现）；compile_enabled/inject_enabled 双开关独立",
+    "compile_enabled": true,
+    "inject_enabled": true,
+    "db_path": "data/memory/miya_memory.db",
+    "categories": [
+      "饮食口味",
+      "生活作息",
+      "工作学习",
+      "兴趣爱好",
+      "身体健康",
+      "情绪心理",
+      "人际关系",
+      "共同经历",
+      "计划打算",
+      "其他"
+    ],
+    "timeout": 30,
+    "min_content_len": 6,
+    "max_pages_per_user": 50,
+    "max_page_chars": 2000,
+    "candidate_pages": 2,
+    "candidate_page_chars": 1500,
+    "index_pages": 50,
+    "inject_max_pages": 2,
+    "inject_max_chars": 800,
+    "stale_days": 30
   }
 }

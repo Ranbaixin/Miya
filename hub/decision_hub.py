@@ -1600,6 +1600,21 @@ class DecisionHub:
             # 稳定画像任务在认知记忆之后启动（双轨结构化去重需要认知条目，见 Phase 2）
             wm_task = asyncio.create_task(fetch_group_chat_context(), name="wm")
 
+            # 【关系维基】主题页面检索（摄入时编译知识，确定性注入；user_id_str 已在此前定义）
+            async def fetch_wiki_context() -> str:
+                wt = ""
+                try:
+                    from memory.relationship_wiki import fetch_wiki_context as _fetch_wiki
+
+                    wt = await _fetch_wiki(user_id=user_id_str or None, user_input=content)
+                    if wt:
+                        logger.info(f"[关系维基] 已检索到页面上下文 ({len(wt)} 字)")
+                except Exception as e:  # noqa: BLE001 — 维基层为增强功能，失败降级
+                    logger.debug(f"[关系维基] 检索失败: {e}")
+                return wt
+
+            wiki_task = asyncio.create_task(fetch_wiki_context(), name="wiki")
+
             # 【预分析合并】谛听策略并入灵魂调用（省一次 LLM 往返）；text_config 可关
             preanalysis_merge = False
             diteng = None
@@ -1729,6 +1744,9 @@ class DecisionHub:
             # Step 6：稳定画像在认知记忆之后构建，双轨按结构化条目去重后注入
             sp_task = asyncio.create_task(fetch_stable_persona(exclude_items=cognitive_items), name="stable_persona")
             stable_persona_context = await sp_task
+
+            # 【关系维基】等待维基页上下文（Phase 1 已启动）
+            wiki_context = await wiki_task
 
             # 【预分析合并】构建谛听策略请求段，随灵魂调用一并执行（省一次 LLM 往返）
             strategy_request = None
@@ -1974,6 +1992,8 @@ class DecisionHub:
                     "group_persona": group_persona_context,
                     # 【Step 6】稳定画像（长期记忆白名单标签，<=3 条结构化去重）
                     "stable_persona": stable_persona_context,
+                    # 【关系维基】主题页面编译知识（确定性注入）
+                    "wiki_context": wiki_context,
                     # 【新增】引用消息和文件上下文
                     "reply_context": reply_context,
                     "files_context": files_context,
@@ -2081,6 +2101,7 @@ class DecisionHub:
                 _hist_text = "\n".join(str(m.get("content", "")) for m in (conversation_context or []))
                 for _name, _text in (
                     ("history", _hist_text),
+                    ("wiki", wiki_context),
                     ("stable_memory", stable_persona_context),
                     ("cognitive_memory", cognitive_memory_context),
                     ("knowledge", knowledge_context or ""),

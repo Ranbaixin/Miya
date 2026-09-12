@@ -66,6 +66,22 @@ def main() -> int:
     if "漂移: 0 条" not in out:
         print("[memory-health] WARNING: 检测到 level 漂移，可运行 "
               "python scripts/check_memory_consistency.py --fix 校正")
+
+    # 关系维基页面统计（只读；无来源页 = 可疑，重点暴露）
+    try:
+        import asyncio
+
+        from memory.relationship_wiki import get_wiki_store
+
+        stats = asyncio.run(get_wiki_store().get_stats())
+        print(
+            f"[memory-health] 维基页面: active={stats['active']} archived={stats['archived']} "
+            f"stale={stats['stale']} 无来源={stats['no_source']} 超长={stats['oversized']}"
+        )
+        if stats["no_source"] > 0:
+            print("[memory-health] WARNING: 存在无来源维基页（可疑，建议人工审阅 dump_pages）")
+    except Exception as e:  # noqa: BLE001 — 维基统计失败不影响其他检查
+        print(f"[memory-health] 维基统计跳过: {e}")
     return 0
 
 

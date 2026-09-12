@@ -478,6 +478,22 @@ class MemoryManager:
                     except Exception as e:  # noqa: BLE001 — 实时提取失败不影响主流程
                         logger.debug(f"[记忆管理器] Neo4j 实时提取跳过: {e}")
 
+                # 【关系维基】对话摄入时编译主题页面（TaskManager 异步，不阻塞回复）
+                if user_id:
+                    try:
+                        from memory.relationship_wiki import submit_wiki_update
+
+                        await submit_wiki_update(
+                            {
+                                "user_input": str(user_input),
+                                "ai_response": content,
+                                "user_id": str(user_id),
+                                "group_id": str(group_id) if group_id else "",
+                            }
+                        )
+                    except Exception as e:  # noqa: BLE001 — 维基编译提交失败不影响主流程
+                        logger.debug(f"[记忆管理器] 关系维基提交跳过: {e}")
+
         except Exception as e:  # noqa: BLE001 — 存储失败不阻断消息处理
             logger.error(f"[记忆管理器] 存储统一记忆失败: {e}")
 

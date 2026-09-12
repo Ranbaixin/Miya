@@ -478,6 +478,13 @@ class PromptManager:
                 user_prompt = stable_persona + "\n\n" + user_prompt
                 logger.info("[PromptManager] 已添加稳定画像上下文")
 
+        # 【关系维基】主题页面编译知识（在稳定画像之后 prepend → 最终布局位于用户侧写与稳定画像之间）
+        if additional_context:
+            wiki_context = additional_context.get("wiki_context", "")
+            if wiki_context:
+                user_prompt = wiki_context + "\n\n" + user_prompt
+                logger.info("[PromptManager] 已添加关系维基上下文")
+
         # 添加用户/群聊侧写上下文（在智能记忆之后）
         if additional_context:
             user_persona = additional_context.get("user_persona", "")
