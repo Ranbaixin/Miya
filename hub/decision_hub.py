@@ -3165,39 +3165,21 @@ class DecisionHub:
         logger.info("[决策层-定时任务] ToolNet子网可用，准备创建定时任务")
 
         try:
-            # 解析时间
-            scheduled_time = ""
+            # 统一时间解析（core/reminder_time_parser：中文数字/小时/相对/绝对/每日重复）
+            # 2026-09 修复：旧逻辑只认"阿拉伯数字+分钟后"，中文数字分支是不可达死代码，
+            # 小时与绝对时间全部错误退化"1分钟后"。现改为：解析成功照常建任务；
+            # 解析失败 → return None 放行给 LLM（create_schedule_task 工具 schema
+            # 支持"X点叫我"等自然语言，由模型解析成 HH:MM 走工具调用）
+            from core.reminder_time_parser import parse_reminder_time
 
-            # 检测相对时间（如"一分钟后"、"五分钟后"）
-            if "分钟后" in content:
-                match = re.search(r"(\d+)\s*分钟", content)
-                if match:
-                    minutes = int(match.group(1))
-                    scheduled_time = f"{minutes}分钟后"
+            reminder_time = parse_reminder_time(content)
+            if reminder_time is None:
+                logger.info(
+                    f"[决策层-定时任务] 时间无法解析，放行给 AI 语义理解: '{content[:50]}'"
+                )
+                return None
 
-            # 如果没有解析到具体分钟数，尝试其他格式
-            elif "分钟后" in content:
-                # 处理中文数字
-                chinese_numbers = {
-                    "一": 1,
-                    "二": 2,
-                    "三": 3,
-                    "四": 4,
-                    "五": 5,
-                    "六": 6,
-                    "七": 7,
-                    "八": 8,
-                    "九": 9,
-                    "十": 10,
-                }
-                for cn, num in chinese_numbers.items():
-                    if f"{cn}分钟后" in content:
-                        scheduled_time = f"{num}分钟后"
-                        break
-
-            # 如果仍未解析到时间，使用默认的1分钟
-            if not scheduled_time:
-                scheduled_time = "1分钟后"
+            scheduled_time = reminder_time.scheduled_at.strftime("%Y-%m-%d %H:%M")
 
             # 检测任务类型
             task_type = "reminder"  # 默认提醒类型

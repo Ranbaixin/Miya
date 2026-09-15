@@ -118,46 +118,30 @@ class CreateScheduleTaskTool(BaseTool):
             # 生成任务ID
             task_id = str(uuid.uuid4())[:8]
 
-            # 解析时间
+            # 统一时间解析（core/reminder_time_parser：相对/中文数字/绝对时钟/每日重复）
+            # 2026-09 修复：与 decision_hub 共享同一解析器，消除两处重复语法实现
             scheduled_at = None
+            repeat_daily_time = None
             if schedule_time:
-                try:
-                    # 检测相对时间（如"1分钟后"、"5分钟后"）
-                    if "分钟后" in schedule_time or "minute" in schedule_time.lower():
-                        match = re.search(r"(\d+)\s*分钟", schedule_time)
-                        if match:
-                            minutes = int(match.group(1))
-                            scheduled_at = datetime.now() + timedelta(minutes=minutes)
-                            logger.info(
-                                f"检测到相对时间: {minutes}分钟后，执行时间: {scheduled_at}"
-                            )
-                    elif "小时后" in schedule_time or "hour" in schedule_time.lower():
-                        match = re.search(r"(\d+)\s*小时", schedule_time)
-                        if match:
-                            hours = int(match.group(1))
-                            scheduled_at = datetime.now() + timedelta(hours=hours)
-                            logger.info(
-                                f"检测到相对时间: {hours}小时后，执行时间: {scheduled_at}"
-                            )
-                    # 绝对时间
-                    elif ":" in schedule_time:
-                        if len(schedule_time) == 5:
-                            # 只有时间，使用今天的日期
-                            today = datetime.now().date()
-                            scheduled_at = datetime.strptime(
-                                f"{today} {schedule_time}", "%Y-%m-%d %H:%M"
-                            )
-                        else:
-                            # 完整日期时间
-                            scheduled_at = datetime.strptime(
-                                schedule_time, "%Y-%m-%d %H:%M"
-                            )
-                except ValueError as e:
-                    return f"❌ 时间格式错误: {e}。请使用 HH:MM、YYYY-MM-DD HH:MM 或相对时间（如'1分钟后'）"
+                from core.reminder_time_parser import parse_reminder_time
+
+                parsed = parse_reminder_time(schedule_time)
+                if parsed is None:
+                    return (
+                        "❌ 时间格式无法解析。请使用 HH:MM、YYYY-MM-DD HH:MM、"
+                        "相对时间（如'1分钟后'、'半小时后'）或'明天早上8点'这类说法"
+                    )
+                scheduled_at = parsed.scheduled_at
+                logger.info(f"[定时任务] 时间解析: '{schedule_time}' -> {scheduled_at}")
 
             # 如果没有指定时间，默认立即执行（5分钟后）
             if not scheduled_at:
                 scheduled_at = datetime.now() + timedelta(minutes=5)
+
+            # repeat 桥接（2026-09 修复：此前 daily 枚举无任何重排逻辑消费）——
+            # daily 时取执行时刻的 HH:MM 填 repeat_daily_time，调度器每日同一时刻重排
+            if repeat == "daily":
+                repeat_daily_time = repeat_daily_time or scheduled_at.strftime("%H:%M")
 
             # 构建任务数据
             task_data = {
@@ -224,6 +208,7 @@ class CreateScheduleTaskTool(BaseTool):
                         priority=priority,
                         data=task_data,
                         execute_at=scheduled_at,
+                        repeat_daily_time=repeat_daily_time,
                     )
                     scheduler.schedule(task)
                     logger.info(

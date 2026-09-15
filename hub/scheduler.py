@@ -6,10 +6,12 @@
 import asyncio
 import contextlib
 import heapq
+import json
 import logging
 import sys
 import threading
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
 logger = logging.getLogger(__name__)
@@ -63,6 +65,67 @@ class Scheduler:
         self.tool_registry = tool_registry
         self.onebot_client = onebot_client
         self.terminal_callback: Optional[Callable[[str], Any]] = None  # 终端模式回调
+        # 2026-09：pending 任务持久化（此前重启全丢；data/ 已在 .gitignore）
+        self._persist_path = Path("data/scheduler_tasks.json")
+
+    # ==================== 持久化 ====================
+
+    def _save_persist(self) -> None:
+        """把 pending 任务全量落盘（任务量小，全量写可接受）"""
+        try:
+            self._persist_path.parent.mkdir(parents=True, exist_ok=True)
+            with self._queue_lock:
+                pending = [
+                    {
+                        "task_id": t.task_id,
+                        "task_type": t.task_type,
+                        "priority": t.priority,
+                        "data": t.data,
+                        "execute_at": t.execute_at.isoformat(),
+                        "repeat_daily_time": t.repeat_daily_time,
+                    }
+                    for t in self.task_queue
+                ]
+            self._persist_path.write_text(
+                json.dumps(pending, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+        except Exception as e:  # noqa: BLE001 — 持久化失败不影响调度
+            logger.warning(f"调度任务落盘失败: {e}")
+
+    def _load_persist(self) -> None:
+        """启动时恢复 pending 任务：未来的入队；过期的 10 分钟宽限内照常执行，超出丢弃"""
+        if not self._persist_path.exists():
+            return
+        try:
+            pending = json.loads(self._persist_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as e:
+            logger.warning(f"调度任务持久化文件损坏，忽略: {e}")
+            return
+        now = datetime.now()
+        grace = timedelta(minutes=10)
+        restored, dropped = 0, 0
+        for item in pending if isinstance(pending, list) else []:
+            try:
+                execute_at = datetime.fromisoformat(item["execute_at"])
+            except (KeyError, ValueError, TypeError):
+                dropped += 1
+                continue
+            if execute_at < now - grace:
+                dropped += 1
+                continue
+            task = Task(
+                task_id=item["task_id"],
+                task_type=item["task_type"],
+                priority=item.get("priority", 5),
+                data=item.get("data", {}),
+                execute_at=execute_at,
+                repeat_daily_time=item.get("repeat_daily_time"),
+            )
+            with self._queue_lock:
+                heapq.heappush(self.task_queue, task)
+            restored += 1
+        if restored or dropped:
+            logger.info(f"调度任务恢复: 入队 {restored} 个，丢弃过期 {dropped} 个")
 
     async def start(self):
         """启动调度器"""
@@ -71,6 +134,7 @@ class Scheduler:
             return
 
         self._running = True
+        self._load_persist()
         self._task = asyncio.create_task(self._run_loop())
         logger.info("任务调度器已启动")
 
@@ -255,18 +319,21 @@ class Scheduler:
                 except (ValueError, TypeError) as e:
                     logger.warning(f"每日任务重排失败: {e}")
 
-            # 标记任务完成
+            # 标记任务完成（一次性任务已出队，重写落盘防止重启后重执行；每日任务由 schedule() 落盘）
             self.complete_task(task.task_id, {"result": "success"})
+            self._save_persist()
 
         except Exception as e:
             logger.error(f"任务执行失败 {task.task_id}: {e}", exc_info=True)
             self.fail_task(task.task_id, str(e))
+            self._save_persist()
 
     def schedule(self, task: Task) -> None:
         """添加任务到调度队列"""
         with self._queue_lock:
             heapq.heappush(self.task_queue, task)
         task.scheduled_at = datetime.now()
+        self._save_persist()
         logger.info(f"任务已添加到调度队列: {task.task_id}, 执行时间: {task.execute_at}")
 
     def get_next_task(self) -> Optional[Task]:
