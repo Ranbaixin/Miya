@@ -523,6 +523,22 @@ class BaseAIClient:
             logger.error(f"[AIClient] 工具执行异常: {e}", exc_info=True)
             return tool_call, f"工具执行异常: {str(e)}"
 
+    @staticmethod
+    def _fill_pending_tool_results(current_messages, tool_calls, from_index: int):
+        """提前返回前，为同轮剩余未执行的 tool_calls 补占位 tool 响应。
+
+        保持 assistant.tool_calls 与 tool 消息一一配对——DeepSeek 等供应商
+        对缺失配对直接 400（"insufficient tool messages following tool_calls"）。
+        """
+        for rest_call in tool_calls[from_index:]:
+            current_messages.append(
+                AIMessage(
+                    role="tool",
+                    content="（已跳过：前置工具已直接返回结果）",
+                    tool_call_id=rest_call.id,
+                )
+            )
+
     def _handle_final_marker(self, result: str) -> Optional[str]:
         """
         处理FINAL标记
@@ -852,7 +868,7 @@ class OpenAIClient(BaseAIClient):
                         try:
                             final_resp = await self.client.chat.completions.create(
                                 model=self.model,
-                                messages=[{"role": m.role, "content": m.content} for m in current_messages],
+                                messages=self._convert_messages_to_openai_format(current_messages),
                                 tool_choice="none",
                             )
                             if final_resp.choices and final_resp.choices[0].message:
@@ -863,20 +879,24 @@ class OpenAIClient(BaseAIClient):
                 else:
                     # 串行执行（使用公共方法）
                     final_detected = False
-                    for tool_call in tool_calls:
+                    for tc_index, tool_call in enumerate(tool_calls):
                         _, result = await self._execute_tool_call(
                             tool_call, _tool_context_var.get() or self.tool_context
                         )
+
+                        # 先追加工具响应消息：DeepSeek 等供应商严格校验
+                        # assistant.tool_calls 与 tool 消息一一配对，缺失直接 400
+                        current_messages.append(AIMessage(role="tool", content=result, tool_call_id=tool_call.id))
 
                         # 检查FINAL标记
                         final_marker = self._handle_final_marker(result)
                         if final_marker == "[FINAL]":
                             final_detected = True
-                            # 生成最终文本回复
+                            # 生成最终文本回复（完整序列化：保留 tool_calls/tool_call_id 配对）
                             try:
                                 final_resp = await self.client.chat.completions.create(
                                     model=self.model,
-                                    messages=[{"role": m.role, "content": m.content} for m in current_messages],
+                                    messages=self._convert_messages_to_openai_format(current_messages),
                                     tool_choice="none",
                                 )
                                 if final_resp.choices and final_resp.choices[0].message:
@@ -925,14 +945,13 @@ class OpenAIClient(BaseAIClient):
                             # 注意：qq_image_analyzer 不在这里，因为它需要经过人格润色
                             "python_interpreter",
                         ]
-                    if tool_call.function.name in direct_return_tools:
-                        logger.info(f"[AIClient] 检测到直接返回工具: {tool_call.function.name}，直接返回结果")
-                        return result
+                        # 检查是否是直接返回工具（循环内判定：返回即终止本轮剩余调用）
+                        if tool_call.function.name in direct_return_tools:
+                            logger.info(f"[AIClient] 检测到直接返回工具: {tool_call.function.name}，直接返回结果")
+                            self._fill_pending_tool_results(current_messages, tool_calls, tc_index + 1)
+                            return result
 
-                    # 添加工具结果消息
-                    tool_result_msg = AIMessage(role="tool", content=result, tool_call_id=tool_call.id)
-                    current_messages.append(tool_result_msg)
-                    logger.info(f"[AIClient] 工具结果已添加到对话历史: {result[:100] if result else '(无结果)'}")
+                        logger.info(f"[AIClient] 工具结果已添加到对话历史: {result[:100] if result else '(无结果)'}")
 
                 iteration += 1
 
@@ -1149,19 +1168,22 @@ class DeepSeekClient(BaseAIClient):
 
                 # 串行执行逻辑（使用公共方法）
                 if not can_concurrent:
-                    for tool_call in tool_calls:
+                    for tc_index, tool_call in enumerate(tool_calls):
                         _, result = await self._execute_tool_call(
                             tool_call, _tool_context_var.get() or self.tool_context
                         )
 
+                        # 先追加工具响应消息：DeepSeek 严格校验 tool_calls/tool 消息一一配对
+                        current_messages.append(AIMessage(role="tool", content=result, tool_call_id=tool_call.id))
+
                         # 检查FINAL标记
                         final_marker = self._handle_final_marker(result)
                         if final_marker == "[FINAL]":
-                            # 生成最终文本回复
+                            # 生成最终文本回复（完整序列化：保留 tool_calls/tool_call_id 配对）
                             try:
                                 final_resp = await self.client.chat.completions.create(
                                     model=self.model,
-                                    messages=[{"role": m.role, "content": m.content} for m in current_messages],
+                                    messages=self._convert_messages_to_openai_format(current_messages),
                                     tool_choice="none",
                                 )
                                 if final_resp.choices and final_resp.choices[0].message:
@@ -1180,10 +1202,8 @@ class DeepSeekClient(BaseAIClient):
                             "multi_terminal",
                         ]
                         if tool_call.function.name in direct_return_tools:
+                            self._fill_pending_tool_results(current_messages, tool_calls, tc_index + 1)
                             return result
-
-                        # 添加工具响应消息
-                        current_messages.append(AIMessage(role="tool", content=result, tool_call_id=tool_call.id))
 
                 # 更新迭代计数
                 iteration += 1
