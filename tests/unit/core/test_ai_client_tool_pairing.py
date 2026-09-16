@@ -144,3 +144,20 @@ class TestDirectReturnWithSiblings:
         tool_msgs = [m for m in current if m.role == "tool"]
         assert [m.tool_call_id for m in tool_msgs] == ["b", "c"]
         assert all("已跳过" in m.content for m in tool_msgs)
+
+
+class TestIsAiErrorReply:
+    def test_error_prefixes_detected(self):
+        from core.ai_client import is_ai_error_reply
+
+        assert is_ai_error_reply("抱歉，AI服务暂时不可用：Error code: 400 ...") is True
+        assert is_ai_error_reply("抱歉，工具调用次数过多，无法完成请求。") is True
+        assert is_ai_error_reply("抱歉亲爱的，当前模型认证出现问题，可能是密钥已过期。请检查API密钥是否有效~") is True
+
+    def test_normal_reply_not_flagged(self):
+        from core.ai_client import is_ai_error_reply
+
+        assert is_ai_error_reply("今天天气不错，出去走走？") is False
+        assert is_ai_error_reply("抱歉来晚了，刚看到消息") is False
+        assert is_ai_error_reply("") is False
+        assert is_ai_error_reply(None) is False

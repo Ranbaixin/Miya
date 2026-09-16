@@ -1162,7 +1162,10 @@ class DecisionHub:
             response = self.emotion.influence_response(response)
 
         # 6. 存储AI回复到记忆（委托给记忆管理器）
-        if response:
+        # AI 服务错误回复只发给用户提示失败，不写入记忆/会话历史（防模型把报错当"自己说过的话"）
+        from core.ai_client import is_ai_error_reply
+
+        if response and not is_ai_error_reply(response):
             perception["response"] = response
             await self.memory_manager.store_unified_memory(perception, "assistant")
 

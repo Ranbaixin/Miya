@@ -23,6 +23,23 @@ _tool_context_var: "contextvars.ContextVar[Optional[Dict[str, Any]]]" = contextv
     "miya_tool_context", default=None
 )
 
+# AI 服务错误回复的前缀（与下方各 chat() 的错误返回文案一一对应）。
+# 此类回复只发给用户提示失败，绝不写入对话/记忆历史（防二次污染：
+# 模型会把历史里的报错当成"自己说过的话"）。
+AI_ERROR_REPLY_PREFIXES = (
+    "抱歉，AI服务暂时不可用",
+    "抱歉亲爱的，当前模型认证出现问题",
+    "抱歉亲爱的，当前DeepSeek模型认证失败",
+    "抱歉，工具调用次数过多",
+)
+
+
+def is_ai_error_reply(text) -> bool:
+    """识别 AI 服务错误回复（decision_hub 持久化前的丢弃闸门使用）"""
+    if not text:
+        return False
+    return any(str(text).startswith(prefix) for prefix in AI_ERROR_REPLY_PREFIXES)
+
 
 @dataclass
 class AIMessage:
