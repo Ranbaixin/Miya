@@ -3803,6 +3803,7 @@ class DecisionHub:
             lines.append("         /admin <list|add|remove>")
             lines.append("         /faq <list>")
             lines.append("         /system <status|reload>")
+            lines.append("账户查询：余额 (DeepSeek API 账户余额，仅管理员)")
             lines.append("")
             lines.append("形态切换：/形态 <形态名>  (不填则查看可用)")
             lines.append("说话模式：/说话 <casual|catching|confiding>")
@@ -3817,6 +3818,16 @@ class DecisionHub:
         version_cmds = command_keywords.get("version", ["版本", "version", "ver"])
         if any(content_lower == kw for kw in version_cmds):
             return "弥娅 AI 虚拟化身系统 v6.0.0"
+
+        # 6.5 余额查询（仅 superadmin，走命令权限闸门；DeepSeek 账户）
+        balance_cmds = command_keywords.get("balance", ["余额", "/余额", "balance"])
+        if any(content_lower == kw for kw in balance_cmds):
+            if not check_command_permission():
+                return get_permission_denied_message()
+            from core.balance_query import fetch_balance
+
+            _, balance_text = await fetch_balance()
+            return balance_text
 
         # 7. TRPG 命令
         trpg_cmds = command_keywords.get("trpg", ["trpg", "跑团"])
