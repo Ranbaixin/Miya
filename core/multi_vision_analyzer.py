@@ -656,36 +656,67 @@ class MultiVisionAnalyzer:
         timeout_value = model_config.timeout if model_config.timeout > 0 else _load_vision_config().get("timeout", 60)
 
         try:
-            response = await self.http_client.post(url, json=payload, headers=headers, timeout=timeout_value)
+            content = ""
+            finish_reason = ""
+            # 思考型模型（DeepSeek V4.1 等）偶发只返回 reasoning_content 或 content 为空
+            # （思考耗尽 max_tokens 预算），同请求重试一次常可恢复；连续两次为空则抛错，
+            # 走 analyze_image 的重试/降级链
+            for attempt in range(1, 3):
+                response = await self.http_client.post(url, json=payload, headers=headers, timeout=timeout_value)
 
-            if response.status_code == 200:
+                if response.status_code != 200:
+                    error_msg = f"API调用失败: HTTP {response.status_code}"
+                    if response.text:
+                        error_msg += f" - {response.text[:100]}"
+                    raise ValueError(error_msg)
+
                 result = response.json()
+                message = result.get("choices", [{}])[0].get("message", {})
+                finish_reason = result.get("choices", [{}])[0].get("finish_reason", "")
 
                 # 提取分析结果
                 if model_config.provider == "zhipu":
-                    content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    content = message.get("content", "") or ""
                 elif model_config.provider == "dashscope":
-                    content = result.get("output", {}).get("text", "")
+                    content = result.get("output", {}).get("text", "") or ""
                 else:
-                    content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    content = message.get("content", "") or ""
 
-                labels = self._extract_labels_from_description(content)
+                # 思考型模型兜底：输出可能落在 reasoning_content 而 content 为空
+                if not content.strip():
+                    reasoning = message.get("reasoning_content") or ""
+                    if str(reasoning).strip():
+                        logger.warning(
+                            f"[MultiVisionAnalyzer] {model_config.name} content 为空，"
+                            f"使用 reasoning_content 兜底（{len(str(reasoning))} 字，finish_reason={finish_reason or '?' }）"
+                        )
+                        content = str(reasoning)
 
-                return {
-                    "description": content,
-                    "labels": labels,
-                    "nsfw_score": 0.0,
-                    "confidence": 0.8,
-                    "has_text": False,
-                    "text": "",
-                    "text_confidence": 0.0,
-                }
-            else:
-                error_msg = f"API调用失败: HTTP {response.status_code}"
-                if response.text:
-                    error_msg += f" - {response.text[:100]}"
-                raise ValueError(error_msg)
+                if content.strip():
+                    logger.info(f"[MultiVisionAnalyzer] 第 {attempt} 次尝试获得描述（{len(content)} 字）")
+                    break
 
+                logger.warning(
+                    f"[MultiVisionAnalyzer] {model_config.name} 第 {attempt}/2 次尝试返回空描述（finish_reason={finish_reason or '?'}）"
+                )
+
+            if not content.strip():
+                raise ValueError(
+                    f"模型连续返回空描述（finish_reason={finish_reason or 'unknown'}，"
+                    f"max_tokens={payload.get('max_tokens')}）——思考耗尽 token 预算或内容被拦截"
+                )
+
+            labels = self._extract_labels_from_description(content)
+
+            return {
+                "description": content,
+                "labels": labels,
+                "nsfw_score": 0.0,
+                "confidence": 0.8,
+                "has_text": False,
+                "text": "",
+                "text_confidence": 0.0,
+            }
         except httpx.TimeoutException:
             raise ValueError(f"{model_config.name} API调用超时")
         except Exception as e:  # noqa: BLE001 — 转换为具名异常上抛

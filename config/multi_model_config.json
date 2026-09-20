@@ -74,7 +74,7 @@
       "latency": "medium",
       "quality": "excellent",
       "_origin": "zhipu_glm_46v_flash",
-      "max_tokens": 1500
+      "max_tokens": 4000
     },
     "deepseek_embedding": {
       "name": "deepseek-embedding",
