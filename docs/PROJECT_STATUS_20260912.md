@@ -58,7 +58,7 @@
 
 - 回滚：`git revert 8786aaef` 一键回 glm-5.3-flash（ZHIPU_API_KEY 保留未动，双供应商互备）
 - 防呆：`core/doctor.py` C3 校验 vision 模型名必须命中视觉关键字表（glm/qwen/internvl/llava/kimi/moonshot/**deepseek**），否则 FAIL——防止"识图变瞎"复发
-- **待实测**：V4.1 的人格质感与识图质量尚无用户验收数据（切换后账号经历断线，真实消息流量少）
+- **已验收**（2026-09-20）：识图质量验收通过——表情包图片一次成功产出 555 字场景级描述，弥娅正确回应；人格质感用户接受现状。回滚预案（revert 8786aaef）保留
 
 ---
 
@@ -150,7 +150,7 @@ bash scripts/deploy/post_deploy_check.sh   # 必跑，exit 0 才算部署完成
 
 ## 9. 下一步路线（按优先级）
 
-1. **账号恢复验证**（进行中）：扫码/快速登录恢复在线 → 用户发消息实测 deepseek-flash 的对话质感与识图质量 → 不满意 `git revert 8786aaef`
+1. **账号恢复验证**（已完成）：2026-09-12 扫码恢复后连续 8 天零被踢零掉线；deepseek-flash 识图与对话已于 2026-09-20 验收通过
 2. **养号 1-2 周**：会话连续存活无被踢 = 风控缓解的验收标准
 3. **SnowLuma 预研**（方向已定，时机未到）：NapCat 官方钦点的下一代协议端（OneBot v11 标准，弥娅侧零改动）。**切换前提** = 账号稳定 + 验收矩阵（`scripts/deploy/SNOWLUMA_ACCEPTANCE.md` 待建）确认 10 个 NapCat 扩展 action 覆盖（poke/群文件全套/表情表态/upload_image 等）。当前不切：风控敏感期换端 = 新设备登录事件，有害
 4. **TTS / matplotlib**：按需启用（doctor WARN 有提示）
