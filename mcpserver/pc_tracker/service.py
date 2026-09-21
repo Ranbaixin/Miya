@@ -1,6 +1,7 @@
 """PC Time Tracker MCP 服务"""
 
 import logging
+import os
 from typing import Any, Dict, Optional
 
 logger = logging.getLogger("pc_tracker.service")
@@ -19,8 +20,13 @@ class PcTrackerService:
     def __init__(self):
         self.name = "pc_tracker"
         self.description = "电脑使用时间追踪数据 — 应用排行、多日趋势、工作习惯"
-        self.version = "1.0.0"
-        self.base_url = "http://127.0.0.1:8080/api/v1"
+        self.version = "1.1.0"
+        # PC Timer 经 SSH 反向隧道映射到服务器 127.0.0.1:9443（电脑侧 8088）
+        # 2026-09-21：原 8080 为端口笔误且拓扑不通（本服务在云服务器上，
+        # 127.0.0.1 指向服务器自身而非用户电脑），改为隧道端点 + 环境变量可配
+        self.base_url = os.getenv(
+            "PC_TRACKER_API_BASE", "http://127.0.0.1:9443/api/v1"
+        )
         self._available = None  # 延迟检测
 
     async def _get(self, path: str) -> Dict[str, Any]:
@@ -57,7 +63,7 @@ class PcTrackerService:
                 return f"未知的 PC Tracker 工具: {tool_name}"
         except Exception as e:
             logger.warning(f"[PC Tracker] 调用失败 ({tool_name}): {e}")
-            return f"PC 时间追踪器不可用: {e}。请确认追踪器是否在运行 (http://127.0.0.1:8080/api/v1/status)"
+            return f"PC 时间追踪器不可用: {e}。请确认家里电脑是否在线（隧道 127.0.0.1:9443 → 电脑 8088）"
 
     async def _handle_context(self) -> str:
         data = await self._get("/agent/context")
@@ -136,6 +142,19 @@ class PcTrackerService:
                 f"数据库大小: {d.get('database_size_bytes', 0) / 1024:.0f} KB"
             )
         return "PC 时间追踪器未运行"
+
+    async def health_check(self) -> bool:
+        """桥可达性探测（定时沉淀任务使用）。/agent/context 200 即健康。"""
+        try:
+            await self._get("/agent/context")
+            return True
+        except Exception:  # noqa: BLE001 — 不可达返回 False
+            return False
+
+    async def get_text_summary(self) -> Optional[str]:
+        """取 text_summary（自然语言当日摘要），供每日作息沉淀任务使用。"""
+        data = await self._get("/agent/context")
+        return (data.get("data", {}) or {}).get("text_summary") or None
 
 
 _pc_tracker_service: Optional[PcTrackerService] = None

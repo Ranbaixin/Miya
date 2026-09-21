@@ -196,6 +196,17 @@ class MiyaDaemon:
         except Exception as e:  # noqa: BLE001 — 主动聊天失败不影响核心，已记录日志
             logger.warning(f"⚠️ 主动聊天启动失败（不影响核心服务）: {e}")
 
+        # PC 使用作息每日沉淀（可选：经 pc_tracker 桥拉当日摘要入长期记忆）
+        try:
+            from core.pc_usage_digest import start_daily_digest
+
+            if start_daily_digest():
+                logger.info("✅ PC 作息每日沉淀任务已排期")
+            else:
+                logger.info("PC 作息沉淀已通过 PC_DIGEST_ENABLED 停用")
+        except Exception as e:  # noqa: BLE001 — 沉淀任务失败不影响核心服务
+            logger.warning(f"⚠️ PC 作息沉淀任务启动失败（不影响核心服务）: {e}")
+
     def _run_startup_preflight(self):
         """启动预检（core/doctor.run_preflight）：只告警不阻断，防止带病不自知上线"""
         try:

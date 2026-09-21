@@ -363,6 +363,9 @@ class PlatformToolsManager:
         "mcp_web_search_fetch",
         "mcp_screen_vision_look_screen",
         "mcp_screen_vision_screenshot",
+        # MCPNet — PC 使用数据（用户电脑经 SSH 反向隧道 127.0.0.1:9443 接入）
+        "mcp_pc_tracker_pc_context",
+        "mcp_pc_tracker_pc_daily",
         "mcp_filesystem_read_file",
         "mcp_filesystem_write_file",
         "mcp_filesystem_list_files",
