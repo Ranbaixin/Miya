@@ -44,7 +44,11 @@ class PcTrackerService:
 
     async def handle_handoff(self, tool_call: Dict[str, Any]) -> str:
         tool_name = tool_call.get("tool_name", "").lower()
-        args = tool_call.get("parameters", tool_call.get("args", {}))
+        # mcp_manager 构造的 tool_call 是平铺顶层（{**kwargs}），参数在顶层而非嵌套
+        # parameters 键——此前错读嵌套键导致 days/date/limit 永远走默认值
+        args = tool_call.get("parameters") or tool_call.get("args") or {
+            k: v for k, v in tool_call.items() if k not in ("service_name", "tool_name", "message")
+        }
 
         try:
             if tool_name == "pc_context":

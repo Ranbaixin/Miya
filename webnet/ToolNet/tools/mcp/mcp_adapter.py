@@ -181,9 +181,18 @@ def discover_mcp_tools() -> List[MCPTool]:
             return tools
 
         for service_name, service in manager._services.items():
-            manifest = service.manifest
-            capabilities = manifest.capabilities
-            tool_list: List[Dict] = capabilities.get("tools", [])
+            # per-service 隔离：单个服务 manifest 损坏（capabilities 为 null/非 dict）
+            # 只跳过该服务，不再让后续服务的所有工具静默丢失（2026-09-26 事故残留缺陷）
+            try:
+                manifest = service.manifest
+                capabilities = manifest.capabilities
+                if not isinstance(capabilities, dict):
+                    logger.warning(f"[MCPNet] 服务 {service_name} 的 capabilities 非 dict（{type(capabilities).__name__}），跳过该服务")
+                    continue
+                tool_list: List[Dict] = capabilities.get("tools", [])
+            except Exception as svc_err:  # noqa: BLE001 — 单服务 manifest 异常只跳过该服务
+                logger.warning(f"[MCPNet] 服务 {service_name} manifest 解析失败，跳过: {svc_err}")
+                continue
 
             for tool_def in tool_list:
                 try:

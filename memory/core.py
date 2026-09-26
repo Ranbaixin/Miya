@@ -93,6 +93,30 @@ class MemorySource(Enum):
 # ==================== 核心数据结构 ====================
 
 
+def _normalize_tags(tags) -> List[str]:
+    """tags 形态归一化（MemoryItem.tags 契约为 List[str]）。
+
+    LLM 调用工具时可能违反 array schema 传字符串（如 "喜好"）——若不归一化，
+    字符串会被按字符迭代进 tag 索引（"喜","好"）并污染标签检索（LIKE '%"tag"%' 永不命中）。
+    接受 None/list/tuple/str（str 按逗号/顿号/空白拆分为多标签）。
+    """
+    if not tags:
+        return []
+    if isinstance(tags, str):
+        import re as _re
+
+        return [t.strip() for t in _re.split(r"[,，、\s]+", tags) if t.strip()]
+    if isinstance(tags, (list, tuple)):
+        result: List[str] = []
+        for t in tags:
+            if isinstance(t, str) and t.strip():
+                result.append(t.strip())
+            elif not isinstance(t, str):
+                result.append(str(t))
+        return result
+    return [str(tags)]
+
+
 @dataclass
 class MemoryItem:
     """
@@ -1221,7 +1245,7 @@ class MiyaMemoryCore:
             content=content,
             level=level,
             priority=priority,
-            tags=tags or [],
+            tags=_normalize_tags(tags),
             user_id=user_id,
             session_id=session_id,
             group_id=group_id,
@@ -1741,7 +1765,7 @@ class MiyaMemoryCore:
         if tags is not None:
             for old_tag in memory.tags:
                 self._tag_index[old_tag].discard(memory_id)
-            memory.tags = tags
+            memory.tags = _normalize_tags(tags)
             for new_tag in memory.tags:
                 self._tag_index[new_tag].add(memory_id)
         if priority is not None:

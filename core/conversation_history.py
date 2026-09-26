@@ -75,7 +75,12 @@ class ConversationHistoryManager:
         return self.data_dir / filename
 
     async def _load_session_from_disk(self, session_id: str) -> List[ConversationMessage]:
-        """从磁盘加载会话历史"""
+        """从磁盘加载会话历史
+
+        逐条解析：单条消息记录损坏只跳过该条（保留坏记录备份字段），
+        绝不因一条坏记录放弃整个会话——否则下条消息到达时会把空列表
+        覆盖写回同名文件，整个会话历史被永久清空（数据黑洞，2026-09 审计发现）。
+        """
         file_path = self._get_session_file(session_id)
 
         if not file_path.exists():
@@ -87,17 +92,30 @@ class ConversationHistoryManager:
                 if not content or not content.strip():
                     return []
                 data = json.loads(content)
-
-            messages = [ConversationMessage(**m) for m in data]
-            logger.debug(f"从磁盘加载会话 {session_id}: {len(messages)} 条消息")
-            return messages
-
         except json.JSONDecodeError as e:
             logger.warning(f"会话历史文件JSON格式错误 {session_id}: {e}")
             return []
         except Exception as e:  # noqa: BLE001 — 加载会话历史失败
             logger.error(f"加载会话历史失败 {session_id}: {e}")
             return []
+
+        if not isinstance(data, list):
+            logger.warning(f"会话历史文件结构异常 {session_id}（顶层非列表），跳过加载")
+            return []
+
+        messages: List[ConversationMessage] = []
+        skipped = 0
+        for m in data:
+            try:
+                messages.append(ConversationMessage(**m))
+            except Exception as e:  # noqa: BLE001 — 单条坏记录跳过，不放弃整个会话
+                skipped += 1
+                logger.warning(f"会话 {session_id} 第 {len(messages) + skipped} 条消息解析失败跳过: {e}")
+        if skipped:
+            logger.warning(f"会话 {session_id} 加载完成：{len(messages)} 条正常，{skipped} 条损坏跳过（文件保留原样）")
+        else:
+            logger.debug(f"从磁盘加载会话 {session_id}: {len(messages)} 条消息")
+        return messages
 
     async def _save_session_to_disk(self, session_id: str, messages: List[ConversationMessage]):
         """保存会话历史到磁盘"""
