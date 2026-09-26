@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 _TYPE_MAP: Dict[str, str] = {
     "string": "string",
     "number": "integer",
+    "integer": "integer",
+    "int": "integer",
     "boolean": "boolean",
     "array": "array",
     "object": "object",
@@ -32,8 +34,31 @@ _MCP_KEYWORDS: Dict[str, List[str]] = {
 }
 
 
-def _parse_param_type(raw: str) -> str:
+def _normalize_param_spec(param_spec) -> str:
+    """参数定义归一化为字符串描述。
+
+    manifest 中参数定义存在两种形态：纯字符串（"可选，查询天数"）或
+    JSON Schema 风格 dict（{"type": "integer", "description": "...", "default": 7}）。
+    dict 形态在 pc_tracker 服务出现，此前 _parse_param_type/_parse_param_desc
+    直接对 dict 调 .strip() 抛 AttributeError，导致 discover 循环整体中断
+    （后续服务的所有工具静默丢失）。
+    """
+    if isinstance(param_spec, str):
+        return param_spec
+    if isinstance(param_spec, dict):
+        ptype = str(param_spec.get("type", "string"))
+        desc = str(param_spec.get("description", ""))
+        default = param_spec.get("default")
+        parts = [p for p in (ptype, desc) if p]
+        if default is not None:
+            parts.append(f"可选，默认 {default}")
+        return " - ".join(parts)
+    return str(param_spec)
+
+
+def _parse_param_type(raw) -> str:
     """将 manifest 中的参数类型描述转为 OpenAI 类型"""
+    raw = _normalize_param_spec(raw)
     raw_lower = raw.strip().lower()
     for key, oai_type in _TYPE_MAP.items():
         if key in raw_lower:
@@ -41,8 +66,9 @@ def _parse_param_type(raw: str) -> str:
     return "string"
 
 
-def _parse_param_desc(raw: str) -> str:
+def _parse_param_desc(raw) -> str:
     """从 manifest 参数描述中提取人类可读描述"""
+    raw = _normalize_param_spec(raw)
     if " - " in raw:
         return raw.split(" - ", 1)[1].strip()
     return raw
@@ -160,11 +186,17 @@ def discover_mcp_tools() -> List[MCPTool]:
             tool_list: List[Dict] = capabilities.get("tools", [])
 
             for tool_def in tool_list:
-                tool = MCPTool(
-                    service_name=service_name,
-                    tool_name=tool_def["name"],
-                    tool_def=tool_def,
-                )
+                try:
+                    tool = MCPTool(
+                        service_name=service_name,
+                        tool_name=tool_def["name"],
+                        tool_def=tool_def,
+                    )
+                except Exception as tool_err:  # noqa: BLE001 — 单工具 schema 构建失败只跳过该工具
+                    logger.warning(
+                        f"[MCPNet] 工具 schema 构建失败，跳过: mcp_{service_name}_{tool_def.get('name')}: {tool_err}"
+                    )
+                    continue
                 tools.append(tool)
                 logger.info(
                     f"[MCPNet] 已创建格式塔工具: {tool._full_name} ({manifest.display_name})"

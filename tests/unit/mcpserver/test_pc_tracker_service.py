@@ -108,3 +108,68 @@ class TestHealthAndSummary:
         result = await service.handle_handoff({"tool_name": "pc_context", "parameters": {}})
         assert "不可用" in result
         assert "9443" in result
+
+
+class TestGestaltSchemaBuild:
+    """discover 循环事故回归：dict 形式参数定义曾致 schema 构建崩溃，
+    整个 discover 循环被外层 try/except 吞掉（后续服务工具全部静默丢失）。"""
+
+    def test_dict_param_spec_builds_ok(self):
+        from webnet.ToolNet.tools.mcp.mcp_adapter import MCPTool
+
+        tool_def = {
+            "name": "pc_daily",
+            "description": "多日使用趋势",
+            "parameters": {
+                "days": {"type": "integer", "description": "查询天数 (1-90)", "default": 7}
+            },
+        }
+        tool = MCPTool("pc_tracker", "pc_daily", tool_def)
+        schema = tool._schema
+        assert schema["parameters"]["properties"]["days"]["type"] == "integer"
+        # default → 标记为可选（描述中出现"可选"）
+        assert "可选" in schema["parameters"]["properties"]["days"]["description"]
+        assert "days" not in schema["parameters"]["required"]
+
+    def test_string_param_spec_still_works(self):
+        from webnet.ToolNet.tools.mcp.mcp_adapter import MCPTool
+
+        tool_def = {
+            "name": "legacy",
+            "description": "旧形态",
+            "parameters": {"q": "搜索词，可选"},
+        }
+        schema = MCPTool("x", "legacy", tool_def)._schema
+        assert schema["parameters"]["properties"]["q"]["type"] == "string"
+
+    def test_discover_survives_single_tool_failure(self, monkeypatch):
+        """discover 循环单工具失败 → 跳过该工具继续，不中断后续服务。"""
+        from webnet.ToolNet.tools.mcp import mcp_adapter
+
+        class _Svc:
+            def __init__(self, manifest):
+                self.manifest = manifest
+
+        class _M:
+            class Manifest:
+                display_name = "x"
+                capabilities = {}
+
+            _initialized = True
+            _services = {}
+
+        bad_manifest = SimpleNamespace(
+            display_name="坏服务",
+            capabilities={"tools": [{"parameters": {}}]},  # 缺 name 键 → KeyError
+        )
+        good_manifest = SimpleNamespace(
+            display_name="好服务",
+            capabilities={"tools": [{"name": "ok_tool", "parameters": {}}]},
+        )
+        fake_mgr = SimpleNamespace(_initialized=True, _services={"a_bad": _Svc(bad_manifest), "b_good": _Svc(good_manifest)})
+        monkeypatch.setattr("core.mcp_manager.get_mcp_manager", lambda: fake_mgr)
+
+        tools = mcp_adapter.discover_mcp_tools()
+        names = [t._full_name for t in tools]
+        assert "mcp_b_good_ok_tool" in names  # 后续服务未受影响
+        assert not any("a_bad" in n for n in names)  # 坏工具被跳过
