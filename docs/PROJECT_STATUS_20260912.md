@@ -8,7 +8,7 @@
 
 ## 1. 项目一句话
 
-弥娅（MIYA）是运行在阿里云 ECS 上的 AI 虚拟化身：QQ 机器人形态接入，拥有持久记忆、情绪系统、主动聊天、工具调用（87+ 工具）、多模态识图能力。用户（然鑫，QQ 869135903）是唯一 superadmin。
+弥娅（MIYA）是运行在阿里云 ECS 上的 AI 虚拟化身：QQ 机器人形态接入，拥有持久记忆、情绪系统、主动聊天、工具调用（87+ 工具）、多模态识图能力。用户（然鑫，QQ <SUPERADMIN_QQ>）是唯一 superadmin。
 
 **当前分支** `fix/v8-hardening`（v8 硬化线，尚未合入 main）。
 
@@ -18,7 +18,7 @@
 
 ```
 [手机QQ] ←→ [NapCat 容器] --反向WS客户端--> [弥娅 daemon :8095] ←→ [deepseek-flash API]
-  阿里云 ECS i-2zegy8r4m3ceqvqpqvsv（2核/1.6Gi/40G，Ubuntu 26.04）
+  阿里云 ECS <INSTANCE_ID>（2核/1.6Gi/40G，Ubuntu 26.04）
 ```
 
 | 组件 | 形态 | 关键点 |
@@ -27,7 +27,7 @@
 | NapCat | docker 容器（host 网络），compose 管理：`docker compose -f scripts/deploy/docker-compose.napcat.yml up -d` | 反向 WS 拨出连 `ws://127.0.0.1:8095`；QQ 数据持久化在 docker volume；配置 bind `/opt/napcat/config` |
 | 依赖安装 | `uv sync --no-group dev` | **改 pyproject 后必须确认包真装上了**（pillow 教训） |
 | 端口红线 | 9800/8095/6099 全部仅 127.0.0.1，安全组只放 22 | `.env` 含全部 API key，权限 600，绝不进 git |
-| 远程管理 | workbench CLI（Git Bash）：`workbench exec --instance-id i-2zegy8r4m3ceqvqpqvsv --region cn-beijing --command "..."` | 上传加 `MSYS_NO_PATHCONV=1`；远端路径参数防 Git Bash 改写 |
+| 远程管理 | workbench CLI（Git Bash）：`workbench exec --instance-id <INSTANCE_ID> --region cn-beijing --command "..."` | 上传加 `MSYS_NO_PATHCONV=1`；远端路径参数防 Git Bash 改写 |
 
 ---
 
@@ -96,7 +96,7 @@ make doctor                              # 同上
 
 **密码回退（已停用！）**：QQ 对被控账号的密码登录强制短信验证，且 NapCat 在验证流程中**卡死不落二维码**（实测）。原配置备份在 `/opt/napcat/.env.password-backup`，恢复方法见 runbook。当前会话被踢的最终恢复手段 = **人工扫码**（`docker cp napcat:/app/napcat/cache/qrcode.png /tmp/qr.png` 取码，约 2 分钟一刷，过期重启容器刷新）。
 
-**正在执行的治本方案**：养号 1-2 周（手机每天登录小号 1153409562、实名、设备锁信任设备、腾讯系适度活跃）。
+**正在执行的治本方案**：养号 1-2 周（手机每天登录小号 <BOT_QQ>、实名、设备锁信任设备、腾讯系适度活跃）。
 
 **教训入库**（read runbook「四、已知注意事项」）：
 - 弥娅侧"平台在线"只代表自己监听，**看不到协议端已死**（僵尸连接）——发消息无回复时先查 `docker logs napcat` 的登录状态

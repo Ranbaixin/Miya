@@ -21,7 +21,7 @@
 4. **解压 + .env 加固**：解压到 `/opt/miya`；`.env` 里 `API_HOST=127.0.0.1`、追加随机 `MIYA_API_TOKEN`、注释 `NEO4J_PASSWORD`（无 Neo4j 自动降级）
 5. **依赖**：`cd /opt/miya && uv sync --no-group dev`
 6. **服务化**：`cp scripts/deploy/miya-daemon.service /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now miya-daemon`
-7. **NapCat**：`bash scripts/deploy/napcat_setup.sh 1153409562` → 扫码 → 写反向 WS（见 napcat_setup.sh 尾部说明）→ `docker restart napcat`
+7. **NapCat**：`bash scripts/deploy/napcat_setup.sh <BOT_QQ>` → 扫码 → 写反向 WS（见 napcat_setup.sh 尾部说明）→ `docker restart napcat`
 8. **验证**：个人 QQ 给机器人发消息，`journalctl -u miya-daemon | grep 发送回复` 看到回复即完成
 
 ## 二、日常运维速查
