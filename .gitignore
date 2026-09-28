@@ -136,8 +136,8 @@ frontend/*/.vite/
 # Git
 .git/
 
-# npm
-package-lock.json
+# npm（仅忽略根目录历史遗留的空 lock；miya_frontend 的 lock 必须入库供 npm ci 使用）
+/package-lock.json
 
 # Rust build (Tauri)
 frontend/packages/web/src-tauri/target/
