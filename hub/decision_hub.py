@@ -13,6 +13,7 @@
 import asyncio
 import logging
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -39,6 +40,16 @@ from memory.session_manager import (
 from mlink.message import Message
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class RespondContext:
+    """_ingest_phase 的产物：_respond_phase 所需的最小上下文包（2026-09-28 DM 合并拆分）。"""
+
+    perception: dict
+    content: str
+    platform: str
+    message: Any  # mlink Message（回写 response 用；DM 合并重放路径可为同一消息对象）
 
 
 _strategy_descriptions_cache = None
@@ -809,7 +820,7 @@ class DecisionHub:
 
     async def process_perception_cross_platform(self, message: Message) -> Optional[str]:
         """
-        处理跨平台感知数据（统一入口）
+        处理跨平台感知数据（统一入口，2026-09-28 拆分为 ingest/respond 两阶段后保持原行为）
 
         委托给感知处理器和响应生成器
 
@@ -818,6 +829,37 @@ class DecisionHub:
 
         Returns:
             响应文本
+        """
+        ctx, direct = await self._ingest_phase(message)
+        if direct is not None:
+            return direct
+        if ctx is None:
+            return None
+        return await self._respond_phase(ctx, turn_handle=None)
+
+    async def ingest_cross_platform(self, message: Message):
+        """DM 合并 intake：仅感知+入账（含快捷命令/定时任务等即时结果），不生成回复。
+
+        Returns:
+            (RespondContext | None, direct_text | None)
+        """
+        return await self._ingest_phase(message)
+
+    async def respond_cross_platform(self, ctx: "RespondContext", turn_handle=None) -> Optional[str]:
+        """DM 合并 worker：对已入账上下文生成回复（turn_handle 提供提交闸门）。"""
+        return await self._respond_phase(ctx, turn_handle=turn_handle)
+
+    async def _ingest_phase(self, message: Message):
+        """
+        感知入账阶段（拆分自原 process_perception_cross_platform，语句保持原样）
+
+        谛听记录/侧写/图片入账/快捷命令/防注入/群聊触发判定/用户消息入库/定时任务检测。
+
+        Args:
+            message: M-Link 消息（包含感知数据）
+
+        Returns:
+            (RespondContext | None, direct_text | None)
         """
         perception = message.content
 
@@ -847,7 +889,7 @@ class DecisionHub:
         # 【过滤】跳过内部处理标志消息，防止循环处理
         if content.startswith("[表情包请求已处理]"):
             logger.info("[决策层] 跳过内部标志消息 (emoji request processed)")
-            return content.replace("[表情包请求已处理] ", "")
+            return None, content.replace("[表情包请求已处理] ", "")
 
         # 【谛听】第一时间记录所有群消息（在任何拦截之前）
         group_id = perception.get("group_id", 0)
@@ -985,13 +1027,13 @@ class DecisionHub:
         quick_response = await self._handle_quick_commands(content, platform, perception)
         if quick_response:
             logger.warning(f"[决策层] ========== 快捷命令拦截成功 ========== {content[:20]} -> {quick_response[:50]}")
-            return quick_response
+            return None, quick_response
 
         # 【安全检查】防注入检测
         injection_result, protection_prompt = await self._check_injection(perception, content)
         if injection_result:
             logger.warning(f"[决策层] 检测到注入攻击: {injection_result}")
-            return injection_result
+            return None, injection_result
 
         # 如果有防护提示，附加到perception中传递给AI
         if protection_prompt:
@@ -1045,7 +1087,7 @@ class DecisionHub:
                 # 避免重复 AI 调用，节省 3-5 秒延迟
             else:
                 logger.info(f"[决策层] 群聊消息无关键词且非活跃对话，跳过: {content[:30]}")
-                return None
+                return None, None
 
         # 1. 检查终端命令（委托给感知处理器）
         # 跳过检查标记：用于非终端模式（如QQ、Web）
@@ -1053,7 +1095,7 @@ class DecisionHub:
             try:
                 terminal_result = await self.perception_handler.check_terminal_command(perception)
                 if terminal_result:
-                    return terminal_result
+                    return None, terminal_result
             except AttributeError:
                 # PerceptionHandler 没有 check_terminal_command 方法，跳过检查
                 pass
@@ -1073,7 +1115,7 @@ class DecisionHub:
         # 3. 判断是否需要响应（委托给感知处理器）
         try:
             if not self.perception_handler.should_respond(perception, game_mode):
-                return None
+                return None, None
         except AttributeError:
             # PerceptionHandler 没有 should_respond 方法，默认响应
             pass
@@ -1084,7 +1126,7 @@ class DecisionHub:
                 tool_call_result = await self.perception_handler.handle_game_start_commands(perception)
                 if tool_call_result:
                     logger.info(f"[决策层] 直接调用工具: {tool_call_result[:100]}")
-                    return tool_call_result
+                    return None, tool_call_result
             except AttributeError:
                 # PerceptionHandler 没有 handle_game_start_commands 方法，跳过检查
                 pass
@@ -1127,9 +1169,31 @@ class DecisionHub:
         if timer_result:
             logger.info(f"[决策层] 定时任务已处理: {timer_result[:50]}")
             # 定时任务有结果，直接返回，不走AI
-            return timer_result
+            return None, timer_result
 
+        # 【DM 合并拆分点】ingest 阶段到此结束：消息已入账、可安全重放；生成与输出副作用在 _respond_phase
+        return RespondContext(perception=perception, content=content, platform=platform, message=message), None
+
+    async def _respond_phase(self, ctx: "RespondContext", turn_handle=None) -> Optional[str]:
+        """响应生成 + 提交闸门 + 输出副作用（拆分自原 process_perception_cross_platform）。
+
+        turn_handle 非 None（DM 合并路径）时：生成完成后先 try_commit()；
+        未提交（生成期间收到新输入）→ 本回答转为草稿，跳过下方全部输出副作用
+        （主动聊天/表情包/情绪染色/AI记忆/工作记忆/Historian），直接返回。"""
+        content = ctx.content
+        perception = ctx.perception
+        platform = ctx.platform
+        message = ctx.message
+
+        # 6. 生成响应（委托给响应生成器）
         response = await self._generate_response_cross_platform(content, platform, perception)
+
+        # ★ DM 合并提交闸门（2026-09-28）：版本比对+置位在 try_commit 内部原子完成
+        if turn_handle is not None:
+            committed = await turn_handle.try_commit()
+            if not committed:
+                logger.info("[决策层] 本轮生成期间收到新输入，回答转为草稿：跳过发送副作用与记忆写入")
+                return response
 
         # 7. 主动聊天系统 v2.0 - 检查是否需要主动发言（全平台支持）
         if response:
