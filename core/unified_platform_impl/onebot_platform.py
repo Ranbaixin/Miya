@@ -15,7 +15,14 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from core.unified_platform.base import BasePlatform
-from core.unified_platform_impl.dm_merger import DmSubmit, IngestOutcome, PrivateChatMerger
+from core.unified_platform_impl.dm_merger import (
+    DmSubmit,
+    GenerateOutcome,
+    IngestOutcome,
+    PrivateChatMerger,
+    SendResult,
+    SynthOutcome,
+)
 
 from .message_mixin import MessageMixin
 
@@ -61,10 +68,15 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         )
         self._dm_merger: Optional[PrivateChatMerger] = (
             PrivateChatMerger(
+                prepare_fn=self._dm_prepare,
                 ingest_fn=self._dm_ingest,
                 generate_fn=self._dm_generate,
+                synth_fn=self._dm_synth,
                 send_fn=self._dm_send,
+                commit_fn=self._dm_commit,
+                post_send_fn=self._dm_post_send,
                 generation_semaphore=self._dispatch_semaphore,  # 保留跨会话并发限制
+                prepare_timeout=float(self._config_data.get("dm_prepare_timeout", 30.0)),
             )
             if self._dm_merge_enabled
             else None
@@ -103,6 +115,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                         .get("ai_analysis", {})
                         .get("timeout", 30),
                         "dm_merge_enabled": qq.get("dm_merge_enabled", True),
+                        "dm_prepare_timeout": qq.get("dm_prepare_timeout", 30.0),
                     }
         except Exception as e:  # noqa: BLE001 — 配置加载失败降级为默认配置，避免平台启动失败
             logger.warning(f"[{self.platform_id}] 加载 qq_config.yaml 失败: {e}")
@@ -275,7 +288,9 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                                         # 处理 echo 响应
                                         echo = data.get("echo")
                                         if echo and echo in self._pending_echoes:
-                                            self._pending_echoes.pop(echo).set_result(data)
+                                            fut = self._pending_echoes.pop(echo)
+                                            if not fut.done():  # 迟到确认不得写入已超时的 Future
+                                                fut.set_result(data)
                                             continue
                                         # 并发改造：收包与处理解耦，避免 AI 调用阻塞接收循环
                                         self._spawn(self._dispatch_message(data))
@@ -326,7 +341,9 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                         continue
                     echo = data.get("echo")
                     if echo and echo in self._pending_echoes:
-                        self._pending_echoes.pop(echo).set_result(data)
+                        fut = self._pending_echoes.pop(echo)
+                        if not fut.done():  # 迟到确认不得写入已超时的 Future
+                            fut.set_result(data)
                         continue
                     # 并发改造：收包与处理解耦，避免 AI 调用阻塞接收循环
                     self._spawn(self._dispatch_message(data))
@@ -762,12 +779,101 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             logger.debug(f"[{self.platform_id}] 预过滤纯表情群消息: group={group_id_str}")
             return
 
-        # === 9. 直接图片 AI 视觉分析 ===
-        extra = {}
-        has_media = has_direct_images
+        # === 8.5 DM 合并登记（2026-09-29 修复版）：自身消息与黑白名单过滤完成后
+        # 立即占位登记（序号+版本+去重），图片/引用等慢分析转入合并器准备任务。
+        # 私聊在此提前返回；群聊保持同步分析+原路由（行为不变）。 ===
+        if self._dm_merger is not None and msg_type == "private":
+            skeleton = {
+                "content": content,
+                "image_segments": image_segments,
+                "file_segments": file_segments,
+                "reply_id": reply_id,
+                "face_texts": face_texts,
+                "has_media": has_direct_images,
+                "user_id": user_id,
+                "bot_qq": bot_qq,
+            }
+            await self._dm_merger.register(
+                DmSubmit(
+                    key=f"private:{user_id}",
+                    original=data,
+                    msg_id=str(data.get("message_id", "")),
+                    raw_content=raw_message,
+                    user_id=user_id,
+                    user_name=user_name,
+                    sender_role=sender_role,
+                    extra={"__skeleton__": skeleton},
+                )
+            )
+            return
 
-        if has_direct_images and not reply_id:
-            # 直接发送的图片（非引用）→ 下载 + 视觉分析
+        # === 9-12. 媒体分析（群聊路径：同步执行，行为不变） ===
+        extra: Dict = {}
+        content, extra, has_media, dropped = await self._analyze_message_media(
+            content=content,
+            extra=extra,
+            image_segments=image_segments,
+            file_segments=file_segments,
+            reply_id=reply_id,
+            face_texts=face_texts,
+            has_media=has_direct_images,
+            user_id=user_id,
+            bot_qq=bot_qq,
+        )
+        if dropped:
+            return
+
+        # === 13. 群名解析 ===
+        group_name = ""
+        if group_id_str and msg_type == "group":
+            group_name = await self._resolve_group_name(group_id_str)
+
+        # === 13. 谛听 / 全局记忆 (decision_hub 已内置) ===
+
+        if has_media:
+            extra["has_media"] = True
+
+        logger.debug(f"[{self.platform_id}] 收到消息: {content[:50]}, reply_id={reply_id}, is_at={is_at_bot}")
+
+        # === 16. 路由到决策中心 ===
+        await self._route_chat_response(
+            data=data,
+            content=content,
+            user_id=user_id,
+            user_name=user_name,
+            msg_type=msg_type,
+            group_id_str=group_id_str,
+            group_name=group_name,
+            sender_role=sender_role,
+            is_at_bot=is_at_bot,
+            extra=extra,
+            has_media=has_media,
+        )
+
+    async def _analyze_message_media(
+        self,
+        *,
+        content: str,
+        extra: Dict,
+        image_segments: list,
+        file_segments: list,
+        reply_id: str,
+        face_texts: list,
+        has_media: bool,
+        user_id: str,
+        bot_qq: str,
+    ) -> tuple:
+        """消息媒体分析（2026-09-29 自 _handle_chat_message 抽取）：
+        直接图片/引用图片视觉分析 + 文件附件 + face 文本注入 + 引用文本/图片处理。
+
+        Returns:
+            (content, extra, has_media, dropped) —— dropped=True 表示空消息应丢弃。
+            群聊路径同步调用（行为不变）；DM 合并路径在准备任务中调用（可超时）。
+        """
+        import re as _re
+
+        # === 9. 直接图片 AI 视觉分析 ===
+        if image_segments and not reply_id:
             for seg in image_segments[:2]:
                 img_data = seg.get("data", {})
                 image_bytes = await self._download_reference_image(img_data)
@@ -802,7 +908,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                     logger.debug(f"[{self.platform_id}] 直接图片分析失败: {e}")
 
         # === 10. 自动保存直接图片 ===
-        if has_direct_images:
+        if image_segments:
             self._spawn(self._auto_save_images(image_segments, user_id))
 
         # === 11. 文件附件 ===
@@ -811,14 +917,12 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             has_media = True
 
         # === 11.5 face 表情文本注入 ===
-        # 位于群聊纯表情预过滤之后（非主人未@的纯表情照旧预过滤）、空内容丢弃之前
-        # （私聊/主人的纯表情消息由此获得 [表情:xxx] 文本，能进决策层而不是被丢弃）
         if face_texts:
             face_text = " ".join(face_texts)
             content = f"{content} [表情:{face_text}]".strip() if content else f"[表情:{face_text}]"
 
         if not content and not has_media and not reply_id:
-            return
+            return content, extra, has_media, True
 
         # === 12. 引用消息处理（文本 / 图片视觉分析） ===
         if reply_id:
@@ -826,17 +930,13 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             reply_data = await self._call_onebot_api("get_msg", {"message_id": int(reply_id)})
             if reply_data:
                 logger.info(f"[{self.platform_id}] 引用获取成功: {str(reply_data)[:80]}")
-                reply_data.get("sender", {}).get("nickname", "")
                 reply_raw = reply_data.get("message", "")
-                # 调试日志
                 logger.debug(
                     f"[{self.platform_id}] reply_raw type={type(reply_raw).__name__}, "
                     f"len={len(reply_raw) if hasattr(reply_raw, '__len__') else 'N/A'}"
                 )
-                # reply_to_bot 检测
                 reply_sender_id = str(reply_data.get("sender", {}).get("user_id", ""))
                 extra["reply_to_bot"] = reply_sender_id == bot_qq
-                # 提取引用文本
                 reply_content = ""
                 if isinstance(reply_raw, list):
                     reply_content = "".join(
@@ -858,9 +958,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                             continue
                         self._spawn(self._auto_save_image_bytes(image_bytes, user_id, img_data))
                         try:
-                            from core.multi_vision_analyzer import (
-                                get_vision_analyzer,
-                            )
+                            from core.multi_vision_analyzer import get_vision_analyzer
 
                             analyzer = await get_vision_analyzer()
                             result = await analyzer.analyze_image(image_bytes)
@@ -889,7 +987,6 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                     if not analyzed:
                         content = f"[回复图片] {content}"
                 elif "[CQ:image" in str(reply_raw):
-                    # 字符串格式的引用图片 — 也尝试下载分析
                     cq_files = _re.findall(r"\[CQ:image,file=([^,\]]+)", str(reply_raw))
                     analyzed_str = False
                     for fid in cq_files[:2]:
@@ -898,9 +995,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                             continue
                         self._spawn(self._auto_save_image_bytes(image_bytes, user_id, {"file": fid}))
                         try:
-                            from core.multi_vision_analyzer import (
-                                get_vision_analyzer,
-                            )
+                            from core.multi_vision_analyzer import get_vision_analyzer
 
                             analyzer = await get_vision_analyzer()
                             result = await analyzer.analyze_image(image_bytes)
@@ -932,34 +1027,8 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                 logger.warning(f"[{self.platform_id}] 引用获取失败: id={reply_id}")
 
         if not content and not has_media:
-            return
-
-        # === 13. 群名解析 ===
-        group_name = ""
-        if group_id_str and msg_type == "group":
-            group_name = await self._resolve_group_name(group_id_str)
-
-        # === 13. 谛听 / 全局记忆 (decision_hub 已内置) ===
-
-        if has_media:
-            extra["has_media"] = True
-
-        logger.debug(f"[{self.platform_id}] 收到消息: {content[:50]}, reply_id={reply_id}, is_at={is_at_bot}")
-
-        # === 16. 路由到决策中心 ===
-        await self._route_chat_response(
-            data=data,
-            content=content,
-            user_id=user_id,
-            user_name=user_name,
-            msg_type=msg_type,
-            group_id_str=group_id_str,
-            group_name=group_name,
-            sender_role=sender_role,
-            is_at_bot=is_at_bot,
-            extra=extra,
-            has_media=has_media,
-        )
+            return content, extra, has_media, True
+        return content, extra, has_media, False
 
     async def _route_chat_response(
         self,
@@ -976,20 +1045,8 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         extra: Optional[Dict],
         has_media: bool,
     ) -> None:
-        """私聊 → DM 合并器；群聊/未启用合并 → 原 route+send 路径（行为不变）。"""
-        if self._dm_merger is not None and msg_type == "private":
-            await self._dm_merger.submit(
-                DmSubmit(
-                    key=f"private:{user_id}",
-                    original=data,
-                    content=content,
-                    user_id=user_id,
-                    user_name=user_name,
-                    sender_role=sender_role,
-                    extra=extra,
-                )
-            )
-            return
+        """群聊/未启用合并 → 原 route+send 路径（行为不变）。
+        私聊已在 _handle_chat_message 的 8.5 段提前登记进合并器，不经过此处。"""
         response = await self.route_to_decision_hub(
             content=content,
             user_id=user_id,
@@ -1006,55 +1063,229 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         elif has_media and not is_at_bot:
             pass
 
-    async def _dm_ingest(self, sub: DmSubmit) -> IngestOutcome:
-        """合并器回调：感知构建 + decision_hub 入账（含快捷命令/定时任务即时结果）。"""
+    # ==================== DM 合并回调（2026-09-29 修复版） ====================
+
+    async def _dm_prepare(self, sub: DmSubmit):
+        """合并器准备回调：对已登记占位执行图片/引用慢分析（可超时标记失败）。"""
+        from core.unified_platform_impl.dm_merger import PreparedInput
+
+        skeleton = (sub.extra or {}).get("__skeleton__", {})
+        extra = {k: v for k, v in (sub.extra or {}).items() if k != "__skeleton__"}
+        content, extra, _has_media, _dropped = await self._analyze_message_media(
+            content=skeleton.get("content", ""),
+            extra=extra,
+            image_segments=skeleton.get("image_segments", []),
+            file_segments=skeleton.get("file_segments", []),
+            reply_id=skeleton.get("reply_id", ""),
+            face_texts=skeleton.get("face_texts", []),
+            has_media=skeleton.get("has_media", False),
+            user_id=skeleton.get("user_id", sub.user_id),
+            bot_qq=skeleton.get("bot_qq", ""),
+        )
+        return PreparedInput(content=content, extra=extra)
+
+    async def _dm_ingest(self, inp) -> IngestOutcome:
+        """合并器入账回调：感知构建 + decision_hub 入账（含快捷命令/定时任务即时结果）。
+        由 worker 按 seq 顺序串行调用——用户记忆严格按接收顺序排列。"""
         respond_ctx, direct = await self.ingest_to_decision_hub(
-            content=sub.content,
-            user_id=sub.user_id,
-            user_name=sub.user_name,
+            content=inp.content,
+            user_id=inp.user_id,
+            user_name=inp.user_name,
             message_type="private",
             group_id="",
             group_name="",
-            sender_role=sub.sender_role,
+            sender_role=inp.sender_role,
             is_at_bot=True,
-            extra=sub.extra,
+            extra=inp.ready_extra,
         )
         if isinstance(respond_ctx, str):  # mixin 返回的错误文本
             return IngestOutcome(error_text=respond_ctx)
         return IngestOutcome(respond_ctx=respond_ctx, direct_text=direct)
 
-    async def _dm_generate(self, key, batch, handle):
-        """合并器回调：对快照 batch 生成回复（最新一条为触发消息）。
+    async def _dm_generate(self, key, batch, handle, draft_ctx) -> GenerateOutcome:
+        """合并器生成回调：对快照 batch 生成回复（turn_handle 仅供工具闸门读取，
+        提交由 worker 在发送前原子执行）。
 
-        合并批次说明注入 content 头部（ingest 已入账的记忆不受影响），
-        模型据此统一回应全部未回复消息。"""
+        每次生成构造 RespondContext 副本注入合并说明与草稿提示——禁止在上一轮
+        上下文上叠加（修复：重算时合并提示反复叠加的缺陷）。"""
+        from hub.decision_hub import RespondContext
+
         last = batch[-1]
         ctx = last.respond_ctx
         if ctx is None:
             raise RuntimeError("无待回复上下文")
+
+        compose: list[str] = []
         if len(batch) > 1:
-            ctx.content = (
-                f"【合并回复】用户连续发来了 {len(batch)} 条消息，请统一回应全部内容：\n"
-                + "\n".join(f"- {p.content}" for p in batch[:-1])
-                + f"\n- {last.content}\n\n"
-                + ctx.content
+            compose.append(
+                f"【合并回复】用户连续发来了 {len(batch)} 条消息，请统一回应全部内容："
             )
-        response = await self._miya_core.decision_hub.respond_cross_platform(ctx, turn_handle=handle)
+            compose.extend(f"- {i.content}" for i in batch)
+        prompt_note = draft_ctx.snapshot_for_prompt()
+        if prompt_note:
+            compose.append(prompt_note)
+
+        merged_content = ("\n".join(compose) + "\n\n" + ctx.content) if compose else ctx.content
+        gen_ctx = RespondContext(
+            perception=dict(ctx.perception), content=merged_content,
+            platform=ctx.platform, message=ctx.message,
+        )
+        outcome = await self._miya_core.decision_hub.respond_cross_platform(gen_ctx)
+        response = outcome.response
+        is_error = False
         if response:
             response = self._filter_thinking(response)
             response = self._filter_output(response)
-        return response
+            from core.ai_client import is_ai_error_reply
 
-    async def _dm_send(self, key, batch, text) -> bool:
-        """合并器回调：发送已提交轮次（文字/语音分条 + 助手侧 realtime 事件 + 本地 TTS）。"""
-        if not text:
-            return False
+            is_error = is_ai_error_reply(response)
+        return GenerateOutcome(response=response or "", artifacts=outcome.artifacts, is_error=is_error)
+
+    async def _dm_synth(self, batch, text) -> SynthOutcome:
+        """合并器合成回调：语音合成在提交闸门之前完成（文字过滤已由生成回调完成）。"""
+        if not self._should_use_voice() or not text.strip():
+            return SynthOutcome(send_text=text, audio_path=None)
         last_original = batch[-1].original
-        await self._send_onebot_reply(last_original, text)
-        self._emit_realtime_events("", text, "弥娅")
-        if self._tts_should_local():
-            self._spawn(self._tts_play_response(text))
-        return True
+        msg_type = last_original.get("message_type", "private")
+        target_id = (
+            last_original.get("sender", {}).get("user_id")
+            if msg_type == "private"
+            else last_original.get("group_id")
+        )
+        try:
+            audio_path, ok = await self._synthesize_voice(msg_type, target_id, text)
+        except Exception as e:  # noqa: BLE001 — 合成失败回退文字
+            logger.warning(f"[{self.platform_id}] DM 语音合成失败回退文字: {e}")
+            audio_path, ok = None, False
+        if ok and audio_path:
+            return SynthOutcome(send_text=text, audio_path=audio_path)
+        return SynthOutcome(send_text=text, audio_path=None)
+
+    async def _dm_send(self, key, batch, text, audio_path) -> SendResult:
+        """合并器发送回调：逐分条等 NapCat echo 确认（3s，无 HTTP 回退）。
+        任一分条失败/超时即停止剩余，不重发已发送内容。"""
+        last_original = batch[-1].original
+        msg_type = last_original.get("message_type", "private")
+        if msg_type == "private":
+            target_id = last_original.get("sender", {}).get("user_id")
+        else:
+            target_id = last_original.get("group_id")
+
+        if not self._ws or not self._connected:
+            return SendResult(status="failed", error="WS 未连接")
+
+        if audio_path:
+            result = await self._send_voice_with_echo(msg_type, target_id, text, audio_path)
+            if result.status == "sent":
+                return result
+            logger.warning(f"[{self.platform_id}] 语音发送未确认（{result.status}），回退文字发送")
+
+        max_len = self._config_data.get("max_message_length", 200)
+        chunks = self._split_message(text, max_len) if text else []
+        message_ids: list = []
+        sent_chunks: list[str] = []
+        status = "failed"
+        error: Optional[str] = None
+        for idx, chunk in enumerate(chunks):
+            params: Dict = {"message_type": msg_type, "message": chunk}
+            if msg_type == "private":
+                params["user_id"] = target_id
+            else:
+                params["group_id"] = target_id
+            ok, data = await self._send_onebot_with_echo("send_msg", params)
+            if ok is True:
+                message_ids.append((data or {}).get("message_id"))
+                sent_chunks.append(chunk)
+                status = "sent"
+            else:
+                status = "timeout" if ok is None else "failed"
+                error = (
+                    "echo 超时（发送状态未知，不重发）" if ok is None else f"NapCat 拒绝: {data}"
+                )
+                break
+            if idx < len(chunks) - 1:
+                await asyncio.sleep(0.3)
+        if sent_chunks and len(sent_chunks) < len(chunks):
+            status = "partial"
+        if not chunks:
+            status, error = "failed", "空文本"
+        logger.info(
+            f"[{self.platform_id}] DM 发送完成: status={status}, 分条 {len(sent_chunks)}/{len(chunks)} -> {msg_type}/{target_id}"
+        )
+        return SendResult(status=status, message_ids=message_ids, sent_chunks=sent_chunks, error=error)
+
+    async def _dm_commit(self, artifacts, send_result: SendResult) -> None:
+        """合并器记忆提交回调：按实际发送结果写正式记忆（完整/部分/失败分层）。"""
+        await self._miya_core.decision_hub.commit_pending(artifacts, send_result)
+
+    async def _dm_post_send(self, key, batch, send_result: SendResult, outcome: GenerateOutcome) -> None:
+        """合并器发送后回调（同一 worker 任务内执行，不另起后台任务）：
+        桌面助手事件按实际送达片段发布；语音本地播放。"""
+        delivered = send_result.delivered_text
+        if delivered:
+            self._emit_realtime_events("", delivered, "弥娅")
+        if outcome.audio_path and self._should_local_playback():
+            try:
+                await self._play_local(outcome.audio_path, delivered or outcome.response)
+            except Exception as e:  # noqa: BLE001 — 本地播放为附加功能，失败不影响结果
+                logger.debug(f"[{self.platform_id}] 本地播放失败: {e}")
+
+    async def _send_onebot_with_echo(self, action: str, params: Dict) -> tuple:
+        """发送类 OneBot API 专用：WS echo 确认（3s），不使用 HTTP 回退——
+        避免「WS 已成功但确认丢失」时经 HTTP 重发造成重复消息。
+        Returns:
+            (True, data)=确认成功；(False, result)=NapCat 拒绝；(None, None)=超时/未连接
+        """
+        import uuid
+
+        if not self._ws or not self._connected:
+            return None, None
+        echo = f"miya_{action}_{uuid.uuid4().hex}"
+        future: asyncio.Future = asyncio.get_event_loop().create_future()
+        self._pending_echoes[echo] = future
+        try:
+            await self._ws.send_str(json.dumps({"action": action, "params": params, "echo": echo}))
+            result = await asyncio.wait_for(future, timeout=3.0)
+            if result and result.get("status") == "ok":
+                return True, result.get("data")
+            return False, result
+        except asyncio.TimeoutError:
+            return None, None
+        except Exception as e:  # noqa: BLE001 — 发送通道异常按超时处理（状态未知，不重发）
+            logger.warning(f"[{self.platform_id}] 发送通道异常: {e}")
+            return None, None
+        finally:
+            self._pending_echoes.pop(echo, None)
+
+    async def _send_voice_with_echo(self, msg_type: str, target_id, text: str, audio_path: str) -> SendResult:
+        """语音消息发送（echo 确认版）。"""
+        import os
+
+        try:
+            file_uri = f"file:///{audio_path.replace(os.sep, '/')}"
+            params: Dict = {"message_type": msg_type, "message": [{"type": "record", "data": {"file": file_uri}}]}
+            if msg_type == "private":
+                params["user_id"] = target_id
+            else:
+                params["group_id"] = target_id
+            ok, data = await self._send_onebot_with_echo("send_msg", params)
+            if ok is True:
+                logger.info(f"[{self.platform_id}] 语音消息已发送（echo 确认）")
+
+                def _cleanup(path):
+                    if os.path.exists(path):
+                        os.unlink(path)
+
+                asyncio.get_event_loop().call_later(30, _cleanup, audio_path)
+                return SendResult(
+                    status="sent", message_ids=[(data or {}).get("message_id")], sent_chunks=[text]
+                )
+            if ok is None:
+                return SendResult(status="timeout", error="语音 echo 超时（状态未知，不重发）")
+            return SendResult(status="failed", error=f"语音发送被拒: {data}")
+        except Exception as e:  # noqa: BLE001 — 语音通道异常降级为文字（由调用方回退）
+            logger.error(f"[{self.platform_id}] 语音发送异常: {e}")
+            return SendResult(status="failed", error=str(e))
 
     async def _send_onebot_reply(self, original: Dict, text: str):
         """发送 OneBot 回复（根据 TTS 配置自动选择文字/语音）"""
@@ -1108,11 +1339,8 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         except (OSError, ValueError):
             return False
 
-    async def _send_voice_reply(self, msg_type: str, target_id: str, text: str):
-        """发送语音回复，返回 (audio_path, success)，失败回退文字"""
-        import json
-        import os
-
+    async def _synthesize_voice(self, msg_type: str, target_id, text: str) -> tuple:
+        """语音合成（不发送）：DM 合并在提交闸门前调用；返回 (audio_path, ok)。"""
         config_path = "config/tts_config.json"
         try:
             with open(config_path, "r", encoding="utf-8") as f:
@@ -1143,6 +1371,16 @@ class OneBotPlatform(MessageMixin, BasePlatform):
 
         if not audio_path:
             return None, False
+        return audio_path, True
+
+    async def _send_voice_reply(self, msg_type: str, target_id: str, text: str):
+        """发送语音回复，返回 (audio_path, success)，失败回退文字（非合并路径用）"""
+        import json as _json
+        import os
+
+        audio_path, ok = await self._synthesize_voice(msg_type, target_id, text)
+        if not ok:
+            return None, False
 
         try:
             file_uri = f"file:///{audio_path.replace(os.sep, '/')}"
@@ -1158,8 +1396,8 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             elif msg_type == "group":
                 reply_data["params"]["group_id"] = target_id
 
-            await self._ws.send_str(json.dumps(reply_data))
-            logger.info(f"[{self.platform_id}] 语音消息已发送 ({preferred})")
+            await self._ws.send_str(_json.dumps(reply_data))
+            logger.info(f"[{self.platform_id}] 语音消息已发送")
 
             # 语音发送成功后，直接复用同一音频文件做本地播放
             if self._should_local_playback():
@@ -1886,6 +2124,14 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             await saver.auto_save_emoji(int(user_id), image_bytes, image_info=image_info)
         except Exception as e:  # noqa: BLE001 — 图片自动保存为附加功能，失败仅记日志
             logger.debug(f"[{self.platform_id}] 自动保存图片失败(bytes): {e}")
+
+    async def _do_stop(self):
+        """平台停止：取消并等待 DM 合并器的全部 worker/准备任务，避免后台任务残留。"""
+        if self._dm_merger is not None:
+            try:
+                await self._dm_merger.shutdown()
+            except Exception as e:  # noqa: BLE001 — 清理失败不阻断平台停止
+                logger.warning(f"[{self.platform_id}] DM 合并器关闭异常: {e}")
 
     async def _do_disconnect(self):
         self._connected = False

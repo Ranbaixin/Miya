@@ -11,6 +11,7 @@
 """
 
 import asyncio
+import contextlib
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -50,6 +51,40 @@ class RespondContext:
     content: str
     platform: str
     message: Any  # mlink Message（回写 response 用；DM 合并重放路径可为同一消息对象）
+
+
+@dataclass
+class GeneratedArtifacts:
+    """生成阶段产出、提交后才落库的数据（2026-09-29 DM 合并：发送确认前不写存储）。
+
+    情绪/认知记录是模型侧体验，提交即写；LifeBook 记录交互，按实际发送结果写。"""
+
+    emotion_memory_content: Optional[str] = None  # 短期情绪记录（store_auto）
+    peak_emotion_content: Optional[str] = None  # 长期峰值情绪（store_auto）
+    peak_tags: Optional[list] = None  # 峰值情绪 tags（两条路径历史格式不同，保持原样）
+    owner_user_id: Optional[str] = None  # store_auto 的归属用户
+    cognition: Optional[dict] = None  # store_cognition 参数包
+    cognition_cache_record: Any = None  # CognitionRecord（直调路径的认知缓存）
+    lifebook_interaction: Optional[dict] = None  # LifeBook record_interaction 参数包
+
+
+@dataclass
+class PendingCommit:
+    """DM 合并路径的待提交数据包：worker 发送确认后交 commit_pending 按结果提交。"""
+
+    artifacts: Optional[GeneratedArtifacts] = None
+    perception: Optional[dict] = None  # assistant 记忆参数（含 user_id/message_type 等）
+    response: str = ""  # 情绪染色后的最终回复
+    platform: str = ""
+    message: Any = None  # mlink Message（回写 content["response"] 用）
+
+
+@dataclass
+class RespondOutcome:
+    """_respond_phase 的产物。pending 非 None 时表示待发送确认后提交（DM 合并路径）。"""
+
+    response: str = ""
+    pending: Optional[PendingCommit] = None
 
 
 _strategy_descriptions_cache = None
@@ -835,7 +870,8 @@ class DecisionHub:
             return direct
         if ctx is None:
             return None
-        return await self._respond_phase(ctx, turn_handle=None)
+        outcome = await self._respond_phase(ctx, collect_only=False)
+        return outcome.response
 
     async def ingest_cross_platform(self, message: Message):
         """DM 合并 intake：仅感知+入账（含快捷命令/定时任务等即时结果），不生成回复。
@@ -845,9 +881,12 @@ class DecisionHub:
         """
         return await self._ingest_phase(message)
 
-    async def respond_cross_platform(self, ctx: "RespondContext", turn_handle=None) -> Optional[str]:
-        """DM 合并 worker：对已入账上下文生成回复（turn_handle 提供提交闸门）。"""
-        return await self._respond_phase(ctx, turn_handle=turn_handle)
+    async def respond_cross_platform(self, ctx: "RespondContext") -> "RespondOutcome":
+        """DM 合并 worker 专用：对已入账上下文生成回复。
+
+        返回 RespondOutcome——pending 非 None 表示输出副作用待发送确认后
+        经 commit_pending 提交（提交闸门由合并 worker 在发送前原子执行）。"""
+        return await self._respond_phase(ctx, collect_only=True)
 
     async def _ingest_phase(self, message: Message):
         """
@@ -1174,26 +1213,52 @@ class DecisionHub:
         # 【DM 合并拆分点】ingest 阶段到此结束：消息已入账、可安全重放；生成与输出副作用在 _respond_phase
         return RespondContext(perception=perception, content=content, platform=platform, message=message), None
 
-    async def _respond_phase(self, ctx: "RespondContext", turn_handle=None) -> Optional[str]:
-        """响应生成 + 提交闸门 + 输出副作用（拆分自原 process_perception_cross_platform）。
+    async def _respond_phase(self, ctx: "RespondContext", collect_only: bool = False) -> "RespondOutcome":
+        """响应生成 + 输出副作用（2026-09-29 改造：输出副作用全部请求级化）。
 
-        turn_handle 非 None（DM 合并路径）时：生成完成后先 try_commit()；
-        未提交（生成期间收到新输入）→ 本回答转为草稿，跳过下方全部输出副作用
-        （主动聊天/表情包/情绪染色/AI记忆/工作记忆/Historian），直接返回。"""
+        collect_only=False（群聊/终端/Web 原路径）：生成后立即执行全部副作用并落库，行为不变。
+        collect_only=True（DM 合并路径）：情绪染色照常执行（发送前的文本效果），
+        其余输出副作用（主动聊天/表情/正式助手记忆/情绪认知/LifeBook）打包进
+        PendingCommit 返回；由合并 worker 在发送确认后经 commit_pending 按实际
+        发送结果提交——草稿阶段零落库、零发送、零桌面事件。"""
         content = ctx.content
         perception = ctx.perception
         platform = ctx.platform
         message = ctx.message
 
         # 6. 生成响应（委托给响应生成器）
-        response = await self._generate_response_cross_platform(content, platform, perception)
+        response, artifacts = await self._generate_response_cross_platform(content, platform, perception)
 
-        # ★ DM 合并提交闸门（2026-09-28）：版本比对+置位在 try_commit 内部原子完成
-        if turn_handle is not None:
-            committed = await turn_handle.try_commit()
-            if not committed:
-                logger.info("[决策层] 本轮生成期间收到新输入，回答转为草稿：跳过发送副作用与记忆写入")
-                return response
+        # 【新增】QQ端状态标签（仅日志，不添加到响应中）
+        if platform in ("qq", "aiocqhttp", "qqofficial") and response and self.personality:
+            from core.text_loader import get_form_name
+
+            profile = self.personality.get_profile()
+            current_form = profile.get("current_form", "normal")
+            speak_mode = profile.get("speak_mode", "casual")
+            form_name = get_form_name(current_form)
+            logger.warning(f"[形态状态] {form_name}|{speak_mode}")
+
+        # 5. 情绪染色（委托给情绪控制器）——发送前的文本效果，两种模式都执行
+        if response:
+            current_form = self.personality.current_form if hasattr(self.personality, "current_form") else "normal"
+            if hasattr(self.emotion, "set_form"):
+                self.emotion.set_form(current_form)
+            response = self.emotion.influence_response(response)
+
+        if collect_only:
+            pending = PendingCommit(
+                artifacts=artifacts,
+                perception=perception,
+                response=response,
+                platform=platform,
+                message=message,
+            )
+            self.emotion.decay_coloring()
+            logger.info(f"[决策层-跨平台] 生成响应（DM 待提交）: {response[:50] if response else '(空)'}")
+            return RespondOutcome(response=response, pending=pending)
+
+        # === 原路径：立即执行输出副作用（行为不变） ===
 
         # 7. 主动聊天系统 v2.0 - 检查是否需要主动发言（全平台支持）
         if response:
@@ -1206,24 +1271,6 @@ class DecisionHub:
             else:
                 # 尝试根据回复内容发送智能表情包
                 asyncio.create_task(self._handle_smart_emoji(response, perception))
-
-        # 【新增】QQ端状态标签（仅日志，不添加到响应中）
-        if platform in ("qq", "aiocqhttp", "qqofficial") and response and self.personality:
-            from core.text_loader import get_form_name
-
-            profile = self.personality.get_profile()
-            current_form = profile.get("current_form", "normal")
-            speak_mode = profile.get("speak_mode", "casual")
-            form_name = get_form_name(current_form)
-            logger.warning(f"[形态状态] {form_name}|{speak_mode}")
-
-        # 5. 情绪染色（委托给情绪控制器）
-        # 先设置当前神格形态，让染色更符合神格风格
-        if response:
-            current_form = self.personality.current_form if hasattr(self.personality, "current_form") else "normal"
-            if hasattr(self.emotion, "set_form"):
-                self.emotion.set_form(current_form)
-            response = self.emotion.influence_response(response)
 
         # 6. 存储AI回复到记忆（委托给记忆管理器）
         # AI 服务错误回复只发给用户提示失败，不写入记忆/会话历史（防模型把报错当"自己说过的话"）
@@ -1272,6 +1319,9 @@ class DecisionHub:
             except Exception as e:  # noqa: BLE001 — 智能记忆为可选增强，失败降级
                 logger.debug(f"[决策层] 智能记忆处理失败: {e}")
 
+        # 生成侧产物落库（情绪/认知/LifeBook——原在 _generate_response_cross_platform 内直写）
+        await self._commit_artifacts(artifacts)
+
         # 7. 情绪衰减
         self.emotion.decay_coloring()
 
@@ -1280,7 +1330,134 @@ class DecisionHub:
         message.content["platform"] = platform
 
         logger.info(f"[决策层-跨平台] 生成响应: {response[:50] if response else '(空)'}")
-        return response
+        return RespondOutcome(response=response, pending=None)
+
+    async def _commit_artifacts(self, artifacts: Optional["GeneratedArtifacts"]) -> None:
+        """提交生成侧产物（情绪/认知/LifeBook）——原路径立即调用；
+        DM 路径经 commit_pending 在发送确认后调用。"""
+        if artifacts is None:
+            return
+        if artifacts.emotion_memory_content:
+            try:
+                from memory import store_auto
+
+                await store_auto(
+                    artifacts.emotion_memory_content,
+                    artifacts.owner_user_id,
+                    tags=["情绪记录", "emotion_context"],
+                    priority=0.5,
+                )
+            except Exception as store_err:  # noqa: BLE001 — 情绪记忆存储为附加功能，失败降级
+                logger.warning(f"[灵魂记忆] store_auto失败: {store_err}")
+        if artifacts.peak_emotion_content:
+            try:
+                from memory import store_auto
+
+                await store_auto(
+                    artifacts.peak_emotion_content,
+                    artifacts.owner_user_id,
+                    tags=artifacts.peak_tags or ["情绪记录", "relation_history"],
+                    priority=0.6,
+                )
+            except Exception as store_err2:  # noqa: BLE001 — 情绪峰值存储为附加功能，失败降级
+                logger.warning(f"[灵魂记忆] 情绪峰值存储失败: {store_err2}")
+        if artifacts.cognition:
+            try:
+                from memory import store_cognition
+
+                await store_cognition(**artifacts.cognition)
+            except Exception as cog_err:  # noqa: BLE001 — 认知记忆存储为附加功能，失败降级
+                logger.warning(f"[认知记忆] 存储失败: {cog_err}")
+        if artifacts.cognition_cache_record is not None:
+            try:
+                from memory.cognition_cache import get_cognition_cache
+
+                await get_cognition_cache().add(artifacts.cognition_cache_record)
+            except Exception as cache_err:  # noqa: BLE001 — 认知缓存为附加功能，失败降级
+                logger.debug(f"[认知缓存] 添加失败: {cache_err}")
+        if artifacts.lifebook_interaction:
+            try:
+                from memory.lifebook import get_lifebook
+
+                lifebook = get_lifebook()
+                if lifebook:
+                    await lifebook.record_interaction(**artifacts.lifebook_interaction)
+            except Exception as e:  # noqa: BLE001 — LifeBook日记为附加功能，失败降级
+                logger.debug(f"[决策层] LifeBook 记录失败: {e}")
+
+    async def commit_pending(self, pending: Optional["PendingCommit"], send_result) -> None:
+        """DM 合并路径：按实际发送结果提交待落库数据。
+
+        - 正式助手记忆/工作记忆/智能记忆/LifeBook：完整发送→全文；部分发送→
+          仅确认成功的片段；失败/超时→不写（不把回复标记为已送达）。
+        - 情绪/认知记录：模型侧体验，照常提交。
+        - 主动聊天与智能表情：归入当前发送任务在本协程内执行（不再另起后台任务），
+          仅在确有送达内容时执行；附加内容失败不重发主回复。"""
+        if pending is None:
+            return
+        perception = dict(pending.perception or {})
+        response = pending.response
+        status = getattr(send_result, "status", "failed")
+        delivered = getattr(send_result, "delivered_text", "")
+
+        # 正式回答按送达结果确定（确认成功=NapCat 接受发送，不代表用户已阅读）
+        if status == "sent":
+            final_response = response
+        elif status == "partial":
+            final_response = delivered
+        else:  # failed / timeout：不写正式回答
+            final_response = ""
+
+        from core.ai_client import is_ai_error_reply
+
+        if final_response and not is_ai_error_reply(final_response):
+            try:
+                perception["response"] = final_response
+                await self.memory_manager.store_unified_memory(perception, "assistant")
+            except Exception as e:  # noqa: BLE001 — 正式记忆写入失败留日志排查
+                logger.error(f"[决策层] DM 正式助手记忆写入失败: {e}", exc_info=True)
+            try:
+                msg_type = perception.get("message_type", "")
+                group_id = perception.get("group_id")
+                user_id = perception.get("user_id")
+
+                from memory.working_memory import get_working_memory
+
+                wm = get_working_memory()
+                wm_key = str(group_id) if (msg_type == "group" and group_id) else f"private_{str(user_id)}"
+                wm.add_message(group_id=wm_key, sender="弥娅", content=final_response[:200], is_at_bot=False)
+            except Exception as e:  # noqa: BLE001 — 工作记忆为附加功能，失败降级
+                logger.debug(f"[决策层] 工作记忆存储AI回复失败: {e}")
+            try:
+                user_input = perception.get("content", "")
+                historian = get_historian()
+                uid = perception.get("user_id", "unknown")
+                await historian.process_after_response(user_input, final_response, uid)
+            except Exception as e:  # noqa: BLE001 — 智能记忆为可选增强，失败降级
+                logger.debug(f"[决策层] 智能记忆处理失败: {e}")
+            # LifeBook 记录的回复文本按实际送达覆盖
+            if pending.artifacts is not None and pending.artifacts.lifebook_interaction:
+                pending.artifacts.lifebook_interaction["lover_response"] = final_response
+
+        # 生成侧产物（情绪/认知 always；LifeBook 按送达结果）
+        await self._commit_artifacts(pending.artifacts)
+
+        # 主动聊天与智能表情：仅在确有送达内容时执行（当前任务内，不另起轮次）
+        if delivered:
+            content = perception.get("content", "")
+            try:
+                proactive_result = await self._handle_proactive_chat(perception, content, response)
+                if not (proactive_result and proactive_result.should_respond):
+                    await self._handle_smart_emoji(delivered, perception)
+            except Exception as e:  # noqa: BLE001 — 附加输出失败不重发主回复、不另起轮次
+                logger.warning(f"[决策层] DM 附加输出失败（不重发主回复）: {e}")
+
+        # 回写消息对象（桌面端 HTTP/轮询读取）
+        message = pending.message
+        if message is not None and hasattr(message, "content"):
+            with contextlib.suppress(Exception):
+                message.content["response"] = response
+                message.content["platform"] = pending.platform
 
     @staticmethod
     def _session_ids_for(platform: str, user_id, group_id) -> list:
@@ -1302,7 +1479,7 @@ class DecisionHub:
                 keys.append(f"{platform}_{uid}")
         return keys
 
-    async def _generate_response_cross_platform(self, content, platform: str, context: dict = None) -> str:
+    async def _generate_response_cross_platform(self, content, platform: str, context: dict = None) -> tuple:
         """
         生成响应（跨平台统一）
 
@@ -1312,8 +1489,10 @@ class DecisionHub:
             context: 上下文信息（现已废弃，保留参数兼容）
 
         Returns:
-            响应文本
+            (响应文本, GeneratedArtifacts) —— 2026-09-29：情绪/认知/LifeBook 等落库
+            数据不再在生成阶段直接写入，由调用方按发送结果提交（原路径立即提交）。
         """
+        artifacts = GeneratedArtifacts()
         perception = context  # 使用 context 作为感知数据源
         # 规范化 content 为字符串
         if isinstance(content, list):
@@ -1343,7 +1522,8 @@ class DecisionHub:
 
         # 如果没有 AI 客户端，使用简化回复
         if not self.ai_client:
-            return await self._fallback_response_cross_platform(content, sender_name, platform)
+            fallback_text = await self._fallback_response_cross_platform(content, sender_name, platform)
+            return fallback_text, artifacts
 
         # 【修改】终端模式：禁用单命令快速检测,让AI处理所有自然语言
         # 原因: 单命令检测会绕过AI理解,导致"打开一个终端"等自然语言请求被错误处理
@@ -2312,10 +2492,8 @@ class DecisionHub:
                         if not _thinking and hasattr(collab_result, "thinking") and collab_result.thinking:
                             _thinking = collab_result.thinking
 
-                        # B方案：存储情绪上下文到短期记忆
+                        # B方案：存储情绪上下文到短期记忆（2026-09-29 改为待提交数据）
                         import json
-
-                        from memory import store_auto
 
                         emotion_memory_content = (
                             f"【情绪记录】\n"
@@ -2326,52 +2504,33 @@ class DecisionHub:
                             f"- 反思: {_reflection}\n"
                             f"- AI思考过程: {_thinking[:200] if _thinking else '无'}"
                         )
-                        try:
-                            await store_auto(
-                                emotion_memory_content,
-                                user_id,
-                                tags=["情绪记录", "emotion_context"],
-                                priority=0.5,
-                            )
-                            logger.info("[灵魂记忆] 协作引擎已存储")
-                        except Exception as store_err:  # noqa: BLE001 — 情绪记忆存储为附加功能，失败降级
-                            logger.warning(f"[灵魂记忆] store_auto失败: {store_err}")
+                        artifacts.emotion_memory_content = emotion_memory_content
+                        artifacts.owner_user_id = user_id
 
                         # C方案：存入长期记忆，AI自行判断重要性
                         significant_emotions = [e for e, i in _emotions.items() if i >= 60]
                         if significant_emotions:
-                            peak_content = f"【情绪记录】与然鑫互动时感到: {', '.join(significant_emotions)}"
-                            await store_auto(
-                                peak_content,
-                                user_id,
-                                tags=["#emotion_record", "#relation_history"],
-                                priority=0.6,
+                            artifacts.peak_emotion_content = (
+                                f"【情绪记录】与然鑫互动时感到: {', '.join(significant_emotions)}"
                             )
+                            artifacts.peak_tags = ["#emotion_record", "#relation_history"]
 
                         # 【新增】协作引擎路径也存储认知记忆（使用之前提取的soul_result数据）
-                        try:
-                            from memory import store_cognition
+                        collab_thinking = ""
+                        if hasattr(collab_result, "thinking") and collab_result.thinking:
+                            collab_thinking = collab_result.thinking
 
-                            # 获取AI思考过程 - 从协作引擎结果获取
-                            collab_thinking = ""
-                            if hasattr(collab_result, "thinking") and collab_result.thinking:
-                                collab_thinking = collab_result.thinking
-                            print(f"[DEBUG协作] thinking: {len(collab_thinking)} chars")
-
-                            # 直接使用之前从soul_result提取的数据
-                            group_id_str_cog = str(context.get("group_id")) if context.get("group_id") else None
-                            await store_cognition(
-                                thinking=collab_thinking,
-                                emotions=_emotions,
-                                inner_thought=_inner_thought,
-                                attribution=_attribution,
-                                reflection=_reflection,
-                                user_id=str(user_id),
-                                group_id=group_id_str_cog,
-                            )
-                            print("[DEBUG协作] 协作引擎路径存储完成")
-                        except Exception as cog_err:  # noqa: BLE001 — 认知记忆存储为附加功能，失败降级
-                            logger.warning(f"[认知记忆] 协作路径存储失败: {cog_err}")
+                        # 直接使用之前从soul_result提取的数据
+                        group_id_str_cog = str(context.get("group_id")) if context.get("group_id") else None
+                        artifacts.cognition = {
+                            "thinking": collab_thinking,
+                            "emotions": _emotions,
+                            "inner_thought": _inner_thought,
+                            "attribution": _attribution,
+                            "reflection": _reflection,
+                            "user_id": str(user_id),
+                            "group_id": group_id_str_cog,
+                        }
 
                         # 存储到 decision_hub 供 SSE/API 读取（协作引擎路径）
                         self._last_soul_output = {
@@ -2385,7 +2544,7 @@ class DecisionHub:
                             f"[SSE] _last_soul_output (collab): inner={bool(_inner_thought)}, emotions={list(_emotions.keys()) if _emotions else []}"
                         )
 
-                        return collab_result.response
+                        return collab_result.response, artifacts
 
                     except Exception as e:  # noqa: BLE001 — 协作引擎为增强路径，失败降级单模型
                         logger.warning(f"[决策层-协作引擎] 协作失败，降级为单模型: {e}")
@@ -2513,10 +2672,8 @@ class DecisionHub:
             if ai_client_to_use and hasattr(ai_client_to_use, "last_reasoning_content"):
                 thinking_content = ai_client_to_use.last_reasoning_content or ""
 
-            # B方案：存储情绪上下文到短期记忆（带 #emotion_context tag）
+            # B方案：存储情绪上下文到短期记忆（2026-09-29 改为待提交数据）
             import json
-
-            from memory import store_auto
 
             emotion_memory_content = (
                 f"【情绪记录】\n"
@@ -2527,43 +2684,22 @@ class DecisionHub:
                 f"- 反思: {_reflection}\n"
                 f"- AI思考过程: {thinking_content[:200] if thinking_content else '无'}"
             )
-
-            # 使用 store_auto 存储，tag 使用不带#的格式（避免embedding问题）
-            try:
-                await store_auto(
-                    emotion_memory_content,
-                    user_id,
-                    tags=["情绪记录", "emotion_context"],
-                    priority=0.5,
-                )
-                logger.info("[灵魂记忆] 已存储情绪上下文")
-            except Exception as store_err:  # noqa: BLE001 — 情绪记忆存储为附加功能，失败降级
-                # 如果存储失败，尝试用更简单的方式
-                logger.warning(f"[灵魂记忆] store_auto失败: {store_err}")
+            artifacts.emotion_memory_content = emotion_memory_content
+            artifacts.owner_user_id = user_id
 
             # C方案：存入长期记忆，让AI自己判断重要性
             # 检测是否有显著的正面情绪（强度>=60）
             significant_emotions = [e for e, i in _emotions.items() if i >= 60]
             if significant_emotions:
-                peak_content = f"【情绪记录】与然鑫互动时感到: {', '.join(significant_emotions)}"
-                try:
-                    await store_auto(
-                        peak_content,
-                        user_id,
-                        tags=["情绪记录", "relation_history"],
-                        priority=0.6,
-                    )
-                    logger.info(f"[灵魂记忆] 已存储情绪: {significant_emotions}")
-                except Exception as store_err2:  # noqa: BLE001 — 情绪峰值存储为附加功能，失败降级
-                    logger.warning(f"[灵魂记忆] 情绪峰值存储失败: {store_err2}")
+                artifacts.peak_emotion_content = (
+                    f"【情绪记录】与然鑫互动时感到: {', '.join(significant_emotions)}"
+                )
+                artifacts.peak_tags = ["情绪记录", "relation_history"]
 
-            # 【LifeBook 集成】用真实情绪数据记录交互到多视角日记
+            # 【LifeBook 集成】用真实情绪数据记录交互到多视角日记（2026-09-29 改为待提交数据）
             try:
-                from memory.lifebook import get_lifebook
-
-                lifebook = get_lifebook()
                 user_msg_content = perception.get("content", "")
-                if lifebook and user_msg_content and response:
+                if user_msg_content and response:
                     emotion_label = "平静"
                     if _soul_result:
                         dominant = _soul_result.get("dominant_emotion", "")
@@ -2577,12 +2713,12 @@ class DecisionHub:
                                 )
                             elif isinstance(emotions, dict) and emotions:
                                 emotion_label = max(emotions, key=emotions.get) if emotions else "平静"
-                    await lifebook.record_interaction(
-                        user_message=user_msg_content,
-                        lover_response=response,
-                        topics=[message_type] if message_type else ["对话"],
-                        emotion=str(emotion_label),
-                    )
+                    artifacts.lifebook_interaction = {
+                        "user_message": user_msg_content,
+                        "lover_response": response,
+                        "topics": [message_type] if message_type else ["对话"],
+                        "emotion": str(emotion_label),
+                    }
             except Exception as e:  # noqa: BLE001 — LifeBook日记为附加功能，失败降级
                 logger.debug(f"[决策层] LifeBook 记录失败: {e}")
 
@@ -2591,8 +2727,7 @@ class DecisionHub:
             try:
                 import uuid
 
-                from memory import store_cognition
-                from memory.cognition_cache import CognitionRecord, get_cognition_cache
+                from memory.cognition_cache import CognitionRecord
 
                 # 获取灵魂发生器的思考（情绪分析过程）
                 soul_reasoning = ""
@@ -2675,25 +2810,21 @@ class DecisionHub:
                     f"[DEBUG认知] soul_reasoning={bool(soul_reasoning)}, ai_reasoning={bool(ai_reasoning)}, _emotions={_emotions}, thinking_content长度={len(thinking_content)}"
                 )
 
-                # 存储到持久化存储
+                # 存储到持久化存储（2026-09-29 改为待提交数据）
                 group_id_str_tmp = str(context.get("group_id")) if context.get("group_id") else None
-                memory_id = await store_cognition(
-                    thinking=thinking_content,
-                    emotions=_emotions,
-                    inner_thought=_inner_thought,
-                    attribution=_attribution,
-                    reflection=_reflection,
-                    user_id=user_id,
-                    group_id=group_id_str_tmp,
-                )
-                print(
-                    f"[DEBUG认知] ✅ 已存储 | 内心: {_inner_thought[:30]}... | 情绪: {_emotions} | 归因: {_attribution[:20]}..."
-                )
+                artifacts.cognition = {
+                    "thinking": thinking_content,
+                    "emotions": _emotions,
+                    "inner_thought": _inner_thought,
+                    "attribution": _attribution,
+                    "reflection": _reflection,
+                    "user_id": user_id,
+                    "group_id": group_id_str_tmp,
+                }
 
-                # 【新增】同时添加到内存缓存区
-                cache = get_cognition_cache()
+                # 【新增】同时添加到内存缓存区（记录对象待提交后 add）
                 cache_record = CognitionRecord(
-                    id=memory_id or str(uuid.uuid4())[:8],
+                    id=str(uuid.uuid4())[:8],
                     timestamp=datetime.now().timestamp(),
                     user_id=user_id,
                     thinking=thinking_content,
@@ -2703,7 +2834,7 @@ class DecisionHub:
                     reflection=_reflection,
                     message_preview=content[:50] if content else "",
                 )
-                await cache.add(cache_record)
+                artifacts.cognition_cache_record = cache_record
                 logger.info("[认知缓存] 已添加到内存缓存区")
             except Exception as cog_err:
                 logger.error(f"[认知记忆] 存储失败: {cog_err}", exc_info=True)
@@ -2722,11 +2853,12 @@ class DecisionHub:
 
             # 【灵魂发生器】将情感注入到回复中 (已移除，使用Prompt引导)
 
-            return response
+            return response, artifacts
 
         except Exception as e:
             logger.error(f"[决策层-跨平台] AI生成失败: {e}", exc_info=True)
-            return await self._fallback_response_cross_platform(content, sender_name, platform)
+            fallback_text = await self._fallback_response_cross_platform(content, sender_name, platform)
+            return fallback_text, artifacts
 
     async def _fallback_response_cross_platform(self, content: str, sender_name: str, platform: str) -> str:
         """

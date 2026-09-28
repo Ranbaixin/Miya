@@ -161,16 +161,7 @@ class ToolRegistry:
         if not tool:
             return f"❌ 工具不存在: {name}"
 
-        # 【2026-09 DM 合并】轮次闸门：被替代轮次中暂停非只读工具的「新启动」；
-        # 已开始的操作不在此拦截（闸门只在启动前生效）。结果文本回填模型。
-        from core.turn_context import current_turn_handle
-
-        _turn = current_turn_handle()
-        if self._turn_gate_blocks(tool, _turn):
-            self.logger.info(f"[ToolNet] 轮次已被新输入替代，暂停非只读工具: {name}")
-            return f"（用户补充了新输入，本轮为草稿重算中，修改类操作「{name}」已跳过）"
-
-        # 【新增】权限检查
+        # 【新增】权限检查（先行——轮次闸门在权限检查后、启动前的无 await 段）
         permission_check = await self._check_tool_permission(name, context)
         if not permission_check["allowed"]:
             self.logger.warning(
@@ -191,6 +182,27 @@ class ToolRegistry:
                 tool_name=name,
                 permission=permission_check.get("required_permission", "unknown"),
             )
+
+        # 【2026-09 DM 合并】权限检查之后、实际启动之前的无 await 段：
+        # ① 同批次工具结果复用（相同工具+相同参数的修改操作不重复执行）；
+        # ② 轮次闸门（被替代轮次暂停非只读工具的新启动）。
+        from core.turn_context import current_draft_context, current_turn_handle
+
+        _turn = current_turn_handle()
+        _draft = current_draft_context()
+        if _draft is not None:
+            reusable = _draft.find_reusable(name, kwargs)
+            if reusable is not None:
+                self.logger.info(f"[ToolNet] 复用本批次已执行结果（不重复执行）: {name}")
+                if reusable.status == "error":
+                    return (
+                        f"（复用本批次记录：操作「{name}」此前已执行但报错，本次未重复执行）"
+                        f"错误信息: {reusable.result}"
+                    )
+                return f"（复用本批次已执行的结果，操作未重复执行）{reusable.result}"
+        if self._turn_gate_blocks(tool, _turn):
+            self.logger.info(f"[ToolNet] 轮次已被新输入替代，暂停非只读工具: {name}")
+            return f"（用户补充了新输入，本轮为草稿重算中，修改类操作「{name}」已跳过）"
 
         try:
             # 验证参数（如果工具实现了validate_args方法）
@@ -225,9 +237,14 @@ class ToolRegistry:
                 result = await tool.execute(context, **kwargs)
 
             self._record_executed_tool(_turn, name)
+            if _draft is not None and not self._is_read_only(tool):
+                # 仅修改类操作写复用记录；只读查询允许重跑获取最新值
+                _draft.add_record(name, kwargs, "ok", str(result)[:500])
             return result
         except Exception as e:
             self.logger.error(f"执行工具失败 {name}: {e}", exc_info=True)
+            if _draft is not None and not self._is_read_only(tool):
+                _draft.add_record(name, kwargs, "error", str(e)[:300])
             return f"❌ 工具执行失败: {str(e)}"
 
     # ==================== DM 合并轮次闸门（2026-09-28） ====================
