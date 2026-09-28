@@ -52,6 +52,7 @@ class ToolRegistry:
 
     def __init__(self):
         self.tools: Dict[str, BaseTool] = {}
+        self.load_failures: Dict[str, str] = {}
         self.logger = logging.getLogger(__name__)
 
     def register(self, tool: "BaseTool") -> bool:
@@ -276,26 +277,22 @@ class ToolRegistry:
 
     def load_all_tools(self):
         """加载所有工具"""
-        self._load_basic_tools()
-        self._load_terminal_tools()
-        self._load_message_tools()
-        self._load_group_tools()
-        self._load_memory_tools()
-        self._load_knowledge_tools()
-        self._load_cognitive_tools()
-        self._load_bilibili_tools()
-        self._load_scheduler_tools()
-        self._load_entertainment_tools()
-        self._load_qq_multimedia_tools()
-        self._load_lifenet_tools()
-        self._load_model_management_tools()
-        self._load_cross_terminal_tools()
-        self._load_visualization_tools()
-        self._load_network_tools()
-        self._load_core_tools()
-        self._load_social_tools()
-        self._load_agent_tools()
-        self._load_mcp_tools()
+        self.load_failures.clear()
+        for name in (
+            "_load_basic_tools", "_load_terminal_tools", "_load_message_tools",
+            "_load_group_tools", "_load_memory_tools", "_load_knowledge_tools",
+            "_load_cognitive_tools", "_load_bilibili_tools", "_load_scheduler_tools",
+            "_load_entertainment_tools", "_load_qq_multimedia_tools", "_load_lifenet_tools",
+            "_load_model_management_tools", "_load_cross_terminal_tools",
+            "_load_visualization_tools", "_load_network_tools", "_load_core_tools",
+            "_load_social_tools", "_load_agent_tools", "_load_mcp_tools",
+        ):
+            try:
+                getattr(self, name)()
+            except Exception as exc:  # noqa: BLE001 - one broken family must not hide the rest
+                self.load_failures[name] = str(exc)
+                self.logger.exception("工具组 %s 加载失败，其余工具组继续加载", name)
+        self.logger.info("工具加载完成: %d 个工具, %d 个失败工具组", len(self.tools), len(self.load_failures))
 
     def _load_basic_tools(self):
         """加载基础工具"""
