@@ -11,7 +11,7 @@
 
 弥娅（MIYA）是运行在云服务器上的 AI 虚拟化身：QQ 机器人形态接入，拥有持久记忆、情绪系统、主动聊天、44 个工具调用、多模态识图、**用户电脑使用数据感知**（2026-09-21 新增）。用户（然鑫）是唯一 superadmin。
 
-**分支** `fix/v8-hardening`（v8 硬化线，未合 main）。**测试基线** 321 passed。**当前无活跃事故**。
+**分支** `fix/v8-hardening`（v8 硬化线，未合 main）。**2026-09-26 测试基线** 321 passed。本文是历史快照，实时状态以 `doctor --runtime` 为准。
 
 ---
 
@@ -126,4 +126,4 @@ tail -f C:/Users/Ran-xin/pc-time-tracker/logs/autostart.log   # PC Timer（[EXIT
 
 ## 8. 本地敏感信息索引（不入 git）
 
-以下信息存于 `docs/LOCAL_INFRA_PRIVATE.md`（本地-only，gitignore 已覆盖）：服务器公网 IP、ECS 实例 ID、superadmin 与机器人 QQ 号全量、API Key 名单、SSH 密钥路径、workbench 命令完整参数。新对话需要这些信息时向用户索取或读该文件。
+以下信息存于 `docs/LOCAL_INFRA_PRIVATE.md`（本地-only，gitignore 已覆盖）：服务器公网 IP、ECS 实例 ID、superadmin 与机器人 QQ 号全量、API Key 名单、SSH 密钥路径、workbench 命令完整参数。`config/permissions.json` 与 `config/qq_config.yaml` 也改为本地私有配置；新克隆从各自的 `.example` 文件复制并填写账号。旧 Git 历史仍包含过去提交的账号标识，不能仅靠此次移出跟踪来消除历史记录。

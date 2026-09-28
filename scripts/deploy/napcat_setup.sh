@@ -1,25 +1,23 @@
 #!/usr/bin/env bash
-# NapCat QQ 协议端安装（多镜像源自愈拉取，成功后自动启动容器）
+# NapCat QQ 协议端安装（固定镜像摘要，拉取失败后重试）
 # 用法: bash napcat_setup.sh <机器人QQ号>   （root 运行，需先完成 server_setup.sh）
 set -e
 QQ=${1:?usage: napcat_setup.sh <QQ号>}
+NAPCAT_UID=${NAPCAT_UID:-10001}
+NAPCAT_GID=${NAPCAT_GID:-10001}
 LOG=/tmp/napcat_pull.log
 STATUS=/tmp/napcat_status
 mkdir -p /opt/napcat/app /opt/napcat/config
 echo "start $(date)" > $LOG
 
 declare -a REFS=(
-  "mlikiowa/napcat-docker:latest"
-  "docker.m.daocloud.io/mlikiowa/napcat-docker:latest"
-  "docker.1ms.run/mlikiowa/napcat-docker:latest"
-  "ghcr.io/napneko/napcat:latest"
+  "${NAPCAT_IMAGE:-mlikiowa/napcat-docker@sha256:1336a777f9a4f1f8cb89fef42f7548deacd3645919a067a50df5b66b5e77390e}"
 )
 OK_REF=""
 for REF in "${REFS[@]}"; do
   echo "=== pulling $REF ===" >> $LOG
   for attempt in 1 2; do
-    timeout 900 docker pull "$REF" >> $LOG 2>&1
-    if docker images --format '{{.Repository}}:{{.Tag}}' | grep -qi "$(echo $REF | cut -d: -f1)"; then
+    if timeout 900 docker pull "$REF" >> "$LOG" 2>&1; then
       OK_REF="$REF"; break 2
     fi
     echo "attempt $attempt for $REF failed" >> $LOG
@@ -30,7 +28,7 @@ done
 
 docker rm -f napcat >/dev/null 2>&1 || true
 docker run -d --name napcat --network host --restart always \
-  -e ACCOUNT="$QQ" -e NAPCAT_UID=0 -e NAPCAT_GID=0 \
+  -e ACCOUNT="$QQ" -e NAPCAT_UID="$NAPCAT_UID" -e NAPCAT_GID="$NAPCAT_GID" \
   -v /opt/napcat/app:/app/napcat -v /opt/napcat/config:/app/napcat/config \
   "$OK_REF"
 sleep 20

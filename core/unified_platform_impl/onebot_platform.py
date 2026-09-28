@@ -590,7 +590,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                     if text:
                         return str(text)
             except Exception:  # noqa: BLE001 — raw 非标准 JSON 时走 id 兜底
-                pass
+                logger.debug("QQ face 扩展信息不是 JSON，回退到 id", exc_info=True)
         id_m = _re.search(r"(?:^|,)id=([^,\]]+)", attrs)
         return f"#{id_m.group(1)}" if id_m else ""
 

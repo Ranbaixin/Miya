@@ -13,7 +13,8 @@ tests/
 └── core/              # 遗留顶层测试（config 热重载 16 项）；不被默认收集，需显式 pytest tests/core/
 ```
 
-当前基线：**132 passed**（`uv run python -X utf8 -m pytest -q`，约 25s）。
+回归入口：`uv run --group dev python -X utf8 -m pytest tests/unit/ -q -p no:cacheprovider`。
+具体通过数以最近一次本地或 CI 运行结果为准。
 
 ## 测试质量约定（新增测试必读）
 

@@ -5,15 +5,24 @@ Wants=network-online.target
 
 [Service]
 Type=simple
+User=miya
+Group=miya
 WorkingDirectory=/opt/miya
+Environment=HOME=/var/lib/miya
 Environment=PYTHONIOENCODING=utf-8
 Environment=PYTHONUTF8=1
-ExecStart=/usr/local/bin/uv run python -X utf8 run/daemon.py --api-host 127.0.0.1 --api-port 9800
+ExecStart=/opt/miya/.venv/bin/python -X utf8 run/daemon.py --api-host 127.0.0.1 --api-port 9800
+StateDirectory=miya
+CacheDirectory=miya
 Restart=always
 RestartSec=10
 TimeoutStartSec=300
 TimeoutStopSec=60
 KillMode=mixed
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+UMask=0077
 
 [Install]
 WantedBy=multi-user.target

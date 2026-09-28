@@ -4,23 +4,24 @@
 > 本机（Windows）通过 Workbench CLI 远程驱动：`workbench exec --instance-id <ID> --region cn-beijing --command "..."`。
 > 服务器上：弥娅在 `/opt/miya`（systemd 服务 `miya-daemon`），NapCat 容器 `napcat`（host 网络），记忆数据在 `/opt/miya/data`。
 
+> 本机私有配置 `config/permissions.json`、`config/qq_config.yaml` 从对应 `.example` 复制后填写；两者已不由 Git 跟踪。代码部署包**不含**这两份配置、`.env` 或运行数据。首次部署需经单独的私有通道配置，后续更新保留服务器现有文件。
+
 ## 一、首次部署（8 步）
 
-1. **本机打包**（Git Bash，仓库根目录）：
+1. **本机打包**（仓库根目录；输出路径需在仓库外）：
    ```bash
-   tar -czf "$TMP/miya_bundle.tar.gz" --exclude='./.venv' --exclude='./venv' --exclude='./logs' \
-     --exclude='./.git' --exclude='./data/neo4j' --exclude='__pycache__' --exclude='./miya_frontend' \
-     --exclude='./release' --exclude='node_modules' --exclude='./.pytest_cache' .
+   python scripts/deploy/create_release_bundle.py /tmp/miya-server.tar.gz --server-only
    ```
+   打包器从当前 Git 索引与未忽略的新文件取代码，排除私有配置、`data/` 和桌面端资源，并生成带 SHA-256 的同名 `.json` 清单。
 2. **服务器基线**：`bash scripts/deploy/server_setup.sh`（或经 workbench exec 分段执行）
 3. **上传**（注意禁用 Git Bash 路径转换）：
    ```bash
-   MSYS_NO_PATHCONV=1 workbench upload "$TMP/miya_bundle.tar.gz" /tmp/miya_bundle.tar.gz \
+   MSYS_NO_PATHCONV=1 workbench upload /tmp/miya-server.tar.gz /opt/miya-staging/<UTC>/miya-server.tar.gz \
      --instance-id <ID> --region cn-beijing --force
    ```
-4. **解压 + .env 加固**：解压到 `/opt/miya`；`.env` 里 `API_HOST=127.0.0.1`、追加随机 `MIYA_API_TOKEN`、注释 `NEO4J_PASSWORD`（无 Neo4j 自动降级）
+4. **解压 + 私有配置**：解压到 `/opt/miya`；首次部署在服务器上单独写入私有配置。`.env` 里 `API_HOST=127.0.0.1`、追加随机 `MIYA_API_TOKEN`、注释 `NEO4J_PASSWORD`（无 Neo4j 自动降级）
 5. **依赖**：`cd /opt/miya && uv sync --no-group dev`
-6. **服务化**：`cp scripts/deploy/miya-daemon.service /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now miya-daemon`
+6. **服务化**：先运行 `bash scripts/deploy/prepare_miya_user.sh`，再执行 `cp scripts/deploy/miya-daemon.service /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now miya-daemon`。服务以专用 `miya` 用户运行，运行数据、日志和配置由该用户持有，代码与虚拟环境仍由部署账号持有。
 7. **NapCat**：`bash scripts/deploy/napcat_setup.sh <BOT_QQ>` → 扫码 → 写反向 WS（见 napcat_setup.sh 尾部说明）→ `docker restart napcat`
 8. **验证**：个人 QQ 给机器人发消息，`journalctl -u miya-daemon | grep 发送回复` 看到回复即完成
 
@@ -37,14 +38,19 @@
 
 ## 三、版本更新流程
 
-1. 本机改代码 → 打包（同第 1 步）
-2. `MSYS_NO_PATHCONV=1 workbench upload <包> /tmp/b.tgz --instance-id <ID> --region cn-beijing --force`
-3. 服务器：`systemctl stop miya-daemon && tar -xzf /tmp/b.tgz -C /opt/miya && cd /opt/miya && uv sync --no-group dev && systemctl start miya-daemon`
-4. 数据目录 `data/` 会被覆盖——**只更新代码时打包要排除 data/**（加 `--exclude='./data'`）
+1. 本机改代码 → 用 `create_release_bundle.py --server-only` 打包；确认清单中的 SHA-256 和文件数。
+2. 服务器先运行 `bash scripts/deploy/backup_server_state.sh`，确认 `/opt/miya-backups/<UTC>/SHA256SUMS` 校验通过。此为在线备份：SQLite 用在线备份 API，NapCat 数据卷在容器运行时复制；恢复 NapCat 数据卷前必须停容器。
+3. 上传包和清单到 `/opt/miya-staging/<UTC>/`，在服务器核对 SHA-256、文件清单及私有路径排除结果。Workbench 上传经 OSS 中转，因此部署包不能包含账号配置或运行数据。
+4. 服务器：`systemctl stop miya-daemon && tar -xzf /opt/miya-staging/<UTC>/miya-server.tar.gz -C /opt/miya && cd /opt/miya && uv sync --no-group dev && bash scripts/deploy/prepare_miya_user.sh && cp scripts/deploy/miya-daemon.service /etc/systemd/system/ && systemctl daemon-reload && systemctl start miya-daemon`。打包器已排除 `data/` 和私有配置，现有数据不会被解压覆盖。
 5. **部署后必跑冒烟**（服务状态/健康端点/NapCat/错误签名扫描/记忆一致性）：
    `bash scripts/deploy/post_deploy_check.sh` —— 退出码非 0 = 存在 FAIL，修复后重试
 6. 部署涉及依赖变更时（pyproject.toml 改动），必须确认 `uv sync --no-group dev` 真正装上
    （教训：pillow 在可选组导致服务器 PIL 缺失、QQ 多媒体工具整包静默加载失败）
+
+从旧 root 服务迁移时，先停止服务，再运行 `prepare_miya_user.sh`；脚本会拒绝在服务仍运行时修改所有权。启动后用 `systemctl show miya-daemon -p User -p Group`、`systemctl status miya-daemon` 和健康端点确认。若启动失败，先读 `journalctl -u miya-daemon -n 100` 查找未覆盖的写入目录，修正该目录所有权后重试，不要临时把服务切回 root。
+旧环境的 `.venv/bin/python` 可能指向 `/root/.local/share/uv/python`，专用用户无法访问；迁移脚本会把 Python 安装到 `/usr/local/share/uv/python` 并重新同步虚拟环境。该步骤需要网络和额外磁盘空间，运行前应确认服务可停机维护。
+
+**回滚**：保持服务停止，先在备份目录运行 `sha256sum --check SHA256SUMS`；解压 `miya-code-config-venv.tar.gz` 和 `miya-data-files.tar.gz` 到 `/opt/miya`，将 `sqlite/` 下的数据库复制回 `data/` 对应路径（先移开旧 `.db-wal`/`.db-shm`），恢复 `systemd/miya-daemon.service` 后 `systemctl daemon-reload && systemctl start miya-daemon`，再跑 `post_deploy_check.sh`。NapCat 只有在本次变更触及时才需要停容器并恢复它的挂载数据与镜像。备份目录仅 root 可读。
 
 ## 三.5、每日自动自检（systemd timer）
 
@@ -82,6 +88,8 @@ systemctl daemon-reload && systemctl enable --now miya-doctor.timer
   必须重新扫码
 - **容器标准配置改用 compose**：`scripts/deploy/docker-compose.napcat.yml`（cd /opt/napcat &&
   docker compose up -d）。QQ 凭据在 docker volume（external，已复用原卷），重建容器不丢登录态。
+  现在 compose 的镜像固定为已运行版本的 digest；首次使用新版 compose 前，先在 `/opt/napcat/.env` 填写 `NAPCAT_ACCOUNT` 和现有数据卷名 `NAPCAT_QQ_VOLUME`（可通过 `docker inspect napcat` 查询）。在 `/opt/napcat` 目录运行 `docker compose config` 核对卷和账号配置后再重建。
+  `NAPCAT_UID`/`NAPCAT_GID` 默认是 10001；该镜像启动脚本会将 `/app` 中的挂载数据改为此所有者，再用 `gosu napcat` 启动 QQ。重建后用 `docker exec napcat ps -eo user,pid,comm` 检查 QQ 进程用户；启动脚本本身仍以 root 运行，容器 host 网络也仍需单独评估。
   密码回退：在 /opt/napcat/.env 配 `NAPCAT_QUICK_PASSWORD_MD5`（echo -n "密码" | md5sum），
   凭据被风控作废时可自动密码登录，摆脱扫码依赖；.env chmod 600 不进 git
 

@@ -138,18 +138,24 @@
 
 - Python 3.11+（项目实测 3.11.x）
 - [uv](https://docs.astral.sh/uv/)（推荐，用于依赖与启动）
-- Node.js 18+（仅构建 Web Ops Center / 桌面端需要）
+- Node.js 24（桌面端 CI 使用的版本；仅构建 Web Ops Center / 桌面端需要）
 - Windows Terminal (终端模式下推荐)
 
 ### 安装
 
 ```bash
-# 推荐：uv 同步（默认安装 runtime + dev 依赖组，含 openai/jieba/pandas 等）
+# 首次克隆后复制本机配置，并填写自己的账号；这两份文件不会进入 Git
+cp config/permissions.example.json config/permissions.json
+cp config/qq_config.example.yaml config/qq_config.yaml
+
+# 推荐：uv 同步（默认安装 runtime 依赖组；运行测试时加 --group dev）
 uv sync
 
 # 或使用 pip（完整依赖）
 pip install -r setup/requirements/full.txt
 ```
+
+桌面端如需关联已有的 QQ 用户记忆，可在 `miya_frontend/.env.local` 中填写 `VITE_OWNER_ID=<你的QQ号>`，然后重新构建。该文件仅保存在本机，不提交到 Git。
 
 ### 启动
 
