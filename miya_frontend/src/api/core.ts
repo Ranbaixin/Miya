@@ -1,6 +1,3 @@
-import type { StreamChunk } from '@/utils/encoding'
-import { aiter } from 'iterator-helper'
-import { decodeStreamChunk, readerToMessageStream } from '@/utils/encoding'
 import { ApiClient } from './index'
 
 export interface MemoryStats {
@@ -17,11 +14,12 @@ export interface EmotionState {
 }
 
 export interface SessionInfo {
-  id: string
-  name: string
-  created_at?: string
-  updated_at?: string
-  message_count?: number
+  sessionId: string
+  createdAt: string
+  lastActiveAt: string
+  conversationRounds: number
+  temporary: boolean
+  displayName?: string
 }
 
 export class CoreApiClient extends ApiClient {
@@ -42,17 +40,26 @@ export class CoreApiClient extends ApiClient {
     user_id?: string
     usg_id?: string
   }): Promise<any> {
-    return this.instance.post('/api/chat/send', data, {
+    const response = await this.instance.post<string>('/api/chat/send', data, {
       transformResponse: [(d: string) => d],  // 跳过 axios JSON 解析
-    }).then((raw: string) => {
-      try { return JSON.parse(raw) } catch { return raw }
     })
+    const raw = response as unknown as string // response interceptor returns response.data
+    try { return JSON.parse(raw) } catch { return raw }
   }
 
-  async listSessions(): Promise<SessionInfo[]> {
+  async listSessions(): Promise<{ sessions: SessionInfo[] }> {
     const res: any = await this.instance.get('/api/chat/sessions')
-    // 2026-09 修复：后端返回 {success, data:[...]}，调用方期望 res.sessions
-    return { sessions: res?.data ?? res?.sessions ?? [] } as any
+    const rawSessions: any[] = Array.isArray(res?.data) ? res.data : Array.isArray(res?.sessions) ? res.sessions : []
+    return {
+      sessions: rawSessions.map((session) => ({
+        sessionId: String(session.sessionId ?? session.session_id ?? ''),
+        displayName: session.displayName ?? session.display_name,
+        createdAt: String(session.createdAt ?? session.created_at ?? ''),
+        lastActiveAt: String(session.lastActiveAt ?? session.updatedAt ?? session.updated_at ?? ''),
+        conversationRounds: Number(session.conversationRounds ?? session.messageCount ?? 0),
+        temporary: Boolean(session.temporary ?? false),
+      })),
+    }
   }
 
   async getSession(sessionId: string): Promise<any> {
@@ -171,7 +178,7 @@ export class CoreApiClient extends ApiClient {
   }
 
   // ── 会话（别名） ──
-  async getSessions(): Promise<SessionInfo[]> { return this.listSessions() }
+  async getSessions(): Promise<{ sessions: SessionInfo[] }> { return this.listSessions() }
 
   // ── 文件 ──
   async parseDocument(file: File): Promise<any> {

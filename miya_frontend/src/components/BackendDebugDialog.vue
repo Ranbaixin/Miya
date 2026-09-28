@@ -12,12 +12,10 @@ const props = defineProps<{
 defineEmits<{ 'update:visible': [value: boolean] }>()
 
 const loading = ref(false)
-const flushingTelemetry = ref(false)
 const lastError = ref('')
 const updatedAt = ref('')
 const snapshot = ref<Record<string, any>>({})
 const backendLogger = ref('')
-const telemetryActionMessage = ref('')
 
 let refreshTimer: ReturnType<typeof setInterval> | null = null
 let stopBackendLogListener: (() => void) | null = null
@@ -63,7 +61,6 @@ async function refreshDashboard() {
     API.agentServerHealth(),
     API.agentServerFullHealth(),
     API.agentServerOpenclawHealth(),
-    API.getTelemetryStatus(),
   ])
 
   const labels = [
@@ -74,7 +71,6 @@ async function refreshDashboard() {
     'agentHealth',
     'agentFullHealth',
     'agentOpenclawHealth',
-    'telemetryStatus',
   ] as const
 
   const nextSnapshot: Record<string, any> = {}
@@ -95,23 +91,6 @@ async function refreshDashboard() {
   updatedAt.value = new Date().toLocaleString()
   lastError.value = errors.join('\n')
   loading.value = false
-}
-
-async function flushTelemetryNow() {
-  flushingTelemetry.value = true
-  telemetryActionMessage.value = ''
-  try {
-    const result = await API.flushTelemetry()
-    telemetryActionMessage.value = `上传结果: ${formatPayload(result.result)}`
-  }
-  catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    telemetryActionMessage.value = `上传失败: ${message}`
-  }
-  finally {
-    flushingTelemetry.value = false
-    await refreshDashboard()
-  }
 }
 
 async function refreshBackendLogger() {
@@ -154,10 +133,6 @@ const sections = computed(() => [
   {
     title: summarize('Agent OpenClaw', snapshot.value.agentOpenclawHealth),
     body: formatPayload(snapshot.value.agentOpenclawHealth),
-  },
-  {
-    title: summarize('Telemetry', snapshot.value.telemetryStatus?.telemetry ?? snapshot.value.telemetryStatus),
-    body: formatPayload(snapshot.value.telemetryStatus),
   },
   {
     title: summarize('OpenClaw Tasks', snapshot.value.openclawTasks),
@@ -239,23 +214,12 @@ onUnmounted(() => {
         :loading="loading"
         @click="refreshDashboard"
       />
-      <Button
-        label="立即上传埋点"
-        icon="pi pi-upload"
-        size="small"
-        severity="secondary"
-        :loading="flushingTelemetry"
-        @click="flushTelemetryNow"
-      />
     </div>
 
     <div v-if="lastError" class="debug-error">
       {{ lastError }}
     </div>
 
-    <div v-if="telemetryActionMessage" class="debug-info">
-      {{ telemetryActionMessage }}
-    </div>
 
     <div class="debug-grid">
       <section v-for="section in sections" :key="section.title" class="debug-card">

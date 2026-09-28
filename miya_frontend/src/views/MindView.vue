@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -28,7 +28,7 @@ let mouseX = 0, mouseY = 0
 let dragging = false, dragStartX = 0, dragStartY = 0
 let camRotY = 0, camRotX = 0.3, camZoom = 1
 let targetRotY = 0, targetRotX = 0.3
-let autoRotate = true
+const autoRotate = ref(true)
 const FOV = 600
 const DEPTH = 800
 
@@ -44,7 +44,7 @@ function onMouseMove(e: MouseEvent) {
     targetRotX += (cy - dragStartY) * 0.003
     targetRotX = Math.max(-1.2, Math.min(1.2, targetRotX))
     dragStartX = cx; dragStartY = cy
-    autoRotate = false
+    autoRotate.value = false
   }
   mouseX = cx; mouseY = cy
 }
@@ -55,11 +55,11 @@ function onMouseDown(e: MouseEvent) {
   const rect = canvasRef.value.getBoundingClientRect()
   dragStartX = e.clientX - rect.left
   dragStartY = e.clientY - rect.top
-  autoRotate = false
+  autoRotate.value = false
 }
 
 function onDoubleClick() {
-  autoRotate = true
+  autoRotate.value = true
 }
 
 function onMouseUp(e: MouseEvent) {
@@ -140,7 +140,7 @@ function animate() {
   ctx.clearRect(0, 0, w, h)
 
   // 自动旋转
-  if (autoRotate) { targetRotY += 0.002; targetRotX += Math.sin(frameCount * 0.003) * 0.0003 }
+  if (autoRotate.value) { targetRotY += 0.002; targetRotX += Math.sin(frameCount * 0.003) * 0.0003 }
   camRotY += (targetRotY - camRotY) * 0.03
   camRotX += (targetRotX - camRotX) * 0.03
 
@@ -307,7 +307,7 @@ async function loadData() {
     for (const d of dirs) {
       try {
         const listRes = await fetch(`http://localhost:8000/api/desktop/files/list?path=${encodeURIComponent(d.dir)}`).then(r => r.json())
-        const files = (listRes?.files || []).filter((f: any) => f.name.endsWith('.json'))
+        const files: Array<{ name: string }> = (listRes?.files || []).filter((f: { name: string }) => f.name.endsWith('.json'))
         const shuffled = files.sort(() => Math.random() - 0.5).slice(0, d.limit)
         // 并发批量加载 (10个一组)
         for (let batch = 0; batch < shuffled.length; batch += 10) {

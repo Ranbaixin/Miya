@@ -22,11 +22,6 @@ console.log('[1/2] Vite build (renderer + electron)...')
 execSync(`${npx} vite build`, { cwd: root, stdio: 'inherit' })
 
 console.log('\n[2/2] TypeScript type check...')
-try {
-  execSync(`${npx} vue-tsc --build --force`, { cwd: root, stdio: 'inherit' })
-}
-catch {
-  console.warn('Type check completed with warnings (non-blocking)')
-}
+execSync(`${npx} vue-tsc --build --force`, { cwd: root, stdio: 'inherit' })
 
 console.log('\nBuild complete!')

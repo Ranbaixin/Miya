@@ -1,4 +1,4 @@
-import type { EmotionCategory, Live2dState } from '../utils/live2dController'
+import type { Live2dState } from '../utils/live2dController'
 
 // ─── 驱动独立 Live2D 窗口 ──────────────────────────────
 

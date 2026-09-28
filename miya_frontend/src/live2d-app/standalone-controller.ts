@@ -47,7 +47,7 @@ let stateStartTime = 0
 let currentStateName: Live2dState = 'idle'
 let lastTickTime = 0
 
-let mouthParams: Record<string, number> = {}
+const mouthParams: Record<string, number> = {}
 let targetMouthParams: Record<string, number> = {}
 
 // ─── 暴露给 IPC ──────────────────────────────────────
@@ -108,9 +108,8 @@ export async function initStandaloneController(
   PIXI.Ticker.shared.add(tickStandalone)
 
   stateStartTime = performance.now()
-  if (actionsData?._states?.idle) {
-    applyState(model, actionsData._states.idle)
-  }
+  const idleState = actionsData?._states?.idle
+  if (idleState) applyState(model, idleState)
 
   console.log('[Live2D Standalone] 控制器初始化完成, ticker registered, expressions:', expressions.length)
 }
@@ -138,30 +137,35 @@ function tickStandalone(_dt: number): void {
   }
 
   // 状态 keyframe 推进
-  if (actionsData?._states?.[currentStateName]) {
-    advanceStateKeyframes(model, actionsData._states[currentStateName])
-  }
+  const state = actionsData?._states?.[currentStateName]
+  if (state) advanceStateKeyframes(model, state)
 }
 
 function applyMouthParams(m: Live2DModel, params: Record<string, number>): void {
   for (const [key, val] of Object.entries(params)) {
-    try { m.internalModel.coreModel.setParameterValueById(key, val) } catch {}
+    try { setParameter(m, key, val) } catch {}
   }
+}
+
+function setParameter(m: Live2DModel, key: string, value: number): void {
+  const core = m.internalModel.coreModel as { setParameterValueById: (id: string, value: number) => void }
+  core.setParameterValueById(key, value)
 }
 
 function applyState(m: Live2DModel, cfg: StateConfig): void {
   if (cfg.params) {
     for (const [key, val] of Object.entries(cfg.params)) {
-      try { m.internalModel.coreModel.setParameterValueById(key, val) } catch {}
+      try { setParameter(m, key, val) } catch {}
     }
   }
 }
 
 function advanceStateKeyframes(m: Live2DModel, cfg: StateConfig): void {
-  if (!cfg.keyframes || cfg.keyframes.length === 0) return
+  const frames = cfg.keyframes
+  if (!frames?.length) return
 
   const elapsed = (performance.now() - stateStartTime) / 1000
-  const totalDuration = cfg.keyframes[cfg.keyframes.length - 1].t
+  const totalDuration = frames[frames.length - 1]!.t
 
   let t: number
   if (cfg.loop) {
@@ -171,12 +175,12 @@ function advanceStateKeyframes(m: Live2DModel, cfg: StateConfig): void {
     t = Math.min(elapsed, totalDuration)
   }
 
-  let kfA = cfg.keyframes[0]
-  let kfB = cfg.keyframes[0]
-  for (let i = 0; i < cfg.keyframes.length - 1; i++) {
-    if (t >= cfg.keyframes[i].t && t <= cfg.keyframes[i + 1].t) {
-      kfA = cfg.keyframes[i]
-      kfB = cfg.keyframes[i + 1]
+  let kfA = frames[0]!
+  let kfB = frames[0]!
+  for (let i = 0; i < frames.length - 1; i++) {
+    if (t >= frames[i]!.t && t <= frames[i + 1]!.t) {
+      kfA = frames[i]!
+      kfB = frames[i + 1]!
       break
     }
   }
@@ -188,26 +192,28 @@ function advanceStateKeyframes(m: Live2DModel, cfg: StateConfig): void {
     const a = kfA.params[key] ?? 0
     const b = kfB.params[key] ?? a
     const val = lerp(a, b, localT)
-    try { m.internalModel.coreModel.setParameterValueById(key, val) } catch {}
+    try { setParameter(m, key, val) } catch {}
   }
 }
 
 function applySequenceAction(m: Live2DModel, cfg: ActionConfig): void {
+  if (!cfg.keyframes.length) return
+  const frames = cfg.keyframes
   let elapsed = 0
   const perFrame = 16
 
   const tick = () => {
     elapsed += perFrame / 1000
-    const totalDuration = cfg.keyframes[cfg.keyframes.length - 1].t * cfg.repeat
+    const totalDuration = frames[frames.length - 1]!.t * cfg.repeat
     if (elapsed >= totalDuration) return
 
-    const t = (elapsed % cfg.keyframes[cfg.keyframes.length - 1].t)
-    let kfA = cfg.keyframes[0]
-    let kfB = cfg.keyframes[0]
-    for (let i = 0; i < cfg.keyframes.length - 1; i++) {
-      if (t >= cfg.keyframes[i].t && t <= cfg.keyframes[i + 1].t) {
-        kfA = cfg.keyframes[i]
-        kfB = cfg.keyframes[i + 1]
+    const t = (elapsed % frames[frames.length - 1]!.t)
+    let kfA = frames[0]!
+    let kfB = frames[0]!
+    for (let i = 0; i < frames.length - 1; i++) {
+      if (t >= frames[i]!.t && t <= frames[i + 1]!.t) {
+        kfA = frames[i]!
+        kfB = frames[i + 1]!
         break
       }
     }
@@ -218,7 +224,7 @@ function applySequenceAction(m: Live2DModel, cfg: ActionConfig): void {
       const a = kfA.params[key] ?? 0
       const b = kfB.params[key] ?? a
       const val = lerp(a, b, localT)
-      try { m.internalModel.coreModel.setParameterValueById(key, val) } catch {}
+      try { setParameter(m, key, val) } catch {}
     }
     requestAnimationFrame(tick)
   }
@@ -234,9 +240,9 @@ function applyEmotion(m: Live2DModel, emotion: string): void {
     neutral: { ParamMouthOpenY: 0, ParamEyeLOpen: 0.8, ParamEyeROpen: 0.8, ParamBrowLY: 0, ParamBrowRY: 0 },
   }
 
-  const params = emotionParams[emotion] || emotionParams.neutral
+  const params = emotionParams[emotion] ?? emotionParams.neutral ?? {}
   for (const [key, val] of Object.entries(params)) {
-    try { m.internalModel.coreModel.setParameterValueById(key, val) } catch {}
+    try { setParameter(m, key, val) } catch {}
   }
 }
 

@@ -69,22 +69,19 @@ const cardPositions = computed(() =>
     return { x: Math.cos(rad) * r, y: Math.sin(rad) * r }
   }),
 )
+const position = (index: number) => cardPositions.value[index] ?? { x: 0, y: 0 }
 
 // ─── Constellation ───────────────────────────────────────────────────
 const wingLines = computed(() => {
-  const pos = cardPositions.value
   const lines: { x1: number; y1: number; x2: number; y2: number; cls: string }[] = []
   // Left wing: feather chain (0→1→2→3)
-  for (let i = 0; i < 3; i++) lines.push({ x1: pos[i].x, y1: pos[i].y, x2: pos[i + 1].x, y2: pos[i + 1].y, cls: 'wing-feather' })
+  for (let i = 0; i < 3; i++) lines.push({ x1: position(i).x, y1: position(i).y, x2: position(i + 1).x, y2: position(i + 1).y, cls: 'wing-feather' })
   // Right wing: feather chain (4→5→6→7)
-  for (let i = 4; i < 7; i++) lines.push({ x1: pos[i].x, y1: pos[i].y, x2: pos[i + 1].x, y2: pos[i + 1].y, cls: 'wing-feather' })
+  for (let i = 4; i < 7; i++) lines.push({ x1: position(i).x, y1: position(i).y, x2: position(i + 1).x, y2: position(i + 1).y, cls: 'wing-feather' })
   // Each feather to center
-  for (let i = 0; i < cards.length; i++) lines.push({ x1: 0, y1: 0, x2: pos[i].x, y2: pos[i].y, cls: 'feather-to-center' })
+  for (let i = 0; i < cards.length; i++) lines.push({ x1: 0, y1: 0, x2: position(i).x, y2: position(i).y, cls: 'feather-to-center' })
   // Wing root connectors (tip feathers → center with highlight)
-  lines.push({ x1: 0, y1: 0, x2: pos[0].x, y2: pos[0].y, cls: 'wing-root' })
-  lines.push({ x1: 0, y1: 0, x2: pos[3].x, y2: pos[3].y, cls: 'wing-root' })
-  lines.push({ x1: 0, y1: 0, x2: pos[4].x, y2: pos[4].y, cls: 'wing-root' })
-  lines.push({ x1: 0, y1: 0, x2: pos[7].x, y2: pos[7].y, cls: 'wing-root' })
+  for (const index of [0, 3, 4, 7]) lines.push({ x1: 0, y1: 0, x2: position(index).x, y2: position(index).y, cls: 'wing-root' })
   return lines
 })
 
@@ -97,7 +94,7 @@ function cardTilt(idx: number) {
 }
 function cardTransform(i: number) {
   const t = cardTilt(i)
-  const s = hoveredCard.value === cards[i].id ? SCALE.value * 1.12 : SCALE.value
+  const s = hoveredCard.value === cards[i]?.id ? SCALE.value * 1.12 : SCALE.value
   return `translate(-50%,-50%) perspective(800px) rotateX(${t.rx}deg) rotateY(${t.ry}deg) scale(${s})`
 }
 
@@ -159,11 +156,11 @@ function enterFloatingMode() {
         </defs>
         <!-- Left wing energy field -->
         <polygon
-          :points="`0,0 ${cardPositions[0].x},${cardPositions[0].y} ${cardPositions[1].x},${cardPositions[1].y} ${cardPositions[2].x},${cardPositions[2].y} ${cardPositions[3].x},${cardPositions[3].y}`"
+          :points="`0,0 ${position(0).x},${position(0).y} ${position(1).x},${position(1).y} ${position(2).x},${position(2).y} ${position(3).x},${position(3).y}`"
           fill="url(#left-wing-grad)" opacity="0.15" stroke="var(--miya-accent)" stroke-width="0.4" stroke-dasharray="3 5" />
         <!-- Right wing energy field -->
         <polygon
-          :points="`0,0 ${cardPositions[4].x},${cardPositions[4].y} ${cardPositions[5].x},${cardPositions[5].y} ${cardPositions[6].x},${cardPositions[6].y} ${cardPositions[7].x},${cardPositions[7].y}`"
+          :points="`0,0 ${position(4).x},${position(4).y} ${position(5).x},${position(5).y} ${position(6).x},${position(6).y} ${position(7).x},${position(7).y}`"
           fill="url(#right-wing-grad)" opacity="0.15" stroke="var(--miya-accent)" stroke-width="0.4" stroke-dasharray="3 5" />
         <!-- Lines -->
         <g opacity="0.3">
@@ -187,8 +184,8 @@ function enterFloatingMode() {
         :class="[{ 'is-hovered': hoveredCard === card.id }, `wing-${i < 4 ? 'left' : 'right'}`]"
         :style="{
           '--card-color': `var(${card.varName}, ${card.fallback})`,
-          left: `calc(50% + ${cardPositions[i].x}px)`,
-          top: `calc(50% + ${cardPositions[i].y}px)`,
+          left: `calc(50% + ${position(i).x}px)`,
+          top: `calc(50% + ${position(i).y}px)`,
           transform: cardTransform(i),
           transition: hoveredCard === card.id
             ? 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s, border-color 0.3s'

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { useStorage } from '@vueuse/core'
 import { Slider, InputText, ToggleSwitch } from 'primevue'
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import API from '@/api/core'
 import { CONFIG } from '@/utils/config'
-import { audioSettings, bgmFileOptions, playBgm, stopBgm } from '@/composables/useAudio'
+import { audioSettings, bgmFileOptions, playBgm } from '@/composables/useAudio'
 import { componentColors, COLOR_GROUPS } from '@/composables/useComponentColors'
 
 const router = useRouter()

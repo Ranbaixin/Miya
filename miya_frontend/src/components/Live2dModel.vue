@@ -4,7 +4,7 @@ import * as PIXI from 'pixi.js'
 
 <script setup lang="ts">
 import { Live2DModel } from 'pixi-live2d-display/cubism4'
-import { computed, nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, useTemplateRef, watch } from 'vue'
 import { CONFIG } from '@/utils/config'
 import { ensureLive2dCoreLoaded } from '@/utils/live2dCoreLoader'
 import { destroyController, initController } from '@/utils/live2dController'

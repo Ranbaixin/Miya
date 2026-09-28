@@ -26,7 +26,6 @@ import {
 import {
   closeLive2dWindow,
   createLive2dWindow,
-  getLive2dWindow,
   toggleLive2dVisibility,
   setLive2dAlwaysOnTop,
   resetLive2dPosition,

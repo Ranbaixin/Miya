@@ -117,15 +117,15 @@ function startIPCListener(): void {
   }).live2dIPC
   if (!ipc) return
 
-  ipc.on('live2d:emotion', (emotion: string) => ctrl.setEmotion(emotion))
-  ipc.on('live2d:state', (state: string) => ctrl.setState(state))
-  ipc.on('live2d:mouth', (params: Record<string, number>) => ctrl.setMouth(params))
-  ipc.on('live2d:action', (action: string) => ctrl.triggerAction(action))
-  ipc.on('live2d:tracking', (enabled: boolean) => ctrl.setTracking(enabled))
-  ipc.on('live2d:background', (data: { color: string, alpha: number }) => {
-    if (app && app.renderer) {
+  ipc.on('live2d:emotion', (emotion) => { if (typeof emotion === 'string') ctrl.setEmotion(emotion) })
+  ipc.on('live2d:state', (state) => { if (typeof state === 'string') ctrl.setState(state) })
+  ipc.on('live2d:mouth', (params) => { if (params && typeof params === 'object' && !Array.isArray(params)) ctrl.setMouth(params as Record<string, number>) })
+  ipc.on('live2d:action', (action) => { if (typeof action === 'string') ctrl.triggerAction(action) })
+  ipc.on('live2d:tracking', (enabled) => { if (typeof enabled === 'boolean') ctrl.setTracking(enabled) })
+  ipc.on('live2d:background', (data) => {
+    if (data && typeof data === 'object' && 'color' in data && 'alpha' in data && app?.renderer) {
       app.renderer.backgroundColor = parseInt(String(data.color), 16)
-      app.renderer.backgroundAlpha = data.alpha
+      app.renderer.backgroundAlpha = Number(data.alpha)
     }
   })
   console.log('[Live2D App] IPC listener started')

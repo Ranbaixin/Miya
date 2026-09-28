@@ -23,9 +23,9 @@ function solveMathCaptcha(question: string): string {
   const text = question.trim()
   const match = text.match(/(-?\d+)\s*([+\-*/xX×÷])\s*(-?\d+)/)
   if (!match) return ''
-  const left = parseInt(match[1])
+  const left = parseInt(match[1]!)
   const op = match[2]
-  const right = parseInt(match[3])
+  const right = parseInt(match[3]!)
   let value: number
   switch (op) {
     case '+': value = left + right; break
@@ -35,6 +35,13 @@ function solveMathCaptcha(question: string): string {
     default: return ''
   }
   return String(value)
+}
+
+function switchMode(nextMode: AuthMode) {
+  mode.value = nextMode
+  error.value = ''
+  errorDetail.value = ''
+  successMsg.value = ''
 }
 
 async function handleLogin() {

@@ -110,7 +110,7 @@ export const DEFAULT_CONFIG = {
   },
   ui: {
     user_name: '用户',
-    owner_id: '1523878699',
+    owner_id: import.meta.env.VITE_OWNER_ID || '',
     desktop_usg_id: 'desktop_user',
     bg_alpha: 0.81,
     window_bg_alpha: 128,

@@ -34,7 +34,7 @@ function startMouthSync(el: HTMLAudioElement): void {
       if (!mouthAnalyser) return
       mouthAnalyser.getFloatTimeDomainData(dataArray)
       let sum = 0
-      for (let i = 0; i < dataArray.length; i++) sum += Math.abs(dataArray[i])
+      for (let i = 0; i < dataArray.length; i++) sum += Math.abs(dataArray[i] ?? 0)
       const rms = sum / dataArray.length
       // ParamMouthOpenY: Cubism 口型张开参数
       const mouthOpen = Math.min(1, Math.max(0, rms * 5))
@@ -105,9 +105,9 @@ export function speak(text: string): Promise<void> {
     headers,
     signal,
     body: JSON.stringify({
-      model: (typeof isLoggedIn !== 'undefined' && isLoggedIn) ? 'default' : 'tts-1',
+      model: 'tts-1',
       input: cleanText,
-      voice: (typeof isLoggedIn !== 'undefined' && isLoggedIn) ? 'Cherry' : 'zh-CN-XiaoyiNeural',
+      voice: 'zh-CN-XiaoyiNeural',
       speed: 1.0,
       response_format: 'mp3',
     }),

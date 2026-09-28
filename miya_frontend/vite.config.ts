@@ -1,6 +1,6 @@
 import process from 'node:process'
 import fs from 'node:fs'
-import { resolve, dirname, isAbsolute } from 'node:path'
+import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import unocss from 'unocss/vite'

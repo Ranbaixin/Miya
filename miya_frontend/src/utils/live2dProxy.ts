@@ -7,6 +7,7 @@
  */
 import type { Live2dAPI } from '@/electron.d'
 import type { Live2dState } from './live2dController'
+import { live2dState, setEmotion, setSoulEmotion, startTracking, stopTracking, triggerAction } from './live2dController'
 
 let _api: Live2dAPI | null = null
 
@@ -32,16 +33,17 @@ export function proxySetEmotion(emotion: string): void {
     api.setEmotion(emotion)
   }
   else {
-    const { setEmotion } = require('./live2dController')
-    setEmotion?.(emotion)
+    const category = emotion === 'surprise' ? 'surprise' : emotion === 'happy' ? 'positive' : emotion === 'sad' || emotion === 'angry' ? 'negative' : 'normal'
+    void setEmotion(category)
   }
 }
 
 export function proxySetSoulEmotion(emotions: Array<{ name: string, intensity: number }>): void {
+  if (!emotions.length) return
   const api = getAPI()
   if (api) {
     // 取 intensity 最高的情绪发给独立窗口
-    const top = emotions.reduce((a, b) => (a.intensity > b.intensity ? a : b), emotions[0])
+    const top = emotions.reduce((a, b) => (a.intensity > b.intensity ? a : b), emotions[0]!)
     if (top) {
       const emotionMap: Record<string, string> = {
         '高兴': 'happy', '开心': 'happy', '喜悦': 'happy', 'happy': 'happy',
@@ -54,8 +56,7 @@ export function proxySetSoulEmotion(emotions: Array<{ name: string, intensity: n
     }
   }
   else {
-    const { setSoulEmotion } = require('./live2dController')
-    setSoulEmotion?.(emotions)
+    setSoulEmotion(emotions)
   }
 }
 
@@ -68,8 +69,7 @@ export function proxySetState(state: Live2dState): void {
   }
   else {
     // live2dState 是 Vue ref，在独立模式下不需要它
-    const { live2dState } = require('./live2dController')
-    if (live2dState) live2dState.value = state
+    live2dState.value = state
   }
 }
 
@@ -92,8 +92,7 @@ export function proxyTriggerAction(action: string): void {
     api.triggerAction(action)
   }
   else {
-    const { triggerAction } = require('./live2dController')
-    triggerAction?.(action)
+    triggerAction(action)
   }
 }
 
@@ -105,8 +104,7 @@ export function proxySetTracking(enabled: boolean): void {
     api.setTracking(enabled)
   }
   else {
-    const { startTracking, stopTracking } = require('./live2dController')
-    enabled ? startTracking?.() : stopTracking?.()
+    enabled ? startTracking() : stopTracking()
   }
 }
 
