@@ -79,6 +79,8 @@ class ToolRegistry:
 class BaseTool:
     """工具基类（兼容层）"""
 
+    read_only: bool = False  # True=纯读取（查询/搜索/状态），DM 被替代轮次中仍可执行
+
     def __init__(self, name: str = None, description: str = ""):
         """
         初始化工具

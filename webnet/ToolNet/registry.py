@@ -10,6 +10,48 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
+# ==================== DM 合并只读白名单（2026-09-28） ====================
+# 「QQ 私聊连续输入合并」被替代轮次中，未标记只读的工具默认暂停（防重复发送/写入）。
+# 白名单 = 纯查询/读取/搜索/状态类，不产生发送、写入、删除、提醒等外部副作用。
+# 维护约定：新增只读工具时把「类名」加进 _READ_ONLY_TOOL_CLASSES，
+# 或在工具类上声明 read_only = True；MCP 服务用 _MCP_READ_ONLY_CAPS（service.cap）。
+_READ_ONLY_TOOL_CLASSES = frozenset(
+    {
+        # 记忆/知识/画像读取
+        "MemoryList", "MemoryQueryTool", "MemorySearchByCategory", "MemoryStats",
+        "SearchEventsTool", "SearchGameMemory", "SearchKnowledgeTool",
+        "SearchNormalMemory", "SearchProfilesTool", "ThinkingQueryTool",
+        "GetRecentMessagesTool",
+        # 生活/游戏读取
+        "LifeGetDiary", "LifeGetMemoryContext", "LifeGetNode", "LifeGetSummary",
+        "LifeListNodes", "LifeSearchMemory", "ListSaves",
+        # 权限/群组/用户/任务查询
+        "CheckPermissionTool", "GetGroupInfoTool", "GetProfileTool", "GetUserInfo",
+        "ListGroupsTool", "ListMembersTool", "ListPermissionsTool",
+        "ListScheduleTasksTool",
+        # QQ 媒体/文件读取
+        "QQFileReaderTool", "QQImageAnalyzerTool", "QQLevelTool",
+        # 搜索/行情/网络探测
+        "ArxivSearchTool", "BilibiliVideoTool", "CrawlWebpageTool",
+        "GrokSearchTool", "TavilySearchTool", "WeiboHotTool", "WeatherQueryTool",
+        "WhoisQueryTool", "SpeedTestTool", "TCPingTool",
+        # 其他纯查询
+        "ChangelogTool", "GetCurrentTime", "Horoscope",
+    }
+)
+
+# MCP 只读能力（service.capability）：pc_tracker 查询六件套
+_MCP_READ_ONLY_CAPS = frozenset(
+    {
+        "pc_tracker.pc_context",
+        "pc_tracker.pc_daily",
+        "pc_tracker.pc_processes",
+        "pc_tracker.pc_current",
+        "pc_tracker.pc_insights",
+        "pc_tracker.pc_status",
+    }
+)
+
 # 统一使用 webnet.tools.base 中的 ToolContext
 if TYPE_CHECKING:
     pass
@@ -119,6 +161,15 @@ class ToolRegistry:
         if not tool:
             return f"❌ 工具不存在: {name}"
 
+        # 【2026-09 DM 合并】轮次闸门：被替代轮次中暂停非只读工具的「新启动」；
+        # 已开始的操作不在此拦截（闸门只在启动前生效）。结果文本回填模型。
+        from core.turn_context import current_turn_handle
+
+        _turn = current_turn_handle()
+        if self._turn_gate_blocks(tool, _turn):
+            self.logger.info(f"[ToolNet] 轮次已被新输入替代，暂停非只读工具: {name}")
+            return f"（用户补充了新输入，本轮为草稿重算中，修改类操作「{name}」已跳过）"
+
         # 【新增】权限检查
         permission_check = await self._check_tool_permission(name, context)
         if not permission_check["allowed"]:
@@ -173,10 +224,37 @@ class ToolRegistry:
             else:
                 result = await tool.execute(context, **kwargs)
 
+            self._record_executed_tool(_turn, name)
             return result
         except Exception as e:
             self.logger.error(f"执行工具失败 {name}: {e}", exc_info=True)
             return f"❌ 工具执行失败: {str(e)}"
+
+    # ==================== DM 合并轮次闸门（2026-09-28） ====================
+
+    def _turn_gate_blocks(self, tool, handle) -> bool:
+        """DM 合并闸门：轮次已被新输入替代时，非只读工具暂停启动。"""
+        if handle is None or not handle.is_superseded():
+            return False
+        return not self._is_read_only(tool)
+
+    @staticmethod
+    def _record_executed_tool(handle, tool_name: str) -> None:
+        """记录已执行的工具名到轮次凭证（草稿观测：被替代轮次的副作用可查）。"""
+        if handle is not None:
+            handle.executed_tools.append(tool_name)
+
+    def _is_read_only(self, tool) -> bool:
+        """只读判定：类属性 read_only > 类名白名单 > MCP 只读能力集合。"""
+        if getattr(tool, "read_only", False):
+            return True
+        cls_name = type(tool).__name__
+        if cls_name in _READ_ONLY_TOOL_CLASSES:
+            return True
+        if cls_name == "MCPTool":
+            cap = f"{getattr(tool, '_service_name', '')}.{getattr(tool, '_tool_name', '')}"
+            return cap in _MCP_READ_ONLY_CAPS
+        return False
 
     async def _check_tool_permission(
         self, tool_name: str, context: ToolContext
@@ -750,6 +828,8 @@ class ToolRegistry:
 
 class BaseTool:
     """工具基类（兼容层）"""
+
+    read_only: bool = False  # True=纯读取（查询/搜索/状态），DM 被替代轮次中仍可执行
 
     def __init__(self):
         self.name = self.__class__.__name__
