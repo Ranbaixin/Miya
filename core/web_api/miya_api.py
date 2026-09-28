@@ -543,12 +543,12 @@ class MiyaAPI:
                 users = stats.get("user_ids", []) if isinstance(stats, dict) else []
 
                 if not users:
-                    users = ["default", "1523878699"]
+                    users = ["default"]
 
                 return {"status": "ok", "data": users}
             except Exception as e:  # noqa: BLE001 — 用户列表获取失败降级默认值
                 logger.warning(f"[MiyaAPI] 获取用户列表失败: {e}")
-                return {"status": "ok", "data": ["default", "1523878699"]}
+                return {"status": "ok", "data": ["default"]}
 
         @self.router.get("/api/plug/alkaid/ltm/graph")
         async def get_ltm_graph(user_id: str = None):

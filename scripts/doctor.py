@@ -4,7 +4,7 @@ Miya Doctor — 统一自检 CLI（本地 / 服务器 / CI / systemd timer 通�
 
 用法：
   python scripts/doctor.py                    # 静态检查 C1-C7
-  python scripts/doctor.py --runtime          # 静态 + 运行时诊断 C8/C9
+  python scripts/doctor.py --runtime          # 静态 + 运行时诊断 C8-C10
   python scripts/doctor.py --runtime --since "3 minutes ago"   # 部署后冒烟
   python scripts/doctor.py --json             # 机器可读输出（CI/定时任务）
   python scripts/doctor.py --runtime --fix    # 含记忆自校正
@@ -26,6 +26,7 @@ from core.doctor import (  # noqa: E402
     FAIL,
     REPO_ROOT,
     check_memory,
+    check_pc_tracker,
     check_runtime,
     has_failures,
     run_static_checks,
@@ -80,6 +81,7 @@ def main() -> int:
         if args.runtime:
             findings.append(check_runtime(since=args.since, health_url=args.health_url))
             findings.append(check_memory(fix=args.fix))
+            findings.append(check_pc_tracker())
 
     if args.json:
         print(

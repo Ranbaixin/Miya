@@ -9,4 +9,5 @@ const isWin = process.platform === 'win32'
 const npx = isWin ? 'npx.cmd' : 'npx'
 const args = process.argv.slice(2)
 
-execSync(`${npx} eslint . ${args.join(' ')}`, { cwd: root, stdio: 'inherit' })
+const targets = ['src', 'electron', 'scripts', 'tests', 'vite.config.ts', 'eslint.config.mjs']
+execSync(`${npx} eslint ${targets.join(' ')} ${args.join(' ')}`, { cwd: root, stdio: 'inherit' })

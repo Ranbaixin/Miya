@@ -198,7 +198,11 @@ def _load_config() -> Dict:
     config_path = Path(__file__).parent.parent / "config" / "soul_generator_config.json"
     try:
         with open(config_path, "r", encoding="utf-8") as f:
-            return json.load(f)
+            config = json.load(f)
+        from core.pc_usage_digest import resolve_digest_user_id
+
+        config["OWNER_USER_ID"] = resolve_digest_user_id() or ""
+        return config
     except Exception as e:  # noqa: BLE001 — 配置加载失败有默认配置兜底
         logger.warning(f"[灵魂发生器] 配置文件加载失败: {e}，使用默认配置")
         return {}

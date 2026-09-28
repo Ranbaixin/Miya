@@ -12,9 +12,9 @@ v7.0 - 替代碎片化的权限检查系统
 用法：
     from core.unified_permission import get_permission_engine
     engine = get_permission_engine()
-    engine.is_superadmin("qq_1523878699")  # True
-    engine.check("qq_1523878699", "tool.web_search")  # True
-    engine.check_command("qq_1523878699", "/形态")  # True
+    engine.is_superadmin("qq_<OWNER_ID>")  # True when configured
+    engine.check("qq_<OWNER_ID>", "tool.web_search")  # True when configured
+    engine.check_command("qq_<OWNER_ID>", "/形态")  # True when configured
 """
 
 from __future__ import annotations

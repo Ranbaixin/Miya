@@ -25,9 +25,34 @@ from core.doctor import (
     check_model_config,
     check_permissions,
     check_prompt_placeholders,
+    check_pc_tracker,
     has_failures,
     summarize,
 )
+
+
+def test_pc_tracker_check_reports_unreachable_bridge_as_warning(monkeypatch):
+    def unavailable(*_args, **_kwargs):
+        raise OSError("connection refused")
+
+    monkeypatch.setattr(doctor.urllib.request, "urlopen", unavailable)
+    finding = check_pc_tracker("http://127.0.0.1:9443/api/v1/agent/context")
+    assert finding.status == WARN
+    assert "9443" in " ".join(finding.details)
+
+
+def test_pc_tracker_check_accepts_reachable_bridge(monkeypatch):
+    class Response:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+    monkeypatch.setattr(doctor.urllib.request, "urlopen", lambda *_args, **_kwargs: Response())
+    assert check_pc_tracker().status == PASS
 
 
 def _statuses(finding) -> list:
@@ -294,7 +319,7 @@ class TestPermissions:
         cfg = tmp_path / "config"
         cfg.mkdir()
         (cfg / "permissions.json").write_text(
-            json.dumps({"superadmins": {"869135903": {"ids": {"qq": ["869135903"]}}}, "permission_groups": {"Default": {"permissions": []}}}),
+            json.dumps({"superadmins": {"123456789": {"ids": {"qq": ["123456789"]}}}, "permission_groups": {"Default": {"permissions": []}}}),
             encoding="utf-8",
         )
         finding = check_permissions(tmp_path)

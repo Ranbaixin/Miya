@@ -14,11 +14,11 @@ from core.unified_permission import UnifiedPermissionEngine
 
 @pytest.fixture
 def engine(tmp_path):
-    """独立配置的权限引擎：超管 qq_869135903，QQ 平台默认 Default 组。"""
+    """独立配置的权限引擎：超管 qq_123456789，QQ 平台默认 Default 组。"""
     cfg = {
         "version": "1.0.0",
         "superadmins": {
-            "869135903": {"name": "然鑫", "ids": {"qq": ["869135903"]}},
+            "123456789": {"name": "然鑫", "ids": {"qq": ["123456789"]}},
         },
         "permission_groups": {
             "Default": {"permissions": ["tool.time", "tool.web_search"]},
@@ -36,7 +36,7 @@ def engine(tmp_path):
 class TestEngineCheckPermissionAlias:
     def test_alias_superadmin_allowed(self, engine):
         """超管经别名校验任意权限 → 放行。"""
-        assert engine.check_permission("qq_869135903", "tool.anything") is True
+        assert engine.check_permission("qq_123456789", "tool.anything") is True
 
     def test_alias_unknown_user_fail_closed(self, engine):
         """未知用户检查 Default 组之外的权限 → 拒绝（fail-closed 保持）。"""
@@ -69,7 +69,7 @@ class TestPermissionCoreDelegation:
         from webnet.AuthNet.permission_core import PermissionCore
 
         core = PermissionCore(use_unified_config=True)
-        assert core.check_permission("qq_869135903", "tool.x") is True
+        assert core.check_permission("qq_123456789", "tool.x") is True
         assert core.check_permission("qq_999999", "tool.x", context={"platform": "qq"}) is False
 
     def test_delegation_list_mode(self, monkeypatch, engine):

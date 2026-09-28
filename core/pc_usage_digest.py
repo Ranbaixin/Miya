@@ -8,17 +8,38 @@
   PC_DIGEST_ENABLED  默认 true
   PC_DIGEST_HOUR     默认 23（点）
   PC_DIGEST_MINUTE   默认 30（分）
-  PC_DIGEST_USER_ID  默认 869135903（然鑫）
+  PC_DIGEST_USER_ID  可选；默认从私有 permissions.json 的 QQ 超管读取
 """
 
 import asyncio
+import json
 import logging
 import os
 from datetime import datetime, timedelta
+from pathlib import Path
 
 logger = logging.getLogger("pc_usage_digest")
 
 _task: asyncio.Task | None = None
+
+
+def resolve_digest_user_id(config_path: Path | None = None) -> str | None:
+    """Resolve the owner without embedding a personal account ID in source."""
+    for key in ("PC_DIGEST_USER_ID", "QQ_SUPERADMIN_QQ"):
+        value = os.getenv(key, "").strip()
+        if value:
+            return value
+
+    path = config_path or Path(__file__).resolve().parent.parent / "config" / "permissions.json"
+    try:
+        config = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    for info in config.get("superadmins", {}).values():
+        for user_id in info.get("ids", {}).get("qq", []):
+            if str(user_id).isdigit():
+                return str(user_id)
+    return None
 
 
 async def _fetch_text_summary() -> str | None:
@@ -34,13 +55,18 @@ async def digest_once() -> bool:
     """执行一次沉淀。成功写入返回 True；桥不可达/无摘要返回 False。"""
     from memory import store_important
 
+    user_id = resolve_digest_user_id()
+    if not user_id:
+        logger.warning("[PC作息] 未配置所有者 QQ，跳过当日摘要")
+        return False
+
     summary = await _fetch_text_summary()
     if not summary:
         logger.info("[PC作息] 桥不可达或无当日摘要，今日跳过")
         return False
     await store_important(
         f"[电脑作息] {summary}",
-        user_id=os.getenv("PC_DIGEST_USER_ID", "869135903"),
+        user_id=user_id,
         tags=["pc_usage", "作息"],
         priority=0.5,
         metadata={"source": "pc_usage_digest", "date": datetime.now().strftime("%Y-%m-%d")},

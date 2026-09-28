@@ -2,8 +2,8 @@
 """仓库密钥泄露扫描（2026-08 安全加固）
 
 检查项：
-1. git 跟踪的 data/ 运行时数据（应全部忽略）
-2. git 跟踪的 config/.env（应忽略）
+1. git 跟踪的根目录或前端 data/ 运行时数据（应全部忽略）
+2. git 跟踪的私有配置和 config/.env（应忽略）
 3. git 跟踪文件中的疑似密钥模式（sk-*、AWS AKIA*、私钥块、JWT）
 
 用法: python scripts/scan_secrets.py
@@ -40,7 +40,7 @@ def git(files: list[str]) -> list[str]:
 def main() -> int:
     problems = []
 
-    tracked_data = [f for f in git(["data/"]) if f != "data/.gitkeep"]
+    tracked_data = [f for f in git(["data/", "miya_frontend/data/"]) if f != "data/.gitkeep"]
     if tracked_data:
         problems.append(f"git 跟踪了 {len(tracked_data)} 个 data/ 运行时文件（应忽略）: "
                         + ", ".join(tracked_data[:5]) + " ...")
@@ -48,6 +48,10 @@ def main() -> int:
     tracked_env = git(["config/.env"])
     if tracked_env:
         problems.append("git 跟踪了 config/.env（含凭据，应忽略）")
+
+    tracked_private_config = git(["config/permissions.json", "config/qq_config.yaml"])
+    if tracked_private_config:
+        problems.append("git 跟踪了账号配置文件: " + ", ".join(tracked_private_config))
 
     # 扫描所有被跟踪的文本文件
     all_files = subprocess.run(

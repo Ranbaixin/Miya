@@ -9,8 +9,8 @@ qq:
   connection:
     ws_url: "ws://localhost:3001"        # OneBot WebSocket 鍦板潃
     token: ""                             # 璁块棶浠ょ墝锛堝彲閫夛級
-    bot_qq: 1153409562                              # 鏈哄櫒浜?QQ 鍙?
-    superadmin_qq: 869135903                      # 瓒呯骇绠＄悊鍛?QQ 鍙?
+    bot_qq: 0                              # 鏈哄櫒浜?QQ 鍙?
+    superadmin_qq: 0                      # 瓒呯骇绠＄悊鍛?QQ 鍙?
     reconnect_interval: 5.0               # 閲嶈繛闂撮殧锛堢锛?
     ping_interval: 20                     # 蹇冭烦闂撮殧锛堢锛?
     ping_timeout: 30                      # 蹇冭烦瓒呮椂锛堢锛?

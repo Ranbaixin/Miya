@@ -108,7 +108,7 @@ async def test_all_fixes():
         # 模拟一个图片事件
         test_event = {
             "message_type": "private",
-            "sender": {"user_id": 1523878699},
+            "sender": {"user_id": 123456789},
             "group_id": 0,
             "message": [
                 {

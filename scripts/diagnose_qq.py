@@ -214,7 +214,10 @@ async def test_onebot_apis():
                 ("get_friend_list", "获取好友列表"),
             ]
             
-            test_user = int(bot_qq) if bot_qq != '0' else 1523878699
+            if bot_qq == '0':
+                print('未配置 QQ_BOT_QQ，跳过发送类 API 测试')
+                return
+            test_user = int(bot_qq)
             
             for api_name, description in apis_to_test:
                 print(f"\n测试 {api_name} ({description})...")

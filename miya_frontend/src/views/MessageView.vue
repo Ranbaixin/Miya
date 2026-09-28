@@ -1,16 +1,15 @@
 <script lang="ts">
-import type { ChatTab, Message } from '@/utils/session'
+import type { Message } from '@/utils/session'
 import { useEventListener } from '@vueuse/core'
-import Dialog from 'primevue/dialog'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import API from '@/api/core'
 import BoxContainer from '@/components/BoxContainer.vue'
-import Markdown from '@/components/Markdown.vue'
 import MessageItem from '@/components/MessageItem.vue'
 import { CONFIG } from '@/utils/config'
 import { proxySetSoulEmotion, proxySetState } from '@/utils/live2dProxy'
-import { activeTabId, CURRENT_SESSION_ID, formatRelativeTime, getActiveTab, IS_TEMPORARY_SESSION, latestEmotion, loadCurrentSession, MESSAGES, newSession, saveMessages, switchSession, tabs } from '@/utils/session'
-import { clearSpeakQueue, isPlaying, queueSpeak, stop as stopTTS } from '@/utils/tts'
+import { parseEmotions } from '@/utils/parseEmotions'
+import { CURRENT_SESSION_ID, formatRelativeTime, getActiveTab, latestEmotion, loadCurrentSession, MESSAGES, newSession, saveMessages, switchSession } from '@/utils/session'
+import { isPlaying, stop as stopTTS } from '@/utils/tts'
 import { setMessageViewExpanded } from '@/utils/uiState'
 
 const isSending = ref(false)
@@ -87,11 +86,10 @@ async function fetchSoulData(retryCount = 0) {
       const merged: any = {}
       for (let i = items.length - 1; i >= Math.max(0, items.length - 5); i--) {
         const entry = items[i]
-        if (!entry || String(entry.user_id) !== '1523878699') continue
-        let emo = entry.emotions
-        if (typeof emo === 'string') { try { emo = eval(`(${emo})`) } catch { emo = null } }
-        if (!merged.emotions && emo && typeof emo === 'object') {
-          merged.emotions = Object.entries(emo).map(([name, val]: any) => ({ name, intensity: val as number }))
+        if (!entry || String(entry.user_id) !== String(CONFIG.value.ui?.owner_id || 'desktop_user')) continue
+        const emo = parseEmotions(entry.emotions)
+        if (!merged.emotions && emo) {
+          merged.emotions = Object.entries(emo).map(([name, val]) => ({ name, intensity: val }))
         }
         if (!merged.innerThought && entry.inner_thought) merged.innerThought = entry.inner_thought
         if (!merged.attribution && entry.attribution) merged.attribution = entry.attribution
@@ -118,7 +116,7 @@ async function chatStreamInternal(content: string, options?: { skill?: string, i
   MESSAGES.value.push({ role: 'assistant', content: '', reasoning: '', generating: true, status: options?.voiceInput ? '理解话语中' : undefined })
   const message = MESSAGES.value[MESSAGES.value.length - 1]!
 
-  let spokenContent = ''
+  const spokenContent = ''
 
   const voiceSync = CONFIG.value.system.voice_enabled
   let contentBuf = ''
@@ -133,15 +131,15 @@ async function chatStreamInternal(content: string, options?: { skill?: string, i
 
   proxySetState('thinking')
   let compressTimer: ReturnType<typeof setTimeout> | undefined
-  let ttsSentenceBuf = ''
+  const ttsSentenceBuf = ''
 
-  let roundContentStart = 0
+  const roundContentStart = 0
 
   return API.chatSend({
     message: content,
     session_id: CURRENT_SESSION_ID.value ?? 'default',
     platform: 'desktop',
-    user_id: CONFIG.value.ui?.owner_id || '1523878699',
+    user_id: CONFIG.value.ui?.owner_id || 'desktop_user',
     usg_id: CONFIG.value.ui?.desktop_usg_id || 'desktop_user',
   }).then((res: any) => {
     // 解析响应 (可能是 SSE 或 JSON)

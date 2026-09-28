@@ -1080,18 +1080,22 @@ class MiyaMemoryCore:
             from pathlib import Path
 
             project_root = Path(__file__).parent.parent
+            from core.pc_usage_digest import resolve_digest_user_id
+
             anchor_files = [
                 (
                     project_root / "data" / "memory_anchors_identity.json",
                     "弥娅",
                     "identity",
                 ),
-                (
-                    project_root / "data" / "memory_anchors_user.json",
-                    "1523878699",
-                    "user",
-                ),
             ]
+            owner_id = resolve_digest_user_id()
+            if owner_id:
+                anchor_files.append((
+                    project_root / "data" / "memory_anchors_user.json",
+                    owner_id,
+                    "user",
+                ))
 
             total_anchors = 0
             loaded_count = 0

@@ -39,7 +39,10 @@ async def test_connection():
         
         onebot_url = os.getenv('QQ_ONEBOT_WS_URL', 'ws://localhost:3001')
         bot_qq = os.getenv('QQ_BOT_QQ', '0')
-        superadmin = os.getenv('QQ_SUPERADMIN_QQ', '1523878699')
+        superadmin = os.getenv('QQ_SUPERADMIN_QQ', '0')
+        if bot_qq == '0' or superadmin == '0':
+            print('请先在私有 config/.env 配置 QQ_BOT_QQ 和 QQ_SUPERADMIN_QQ')
+            return False
         
         print(f"OneBot URL: {onebot_url}")
         print(f"机器人QQ: {bot_qq}")
@@ -57,7 +60,7 @@ async def test_connection():
         # 创建客户端
         client = QQOneBotClient(
             ws_url=onebot_url,
-            bot_qq=int(bot_qq) if bot_qq != '0' else 3681817929,
+            bot_qq=int(bot_qq),
             access_token=None
         )
         
@@ -72,7 +75,7 @@ async def test_connection():
             await asyncio.sleep(2)
             
             # 测试私聊消息
-            test_user = int(superadmin) if superadmin != '0' else 1523878699
+            test_user = int(superadmin)
             print(f"\n测试私聊消息到 QQ{test_user}...")
             
             try:

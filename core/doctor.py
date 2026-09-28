@@ -16,11 +16,13 @@ Miya 统一自检库 — 全项目配置/依赖/运行时体检（防"带病不�
   C7 权限配置校验（superadmins / Default 组）
   C8 运行时诊断（--runtime：健康端点 + journalctl 错误签名 + crash-loop）
   C9 记忆一致性（--runtime：复用 scripts/check_memory_consistency.py）
+  C10 PC Timer 反向隧道（--runtime：检查 API 可达性）
 """
 
 from __future__ import annotations
 
 import json
+import logging
 import re
 import shutil
 import subprocess
@@ -38,6 +40,8 @@ PASS = "PASS"
 WARN = "WARN"
 FAIL = "FAIL"
 SKIP = "SKIP"
+
+logger = logging.getLogger(__name__)
 
 # grep 反验证的源码目录（不含 tests/ —— 测试引用不算运行时消费）
 SOURCE_DIRS = ("core", "hub", "memory", "webnet", "utils", "run", "plugins", "scripts")
@@ -308,6 +312,7 @@ def check_dead_config(repo_root: Path = REPO_ROOT) -> Finding:
         try:
             data = _load_json(path) if filename.endswith(".json") else _load_yaml(path)
         except Exception:  # noqa: BLE001 — 解析失败由 C2 报告
+            logger.debug("幽灵引用检查跳过不可解析的配置 %s", path, exc_info=True)
             continue
         node = data
         for part in key_path.split("."):
@@ -623,6 +628,8 @@ def check_permissions(repo_root: Path = REPO_ROOT) -> Finding:
     superadmins = cfg.get("superadmins", {})
     if not superadmins:
         finding.add(FAIL, "superadmins 为空（无超管，所有者将被 fail-closed 拒绝）", "配置 superadmins.ids")
+    elif "<SUPERADMIN_QQ>" in json.dumps(superadmins):
+        finding.add(WARN, "权限配置仍使用示例 QQ 占位符", "在本机私有 permissions.json 中填写真实账号")
     groups = cfg.get("permission_groups", {})
     if "Default" not in groups:
         finding.add(WARN, "permission_groups 缺少 Default 组（未知用户将无任何权限）", "补充 Default 组")
@@ -755,7 +762,24 @@ def check_runtime(
     return finding
 
 
-# ==================== C9 记忆一致性 ====================
+# ==================== C10 PC Timer 反向隧道 ====================
+
+def check_pc_tracker(url: str = "http://127.0.0.1:9443/api/v1/agent/context") -> Finding:
+    """Report whether the optional PC Timer reverse tunnel is reachable."""
+    finding = Finding("C10", "PC Timer 反向隧道")
+    try:
+        with urllib.request.urlopen(url, timeout=3) as response:
+            status = response.status
+    except (OSError, TimeoutError) as exc:
+        finding.add(WARN, f"PC Timer 隧道不可达 ({url}): {exc}", "检查本机隧道进程和 PC Timer 8088")
+        return finding
+
+    if status != 200:
+        finding.add(WARN, f"PC Timer 返回 HTTP {status} ({url})", "检查 PC Timer API 和隧道")
+    else:
+        finding.add(PASS, "PC Timer 隧道端点返回 200")
+    return finding
+
 
 def check_memory(fix: bool = False, repo_root: Path = REPO_ROOT) -> Finding:
     """复用 scripts/check_memory_consistency.py（--fix 传递自校正）"""

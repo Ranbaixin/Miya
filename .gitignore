@@ -219,3 +219,6 @@ data/neo4j/
 
 # 本地敏感信息（绝不提交）
 docs/LOCAL_INFRA_PRIVATE.md
+config/permissions.json
+config/qq_config.yaml
+miya_frontend/data/

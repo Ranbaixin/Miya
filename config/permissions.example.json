@@ -4,29 +4,29 @@
   "description": "弥娅系统统一权限配置文件",
 
   "superadmins": {
-    "然鑫": {
-      "name": "然鑫",
+    "所有者": {
+      "name": "所有者",
       "ids": {
-        "qq": ["869135903"],
-        "qqofficial": ["869135903", "7C22343989F081B759F6DADC99148E17"],
-        "aiocqhttp": ["869135903"],
-        "terminal": ["869135903"],
-        "desktop": ["869135903"],
-        "webchat": ["869135903"],
+        "qq": ["<SUPERADMIN_QQ>"],
+        "qqofficial": ["<SUPERADMIN_QQ>", "EXAMPLE_QQOFFICIAL_ID"],
+        "aiocqhttp": ["<SUPERADMIN_QQ>"],
+        "terminal": ["<SUPERADMIN_QQ>"],
+        "desktop": ["<SUPERADMIN_QQ>"],
+        "webchat": ["<SUPERADMIN_QQ>"],
         "telegram": [],
         "discord": [],
-        "lark": ["452c3ccc"]
+        "lark": ["EXAMPLE_LARK_ID"]
       }
     },
-    "3141293329": {
-      "name": "然鑫的助理",
+    "<STAFF_QQ>": {
+      "name": "所有者的助理",
       "role": "staff",
-      "description": "然鑫的AI对接助理，负责与弥娅系统对接",
+      "description": "所有者的AI对接助理，负责与弥娅系统对接",
       "ids": {
-        "qq": ["3141293329"],
-        "aiocqhttp": ["3141293329"],
-        "terminal": ["3141293329"],
-        "webchat": ["3141293329"]
+        "qq": ["<STAFF_QQ>"],
+        "aiocqhttp": ["<STAFF_QQ>"],
+        "terminal": ["<STAFF_QQ>"],
+        "webchat": ["<STAFF_QQ>"]
       }
     }
   },
@@ -34,7 +34,7 @@
   "permission_groups": {
     "Staff": {
       "name": "助理权限组",
-      "description": "然鑫的助理团队，拥有管理级权限但不包括系统配置",
+      "description": "所有者的助理团队，拥有管理级权限但不包括系统配置",
       "permissions": [
         "tool.*",
         "memory.*",
@@ -171,24 +171,24 @@
       "created_at": "2026-03-11T00:00:00"
     },
     {
-      "user_id": "869135903",
-      "username": "然鑫",
+      "user_id": "<SUPERADMIN_QQ>",
+      "username": "所有者",
       "platform": "qq",
       "permission_groups": ["Admin", "Developer"],
       "description": "超级管理员 - 拥有所有权限",
       "created_at": "2026-03-15T10:00:00"
     },
     {
-      "user_id": "qq_869135903",
-      "username": "然鑫",
+      "user_id": "qq_<SUPERADMIN_QQ>",
+      "username": "所有者",
       "platform": "qq",
       "permission_groups": ["Admin", "Developer"],
       "description": "超级管理员 - 拥有所有权限",
       "created_at": "2026-03-15T10:00:00"
     },
     {
-      "user_id": "terminal_869135903",
-      "username": "然鑫",
+      "user_id": "terminal_<SUPERADMIN_QQ>",
+      "username": "所有者",
       "platform": "terminal",
       "permission_groups": ["Admin", "Developer"],
       "description": "超级管理员 - 拥有所有权限",
@@ -196,11 +196,11 @@
     },
     {
       "user_id": "desktop_user",
-      "username": "然鑫",
+      "username": "所有者",
       "platform": "desktop",
-      "linked_to": "869135903",
+      "linked_to": "<SUPERADMIN_QQ>",
       "permission_groups": ["Admin", "Developer"],
-      "description": "桌面端用户 - 关联到QQ的然鑫",
+      "description": "桌面端用户 - 关联到QQ的所有者",
       "created_at": "2026-04-23T14:00:00"
     }
   ],
@@ -278,33 +278,33 @@
   "special_rules": {
     "staff_whitelist": [
       "terminal_default",
-      "3141293329",
-      "qq_3141293329",
-      "aiocqhttp_3141293329",
-      "webchat_3141293329"
+      "<STAFF_QQ>",
+      "qq_<STAFF_QQ>",
+      "aiocqhttp_<STAFF_QQ>",
+      "webchat_<STAFF_QQ>"
     ],
     "admin_whitelist": [
       "terminal_default",
-      "869135903",
-      "qq_869135903",
-      "terminal_869135903",
-      "qqofficial_869135903",
-      "aiocqhttp_869135903",
-      "lark_452c3ccc",
+      "<SUPERADMIN_QQ>",
+      "qq_<SUPERADMIN_QQ>",
+      "terminal_<SUPERADMIN_QQ>",
+      "qqofficial_<SUPERADMIN_QQ>",
+      "aiocqhttp_<SUPERADMIN_QQ>",
+      "lark_EXAMPLE_LARK_ID",
       "desktop_user",
-      "webchat_869135903"
+      "webchat_<SUPERADMIN_QQ>"
     ],
     "super_admin_whitelist": [
       "terminal_default",
-      "869135903",
-      "qq_869135903",
-      "terminal_869135903",
-      "qqofficial_869135903",
-      "qqofficial_7C22343989F081B759F6DADC99148E17",
-      "aiocqhttp_869135903",
-      "lark_452c3ccc",
+      "<SUPERADMIN_QQ>",
+      "qq_<SUPERADMIN_QQ>",
+      "terminal_<SUPERADMIN_QQ>",
+      "qqofficial_<SUPERADMIN_QQ>",
+      "qqofficial_EXAMPLE_QQOFFICIAL_ID",
+      "aiocqhttp_<SUPERADMIN_QQ>",
+      "lark_EXAMPLE_LARK_ID",
       "desktop_user",
-      "webchat_869135903"
+      "webchat_<SUPERADMIN_QQ>"
     ]
   },
 
@@ -338,9 +338,9 @@
     "whitelist_mode": false,
     "user_whitelist": [
       "terminal_default",
-      "869135903",
-      "qq_869135903",
-      "terminal_869135903"
+      "<SUPERADMIN_QQ>",
+      "qq_<SUPERADMIN_QQ>",
+      "terminal_<SUPERADMIN_QQ>"
     ]
   }
 }
