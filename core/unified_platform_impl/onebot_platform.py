@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from core.unified_platform.base import BasePlatform
+from core.unified_platform_impl.dm_merger import DmSubmit, IngestOutcome, PrivateChatMerger
 
 from .message_mixin import MessageMixin
 
@@ -53,6 +54,21 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         # 群聊消息批处理缓冲: group_id → [messages]
         self._batch_buffers: Dict[str, list] = {}
         self._batch_timers: Dict[str, asyncio.Task] = {}
+        # 2026-09 DM 合并：私聊连续输入合并器（每用户一轮式处理；false 回退逐条回复）
+        # 开关优先级：构造参数 > qq_config.yaml(qq.dm_merge_enabled) > 默认开启
+        self._dm_merge_enabled = bool(
+            self.config.get("dm_merge_enabled", self._config_data.get("dm_merge_enabled", True))
+        )
+        self._dm_merger: Optional[PrivateChatMerger] = (
+            PrivateChatMerger(
+                ingest_fn=self._dm_ingest,
+                generate_fn=self._dm_generate,
+                send_fn=self._dm_send,
+                generation_semaphore=self._dispatch_semaphore,  # 保留跨会话并发限制
+            )
+            if self._dm_merge_enabled
+            else None
+        )
 
     @property
     def _config_data(self) -> dict:
@@ -86,6 +102,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
                         "image_analysis_timeout": qq.get("image_recognition", {})
                         .get("ai_analysis", {})
                         .get("timeout", 30),
+                        "dm_merge_enabled": qq.get("dm_merge_enabled", True),
                     }
         except Exception as e:  # noqa: BLE001 — 配置加载失败降级为默认配置，避免平台启动失败
             logger.warning(f"[{self.platform_id}] 加载 qq_config.yaml 失败: {e}")
@@ -355,13 +372,19 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         return lock
 
     async def _dispatch_message(self, data: Dict) -> None:
-        """消息分发：收包循环只负责入队，此处限流 + 会话串行后处理"""
+        """消息分发：收包循环只负责入队，此处限流 + 会话串行后处理。
+
+        2026-09 DM 合并：私聊改走合并器 intake（不取会话锁——收到即 bump 版本，
+        生成/发送由每用户唯一 worker 串行）；群聊维持原「信号量+会话锁」并发门。"""
         try:
             msg_type = data.get("message_type", "private")
             sender = data.get("sender", {}) or {}
             user_id = str(sender.get("user_id", ""))
             group_id = str(data.get("group_id", ""))
             key = self._conv_key(msg_type, group_id, user_id)
+            if self._dm_merger is not None and msg_type == "private":
+                await self._handle_onebot_message(data)  # intake 快路径，_route_chat_response 接管
+                return
             lock = self._get_conv_lock(key)
             async with self._dispatch_semaphore:
                 async with lock:
@@ -924,7 +947,49 @@ class OneBotPlatform(MessageMixin, BasePlatform):
         logger.debug(f"[{self.platform_id}] 收到消息: {content[:50]}, reply_id={reply_id}, is_at={is_at_bot}")
 
         # === 16. 路由到决策中心 ===
-        # 并发改造：串行化已由 _dispatch_message 的会话锁 + 信号量完成，此处直接调用
+        await self._route_chat_response(
+            data=data,
+            content=content,
+            user_id=user_id,
+            user_name=user_name,
+            msg_type=msg_type,
+            group_id_str=group_id_str,
+            group_name=group_name,
+            sender_role=sender_role,
+            is_at_bot=is_at_bot,
+            extra=extra,
+            has_media=has_media,
+        )
+
+    async def _route_chat_response(
+        self,
+        *,
+        data: Dict,
+        content: str,
+        user_id: str,
+        user_name: str,
+        msg_type: str,
+        group_id_str: str,
+        group_name: str,
+        sender_role: str,
+        is_at_bot: bool,
+        extra: Optional[Dict],
+        has_media: bool,
+    ) -> None:
+        """私聊 → DM 合并器；群聊/未启用合并 → 原 route+send 路径（行为不变）。"""
+        if self._dm_merger is not None and msg_type == "private":
+            await self._dm_merger.submit(
+                DmSubmit(
+                    key=f"private:{user_id}",
+                    original=data,
+                    content=content,
+                    user_id=user_id,
+                    user_name=user_name,
+                    sender_role=sender_role,
+                    extra=extra,
+                )
+            )
+            return
         response = await self.route_to_decision_hub(
             content=content,
             user_id=user_id,
@@ -936,11 +1001,60 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             is_at_bot=is_at_bot,
             extra=extra,
         )
-
         if response:
             await self._send_onebot_reply(data, response)
         elif has_media and not is_at_bot:
             pass
+
+    async def _dm_ingest(self, sub: DmSubmit) -> IngestOutcome:
+        """合并器回调：感知构建 + decision_hub 入账（含快捷命令/定时任务即时结果）。"""
+        respond_ctx, direct = await self.ingest_to_decision_hub(
+            content=sub.content,
+            user_id=sub.user_id,
+            user_name=sub.user_name,
+            message_type="private",
+            group_id="",
+            group_name="",
+            sender_role=sub.sender_role,
+            is_at_bot=True,
+            extra=sub.extra,
+        )
+        if isinstance(respond_ctx, str):  # mixin 返回的错误文本
+            return IngestOutcome(error_text=respond_ctx)
+        return IngestOutcome(respond_ctx=respond_ctx, direct_text=direct)
+
+    async def _dm_generate(self, key, batch, handle):
+        """合并器回调：对快照 batch 生成回复（最新一条为触发消息）。
+
+        合并批次说明注入 content 头部（ingest 已入账的记忆不受影响），
+        模型据此统一回应全部未回复消息。"""
+        last = batch[-1]
+        ctx = last.respond_ctx
+        if ctx is None:
+            raise RuntimeError("无待回复上下文")
+        if len(batch) > 1:
+            ctx.content = (
+                f"【合并回复】用户连续发来了 {len(batch)} 条消息，请统一回应全部内容：\n"
+                + "\n".join(f"- {p.content}" for p in batch[:-1])
+                + f"\n- {last.content}\n\n"
+                + ctx.content
+            )
+        response = await self._miya_core.decision_hub.respond_cross_platform(ctx, turn_handle=handle)
+        if response:
+            response = self._filter_thinking(response)
+            response = self._filter_output(response)
+        return response
+
+    async def _dm_send(self, key, batch, text) -> bool:
+        """合并器回调：发送已提交轮次（文字/语音分条 + 助手侧 realtime 事件 + 本地 TTS）。"""
+        if not text:
+            return False
+        last_original = batch[-1].original
+        await self._send_onebot_reply(last_original, text)
+        self._emit_realtime_events("", text, "弥娅")
+        if self._tts_should_local():
+            self._spawn(self._tts_play_response(text))
+        return True
 
     async def _send_onebot_reply(self, original: Dict, text: str):
         """发送 OneBot 回复（根据 TTS 配置自动选择文字/语音）"""

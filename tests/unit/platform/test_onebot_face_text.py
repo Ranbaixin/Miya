@@ -51,7 +51,8 @@ def _make_platform(monkeypatch, captured):
     async def fake_resolve_group_name(group_id):
         return "测试群"
 
-    platform = OneBotPlatform({"bot_qq": "10000"})
+    # DM 合并关闭：本文件专测表情文本注入（route 捕获），与合并器无关
+    platform = OneBotPlatform({"bot_qq": "10000", "dm_merge_enabled": False})
     platform.route_to_decision_hub = fake_route
     monkeypatch.setattr(platform, "_is_group_allowed", lambda gid: True)
     monkeypatch.setattr(platform, "_is_user_allowed", lambda uid: True)

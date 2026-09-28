@@ -2,7 +2,7 @@
 
 验证：
 - 会话 key 划分（群按群、私聊按用户）
-- 同会话串行（conv lock）
+- 同会话串行（conv lock，2026-09 DM 合并后仅群聊仍走此门；私聊并发语义见 test_dm_route_branch.py）
 - 跨会话并发且受 semaphore(4) 限流
 """
 
@@ -16,6 +16,12 @@ from core.unified_platform_impl.onebot_platform import OneBotPlatform
 @pytest.fixture
 def platform():
     return OneBotPlatform(config={"bot_qq": "10001", "ws_reverse_port": 0})
+
+
+@pytest.fixture
+def group_platform():
+    """DM 合并关闭的平台（专测会话锁语义，不经合并器分支）。"""
+    return OneBotPlatform(config={"bot_qq": "10001", "ws_reverse_port": 0, "dm_merge_enabled": False})
 
 
 def test_conv_key(platform):
@@ -32,8 +38,8 @@ def test_conv_lock_singleton(platform):
     assert c is not a
 
 
-async def test_same_conversation_serial(platform):
-    """同会话两条消息必须串行（并发度 1）。"""
+async def test_same_conversation_serial(group_platform):
+    """同会话（群）两条消息必须串行（并发度 1）。"""
     active = 0
     max_active = 0
 
@@ -44,17 +50,17 @@ async def test_same_conversation_serial(platform):
         await asyncio.sleep(0.03)
         active -= 1
 
-    platform._handle_onebot_message = fake_handle
+    group_platform._handle_onebot_message = fake_handle
     msgs = [
-        {"message_type": "private", "sender": {"user_id": "42"}},
-        {"message_type": "private", "sender": {"user_id": "42"}},
-        {"message_type": "private", "sender": {"user_id": "42"}},
+        {"message_type": "group", "group_id": "88", "sender": {"user_id": "42"}},
+        {"message_type": "group", "group_id": "88", "sender": {"user_id": "42"}},
+        {"message_type": "group", "group_id": "88", "sender": {"user_id": "42"}},
     ]
-    await asyncio.gather(*[platform._dispatch_message(m) for m in msgs])
+    await asyncio.gather(*[group_platform._dispatch_message(m) for m in msgs])
     assert max_active == 1
 
 
-async def test_cross_conversation_concurrent_but_limited(platform):
+async def test_cross_conversation_concurrent_but_limited(group_platform):
     """不同会话可并发，但全局限流 ≤4。"""
     active = 0
     max_active = 0
@@ -66,11 +72,11 @@ async def test_cross_conversation_concurrent_but_limited(platform):
         await asyncio.sleep(0.05)
         active -= 1
 
-    platform._handle_onebot_message = fake_handle
+    group_platform._handle_onebot_message = fake_handle
     msgs = [
-        {"message_type": "private", "sender": {"user_id": str(i)}} for i in range(10)
+        {"message_type": "group", "group_id": str(i), "sender": {"user_id": "42"}} for i in range(10)
     ]
-    await asyncio.gather(*[platform._dispatch_message(m) for m in msgs])
+    await asyncio.gather(*[group_platform._dispatch_message(m) for m in msgs])
     assert 1 < max_active <= 4
 
 
