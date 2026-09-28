@@ -11,7 +11,7 @@
 
 弥娅（MIYA）是运行在云服务器上的 AI 虚拟化身：QQ 机器人形态接入，拥有持久记忆、情绪系统、主动聊天、44 个工具调用、多模态识图、**用户电脑使用数据感知**（2026-09-21 新增）。用户（然鑫）是唯一 superadmin。
 
-**分支** `fix/v8-hardening`（v8 硬化线，未合 main）。**2026-09-26 测试基线** 321 passed。本文是历史快照，实时状态以 `doctor --runtime` 为准。
+**分支** `fix/v8-hardening`（v8 硬化线，未合 main）。**2026-09-28 测试基线** 358 passed（本地 Windows + GitHub CI ubuntu 双绿）。本文是历史快照，实时状态以 `doctor --runtime` 为准。
 
 ---
 
@@ -91,7 +91,7 @@
 
 | 方向 | 状态 | 等什么 |
 |---|---|---|
-| **DM 私聊输入合并** | 🆕 已实施待线上实测 | 私聊连续消息合并一轮回复；设计+实施计划 `docs/superpowers/plans/2026-09-28-qq-private-input-merge.md`；实测清单 `docs/QQ_DM_MERGE_ACCEPTANCE.md`。已知边界：草稿不注入下一轮提示词；拍一拍 AI 路径旁路合并器；registry 只读白名单为类名级（HANDOFF 要求的 per-tool 守卫另计） |
+| **DM 私聊输入合并** | ✅ 已上线（2026-09-28，备份 20260928T073024Z）待实测 | 私聊连续消息合并一轮回复；设计+实施计划 `docs/superpowers/plans/2026-09-28-qq-private-input-merge.md`；实测清单 `docs/QQ_DM_MERGE_ACCEPTANCE.md`。已知边界：草稿不注入下一轮提示词；拍一拍 AI 路径旁路合并器；registry 只读白名单为类名级（HANDOFF 要求的 per-tool 守卫另计）。遗留决策项：main 分叉 170 提交（mineradio/v8.1-v8.2 平台重构）与硬化线合并方案待定，PR #1 留档 |
 | **PC Timer 稳定性** | 🔶 唯一活跃问题 | 9/21 两次静默死亡（根因未明，新日志机制 `[EXIT]` 标记下次留痕）；**用户待办：pc-time-tracker 24 文件修复改动未 commit** |
 | SnowLuma 迁移 | 📋 排期待启动 | 养号已达标（8 天+零被踢）；前置=验收矩阵（10 个 NapCat 扩展 action 覆盖度）+ compose；**换端不解决风控** |
 | Persona Profiler 新项目 | 📋 已规划待启动 | 独立仓库自适应问卷画像（计划要点在 9/13 对话，需落盘为 README）；Miya 内置画像管线由它承接 |
