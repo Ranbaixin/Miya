@@ -168,6 +168,136 @@ class MessageMixin:
 
     # ============ 核心路由 ============
 
+    async def _build_perception_message(
+        self,
+        *,
+        content: str,
+        user_id: str,
+        user_name: str = "",
+        message_type: str = "private",
+        group_id: str = "",
+        group_name: str = "",
+        sender_role: str = "member",
+        is_at_bot: bool = True,
+        extra: Optional[Dict] = None,
+    ):
+        """构建 perception dict + M-Link Message（含超管身份注入）。
+
+        2026-09-28 自 route_to_decision_hub 抽取，供普通路由与 DM 合并 intake 共用。"""
+        from mlink.message import Message
+
+        group_id_int = 0
+        if group_id:
+            with contextlib.suppress(ValueError):
+                group_id_int = int(group_id)
+
+        perception_data = {
+            "content": content,
+            "input": content,
+            "sender_name": user_name or user_id,
+            "user_id": user_id,
+            "sender_id": user_id,
+            "unified_user_id": f"{self.platform_id}_{user_id}",
+            "message_type": message_type,
+            "group_id": group_id_int,
+            "group_name": group_name,
+            "sender_role": sender_role,
+            "platform": self.platform_id,
+            "source": self.platform_id,
+            "is_at_bot": is_at_bot,
+            "reply_to_bot": False,
+            "timestamp": datetime.now().isoformat(),
+            "is_owner": False,
+            "owner_name": "",
+        }
+
+        # 注入身份信息：检查发送者是否是超管/所有者
+        try:
+            from core.unified_permission import get_permission_engine
+
+            engine = get_permission_engine()
+            if engine.is_superadmin(str(user_id), platform=self.platform_id):
+                perception_data["is_owner"] = True
+                logger.info(f"[身份] {user_name}({user_id}) → 创造者")
+                # 从 superadmins 配置中获取名字和规范ID
+                for _person, info in engine._config.get("superadmins", {}).items():
+                    perception_data["owner_name"] = info.get("name", "")
+                    # 获取规范用户ID（第一个有值的平台ID作为标准）
+                    canonical_id = str(user_id)
+                    ids = info.get("ids", {})
+                    for _pid, raw_ids in ids.items():
+                        if isinstance(raw_ids, list) and raw_ids:
+                            canonical_id = str(raw_ids[0])
+                            break
+                        elif isinstance(raw_ids, str) and raw_ids:
+                            canonical_id = str(raw_ids)
+                            break
+                    perception_data["canonical_user_id"] = canonical_id
+                    perception_data["sender_name"] = info.get("name", "") or user_name or user_id
+                    # 关键：统一 user_id 为规范ID，确保记忆存储在同一桶内
+                    perception_data["user_id"] = canonical_id
+                    break
+            elif engine.is_staff(str(user_id), platform=self.platform_id):
+                perception_data["is_staff"] = True
+                logger.info(f"[身份] {user_name}({user_id}) → 助理")
+            else:
+                logger.info(f"[身份] {user_name}({user_id}) → 普通用户")
+        except Exception as e:  # noqa: BLE001 — 权限引擎故障按普通用户处理（安全默认），留日志便于排查
+            logger.warning(f"[{self.platform_id}] 身份权限判定失败，按普通用户处理: {e}")
+
+        if extra:
+            perception_data.update(extra)
+
+        mlink_msg = Message(
+            msg_type="data",
+            content=perception_data,
+            source=self.platform_id,
+        )
+        return mlink_msg, perception_data
+
+    async def ingest_to_decision_hub(
+        self,
+        *,
+        content: str,
+        user_id: str,
+        user_name: str = "",
+        message_type: str = "private",
+        group_id: str = "",
+        group_name: str = "",
+        sender_role: str = "member",
+        is_at_bot: bool = True,
+        extra: Optional[Dict] = None,
+    ):
+        """DM 合并 intake：感知构建 + decision_hub 入账（含快捷命令/定时任务即时结果），不生成回复。
+
+        Returns:
+            (respond_ctx | 错误文本, direct_text | None)
+            用户消息侧 realtime 事件照发；助手回复事件由合并 worker 发送后补发。
+        """
+        miya = self._miya_core
+        if not miya:
+            return "弥娅系统未就绪", None
+        try:
+            mlink_msg, _perception = await self._build_perception_message(
+                content=content,
+                user_id=user_id,
+                user_name=user_name,
+                message_type=message_type,
+                group_id=group_id,
+                group_name=group_name,
+                sender_role=sender_role,
+                is_at_bot=is_at_bot,
+                extra=extra,
+            )
+            self._emit_realtime_events(content, "", user_name or user_id)
+            outcome = await miya.decision_hub.ingest_cross_platform(mlink_msg)
+            self._spawn(self._after_route(content, "", user_id))
+            respond_ctx, direct = outcome
+            return respond_ctx, direct
+        except Exception as e:  # noqa: BLE001 — intake 异常以错误文本回传，由合并器即时发送
+            logger.error(f"[{self.platform_id}] DM ingest 异常: {e}", exc_info=True)
+            return f"处理消息时出错了: {e}", None
+
     async def route_to_decision_hub(
         self,
         content: str,
@@ -202,74 +332,16 @@ class MessageMixin:
             return "弥娅系统未就绪"
 
         try:
-            from mlink.message import Message
-
-            group_id_int = 0
-            if group_id:
-                with contextlib.suppress(ValueError):
-                    group_id_int = int(group_id)
-
-            perception_data = {
-                "content": content,
-                "input": content,
-                "sender_name": user_name or user_id,
-                "user_id": user_id,
-                "sender_id": user_id,
-                "unified_user_id": f"{self.platform_id}_{user_id}",
-                "message_type": message_type,
-                "group_id": group_id_int,
-                "group_name": group_name,
-                "sender_role": sender_role,
-                "platform": self.platform_id,
-                "source": self.platform_id,
-                "is_at_bot": is_at_bot,
-                "reply_to_bot": False,
-                "timestamp": datetime.now().isoformat(),
-                "is_owner": False,
-                "owner_name": "",
-            }
-
-            # 注入身份信息：检查发送者是否是超管/所有者
-            try:
-                from core.unified_permission import get_permission_engine
-
-                engine = get_permission_engine()
-                if engine.is_superadmin(str(user_id), platform=self.platform_id):
-                    perception_data["is_owner"] = True
-                    logger.info(f"[身份] {user_name}({user_id}) → 创造者")
-                    # 从 superadmins 配置中获取名字和规范ID
-                    for _person, info in engine._config.get("superadmins", {}).items():
-                        perception_data["owner_name"] = info.get("name", "")
-                        # 获取规范用户ID（第一个有值的平台ID作为标准）
-                        canonical_id = str(user_id)
-                        ids = info.get("ids", {})
-                        for _pid, raw_ids in ids.items():
-                            if isinstance(raw_ids, list) and raw_ids:
-                                canonical_id = str(raw_ids[0])
-                                break
-                            elif isinstance(raw_ids, str) and raw_ids:
-                                canonical_id = str(raw_ids)
-                                break
-                        perception_data["canonical_user_id"] = canonical_id
-                        perception_data["sender_name"] = info.get("name", "") or user_name or user_id
-                        # 关键：统一 user_id 为规范ID，确保记忆存储在同一桶内
-                        perception_data["user_id"] = canonical_id
-                        break
-                elif engine.is_staff(str(user_id), platform=self.platform_id):
-                    perception_data["is_staff"] = True
-                    logger.info(f"[身份] {user_name}({user_id}) → 助理")
-                else:
-                    logger.info(f"[身份] {user_name}({user_id}) → 普通用户")
-            except Exception as e:  # noqa: BLE001 — 权限引擎故障按普通用户处理（安全默认），留日志便于排查
-                logger.warning(f"[{self.platform_id}] 身份权限判定失败，按普通用户处理: {e}")
-
-            if extra:
-                perception_data.update(extra)
-
-            mlink_msg = Message(
-                msg_type="data",
-                content=perception_data,
-                source=self.platform_id,
+            mlink_msg, _perception = await self._build_perception_message(
+                content=content,
+                user_id=user_id,
+                user_name=user_name,
+                message_type=message_type,
+                group_id=group_id,
+                group_name=group_name,
+                sender_role=sender_role,
+                is_at_bot=is_at_bot,
+                extra=extra,
             )
 
             if hasattr(miya, "decision_hub"):
