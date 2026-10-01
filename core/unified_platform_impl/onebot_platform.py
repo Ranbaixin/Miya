@@ -1139,7 +1139,7 @@ class OneBotPlatform(MessageMixin, BasePlatform):
             from core.ai_client import is_ai_error_reply
 
             is_error = is_ai_error_reply(response)
-        return GenerateOutcome(response=response or "", artifacts=outcome.artifacts, is_error=is_error)
+        return GenerateOutcome(response=response or "", artifacts=outcome.pending, is_error=is_error)
 
     async def _dm_synth(self, batch, text) -> SynthOutcome:
         """合并器合成回调：语音合成在提交闸门之前完成（文字过滤已由生成回调完成）。"""

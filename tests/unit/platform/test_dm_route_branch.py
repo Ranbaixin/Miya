@@ -124,7 +124,9 @@ async def test_dm_generate_fresh_copy_no_accumulation():
 
     async def respond(ctx):
         seen_contents.append(ctx.content)
-        return types.SimpleNamespace(response="回答", artifacts={"n": 1})
+        from hub.decision_hub import RespondOutcome
+
+        return RespondOutcome(response="回答", pending=types.SimpleNamespace(n=1))
 
     p._miya_core = types.SimpleNamespace(decision_hub=types.SimpleNamespace(respond_cross_platform=respond))
     ctx = types.SimpleNamespace(
@@ -157,7 +159,9 @@ async def test_dm_generate_injects_draft_note():
     p = _make_platform()
 
     async def respond(ctx):
-        return types.SimpleNamespace(response=ctx.content, artifacts=None)
+        from hub.decision_hub import RespondOutcome
+
+        return RespondOutcome(response=ctx.content, pending=None)
 
     p._miya_core = types.SimpleNamespace(decision_hub=types.SimpleNamespace(respond_cross_platform=respond))
     from core.turn_context import DraftContext
