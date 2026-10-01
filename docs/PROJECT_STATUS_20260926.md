@@ -92,7 +92,7 @@
 | 方向 | 状态 | 等什么 |
 |---|---|---|
 | **DM 私聊输入合并** | 🔧 六项缺陷修复+1 热修已上线（2026-10-01，备份 20261001T133822Z），待真实 QQ 链路复验 | 首版验收六项缺陷已修复回归（376 passed）；10-01 巡检发现首条真实消息触发 `_dm_generate` 字段名错位（RespondOutcome.pending 误写 artifacts）→ 收到失败提示，已热修部署（c9fd04ce），测试改用真实 RespondOutcome 守住字段契约。验收记录 `docs/QQ_DM_MERGE_SERVER_ACCEPTANCE_20260928.md`，实测清单 `docs/QQ_DM_MERGE_ACCEPTANCE.md`。遗留决策项：main 分叉 149 提交与硬化线合并方案待定，PR #1 留档 |
-| **PC Timer 稳定性** | 🔶 唯一活跃问题 | 9/21 两次静默死亡（根因未明，新日志机制 `[EXIT]` 标记下次留痕）；**用户待办：pc-time-tracker 24 文件修复改动未 commit** |
+| **PC Timer 稳定性** | ✅ 链路恢复（2026-10-01 排障） | 本体一直健康（8088/API 200，无 [EXIT] 崩溃留痕——9/21 静默死亡问题在新日志机制下未复发）。10-01 隧道断裂根因：网络环境移动→电信切换，移动线路到服务器 22 端口不通 + 隧道脚本退出（自启仅在登录时触发）。已重启脚本恢复全链路（云端经 9443 读 200）。注意：网络再切回移动线路时 22 可能不通（脚本会自动重试，脚本活着即可自愈）；**用户待办：pc-time-tracker 24 文件修复改动未 commit** |
 | SnowLuma 迁移 | 📋 排期待启动 | 养号已达标（8 天+零被踢）；前置=验收矩阵（10 个 NapCat 扩展 action 覆盖度）+ compose；**换端不解决风控** |
 | Persona Profiler 新项目 | 📋 已规划待启动 | 独立仓库自适应问卷画像（计划要点在 9/13 对话，需落盘为 README）；Miya 内置画像管线由它承接 |
 | registry 守卫加固 / 死配置清理 | 📋 审计工单 | HANDOFF 附录 §1-6（registry 六加载器无守卫=一崩全丢 68 工具、permissions/multi_model 死键、TOOL_PACKS 死工具名） |
